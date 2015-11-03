@@ -1,0 +1,8 @@
+*.pyc
+*~
+*.sublime-project
+*.sublime-workspace
+test*
+builds/*
+movies/*
+images/*
