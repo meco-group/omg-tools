@@ -1,8 +1,6 @@
 *.pyc
 *~
-*.sublime-project
-*.sublime-workspace
-test*
-builds/*
-movies/*
-images/*
+*/movies/*
+*/images/*
+.*
+!.gitignore

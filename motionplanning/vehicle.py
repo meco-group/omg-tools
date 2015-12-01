@@ -1,181 +1,334 @@
-from spline_extra import *
-from shape import *
-from casadi import *
-from casadi.tools import *
-from plant import *
+from optilayer import OptiLayer, evalf
+from spline import BSplineBasis
+from casadi import SX, MX, SXFunction
+from scipy.signal import filtfilt, butter
+from scipy.interpolate import splev
+import numpy as np
 
-class Vehicle:
 
-    def __init__(self, index, shape, degree, options):
-        self.setOptions(options)
-        self.ind            = index
-        self.shape          = shape
-        self.degree         = degree
+class Vehicle(OptiLayer):
 
-        self.trajectory     = {}
-        self.trajectory['knots'] = {}
-        self.prediction     = {}
-        self.path           = {}
-        self.trajectories   = {'time':[], 'y':[], 'dy':[], 'input':[], 'state':[], 'knots': {}}
-        self.trajectories['knots'] = {'time':[], 'y':[], 'dy':[], 'input':[], 'state':[]}
-        self.predictions    = {'y':[], 'dy':[], 'input':[], 'state':[]}
-        self.plant          = Plant(self.updateReal, self.updateModel) if self.model_mismatch else Plant(self.updateModel, self.updateModel)
+    def __init__(self, n_y, degree, shape, options, **kwargs):
+        self.index = 0
+        OptiLayer.__init__(self, 'vehicle'+str(self.index))
+        self.shape = shape
+        self._signals = {}
+        self.signal_length = {}
+        self._init_memory()
 
-    def initialize(self, time, **kwargs):
+        # create spline basis
+        self.degree = degree
         if 'knots' in kwargs:
             self.knots = kwargs['knots']
+        elif 'knot_intervals' in kwargs:
+            self.knot_intervals = kwargs['knot_intervals']
+            self.knots = np.r_[np.zeros(self.degree),
+                               np.linspace(0., 1., self.knot_intervals+1),
+                               np.ones(self.degree)]
         else:
-            self.knots = np.r_[np.zeros(self.degree), np.linspace(0., 1., time['knot_intervals']+1), np.ones(self.degree)]
-        self.Basis  = BSplineBasis(self.knots, self.degree)
-        self.plant.setDisturbance(self.getDisturbance(time['sample_time']))
+            self.knot_intervals = 10
+            self.knots = np.r_[np.zeros(self.degree),
+                               np.linspace(0., 1., self.knot_intervals+1),
+                               np.ones(self.degree)]
+        self.basis = BSplineBasis(self.knots, self.degree)
 
-    def setNeighbours(self, neighbours, **kwargs):
-        self.neighbours = neighbours
-        if 'rel_pos' in kwargs:
-            self.rel_pos = kwargs['rel_pos']
-        self.Nn         = len(neighbours)
-        nghb_list       = [neighbour.ind for neighbour in self.neighbours]
-        for i in range(len(self.ind_nghb)):
-            for l in range(self.Nn):
-                if nghb_list[l] == i:
-                    self.ind_nghb[i] = l
+        # create spline variable
+        self.n_y = n_y
+        self.splines = self.define_spline_variable('y', self.n_y)
 
-    def setOptions(self, options):
-        self.input_dist     = options['input_disturbance'] if ('input_disturbance' in options) else False
-        self.model_mismatch = options['model_mismatch'] if ('model_mismatch' in options) else False
-        self.ideal          = not (self.model_mismatch or self.input_dist)
+        # create corresponding signal
+        self.order = self.degree if not (
+            'order' in kwargs) else kwargs['order']
+        self._y = SX.sym('y', n_y, self.order+1)
+        self.define_signal('y', self._y)
 
-    def setInitialConditions(self, y0, dy0):
-        self.y0    = y0
-        self.dy0   = dy0
-        self.path['y']      = np.vstack(y0)
-        self.path['dy']     = np.vstack(dy0)
-        self.path['input']  = self.getInput(y0, dy0)
-        self.path['state']  = self.getState(y0, dy0)
-        self.path['time']   = np.array([0.])
-        self.prediction['y']      = np.vstack(y0)
-        self.prediction['dy']     = np.vstack(dy0)
-        self.prediction['input']  = self.getInput(y0, dy0)
-        self.prediction['state']  = self.getState(y0, dy0)
+        # set options
+        self.set_default_options()
+        self.set_options(options)
 
-        self.plant.setState(self.path['state'])
+        # create plant object
+        if self.options['model_mismatch']:
+            self.plant = Plant(self.update_real, self.update_model)
+        else:
+            self.plant = Plant(self.update_model, self.update_model)
 
-    def setTerminalConditions(self, yT, dyT):
-        self.yT     = yT
-        self.dyT    = dyT
+    # ========================================================================
+    # Vehicle options
+    # ========================================================================
 
-    def getCheckPoints(self, position):
-        return self.shape.getCheckPoints(position)
+    def set_default_options(self):
+        self.options = {'model_mismatch': False, 'safety_distance': 0.,
+                        'horizon_time': 10., 'sample_time': 0.01}
+        self.ideal = not self.options['model_mismatch']
+        if self.ideal:
+            self.options['boundary_smoothness'] = {'initial': self.order,
+                                                   'internal': self.degree-1,
+                                                   'terminal': self.degree}
+        else:
+            self.options['boundary_smoothness'] = {'initial': self.order,
+                                                   'internal': self.degree-2,
+                                                   'terminal': self.degree}
 
-    def transformSplines(self, variables, transformation):
-        variables['cy'] = transformation(variables['cy'], self.knots, self.degree)
-        return variables
+    def set_options(self, options):
+        self.options.update(options)
 
-    def getSplines(self, variables):
-        return [BSpline(self.Basis, variables['cy',:,k]) for k in range(self.n_y)]
+    def set_disturbance(self, fc, stdev, mean=0.):
+        # fc = cut-off frequency divided by Nyquist frequency
+        self.ideal = False
+        self.plant.set_disturbance(fc, stdev, mean)
 
-    def getSplineCoeffs(self, variables):
-        return variables['cy'].toArray()
+    # ========================================================================
+    # Signal manipulation
+    # ========================================================================
 
-    def getVariableStruct(self):
-        return struct([entry('cy', shape=(len(self.Basis), self.n_y))])
+    # define signals as symbolic expression
+    def define_signal(self, name, expr):
+        if isinstance(expr, list):
+            self.signal_length[name] = len(expr)
+        else:
+            self.signal_length[name] = expr.shape[0]
+        expr = [expr] if not isinstance(expr, list) else expr
+        self._signals[name] = SXFunction([self._y], expr)
 
-    def initVariables(self, variables):
+    def define_position(self, expr):
+        self.define_signal('position', expr)
+
+    def define_input(self, expr):
+        self.define_signal('input', expr)
+
+    def define_state(self, expr):
+        self.define_signal('state', expr)
+
+    # evaluate symbols from symbolic or numeric y trajectories
+    def get_signal(self, name, y=None):
+        if y is None:
+            result = evalf(self._signals[name], self._y)
+            result = result[0] if len(result) == 1 else result
+        elif isinstance(y, (MX, SX)):
+            result = evalf(self._signals[name], y)
+            result = result[0] if len(result) == 1 else result
+        else:
+            if len(y.shape) == 3:
+                result = []
+                for t in range(y.shape[2]):
+                    ret = evalf(self._signals[name], y[:, :, t])
+                    result.append(np.vstack([r.toArray() for r in ret]))
+                result = np.dstack(result)
+            else:
+                result = [r.toArray() for r in evalf(self._signals[name], y)]
+                result = np.vstack(result)
+        return result
+
+    def get_position(self, y=None):
+        if not ('position' in self._signals):
+            raise ValueError('Position not defined! Use define_position().')
+        return self.get_signal('position', y)
+
+    def get_input(self, y=None):
+        if not ('input' in self._signals):
+            raise ValueError('Input not defined! Use define_input().')
+        return self.get_signal('input', y)
+
+    def get_state(self, y=None):
+        if not ('state' in self._signals):
+            raise ValueError('State not defined! Use define_state().')
+        return self.get_signal('state', y)
+
+    def get_signals(self, y_coeffs, T, time):
+        signals = {}
+        signals['time'] = time
+        y = self.get_splines(y_coeffs, T, time)
+        for name in self._signals.keys():
+            signals[name] = self.get_signal(name, y)
+        return signals
+
+    # compute spline trajectories from coefficients
+    def get_splines(self, y_coeffs, T, time):
+        y = np.zeros((self.n_y, self.order+1, time.size))
         for k in range(self.n_y):
-            variables['cy',:,k] = np.linspace(self.y0[k], self.yT[k], len(self.Basis))
+            for d in range(self.order+1):
+                y[k, d, :] = (1./T**d)*splev(time/T, (self.knots,
+                                                      y_coeffs[:, k].ravel(),
+                                                      self.degree), d)
+        return y
+
+    # ========================================================================
+    # Initial and terminal conditions
+    # ========================================================================
+
+    def set_initial_condition(self, y0):
+        self.y0 = y0
+        for name in self._signals.keys():
+            self.path[name] = self.get_signal(name, y0)
+            self.prediction[name] = self.get_signal(name, y0)
+        self.path['time'] = np.array([0.])
+        self.plant.set_state(self.get_state(y0))
+
+    def set_terminal_condition(self, yT):
+        self.yT = yT
+
+    # ========================================================================
+    # Update and simulation related functions
+    # ========================================================================
+
+    def update(self, y_coeffs, current_time, update_time, **kwargs):
+        horizon_time = self.options['horizon_time']
+        sample_time = self.options['sample_time']
+        self._update_trajectory(y_coeffs, current_time, update_time,
+                                horizon_time, sample_time, **kwargs)
+        self._predict(update_time, sample_time)
+        self._follow_trajectory(update_time, sample_time)
+
+    def _update_trajectory(self, y_coeffs, current_time, update_time,
+                           horizon_time, sample_time, **kwargs):
+        # rel_current_time : current time wrt to spline basis
+        rel_current_time = 0.
+        if 'rel_current_time' in kwargs:
+            rel_current_time = kwargs['rel_current_time']
+        n_samp = int(round((horizon_time-rel_current_time)/sample_time, 3)) + 1
+        time_axis = np.linspace(current_time,
+                                current_time + (n_samp-1)*sample_time, n_samp)
+        if 'time_axis_knots' in kwargs:
+            time_axis_knots = kwargs['time_axis_knots']
+        else:
+            time_axis_knots = ((np.r_[self.knots] - rel_current_time) *
+                               horizon_time + current_time)
+        time_spline_ev = time_axis - current_time + rel_current_time
+        time_spline_ev_knots = (time_axis_knots -
+                                current_time + rel_current_time)
+
+        self.trajectory = self.get_signals(y_coeffs, horizon_time,
+                                           time_spline_ev)
+        self.trajectory['time'] = time_axis
+        self.trajectory_kn = self.get_signals(
+            y_coeffs, horizon_time, time_spline_ev_knots)
+        self.trajectory_kn['time'] = time_axis_knots
+        self._add_to_memory(self.trajectories, self.trajectory,
+                            int(update_time/sample_time))
+        self._add_to_memory(self.trajectories_kn, self.trajectory_kn,
+                            int(update_time/sample_time))
+
+    def _predict(self, predict_time, sample_time):
+        n_samp = int(predict_time/sample_time)
+        if self.ideal:
+            y_pred = self.trajectory['y'][:, :, n_samp]
+        else:
+            y_pred = self.plant.simulate(
+                self.path['state'][:, :, -1],
+                self.trajectory['input'][:, :, :n_samp],
+                self.trajectory['y'][:, :, 1:n_samp+1], sample_time)
+        for key in self._signals.keys():
+            self.prediction[key] = self.get_signal(key, y_pred)
+        self._add_to_memory(
+            self.predictions, self.prediction, int(predict_time/sample_time))
+
+    def _follow_trajectory(self, follow_time, sample_time):
+        n_samp = int(follow_time/sample_time)
+        y = self.trajectory['y'][:, :, 1:n_samp+1]
+        if not self.ideal:
+            y = self.plant.update(
+                self.trajectory['input'][:, :, :n_samp], y, sample_time)
+        self.path['time'] = np.append(
+            self.path['time'], (self.path['time'][-1] +
+                                np.linspace(sample_time, follow_time, n_samp)),
+            axis=1)
+        for key in self._signals.keys():
+            self.path[key] = np.dstack(
+                (self.path[key], self.get_signal(key, y)))
+
+    def _init_memory(self):
+        self.trajectories = {}
+        self.trajectories_kn = {}
+        self.predictions = {}
+        self.trajectory = {}
+        self.trajectory_kn = {}
+        self.prediction = {}
+        self.path = {}
+
+    def _add_to_memory(self, memory, dictionary, repeat=1):
+        for key in dictionary.keys():
+            if not (key in memory):
+                memory[key] = []
+            memory[key].extend([dictionary[key] for k in range(repeat)])
+
+    # ========================================================================
+    # Methods encouraged to override (very basic implementation)
+    # ========================================================================
+
+    def update_model(self, state, input, y, sample_time):
+        return y
+
+    def update_real(self, state, input, y, sample_time):
+        self.update_model(state, input, y, sample_time)
+
+    def init_variables(self):
+        variables = {'y': np.zeros((len(self.basis), self.n_y))}
+        for k in range(self.n_y):
+            variables['y'][:, k] = np.linspace(
+                self.y0[k, 0], self.yT[k, 0], len(self.basis))
         return variables
 
-    def getParameterStruct(self):
-        return struct([
-            entry('y0',     shape=self.n_y),
-            entry('dy0',    shape=self.n_dy),
-            entry('yT',     shape=self.n_y),
-            entry('dyT',    shape=self.n_dy)])
+    def get_parameters(self, time):
+        return {}
 
-    def setParameters(self, parameters):
-        parameters['y0']    = self.prediction['y']
-        parameters['dy0']   = self.prediction['dy']
-        parameters['yT']    = self.yT
-        parameters['dyT']   = self.dyT
-        return parameters
-
-    def getLbgUbg(self, t = 0.):
-        for d in range(1,max(self.boundary_smoothness['initial'],self.boundary_smoothness['internal'])+1):
-            bc_state = 'initial' if (t == 0.) else 'internal'
-            bc = 0 if (d <= self.boundary_smoothness[bc_state]) else inf
-            for k in range(self.n_y):
-                ind = (d-1)*self.n_y+k
-                self.ubg['dy0_'+str(ind)] = bc
-        return self.lbg, self.ubg
-
-    # This implements the interpretation of a computed spline trajectory/prediction of next initial state/following of trajectory
-    def update(self, y_coeffs, knots, update_time, horizon_time, sample_time):
-        self.updateTrajectory(y_coeffs, knots, update_time, horizon_time, sample_time)
-        self.predictState(update_time, sample_time)
-        self.followTrajectory(update_time, sample_time)
-
-    def updateTrajectory(self, y_coeffs, knots, update_time, horizon_time, sample_time):
-        n_samp          = int(round(horizon_time*(1.-knots[0])/sample_time,3))
-        current_time    = self.path['time'][-1]
-        self.trajectory['time']             = np.linspace(current_time, current_time + n_samp*sample_time, n_samp + 1)
-        self.trajectory['y']                = np.vstack([np.hstack(splev((self.trajectory['time']-current_time+knots[0]*horizon_time)/horizon_time, (knots, y_coeffs[:,k], self.degree), 0)) for k in range(self.n_y)])
-        self.trajectory['dy']               = self.getDy(y_coeffs, knots, horizon_time, (self.trajectory['time']-current_time+knots[0]*horizon_time)/horizon_time)
-        self.trajectory['input']            = self.getInput(self.trajectory['y'], self.trajectory['dy'])
-        self.trajectory['state']            = self.getState(self.trajectory['y'], self.trajectory['dy'])
-        self.trajectory['knots']['time']    = (np.r_[knots] - knots[0])*horizon_time + current_time
-        self.trajectory['knots']['y']       = np.vstack([np.hstack(splev(np.r_[knots], (knots, y_coeffs[:,k], self.degree), 0)) for k in range(self.n_y)])
-        self.trajectory['knots']['dy']      = self.getDy(y_coeffs, knots, horizon_time, np.r_[knots])
-        self.trajectory['knots']['input']   = self.getInput(self.trajectory['knots']['y'], self.trajectory['knots']['dy'])
-        self.trajectory['knots']['state']   = self.getState(self.trajectory['knots']['y'], self.trajectory['knots']['dy'])
-        for ind in ['time','y','dy','input','state']:
-            self.trajectories[ind].extend([self.trajectory[ind] for k in range(int(update_time/sample_time))])
-            self.trajectories['knots'][ind].extend([self.trajectory['knots'][ind] for k in range(int(update_time/sample_time))])
-
-    def predictState(self, predict_time, sample_time):
-        n_samp          = int(predict_time/sample_time)
-        if self.ideal:
-            self.prediction['y']      = np.vstack([self.trajectory['y'][k,n_samp] for k in range(self.n_y)])
-            self.prediction['dy']     = np.vstack([self.trajectory['dy'][k,n_samp] for k in range(self.n_dy)])
-            self.prediction['input']  = self.getInput(self.prediction['y'], self.prediction['dy'])
-            self.prediction['state']  = self.getState(self.prediction['y'], self.prediction['dy'])
+    def get_checkpoints(self, y=None):
+        if y is None:
+            return self.shape.get_checkpoints(self.splines)
         else:
-            self.predicition = self.plant.simulate(self.state, self.trajectory['input'][:,:n_samp], sample_time)
-        for ind in ['y','dy','input','state']:
-            self.predictions[ind].extend([self.prediction[ind] for k in range(int(predict_time/sample_time))])
+            return self.shape.get_checkpoints(y)
 
-    def followTrajectory(self, follow_time, sample_time):
-        n_samp     = int(follow_time/sample_time)
-        if self.ideal:
-            y      = np.vstack([self.trajectory['y'][k,1:n_samp+1] for k in range(self.n_y)])
-            dy     = np.vstack([self.trajectory['dy'][k,1:n_samp+1] for k in range(self.n_dy)])
-            input  = self.getInput(y, dy)
-            state  = self.getState(y, dy)
-            time   = np.linspace(sample_time,follow_time,n_samp)
-        else:
-            y, dy, input, state, time = self.plant.update(self.trajectory['input'][:,:n_samp], sample_time)
-        self.path['time']   = np.append(self.path['time'], self.path['time'][-1] + time, axis = 1)
-        self.path['y']      = np.append(self.path['y'], y, axis = 1)
-        self.path['dy']     = np.append(self.path['dy'], dy, axis = 1)
-        self.path['input']  = np.append(self.path['input'], input, axis = 1)
-        self.path['state']  = np.append(self.path['state'], state, axis = 1)
+    def draw(self, k=-1):
+        return self.path['position'][:, k]
 
-    # This defines the required interface of inherriting vehicle classes
-    def getConstraints(self, y, initial, terminal, boundary_smoothness, T, t = 0.):
-        raise NotImplementedError('Please implement this method!')
-    def getState(self, y, dy):
-        raise NotImplementedError('Please implement this method!')
-    def getInput(self, y, dy):
-        raise NotImplementedError('Please implement this method!')
-    def getPosition(self, y):
-        raise NotImplementedError('Please implement this method!')
-    def getDy(y_coeffs, knots, horizon_time, time_axis):
-        raise NotImplementedError('Please implement this method!')
-    def getDisturbance(self, sample_time):
-        raise NotImplementedError('Please implement this method!')
-    def updateModel(self, state, input, Ts):
-        raise NotImplementedError('Please implement this method!')
-    def updateReal(self, state, input, Ts):
-        raise NotImplementedError('Please implement this method!')
-    def draw(self, k = -1):
+    # ========================================================================
+    # Methods required to override (no general implementation possible)
+    # ========================================================================
+
+    def set_initial_pose(self, pose):
         raise NotImplementedError('Please implement this method!')
 
+    def set_terminal_pose(self, pose):
+        raise NotImplementedError('Please implement this method!')
+
+
+class Plant:
+
+    def __init__(self, update_real, update_model):
+        self.update_real = update_real
+        self.update_model = update_model
+        self._dist_pntr = 0
+
+    def set_disturbance(self, fc, stdev, mean=0.):
+        # create disturbance signal
+        # fc = cut-off frequency divided by Nyquist frequency
+        self._n_samp = 3000
+        n_in = len(stdev)
+        b, a = butter(3, fc, 'low')
+        self.disturbance = np.zeros((n_in, self._n_samp))
+        for k in range(n_in):
+            if stdev[k] > 0.:
+                self.disturbance[k, :] = filtfilt(
+                    b, a, np.random.normal(mean[k], stdev[k], self._n_samp))
+            else:
+                self.disturbance[k, :] = np.zeros(self._n_samp)
+
+    def set_state(self, state):
+        self.state = state
+
+    def simulate(self, state0, input, y, sample_time):
+        state = state0
+        for k in range(input.shape[1]):
+            y = self.update_model(state, input[:, k], y[:, :, k], sample_time)
+        return y
+
+    def update(self, input, y, sample_time):
+        _y = []
+        for k in range(input.shape[1]):
+            y = self.update_real(
+                self.state, input[:, k] +
+                self.disturbances[:, self._dist_pntr], sample_time)
+            _y.append(np.c_[y])
+            self._dist_pntr += 1
+            if self._dist_pntr >= self._n_samp:
+                self._dist_pntr = 0
+        return y
