@@ -15,6 +15,7 @@ def evalf(fun, x):
 class OptiLayer:
     _children = {}
     _symbols = {}
+    _symbols_used = []
 
     def __init__(self, label):
         self._label = label
@@ -40,16 +41,15 @@ class OptiLayer:
     @classmethod
     def _check_symbols(cls, name):
         if name in cls._symbols:
-            if cls._symbols[name][1]:
+            if name in cls._symbols_used:
                 raise ValueError(
-                    name+""" is a symbol which is already defined
-                             as variable or parameter!""")
+                    """%s is a symbol which is already defined
+                    as variable or parameter!""" % name)
             else:
-                cls._symbols[name][1] = True
+                cls._symbols_used.append(name)
 
     @classmethod
     def _check_varpar(cls, name):
-        cnt = 0
         cnt = 0
         for label, child in OptiLayer._children.items():
             if name in child._variables:
@@ -58,8 +58,8 @@ class OptiLayer:
                 cnt += 1
         if cnt > 1:
             raise ValueError(
-                'Symbol '+name+""" already used multiple times as
-                                   variable or parameter!""")
+                """Symbol %s already used multiple times
+                as variable or parameter!""" % name)
         else:
             return cnt
 
@@ -68,76 +68,66 @@ class OptiLayer:
     # ========================================================================
 
     def define_symbol(self, name, size0=1, size1=1):
-        cnt = OptiLayer._check_varpar(name)
-        index = self._add_label(name)
         if not (name in OptiLayer._symbols):
-            OptiLayer._symbols[name] = [
-                MX.sym(index, size0, size1), (cnt == 1)]
-        OptiLayer._symbols[name][1] = (cnt == 1)
-        return OptiLayer._symbols[name][0]
-
-    def define_spline_symbol(self, name, size=1, **kwargs):
-        cnt = OptiLayer._check_varpar(name)
-        index = self._add_label(name)
-        basis = kwargs['basis'] if 'basis' in kwargs else self.basis
-        if not (name in OptiLayer._symbols):
-            OptiLayer._symbols[name] = [
-                MX.sym(index, len(basis), size1), (cnt == 1)]
-        OptiLayer._symbols[name][1] = (cnt == 1)
-        return [BSpline(basis, OptiLayer._symbols[name][0][:, k])
-                for k in range(size)]
+            self._define_mx(name, size0, size1, OptiLayer._symbols, 'symbol')
+        return self._symbols[name]
 
     def define_variable(self, name, size0=1, size1=1):
         OptiLayer._check_symbols(name)
-        index = self._add_label(name)
-        if index in self._variables:
-            raise ValueError(
-                'Name '+name+' already used for variable of '+label+'!')
-        self._variables[name] = MX.sym(index, size0, size1)
-        return self._variables[name]
+        return self._define_mx(name, size0, size1,
+                               self._variables, 'variable')
 
-    def define_spline_variable(self, name, size=1, **kwargs):
+    def define_parameter(self, name, size0=1, size1=1):
         OptiLayer._check_symbols(name)
-        index = self._add_label(name)
-        if index in self._variables:
-            raise ValueError(
-                'Name '+name+' already used for variable of '+self._label+'!')
+        return self._define_mx(name, size0, size1,
+                               self._parameters, 'parameter')
+
+    def define_spline_symbol(self, name, size0=1, size1=1, **kwargs):
         basis = kwargs['basis'] if 'basis' in kwargs else self.basis
-        self._splines[name] = basis
-        self._variables[name] = MX.sym(index, len(basis), size)
-        return [BSpline(basis, self._variables[name][:, k])
-                for k in range(size)]
+        if not (name in OptiLayer._symbols):
+            self._define_mx_spline(name, size0, size1, basis,
+                                   OptiLayer._symbols, 'symbol')
+        return self._symbols[name]
 
-    def define_parameter(self, name, size0=1, size1=1, label=None):
+    def define_spline_variable(self, name, size0=1, size1=1, **kwargs):
         OptiLayer._check_symbols(name)
-        index = self._add_label(name)
-        if index in self._parameters:
-            raise ValueError(
-                'Name '+name+' already used for parameter of '+self._label+'!')
-        self._parameters[name] = MX.sym(index, size0, size1)
-        return self._parameters[name]
+        basis = kwargs['basis'] if 'basis' in kwargs else self.basis
+        return self._define_mx_spline(name, size0, size1,
+                                      basis, self._variables, 'variable')
 
     def define_spline_parameter(self, name, size0=1, size1=1, **kwargs):
-        for l in range(size1):
-            _name = name + str(l)
-            OptiLayer._check_symbols(_name)
-            index = self._add_label(_name)
-            if index in self._parameters:
-                raise ValueError(
-                    'Name '+_name+' already used for parameter of ' +
-                    self._label+'!')
-            basis = kwargs['basis'] if 'basis' in kwargs else self.basis
-            self._parameters[_name] = MX.sym(index, len(basis), size0)
-        return [[BSpline(basis, self._parameters[name+str(l)][:, k])
-                 for k in range(size0)] for l in range(size1)]
+        OptiLayer._check_symbols(name)
+        basis = kwargs['basis'] if 'basis' in kwargs else self.basis
+        return self._define_mx_spline(name, size0, size1,
+                                      basis, self._parameters, 'parameter')
+
+    def _define_mx(self, name, size0, size1, dictionary, type):
+        index = self._add_label((name))
+        if index in dictionary:
+            raise ValueError('Name %s already used for %s of %s!' %
+                             (name, type, self._label))
+        dictionary[name] = MX.sym(index, size0, size1)
+        return dictionary[name]
+
+    def _define_mx_spline(self, name, size0, size1, basis, dictionary, type):
+        if size1 > 1:
+            ret = []
+            for l in range(size1):
+                _name = name + str(l)
+                ret.append(self._define_mx_spline(_name, size0, 1, basis,
+                                                  dictionary, type))
+            return ret
+        else:
+            coeffs = self._define_mx(name, len(basis), size0, dictionary, type)
+        return [BSpline(basis, coeffs[:, k]) for k in range(size0)]
 
     def define_constraint(self, expr, lb, ub, shutdown=False, name=None):
         if name is None:
             name = 'c'+str(self._constraint_cnt)
             self._constraint_cnt += 1
         if name in self._constraints:
-            raise ValueError('Name '+name+' already used for constraint of ' +
-                             self._label+'!')
+            raise ValueError('Name %s already used for constraint of %s!' %
+                             (name, self._label))
         if isinstance(expr, BSpline):
             self._constraints[name] = (
                 expr.coeffs, lb*np.ones(expr.coeffs.shape[0]),
