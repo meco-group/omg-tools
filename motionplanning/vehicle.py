@@ -2,8 +2,11 @@ from optilayer import OptiLayer, evalf
 from spline import BSplineBasis
 from casadi import SX, MX, SXFunction
 from scipy.signal import filtfilt, butter
-from scipy.interpolate import splev
+from scipy.interpolate import splev, interp1d
+from numpy.random import normal
 import numpy as np
+
+import time as tttime
 
 
 class Vehicle(OptiLayer):
@@ -46,36 +49,45 @@ class Vehicle(OptiLayer):
         self.set_default_options()
         self.set_options(options)
 
-        # create plant object
-        if self.options['model_mismatch']:
-            self.plant = Plant(self.update_real, self.update_model)
-        else:
-            self.plant = Plant(self.update_model, self.update_model)
-
     # ========================================================================
     # Vehicle options
     # ========================================================================
 
     def set_default_options(self):
         self.options = {'model_mismatch': False, 'safety_distance': 0.,
-                        'horizon_time': 10., 'sample_time': 0.01}
-        self.ideal = not self.options['model_mismatch']
-        if self.ideal:
-            self.options['boundary_smoothness'] = {'initial': self.order,
-                                                   'internal': self.degree-1,
-                                                   'terminal': self.degree}
-        else:
-            self.options['boundary_smoothness'] = {'initial': self.order,
-                                                   'internal': self.degree-2,
-                                                   'terminal': self.degree}
+                        'horizon_time': 10., 'sample_time': 0.01,
+                        'ideal_update': False}
+        self.options['boundary_smoothness'] = {'initial': self.order,
+                                               'internal': self.degree-2,
+                                               'terminal': self.degree}
 
     def set_options(self, options):
         self.options.update(options)
 
-    def set_disturbance(self, fc, stdev, mean=0.):
-        # fc = cut-off frequency divided by Nyquist frequency
-        self.ideal = False
-        self.plant.set_disturbance(fc, stdev, mean)
+    def set_input_disturbance(self, fc, stdev, mean=None):
+        # fc = cut-off frequency of disturbance
+        # stdev, mean = parameters for Gaussian noise
+        filt = butter(3, fc, 'low')
+        if mean is None:
+            mean = np.zeros(stdev.shape)
+        self._inpute_dist = {'filter': filt, 'mean': mean, 'stdev': stdev}
+
+    def add_input_disturbance(self, input):
+        if not hasattr(self, '_inpute_dist'):
+            return input
+        n_sign = input.shape[0]
+        n_samp = input.shape[2]
+        disturbance = np.zeros((n_sign, 1, n_samp))
+        filt = self._inpute_dist['filter']
+        mean = self._inpute_dist['mean']
+        stdev = self._inpute_dist['stdev']
+        for k in range(n_sign):
+            if stdev[k] > 0:
+                disturbance[k, :] = filtfilt(filt[0], filt[1],
+                                             normal(mean[k], stdev[k], n_samp))
+            else:
+                disturbance[k, :] = np.zeros(n_samp)
+        return input + disturbance
 
     # ========================================================================
     # Signal manipulation
@@ -159,10 +171,12 @@ class Vehicle(OptiLayer):
     def set_initial_condition(self, y0):
         self.y0 = y0
         for name in self._signals.keys():
-            self.path[name] = self.get_signal(name, y0)
-            self.prediction[name] = self.get_signal(name, y0)
+            signal = self.get_signal(name, y0)
+            self.prediction[name] = signal
+            self.path[name] = np.zeros(signal.shape + (1,))
+            self.path[name][:, :, 0] = self.get_signal(name, y0)
         self.path['time'] = np.array([0.])
-        self.plant.set_state(self.get_state(y0))
+        # self.plant.set_state(self.get_state(y0))
 
     def set_terminal_condition(self, yT):
         self.yT = yT
@@ -181,7 +195,7 @@ class Vehicle(OptiLayer):
 
     def _update_trajectory(self, y_coeffs, current_time, update_time,
                            horizon_time, sample_time, **kwargs):
-        # rel_current_time : current time wrt to spline basis
+        # rel_current_time : current time wrt to spline basis horizon
         rel_current_time = 0.
         if 'rel_current_time' in kwargs:
             rel_current_time = kwargs['rel_current_time']
@@ -200,8 +214,8 @@ class Vehicle(OptiLayer):
         self.trajectory = self.get_signals(y_coeffs, horizon_time,
                                            time_spline_ev)
         self.trajectory['time'] = time_axis
-        self.trajectory_kn = self.get_signals(
-            y_coeffs, horizon_time, time_spline_ev_knots)
+        self.trajectory_kn = self.get_signals(y_coeffs, horizon_time,
+                                              time_spline_ev_knots)
         self.trajectory_kn['time'] = time_axis_knots
         self._add_to_memory(self.trajectories, self.trajectory,
                             int(update_time/sample_time))
@@ -209,32 +223,42 @@ class Vehicle(OptiLayer):
                             int(update_time/sample_time))
 
     def _predict(self, predict_time, sample_time):
-        n_samp = int(predict_time/sample_time)
-        if self.ideal:
+        if self.options['ideal_update']:
+            n_samp = int(predict_time/sample_time)
             y_pred = self.trajectory['y'][:, :, n_samp]
         else:
-            y_pred = self.plant.simulate(
-                self.path['state'][:, :, -1],
-                self.trajectory['input'][:, :, :n_samp],
-                self.trajectory['y'][:, :, 1:n_samp+1], sample_time)
+            input = self.trajectory['input']
+            y0 = self.path['y'][:, :, -1]
+            y = self.integrate_model(y0, input, sample_time, predict_time)
+            y_pred = y[:, :, -1]
+            n_samp = int(predict_time/sample_time)
         for key in self._signals.keys():
             self.prediction[key] = self.get_signal(key, y_pred)
-        self._add_to_memory(
-            self.predictions, self.prediction, int(predict_time/sample_time))
+        self._add_to_memory(self.predictions, self.prediction,
+                            int(predict_time/sample_time))
 
     def _follow_trajectory(self, follow_time, sample_time):
         n_samp = int(follow_time/sample_time)
-        y = self.trajectory['y'][:, :, 1:n_samp+1]
-        if not self.ideal:
-            y = self.plant.update(
-                self.trajectory['input'][:, :, :n_samp], y, sample_time)
-        self.path['time'] = np.append(
-            self.path['time'], (self.path['time'][-1] +
-                                np.linspace(sample_time, follow_time, n_samp)),
-            axis=1)
+        if self.options['ideal_update']:
+            y = self.trajectory['y'][:, :, 1:n_samp+1]
+        else:
+            y0 = self.path['y'][:, :, -1]
+            input = self.add_input_disturbance(self.trajectory['input'])
+            y = self.integrate_model(y0, input, sample_time, follow_time)
+            y = y[:, :, 1:]
+        self.path['time'] = np.append(self.path['time'],
+                                      (self.path['time'][-1] +
+                                       np.linspace(sample_time, follow_time,
+                                                   n_samp)), axis=1)
         for key in self._signals.keys():
             self.path[key] = np.dstack(
                 (self.path[key], self.get_signal(key, y)))
+
+    def _get_input_sample(self, time, input, sample_time):
+        n_samp = input.shape[1]
+        time_axis = np.linspace(0, (n_samp-1)*sample_time, n_samp)
+        u_interp = interp1d(time_axis, input, kind='linear')
+        return u_interp(time)
 
     def _init_memory(self):
         self.trajectories = {}
@@ -254,12 +278,6 @@ class Vehicle(OptiLayer):
     # ========================================================================
     # Methods encouraged to override (very basic implementation)
     # ========================================================================
-
-    def update_model(self, state, input, y, sample_time):
-        return y
-
-    def update_real(self, state, input, y, sample_time):
-        self.update_model(state, input, y, sample_time)
 
     def init_variables(self):
         variables = {'y': np.zeros((len(self.basis), self.n_y))}
@@ -290,45 +308,5 @@ class Vehicle(OptiLayer):
     def set_terminal_pose(self, pose):
         raise NotImplementedError('Please implement this method!')
 
-
-class Plant:
-
-    def __init__(self, update_real, update_model):
-        self.update_real = update_real
-        self.update_model = update_model
-        self._dist_pntr = 0
-
-    def set_disturbance(self, fc, stdev, mean=0.):
-        # create disturbance signal
-        # fc = cut-off frequency divided by Nyquist frequency
-        self._n_samp = 3000
-        n_in = len(stdev)
-        b, a = butter(3, fc, 'low')
-        self.disturbance = np.zeros((n_in, self._n_samp))
-        for k in range(n_in):
-            if stdev[k] > 0.:
-                self.disturbance[k, :] = filtfilt(
-                    b, a, np.random.normal(mean[k], stdev[k], self._n_samp))
-            else:
-                self.disturbance[k, :] = np.zeros(self._n_samp)
-
-    def set_state(self, state):
-        self.state = state
-
-    def simulate(self, state0, input, y, sample_time):
-        state = state0
-        for k in range(input.shape[1]):
-            y = self.update_model(state, input[:, k], y[:, :, k], sample_time)
-        return y
-
-    def update(self, input, y, sample_time):
-        _y = []
-        for k in range(input.shape[1]):
-            y = self.update_real(
-                self.state, input[:, k] +
-                self.disturbances[:, self._dist_pntr], sample_time)
-            _y.append(np.c_[y])
-            self._dist_pntr += 1
-            if self._dist_pntr >= self._n_samp:
-                self._dist_pntr = 0
-        return y
+    def integrate_model(self, y0, input, sample_time, integration_time):
+        raise NotImplementedError('Please implement this method!')

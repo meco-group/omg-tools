@@ -1,6 +1,8 @@
 from vehicle import Vehicle
 from shape import Circle
 from casadi import inf
+from scipy.integrate import odeint
+
 import numpy as np
 
 
@@ -21,8 +23,9 @@ class Holonomic(Vehicle):
         y1, dy1, ddy1 = y[1, 0], y[1, 1], y[1, 2]
 
         self.define_position([y0, y1])
-        self.define_input([dy0, dy0])
-        self.define_state([y0, y1, dy0, dy1])
+        self.define_input([dy0, dy1])
+        self.define_state([y0, y1])
+        self.define_signal('a', [ddy0, ddy1])
 
         # define system constraints
         y0, y1 = self.splines[0], self.splines[1]
@@ -50,19 +53,22 @@ class Holonomic(Vehicle):
         y[:, 0] = position
         self.set_terminal_condition(y)
 
-    def update_model(self, state, input, _y, sample_time):
-        _x, _z, _ux, _uz = state[0, :], state[1, :], state[2, :], state[3, :]
-
-        ux, uz = input[0, :], input[1, :]
-        x = _x + 0.5*sample_time*(ux + _ux)
-        z = _z + 0.5*sample_time*(uz + _uz)
-
-        y = np.zeros((self.n_y, self.order+1))
-        y[:, 0] = [x, z]
-        y[:, 1] = [ux, uz]
-        for k in range(2, self.orde+2):
-            y[:, k] = _y[:, k]
+    def integrate_model(self, y0, input, sample_time, integration_time):
+        n_samp = int(integration_time/sample_time)+1
+        y = np.zeros((self.n_y, self.order+1, n_samp))
+        state0 = self.get_state(y0).ravel()
+        time_axis = np.linspace(0., (n_samp-1)*sample_time, n_samp)
+        y[:, 0, :] = odeint(self._model_update, state0, time_axis,
+                            args=(input[:, 0, :], sample_time)).T
+        y[:, 1, :] = input[:, 0, :n_samp]
+        for d in range(2, self.order+1):
+            for k in range(self.n_y):
+                y[k, d, :] = np.gradient(y[k, d-1, :], sample_time)
         return y
+
+    def _model_update(self, state, time, input, sample_time):
+        u = self._get_input_sample(time, input, sample_time)
+        return u
 
     def draw(self, t=-1):
         return self.path['position'][:, :, t] + self.shape.draw()
