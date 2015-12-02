@@ -138,6 +138,6 @@ class Point2point(Problem):
 
     def stop_criterium(self):
         for vehicle in self.vehicles:
-            if np.linalg.norm(vehicle.prediction['y'] - vehicle.yT) > 1.e-2:
+            if np.linalg.norm(vehicle.trajectory['y'][:,:,0] - vehicle.yT) > 1.e-2:
                 return False
         return True
