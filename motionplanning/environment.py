@@ -76,6 +76,8 @@ class Environment(OptiLayer):
         chck_obs = self.define_spline_parameter(
             'chck_'+str(obstacle.index), self.n_dim,
             obstacle.shape.n_chck, basis=obstacle.basis)
+        if obstacle.shape.n_chck == 1:
+            chck_obs = [chck_obs]
         rad_obs = self.define_parameter('rad_'+str(obstacle.index))
 
         for vehicle in self.vehicles:
@@ -135,8 +137,12 @@ class Environment(OptiLayer):
             # checkpoints
             chck_obs, rad_obs = obstacle.get_checkpoints(x_obs)
             for l, chck in enumerate(chck_obs):
-                parameters['chck_'+str(obstacle.index)+str(l)] = np.hstack(
-                    [np.c_[chck[k].coeffs] for k in range(self.n_dim)])
+                if len(chck_obs) == 1:
+                    name = 'chck_'+str(obstacle.index)
+                else:
+                    name = 'chck_'+str(obstacle.index)+str(l)
+                parameters[name] = np.hstack([np.c_[chck[k].coeffs]
+                                             for k in range(self.n_dim)])
             parameters['rad_'+str(obstacle.index)] = rad_obs
         return parameters
 
