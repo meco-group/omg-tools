@@ -2,6 +2,7 @@ from vehicle import Vehicle
 from shape import Quad
 import numpy as np
 from casadi import inf, sqrt, arctan2
+from scipy.integrate import odeint
 
 
 class Quadrotor(Vehicle):
@@ -28,7 +29,7 @@ class Quadrotor(Vehicle):
 
         self.define_position([y0, y1])
         self.define_input([u1, u2])
-        self.define_state([y0, y1, dy0, dy1, theta, u1, u2])
+        self.define_state([y0, y1, theta, dy0, dy1])
 
         # define system constraints
         y0, y1 = self.splines[0], self.splines[1]
@@ -61,24 +62,35 @@ class Quadrotor(Vehicle):
         y[:, 0] = position
         self.set_terminal_condition(y)
 
-    def update_model(self, state, input, _y, sample_time):
-        _x, _z, _dx, _dz = state[0, :], state[1, :], state[2, :], state[3, :]
-        _th, _u1, _u2 = state[4, :], state[5, :], state[6, :]
-
-        u1, u2 = input[0, :], input[1, :]
-        th = _th + 0.5*sample_time*(u2 + _u2)
-        dx = _dx + 0.5*sample_time*(u1*np.sin(th) + _u1*np.sin(_th))
-        dz = _dz + 0.5*sample_time*(u1*np.cos(th) + _u1*np.cos(_th) - 2*self.g)
-        x = _x + 0.5*sample_time*(dx + _dx)
-        z = _z + 0.5*sample_time*(dz + _dz)
-
-        y = np.zeros((self.n_y, self.order+1))
-        y[:, 0] = [x, z]
-        y[:, 1] = [dx, dz]
-        y[:, 2] = [u1*np.sin(th), u1*np.cos(th)-self.g]
-        y[:, 3] = _y[:, 3]
+    def integrate_model(self, y0, input, sample_time, integration_time):
+        n_samp = int(integration_time/sample_time)+1
+        y = np.zeros((self.n_y, self.order+1, n_samp))
+        state0 = self.get_state(y0).ravel()
+        time_axis = np.linspace(0., (n_samp-1)*sample_time, n_samp)
+        state = odeint(self._model_update, state0, time_axis,
+                       args=(input[:, 0, :], sample_time)).T
+        y[:, 0, :] = state[:2, :]
+        y[:, 1, :] = state[3:, :]
+        u = input[:, 0, :n_samp]
+        theta = state[2, :]
+        y[0, 2, :] = u[0, :]*np.sin(theta)
+        y[1, 2, :] = u[0, :]*np.cos(theta) - self.g
+        for d in range(3, self.order+1):
+            for k in range(self.n_y):
+                y[k, d, :] = np.gradient(y[k, d-1, :], sample_time)
         return y
+
+    def _model_update(self, state, time, input, sample_time):
+        u = self._get_input_sample(time, input, sample_time)
+        x, z, theta, dx, dz = state
+        dstate = np.zeros(5)
+        dstate[0] = dx
+        dstate[1] = dz
+        dstate[2] = u[1]
+        dstate[3] = u[0]*np.sin(theta)
+        dstate[4] = u[0]*np.cos(theta) - self.g
+        return dstate
 
     def draw(self, t=-1):
         return (self.path['position'][:, :, t] +
-                self.shape.draw(-self.path['state'][4, :, t]))
+                self.shape.draw(-self.path['state'][2, :, t]))
