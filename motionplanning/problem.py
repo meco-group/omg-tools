@@ -24,15 +24,19 @@ class Simulator:
         current_time = 0.
         stop = False
         while not stop:
-            # solve problem
-            self.problem.solve(current_time)
-            # update vehicle(s) and environment
-            self.problem.update(current_time, self.options['update_time'])
+            stop = self.update(current_time)
             current_time += self.options['update_time']
-            self.plot.update()
-            # check termination criteria
-            stop = self.problem.stop_criterium()
         self.problem.final()
+
+    def update(self, current_time):
+        # solve problem
+        self.problem.solve(current_time)
+        # update vehicle(s) and environment
+        self.problem.update(current_time, self.options['update_time'])
+        self.plot.update()
+        # check termination criteria
+        stop = self.problem.stop_criterium()
+        return stop
 
 
 class Problem(OptiLayer):

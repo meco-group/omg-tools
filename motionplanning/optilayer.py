@@ -7,8 +7,6 @@ import copy
 
 def evalf(fun, x):
     x = x if isinstance(x, list) else [x]
-    if not fun.isInit():
-        fun.init()
     return fun(x)
 
 
