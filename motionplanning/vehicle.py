@@ -3,10 +3,9 @@ from spline import BSplineBasis
 from casadi import SX, MX, SXFunction
 from scipy.signal import filtfilt, butter
 from scipy.interpolate import splev, interp1d
+from scipy.integrate import odeint
 from numpy.random import normal
 import numpy as np
-
-import time as tttime
 
 
 class Vehicle(OptiLayer):
@@ -54,15 +53,20 @@ class Vehicle(OptiLayer):
     # ========================================================================
 
     def set_default_options(self):
-        self.options = {'model_mismatch': False, 'safety_distance': 0.,
+        self.options = {'safety_distance': 0., 'safety_weight': 10.,
                         'horizon_time': 10., 'sample_time': 0.01,
-                        'ideal_update': False}
+                        'ideal_update': False, '1storder_delay': False,
+                        'time_constant': 0.1}
         self.options['boundary_smoothness'] = {'initial': self.order,
                                                'internal': self.degree-2,
                                                'terminal': self.degree}
 
     def set_options(self, options):
         self.options.update(options)
+        if self.options['1storder_delay']:
+            self.integrate_plant = self._integrate_plant
+        else:
+            self.integrate_plant = self.integrate_model
 
     def set_input_disturbance(self, fc, stdev, mean=None):
         # fc = cut-off frequency of disturbance
@@ -104,12 +108,15 @@ class Vehicle(OptiLayer):
 
     def define_position(self, expr):
         self.define_signal('position', expr)
+        self.n_pos = self.signal_length['position']
 
     def define_input(self, expr):
         self.define_signal('input', expr)
+        self.n_in = self.signal_length['input']
 
     def define_state(self, expr):
         self.define_signal('state', expr)
+        self.n_st = self.signal_length['state']
 
     # evaluate symbols from symbolic or numeric y trajectories
     def get_signal(self, name, y=None):
@@ -163,6 +170,21 @@ class Vehicle(OptiLayer):
                                                       y_coeffs[:, k].ravel(),
                                                       self.degree), d)
         return y
+
+    # inverse getter: get y from state and input
+    def _get_y(self, state, input):
+        if len(state.shape) == 3:
+            n_samp = state.shape[2]
+            y = np.zeros((self.n_y, self.order+1, n_samp))
+            for k in range(n_samp):
+                y[:, :, k], deg = self._get_y(state[:, :, k], input[:, :, k])
+            sample_time = self.options['sample_time']
+            for d in range(deg+1, self.order+1):
+                for k in range(self.n_y):
+                    y[k, d, :] = np.gradient(y[k, d-1, :], sample_time)
+            return y
+        else:
+            return self.get_y(state, input)
 
     # ========================================================================
     # Initial and terminal conditions
@@ -244,7 +266,7 @@ class Vehicle(OptiLayer):
         else:
             y0 = self.path['y'][:, :, -1]
             input = self.add_input_disturbance(self.trajectory['input'])
-            y = self.integrate_model(y0, input, sample_time, follow_time)
+            y = self.integrate_plant(y0, input, sample_time, follow_time)
             y = y[:, :, 1:]
         self.path['time'] = np.append(self.path['time'],
                                       (self.path['time'][-1] +
@@ -254,11 +276,52 @@ class Vehicle(OptiLayer):
             self.path[key] = np.dstack(
                 (self.path[key], self.get_signal(key, y)))
 
-    def _get_input_sample(self, time, input, sample_time):
-        n_samp = input.shape[1]
+    def integrate_model(self, y0, input, sample_time, integration_time):
+        u_interp = self._get_input_interpolator(input, sample_time)
+        n_samp = int(integration_time/sample_time)+1
+        time_axis = np.linspace(0., (n_samp-1)*sample_time, n_samp)
+        y = np.zeros((self.n_y, self.order+1, n_samp))
+        state0 = self.get_state(y0).ravel()
+        state = np.zeros((self.n_st, 1, n_samp))
+        state[:, 0, :] = odeint(self._update_ode_model, state0, time_axis,
+                                args=(u_interp,)).T
+        y = self._get_y(state, input[:, :, :n_samp])
+        return y
+
+    def _update_ode_model(self, state, time, u_interp):
+        u = u_interp(time)
+        return self.model_update(state, u)
+
+    def _integrate_plant(self, y0, input, sample_time, integration_time):
+        u_interp = self._get_input_interpolator(input, sample_time)
+        n_samp = int(integration_time/sample_time)+1
+        time_axis = np.linspace(0., (n_samp-1)*sample_time, n_samp)
+        y = np.zeros((self.n_y, self.order+1, n_samp))
+        state0_a = self.get_state(y0).ravel()
+        state0_b = self.get_input(y0).ravel()
+        state0 = np.r_[state0_a, state0_b]
+        state = np.zeros((self.n_st+self.n_in, 1, n_samp))
+        state[:, 0, :] = odeint(self._update_ode_plant, state0, time_axis,
+                                args=(u_interp,)).T
+        y = self._get_y(state[:self.n_st, :, :], state[-self.n_in:, :, :])
+        return y
+
+    def _update_ode_plant(self, state, time, u_interp):
+        u = u_interp(time)
+        return self.plant_update(state, u)
+
+    def _get_input_interpolator(self, input, sample_time):
+        n_samp = input.shape[2]
         time_axis = np.linspace(0, (n_samp-1)*sample_time, n_samp)
-        u_interp = interp1d(time_axis, input, kind='linear')
-        return u_interp(time)
+        return interp1d(time_axis, input[:, 0, :], kind='linear')
+
+    def plant_update(self, state, input):
+        tau = self.options['time_constant']
+        state_a = state[:self.n_st]
+        state_b = state[-self.n_in:]
+        dstate_a = self.model_update(state=state_a, input=state_b)
+        dstate_b = (1./tau)*(-state_b + input)
+        return np.r_[dstate_a, dstate_b]
 
     def _init_memory(self):
         self.trajectories = {}
@@ -308,5 +371,8 @@ class Vehicle(OptiLayer):
     def set_terminal_pose(self, pose):
         raise NotImplementedError('Please implement this method!')
 
-    def integrate_model(self, y0, input, sample_time, integration_time):
+    def model_update(self, state, input):
+        raise NotImplementedError('Please implement this method!')
+
+    def get_y(self, state, input):
         raise NotImplementedError('Please implement this method!')
