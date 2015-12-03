@@ -15,6 +15,7 @@ class Vehicle(OptiLayer):
         OptiLayer.__init__(self, 'vehicle'+str(self.index))
         self.shape = shape
         self._signals = {}
+        self._signals_num = {}
         self.signal_length = {}
         self._init_memory()
 
@@ -105,6 +106,8 @@ class Vehicle(OptiLayer):
             self.signal_length[name] = expr.shape[0]
         expr = [expr] if not isinstance(expr, list) else expr
         self._signals[name] = SXFunction([self._y], expr)
+        self._signals[name].init()
+        self._signals_num[name] = self._generate_function(expr)
 
     def define_position(self, expr):
         self.define_signal('position', expr)
@@ -126,16 +129,15 @@ class Vehicle(OptiLayer):
         elif isinstance(y, (MX, SX)):
             result = evalf(self._signals[name], y)
             result = result[0] if len(result) == 1 else result
-        else:
+        else:  # numerical evaluation
             if len(y.shape) == 3:
                 result = []
                 for t in range(y.shape[2]):
-                    ret = evalf(self._signals[name], y[:, :, t])
-                    result.append(np.vstack([r.toArray() for r in ret]))
+                    ret = np.vstack(self._signals_num[name](y[:, :, t]))
+                    result.append(ret)
                 result = np.dstack(result)
             else:
-                result = [r.toArray() for r in evalf(self._signals[name], y)]
-                result = np.vstack(result)
+                result = np.vstack(self._signals_num[name](y))
         return result
 
     def get_position(self, y=None):
@@ -185,6 +187,47 @@ class Vehicle(OptiLayer):
             return y
         else:
             return self.get_y(state, input)
+
+    # convert symbolic casadi expression to numerical function evaluation
+    # this is probably the most stupid way to do it, but it is the most
+    # efficient way that works. Idea is: check your casadi expression and
+    # build up a string from which a lambda expression is build. Because casadi
+    # uses in its __str__ function some non-python operation names,
+    # _check_expression should translate them. This is however manually
+    # implemented and probably not all cases are covered...
+    def _generate_function(self, expression):
+        if not isinstance(expression, list):
+            expression = [expression]
+        expr_str = []
+        for expr in expression:
+            string = expr.__str__()
+            for k in range(self.n_y):
+                for l in range(self.order+1):
+                    j = self.n_y*l + k
+                    string = string.replace('y_%d' % (j), 'y[%d,%d]' % (k, l))
+            string = self._check_expression(string)
+            expr_str.append(string)
+        exec('fun = lambda y: [%s]' % ','.join(expr_str))
+        return fun
+
+    def _check_expression(self, expression):
+        dictionary = {'sqrt(': 'np.sqrt(', 'cos(': 'np.cos(',
+                      'sin(': 'np.sin(', 'atan2(': 'np.arctan2(',
+                      'atan(': 'np.arctan(', 'tan(': 'np.tan(',
+                      'pow(': 'np.power(', 'log(': 'np.log(',
+                      'log10(': 'np.log10('}
+        for str1, str2 in dictionary.items():
+            if expression.find(str1) >= 0:
+                expression = expression.replace(str1, str2)
+        # sq() means power of 2
+        while expression.find('sq(') >= 0:
+            splt = expression.split('sq(', 1)
+            a = splt[1]
+            br_in_between = len(a.split(')')[0].split('(')) - 1
+            splt2 = a.split(')', br_in_between+1)
+            expression = (splt[0]+'np.power('+')'.join(splt2[:br_in_between+1])
+                          + ','+str(2)+')' + splt2[-1])
+        return expression
 
     # ========================================================================
     # Initial and terminal conditions
