@@ -1,5 +1,4 @@
 from optilayer import OptiLayer
-from fleet import get_fleet_vehicles
 from spline import BSplineBasis, BSpline
 from spline_extra import definite_integral
 from casadi import inf
@@ -8,9 +7,8 @@ import numpy as np
 
 class Environment(OptiLayer):
 
-    def __init__(self, room, vehicles, obstacles=[], options={}):
+    def __init__(self, room, obstacles=[], options={}):
         OptiLayer.__init__(self, 'environment')
-        self.fleet, self.vehicles = get_fleet_vehicles(vehicles)
 
         self.set_default_options()
         self.set_options(options)
@@ -20,15 +18,6 @@ class Environment(OptiLayer):
         if not ('position' in room):
             self.room['position'] = [0. for k in range(self.n_dim)]
 
-        # create spline basis: same knot sequence as vehicle (but other degree)
-        veh = self.vehicles[0]
-        self.degree = 1
-        self.knots = np.r_[
-            np.zeros(self.degree), veh.knots[veh.degree:-veh.degree],
-            np.ones(self.degree)]
-        self.knot_intervals = len(veh.knots[veh.degree:-veh.degree]) - 1
-        self.basis = BSplineBasis(self.knots, self.degree)
-
         # objective for environment
         self._objective = 0.
 
@@ -37,23 +26,12 @@ class Environment(OptiLayer):
         for obstacle in obstacles:
             self.add_obstacle(obstacle)
 
-        # simple room constraint
-        lim = self.get_canvas_limits()
-        for vehicle in self.vehicles:
-            chck_veh, rad_veh = vehicle.get_checkpoints()
-            for chck in chck_veh:
-                for k in range(self.n_dim):
-                    self.define_constraint(-chck[k] + lim[k][0], -inf, 0.)
-                    self.define_constraint(chck[k] - lim[k][1], -inf, 0.)
-
     # ========================================================================
     # Environment options
     # ========================================================================
 
     def set_default_options(self):
         self.options = {}
-        self.options['horizon_time'] = self.vehicles[0].options['horizon_time']
-        self.options['sample_time'] = self.vehicles[0].options['sample_time']
 
     def set_options(self, options):
         self.options.update(options)
@@ -70,19 +48,39 @@ class Environment(OptiLayer):
             obstacle.index = self.No
             self.obstacles.append(obstacle)
             self.No += 1
-            self._add_obstacleconstraints(obstacle)
 
-    def _add_obstacleconstraints(self, obstacle):
-        chck_obs = self.define_spline_parameter(
-            'chck_'+str(obstacle.index), self.n_dim,
-            obstacle.shape.n_chck, basis=obstacle.basis)
-        if obstacle.shape.n_chck == 1:
-            chck_obs = [chck_obs]
-        rad_obs = self.define_parameter('rad_'+str(obstacle.index))
+    def add_vehicle(self, vehicle):
+        if isinstance(vehicle, list):
+            for veh in vehicle:
+                self.add_vehicle(veh)
+        else:
+            if not hasattr(self, 'basis'):
+                # create spline basis: same knot sequence as vehicle (but other degree)
+                veh = vehicle
+                self.degree = 1
+                self.knots = np.r_[
+                    np.zeros(self.degree), veh.knots[veh.degree:-veh.degree],
+                    np.ones(self.degree)]
+                self.knot_intervals = len(veh.knots[veh.degree:-veh.degree]) - 1
+                self.basis = BSplineBasis(self.knots, self.degree)
+                # define time information
+                self.options['horizon_time'] = veh.options['horizon_time']
+                self.options['sample_time'] = veh.options['sample_time']
 
-        for vehicle in self.vehicles:
-            safety_distance = vehicle.options['safety_distance']
-            safety_weight = vehicle.options['safety_weight']
+            self._add_vehicleconstraints(vehicle)
+
+    def _add_vehicleconstraints(self, vehicle):
+        safety_distance = vehicle.options['safety_distance']
+        safety_weight = vehicle.options['safety_weight']
+
+        chck_veh, rad_veh = vehicle.get_checkpoints()
+        for obstacle in self.obstacles:
+            chck_obs = self.define_spline_parameter(
+                'chck_'+str(obstacle.index), self.n_dim,
+                obstacle.shape.n_chck, basis=obstacle.basis)
+            if obstacle.shape.n_chck == 1:
+                chck_obs = [chck_obs]
+            rad_obs = self.define_parameter('rad_'+str(obstacle.index))
 
             a_hp = self.define_spline_variable(
                 'a_' + str(vehicle.index)+str(obstacle.index), self.n_dim)
@@ -92,13 +90,13 @@ class Environment(OptiLayer):
                 t, T = self.define_symbol('t'), self.define_symbol('T')
                 eps = self.define_spline_variable(
                     'eps_'+str(vehicle.index)+str(obstacle.index))[0]
-                self._objective += safety_weight*definite_integral(eps, t/T, 1.)
+                self._objective += (safety_weight *
+                                    definite_integral(eps, t/T, 1.))
                 self.define_constraint(eps - safety_distance, -inf, 0.)
                 self.define_constraint(-eps, -inf, 0.)
             else:
                 eps = 0.
 
-            chck_veh, rad_veh = vehicle.get_checkpoints()
             for chck in chck_veh:
                 self.define_constraint(sum(
                     [a_hp[k]*chck[k] for k in range(self.n_dim)]) -
@@ -110,6 +108,52 @@ class Environment(OptiLayer):
             self.define_constraint(sum(
                 [a_hp[k]*a_hp[k] for k in range(self.n_dim)])-1., -inf, 0.)
         self.define_objective(self._objective)
+
+        # simple room constraint
+        lim = self.get_canvas_limits()
+        for chck in chck_veh:
+            for k in range(self.n_dim):
+                self.define_constraint(-chck[k] + lim[k][0], -inf, 0.)
+                self.define_constraint(chck[k] - lim[k][1], -inf, 0.)
+
+    # def _add_obstacleconstraints(self, obstacle):
+    #     chck_obs = self.define_spline_parameter(
+    #         'chck_'+str(obstacle.index), self.n_dim,
+    #         obstacle.shape.n_chck, basis=obstacle.basis)
+    #     if obstacle.shape.n_chck == 1:
+    #         chck_obs = [chck_obs]
+    #     rad_obs = self.define_parameter('rad_'+str(obstacle.index))
+
+    #     for vehicle in self.vehicles:
+    #         safety_distance = vehicle.options['safety_distance']
+    #         safety_weight = vehicle.options['safety_weight']
+
+    #         a_hp = self.define_spline_variable(
+    #             'a_' + str(vehicle.index)+str(obstacle.index), self.n_dim)
+    #         b_hp = self.define_spline_variable(
+    #             'b_' + str(vehicle.index)+str(obstacle.index))[0]
+    #         if safety_distance > 0.:
+    #             t, T = self.define_symbol('t'), self.define_symbol('T')
+    #             eps = self.define_spline_variable(
+    #                 'eps_'+str(vehicle.index)+str(obstacle.index))[0]
+    #             self._objective += safety_weight*definite_integral(eps, t/T, 1.)
+    #             self.define_constraint(eps - safety_distance, -inf, 0.)
+    #             self.define_constraint(-eps, -inf, 0.)
+    #         else:
+    #             eps = 0.
+
+    #         chck_veh, rad_veh = vehicle.get_checkpoints()
+    #         for chck in chck_veh:
+    #             self.define_constraint(sum(
+    #                 [a_hp[k]*chck[k] for k in range(self.n_dim)]) -
+    #                 b_hp + rad_veh + 0.5*(safety_distance-eps), -inf, 0.)
+    #         for chck in chck_obs:
+    #             self.define_constraint(-sum(
+    #                 [a_hp[k]*chck[k] for k in range(self.n_dim)]) +
+    #                 b_hp + rad_obs + 0.5*(safety_distance-eps), -inf, 0.)
+    #         self.define_constraint(sum(
+    #             [a_hp[k]*a_hp[k] for k in range(self.n_dim)])-1., -inf, 0.)
+    #     self.define_objective(self._objective)
 
     # ========================================================================
     # Update environment

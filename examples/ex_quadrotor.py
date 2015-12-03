@@ -11,13 +11,13 @@ vehicle.set_options({'safety_distance': 0.1})
 # vehicle.set_input_disturbance(0.01, 0.1*np.ones(2))
 
 # create environment
-environment = Environment(room={'shape': Square(5.)}, vehicles=vehicle)
+environment = Environment(room={'shape': Square(5.)})
 environment.add_obstacle(Obstacle({'position': [-0.6, -5.4]},
                                   shape=Rectangle(width=0.2, height=12.)))
 
 # create a point-to-point problem
-codegen = {'compileme': False, 'codegen': True, 'buildname': 'quadrotor'}
-problem = Point2point(environment, options={'codegen': codegen})
+codegen = {'compileme': True, 'codegen': True, 'buildname': 'quadrotor'}
+problem = Point2point(vehicle, environment, options={'codegen': codegen})
 
 # create simulator
 simulator = Simulator(problem)

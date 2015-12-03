@@ -16,7 +16,7 @@ vehicle.set_initial_pose([-1.5, -1.5])
 vehicle.set_terminal_pose([2., 2.])
 
 # create environment
-environment = Environment(room={'shape': Square(2.5)}, vehicles=vehicle)
+environment = Environment(room={'shape': Square(2.5)})
 rectangle = Rectangle(width=3., height=0.2)
 environment.add_obstacle(Obstacle({'position': [-2.1, -0.5]}, shape=rectangle))
 environment.add_obstacle(Obstacle({'position': [1.7, -0.5]}, shape=rectangle))
@@ -25,8 +25,8 @@ environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
                                   trajectory=trajectory))
 
 # create a point-to-point problem
-codegen = {'compileme': False, 'codegen': True, 'buildname': 'holonomic'}
-problem = Point2point(environment, options={'codegen': codegen})
+codegen = {'compileme': True, 'codegen': True, 'buildname': 'holonomic'}
+problem = Point2point(vehicle, environment, options={'codegen': codegen})
 
 # create simulator
 simulator = Simulator(problem)
