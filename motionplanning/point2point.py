@@ -6,8 +6,8 @@ import numpy as np
 
 class Point2point(Problem):
 
-    def __init__(self, environment, options={}):
-        Problem.__init__(self, environment, options)
+    def __init__(self, fleet, environment, options={}):
+        Problem.__init__(self, fleet, environment, options)
 
         g = [self.define_spline_variable(
             'g_'+str(vehicle.index), vehicle.n_y, basis=vehicle.basis)
@@ -75,7 +75,6 @@ class Point2point(Problem):
         parameters['T'] = self.vehicles[0].options['horizon_time']
         parameters['t'] = np.round(current_time, 6) % self.knot_time
         for vehicle in self.vehicles:
-
             parameters['y0_'+str(vehicle.index)] = vehicle.prediction['y']
             parameters['yT_'+str(vehicle.index)] = vehicle.yT
         return parameters

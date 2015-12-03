@@ -1,4 +1,5 @@
 from optilayer import OptiLayer
+from fleet import get_fleet_vehicles
 from plots import Plots
 from casadi import MXFunction, NlpSolver, nlpIn, nlpOut
 from codegeneration import get_nlp_solver, get_function
@@ -41,11 +42,14 @@ class Simulator:
 
 class Problem(OptiLayer):
 
-    def __init__(self, environment, options={}):
-        self.fleet = environment.fleet
-        self.vehicles = self.fleet.vehicles
+    def __init__(self, fleet, environment, options={}, **kwargs):
+        self.fleet, self.vehicles = get_fleet_vehicles(fleet)
         self.environment = environment
-        OptiLayer.__init__(self, 'problem')
+        self.environment.add_vehicle(self.vehicles)
+        if 'opti_name' in kwargs:
+            OptiLayer.__init__(self, kwargs['opti_name'])
+        else:
+            OptiLayer.__init__(self, 'problem')
         self.set_default_options()
         self.set_options(options)
         self.iteration = 0

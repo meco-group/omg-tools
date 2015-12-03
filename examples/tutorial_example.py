@@ -53,9 +53,8 @@ vehicle.set_options({'safety_distance': 0.1})
 #   vehicle.set_options({'1storder_delay': True, 'time_constant': 0.1})
 
 # Now, we create an environment
-# An environment is determined by a room with certain shape and we put the
-# vehicle(s) inside the environment
-environment = Environment(room={'shape': Square(2.5)}, vehicles=vehicle)
+# An environment is determined by a room with certain shape
+environment = Environment(room={'shape': Square(2.5)})
 # Also we can add some obstacles
 # Let's first define a recangular shape
 rectangle = Rectangle(width=3., height=0.2)
@@ -80,7 +79,7 @@ environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
 # There arer other options, set on a default value. Check them out with
 # problem.options
 codegen = {'compileme': False, 'codegen': True, 'buildname': 'holonomic'}
-problem = Point2point(environment, options={'codegen': codegen})
+problem = Point2point(vehicle, environment, options={'codegen': codegen})
 
 # Create simulator
 # This allows to simulate a motion planning algorithm and allows to plot
