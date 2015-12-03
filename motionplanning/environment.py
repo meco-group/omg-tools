@@ -82,6 +82,7 @@ class Environment(OptiLayer):
 
         for vehicle in self.vehicles:
             safety_distance = vehicle.options['safety_distance']
+            safety_weight = vehicle.options['safety_weight']
 
             a_hp = self.define_spline_variable(
                 'a_' + str(vehicle.index)+str(obstacle.index), self.n_dim)
@@ -91,7 +92,7 @@ class Environment(OptiLayer):
                 t, T = self.define_symbol('t'), self.define_symbol('T')
                 eps = self.define_spline_variable(
                     'eps_'+str(vehicle.index)+str(obstacle.index))[0]
-                self._objective += (10.)*definite_integral(eps, t/T, 1.)
+                self._objective += safety_weight*definite_integral(eps, t/T, 1.)
                 self.define_constraint(eps - safety_distance, -inf, 0.)
                 self.define_constraint(-eps, -inf, 0.)
             else:
