@@ -6,6 +6,9 @@ from motionplanning import *
 vehicle = Quadrotor()
 vehicle.set_initial_pose([-4., -4.])
 vehicle.set_terminal_pose([4., 4.])
+vehicle.set_options({'safety_distance': 0.1})
+# vehicle.set_options({'1storder_delay': True, 'time_constant': 0.1})
+# vehicle.set_input_disturbance(0.01, 0.1*np.ones(2))
 
 # create environment
 environment = Environment(room={'shape': Square(5.)}, vehicles=vehicle)

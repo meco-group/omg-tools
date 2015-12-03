@@ -44,6 +44,13 @@ vehicle.options['boundary_smoothness']['initial'] = 1
 # Collision avoidance where we try to keep a distance 0.1m (in a soft way),
 # but distance 0m in a hard way.
 vehicle.set_options({'safety_distance': 0.1})
+# For simulation, we can add some input disturbance, which is Gaussian noise
+# with some mean (default 0) and stdev and which if filtered with some
+# cut-off frequency fc:
+#   vehicle.set_input_disturbance(fc = 0.01, stdev = 0.05*np.ones(2))
+# Also we can simulate our system with an extra 1st order delay (model-plant
+# mismatch):
+#   vehicle.set_options({'1storder_delay': True, 'time_constant': 0.1})
 
 # Now, we create an environment
 # An environment is determined by a room with certain shape and we put the
