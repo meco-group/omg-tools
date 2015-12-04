@@ -105,7 +105,7 @@ class Point2point(Problem):
     def init_step(self):
         # transform spline variables
         if np.round(self.current_time, 6) % self.knot_time == 0:
-            OptiLayer.transform_splines(
+            OptiLayer.transform_spline_variables(
                 lambda coeffs, knots, degree: shift_over_knot(coeffs, knots,
                                                               degree, 1))
 
