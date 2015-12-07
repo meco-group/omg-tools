@@ -1,6 +1,7 @@
 from casadi import MX, inf, MXFunction, getSymbols, substitute
 from casadi.tools import struct, struct_MX, struct_symMX, entry
 from spline import BSpline
+from itertools import groupby
 import numpy as np
 import copy
 
@@ -23,7 +24,7 @@ class OptiLayer:
         self._splines = {}
         self._objective = 0.
         self._constraint_cnt = 0
-        OptiLayer._children.update({label: self})
+        OptiLayer._children.update({self.label: self})
 
     # ========================================================================
     # Auxiliary functions
@@ -31,15 +32,16 @@ class OptiLayer:
 
     @ classmethod
     def _make_label(cls, label):
-        if label in cls._children.keys():
-            index = [''.join(g) for _, g in groupby(label, str.isalpha)][-1]
-            if index.isdigit():
-                label = label+str(int(index)+1)
+        label_split = [''.join(g) for _, g in groupby(label, str.isalpha)]
+        index = label_split[-1]
+        rest = ''.join(label_split[:-1])
+        if index.isdigit():
+            if label in cls._children.keys():
+                return cls._make_label(rest+str(int(index)+1))
             else:
-                label = label+str(0)
-            cls._make_label(label)
+                return label
         else:
-            return label
+            return cls._make_label(label+str(0))
 
     def _add_label(self, name, label=None):
         if label is None:
