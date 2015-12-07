@@ -12,7 +12,7 @@ class Vehicle(OptiLayer):
 
     def __init__(self, n_y, degree, shape, options, **kwargs):
         self.index = 0
-        OptiLayer.__init__(self, 'vehicle'+str(self.index))
+        OptiLayer.__init__(self, 'vehicle')
         self.shape = shape
         self._signals = {}
         self._signals_num = {}

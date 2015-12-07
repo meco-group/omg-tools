@@ -11,7 +11,7 @@ Toolbox
 
 - subfolders in motionplanning
 
-- guard label uniqueness
++ guard label uniqueness
 - think on how environment should be copied with other label...
 
 - worries
