@@ -1,5 +1,6 @@
-from casadi import MX, inf, MXFunction, getSymbols, substitute
+from casadi import MX, SX, inf, MXFunction, getSymbols, substitute
 from casadi.tools import struct, struct_MX, struct_symMX, entry
+from casadi.tools.structure import msymStruct
 from spline import BSpline
 from itertools import groupby
 import numpy as np
@@ -167,21 +168,44 @@ class OptiLayer:
     def define_objective(self, expr):
         self._objective = expr
 
-    def get_variable(self, name):
-        return OptiLayer._var_result[self.label, name].toArray()
+    def get_variable(self, name, variables=None):
+        if variables is None:
+            return self._variables[name]
+        elif isinstance(variables, msymStruct):
+            return variables[self.label, name]
+        else:
+            return variables[self.label, name].toArray()
 
-    def get_parameter(self, name):
-        return OptiLayer._par[self.label, name].toArray()
+    def get_parameter(self, name, parameters=None):
+        if parameters is None:
+            return self._parameters[name]
+        elif isinstance(parameters, msymStruct):
+            return parameters[self.label, name]
+        else:
+            return parameters[self.label, name].toArray()
 
-    def get_constraint(self, name):
-        return OptiLayer._evaluate_symbols(self._constraints[name][0],
-                                           OptiLayer._var_result,
-                                           OptiLayer._par).toArray().ravel()
+    def get_constraint(self, name, variables=None, parameters=None):
+        if (variables is None) and (parameters is None):
+            return self._constraints[name][0]
+        elif (isinstance(variables, msymStruct) and
+              isinstance(parameters, msymStruct)):
+            return OptiLayer._evaluate_symbols(self._constraints[name][0],
+                                               variables,  parameters)
+        else:
+            return OptiLayer._evaluate_symbols(
+                self._constraints[name][0], variables,
+                parameters).toArray().ravel()
 
-    def get_objective(self):
-        return OptiLayer._evaluate_symbols(self._objective,
-                                           OptiLayer._var_result,
-                                           OptiLayer._par).toArray().ravel()
+    def get_objective(self, variables=None, parameters=None):
+        if (variables is None) and (parameters is None):
+            return self._objective
+        elif (isinstance(variables, msymStruct) and
+              isinstance(parameters, msymStruct)):
+            return OptiLayer._evaluate_symbols(self._objective, variables,
+                                               parameters)
+        else:
+            return OptiLayer._evaluate_symbols(
+                self._objective, variables, parameters).toArray().ravel()
 
     # ========================================================================
     # Problem composition
@@ -259,6 +283,7 @@ class OptiLayer:
     def _evaluate_symbols(cls, expression, variables, parameters):
         symbols = getSymbols(expression)
         f = MXFunction(symbols, [expression])
+        f.init()
         f_in = []
         for sym in symbols:
             [child, name] = cls.symbol_dict[sym.getName()]
