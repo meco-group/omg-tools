@@ -1,0 +1,35 @@
+ADMM
+- rewrite shiftFirstKnotFwd with knot insertion
+- multiple knots inside: does this still work?
+
+Toolbox
++ communication admm
++ updaters should get neighbors, not vehicles
+- test everything
+- better admm formulation?
+- rendezvous
+
+- subfolders in motionplanning
+
+- guard label uniqueness
+- think on how environment should be copied with other label...
+
+- worries
+    - environment defines constraints on already multiple vehicles
+    - should admm be part of a children group? Yes, I think it should: it
+      defines objective part and has parameters.
+
++ create dictionary system: symbol_name:[child, local name]
+    symbol name is unique, local name not!
+
+Notes/desires:
+* All MX symbol names are unique!
+* Local names (defined in a child) are not, but are human readable
+* All child-labels are unique! OptiLayer should guard this and change the label
+* Unique translation from MX symbol name to [child, local name]
+* Opposite is not true! This due to symbols: multiple MX symbols can point to
+  1 [child, local name].
+
+If we can retrieve a subset of the symbol_dict, we can act on single group:
+create group constraints/variables/parameters
+
