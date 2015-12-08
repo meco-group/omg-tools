@@ -1,6 +1,9 @@
-from casadi import SX, inf, MXFunction, getSymbols, substitute
+from casadi import SX, inf, SXFunction, nlpIn, nlpOut, NlpSolver
+from casadi import getSymbols, substitute
 from casadi.tools import struct, struct_SX, struct_symSX, entry
 from casadi.tools.structure import msymStruct
+from codegeneration import get_nlp_solver, get_function
+from codegeneration import gen_code_nlp, gen_code_function
 from spline import BSpline
 from itertools import groupby
 import numpy as np
@@ -195,6 +198,23 @@ class OptiLayer:
     # ========================================================================
 
     @classmethod
+    def construct_problem(cls, options):
+        cls.translate_symbols()
+        variables = cls.construct_variables()
+        parameters = cls.construct_parameters()
+        constraints, lb, ub = cls.construct_constraints(variables, parameters)
+        objective = cls.construct_objective(variables, parameters)
+        problem, compile_time = cls.compile_nlp(
+            SXFunction(nlpIn(x=variables, p=parameters),
+                       nlpOut(f=objective, g=constraints)), options)
+        for key, option in options['casadi'].items():
+            if problem.hasOption(key):
+                problem.setOption(key, option)
+        problem.init()
+        cls.init_variables()
+        return problem, compile_time
+
+    @classmethod
     def translate_symbols(cls, group=None):
         if group is None:
             group = cls._children
@@ -293,6 +313,40 @@ class OptiLayer:
             elif name in child._parameters:
                 f_in.append(parameters[child.label, name])
         return evalf(f, f_in)[0]
+
+    # ========================================================================
+    # Methods related to c code generation
+    # ========================================================================
+
+    @classmethod
+    def compile_nlp(cls, nlp, options):
+        codegen = options['codegen']
+        compile_time = 0.
+        if codegen['codegen']:
+            if not codegen['compileme']:
+                problem = get_nlp_solver('.builds/'+codegen['buildname'])
+            else:
+                nlp.init()
+                problem, compile_time = gen_code_nlp(
+                    NlpSolver(options['casadi']['solver'], nlp),
+                    '.builds/'+codegen['buildname'])
+            return problem, compile_time
+        else:
+            return NlpSolver(options['casadi']['solver'], nlp), 0.
+
+    @classmethod
+    def compile_function(cls, function, name, options):
+        codegen = options['codegen']
+        compile_time = 0.
+        if codegen['codegen']:
+            if not codegen['compileme']:
+                function = get_function('.builds/'+codegen['buildname'], name)
+            else:
+                function, compile_time = gen_code_function(
+                    function, '.builds/'+codegen['buildname'], name)
+            return function, compile_time
+        else:
+            return function, 0.
 
     # ========================================================================
     # Problem evaluation
