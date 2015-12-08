@@ -111,7 +111,7 @@ class Point2point(Problem):
 
     def update(self, current_time, update_time):
         for vehicle in self.vehicles:
-            y_coeffs = vehicle.get_variable('y')
+            y_coeffs = vehicle.get_variable('y', solution=True, spline=False)
             """
             This represents coefficients of spline in a basis, for which a part
             of the corresponding time horizon lies in the past. Therefore,
