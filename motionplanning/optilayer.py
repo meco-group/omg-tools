@@ -1,5 +1,5 @@
-from casadi import MX, SX, inf, MXFunction, getSymbols, substitute
-from casadi.tools import struct, struct_MX, struct_symMX, entry
+from casadi import SX, inf, MXFunction, getSymbols, substitute
+from casadi.tools import struct, struct_SX, struct_symSX, entry
 from casadi.tools.structure import msymStruct
 from spline import BSpline
 from itertools import groupby
@@ -31,7 +31,7 @@ class OptiLayer:
     # Auxiliary functions
     # ========================================================================
 
-    @ classmethod
+    @classmethod
     def _make_label(cls, label):
         label_split = [''.join(g) for _, g in groupby(label, str.isalpha)]
         index = label_split[-1]
@@ -44,110 +44,66 @@ class OptiLayer:
         else:
             return cls._make_label(label+str(0))
 
+    @classmethod
+    def _add_to_dict(cls, symbol, child, name):
+        for index, sym in enumerate(getSymbols(symbol)):
+            cls.symbol_dict[sym.getName()] = [child, name, index]
+
     def _add_label(self, name, label=None):
         if label is None:
             label = self.label
         return name+'_'+label
 
-    @classmethod
-    def _rmv_label(cls, index):
-        return '_'.join(index.split('_')[:-1])
-
-    @classmethod
-    def _get_label(cls, index):
-        return index.split('_')[-1]
-
-    def _check_symbols(self, name):
-        if name in OptiLayer._symbols:
-            for index, sym in OptiLayer.symbol_dict.items():
-                if sym[1] == name:
-                    if name in sym[0]._variables:
-                        raise ValueError(
-                            'Symbol %s already used as variable of %s!' %
-                            (name, sym[0].label))
-                    elif name in sym[0]._parameters:
-                        raise ValueError(
-                            'Symbol %s already used as parameter of %s!' %
-                            (name, sym[0].label))
-                    elif sym[0]._symbols:
-                        OptiLayer.symbol_dict[index] = [self, name]
-                    else:
-                        raise ValueError(
-                            ('Symbol %s already used as something I '
-                             'do know what of %s!') % (name, sym[0].label))
-
-    def _check_varpar(self, name):
-        cnt = 0
-        child = self
-        for sym in OptiLayer.symbol_dict.values():
-            if sym[1] == name:
-                child = sym[0]
-                cnt += 1
-        if cnt > 1:
-            raise ValueError(
-                ('Symbol %s already used multiple times '
-                 'as variable or parameter!') % name)
-        return child
+    # ========================================================================
+    # Definition of symbols, variables, parameters, constraints, objective
+    # ========================================================================
 
     def define_symbol(self, name, size0=1, size1=1):
         if not (name in OptiLayer._symbols):
-            child = self._check_varpar(name)
-            self._define_mx(name, size0, size1, OptiLayer._symbols, child)
+            self._define_sx(name, size0, size1, OptiLayer._symbols)
         return OptiLayer._symbols[name]
 
     def define_variable(self, name, size0=1, size1=1):
-        self._check_symbols(name)
-        return self._define_mx(name, size0, size1, self._variables)
+        return self._define_sx(name, size0, size1, self._variables)
 
     def define_parameter(self, name, size0=1, size1=1):
-        self._check_symbols(name)
-        return self._define_mx(name, size0, size1, self._parameters)
+        return self._define_sx(name, size0, size1, self._parameters)
 
     def define_spline_symbol(self, name, size0=1, size1=1, **kwargs):
         basis = kwargs['basis'] if 'basis' in kwargs else self.basis
         if not (name in OptiLayer._symbols):
-            child = self._check_varpar(name)
-            self._define_mx_spline(
-                name, size0, size1, basis, OptiLayer._symbols, child)
+            self._define_sx_spline(name, size0, size1, basis,
+                                   OptiLayer._symbols)
         return OptiLayer._symbols[name]
 
     def define_spline_variable(self, name, size0=1, size1=1, **kwargs):
-        self._check_symbols(name)
         basis = kwargs['basis'] if 'basis' in kwargs else self.basis
-        return self._define_mx_spline(name, size0, size1,
+        return self._define_sx_spline(name, size0, size1,
                                       self._variables, basis)
 
     def define_spline_parameter(self, name, size0=1, size1=1, **kwargs):
-        self._check_symbols(name)
         basis = kwargs['basis'] if 'basis' in kwargs else self.basis
-        return self._define_mx_spline(name, size0, size1,
+        return self._define_sx_spline(name, size0, size1,
                                       self._parameters, basis)
 
-    def _define_mx(self, name, size0, size1, dictionary, child=None):
-        if child is None:
-            child = self
-        index = child._add_label(name)
+    def _define_sx(self, name, size0, size1, dictionary):
+        index = self._add_label(name)
         if index in OptiLayer.symbol_dict:
             raise ValueError('Name %s already used for parameter or variable!')
-        OptiLayer.symbol_dict[index] = [child, name]
-        dictionary[name] = MX.sym(index, size0, size1)
+        dictionary[name] = SX.sym(index, size0, size1)
+        OptiLayer._add_to_dict(dictionary[name], self, name)
         return dictionary[name]
 
-    def _define_mx_spline(self, name, size0, size1,
-                          dictionary, basis, child=None):
-        if child is None:
-            child = self
+    def _define_sx_spline(self, name, size0, size1, dictionary, basis):
         if size1 > 1:
             ret = []
             for l in range(size1):
                 _name = name + str(l)
                 ret.append(
-                    self._define_mx_spline(_name, size0, 1,
-                                           dictionary, basis, child))
+                    self._define_sx_spline(_name, size0, 1, dictionary, basis))
             return ret
         else:
-            coeffs = self._define_mx(
-                name, len(basis), size0, dictionary, child)
+            coeffs = self._define_sx(name, len(basis), size0, dictionary)
             self._splines[name] = basis
             return [BSpline(basis, coeffs[:, k]) for k in range(size0)]
 
@@ -168,21 +124,48 @@ class OptiLayer:
     def define_objective(self, expr):
         self._objective = expr
 
-    def get_variable(self, name, variables=None):
-        if variables is None:
-            return self._variables[name]
-        elif isinstance(variables, msymStruct):
-            return variables[self.label, name]
+    def get_variable(self, name, **kwargs):
+        variables = kwargs['variables'] if 'variables' in kwargs else None
+        solution = kwargs['solution'] if 'solution' in kwargs else False
+        spline = kwargs['spline'] if 'spline' in kwargs else True
+        if solution:
+            variables = OptiLayer._var_result
+        if name in self._splines and spline:
+            basis = self._splines[name]
+            return self._get_symbol_spline(name, basis,
+                                           variables, self._variables)
         else:
-            return variables[self.label, name].toArray()
+            return self._get_symbol(name, variables, self._variables)
 
-    def get_parameter(self, name, parameters=None):
-        if parameters is None:
-            return self._parameters[name]
-        elif isinstance(parameters, msymStruct):
-            return parameters[self.label, name]
+    def get_parameter(self, name, **kwargs):
+        parameters = kwargs['parameters'] if 'parameters' in kwargs else None
+        solution = kwargs['solution'] if 'solution' in kwargs else False
+        spline = kwargs['spline'] if 'spline' in kwargs else True
+        if solution:
+            parameters = OptiLayer._par
+        if name in self._splines and spline:
+            basis = self._splines[name]
+            return self._get_symbol_spline(name, basis,
+                                           parameters, self._parameters)
         else:
-            return parameters[self.label, name].toArray()
+            return self._get_symbol(name, parameters, self._parameters)
+
+    def _get_symbol(self, name, data, dictionary):
+        if data is None:
+            return dictionary[name]
+        elif isinstance(data, msymStruct):
+            return data[self.label, name]
+        else:
+            return data[self.label, name].toArray()
+
+    def _get_symbol_spline(self, name, basis, data, dictionary):
+        if data is None:
+            coeffs = dictionary[name]
+        elif isinstance(data, msymStruct):
+            coeffs = data[self.label, name]
+        else:
+            coeffs = data[self.label, name].toArray()
+        return [BSpline(basis, coeffs[:, k]) for k in range(coeffs.shape[1])]
 
     def get_constraint(self, name, variables=None, parameters=None):
         if (variables is None) and (parameters is None):
@@ -212,6 +195,22 @@ class OptiLayer:
     # ========================================================================
 
     @classmethod
+    def translate_symbols(cls, group=None):
+        if group is None:
+            group = cls._children
+        for name, symbol in cls._symbols.items():
+            sym_def = []
+            for label, child in group.items():
+                if name in child._variables or name in child._parameters:
+                    sym_def.append(child)
+            if len(sym_def) > 1:
+                raise ValueError('Symbol %s is defined multiple times as'
+                                 ' parameter or variable of %s!' %
+                                (name, ','.join([sd.label for sd in sym_def])))
+            else:
+                cls._add_to_dict(symbol, sym_def[0], name)
+
+    @classmethod
     def construct_variables(cls, group=None):
         if group is None:
             group = cls._children
@@ -222,7 +221,7 @@ class OptiLayer:
                 entries_child.append(entry(name, shape=var.shape))
             entries.append(entry(label, struct=struct(entries_child)))
         cls._var_struct = struct(entries)
-        return struct_symMX(cls._var_struct)
+        return struct_symSX(cls._var_struct)
 
     @classmethod
     def construct_parameters(cls, group=None):
@@ -235,7 +234,7 @@ class OptiLayer:
                 entries_child.append(entry(name, shape=par.shape))
             entries.append(entry(label, struct=struct(entries_child)))
         cls._par_struct = struct(entries)
-        return struct_symMX(cls._par_struct)
+        return struct_symSX(cls._par_struct)
 
     @classmethod
     def construct_constraints(cls, variables, parameters, group=None):
@@ -247,7 +246,7 @@ class OptiLayer:
                 expression = cls._substitute_symbols(
                     constraint[0], variables, parameters)
                 entries.append(entry(child._add_label(name), expr=expression))
-        constraints = struct_MX(entries)
+        constraints = struct_SX(entries)
         cls._lb, cls._ub = constraints(0), constraints(0)
         cls._constraint_shutdown = {}
         for child in group.values():
@@ -272,11 +271,13 @@ class OptiLayer:
     @classmethod
     def _substitute_symbols(cls, expr, variables, parameters):
         for sym in getSymbols(expr):
-            [child, name] = cls.symbol_dict[sym.getName()]
+            [child, name, index] = cls.symbol_dict[sym.getName()]
             if name in child._variables:
-                expr = substitute(expr, sym, variables[child.label, name])
+                expr = substitute(expr, sym,
+                                  variables[child.label, name, index])
             elif name in child._parameters:
-                expr = substitute(expr, sym, parameters[child.label, name])
+                expr = substitute(expr, sym,
+                                  parameters[child.label, name, index])
         return expr
 
     @classmethod

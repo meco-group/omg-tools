@@ -3,15 +3,15 @@ ADMM
 - multiple knots inside: does this still work?
 
 Toolbox
-+ communication admm
-+ updaters should get neighbors, not vehicles
-- test everything
-- better admm formulation?
-- rendezvous
-
 - subfolders in motionplanning
 
 + guard label uniqueness
++ get_variable, get_parameter, get_symbol -> give back symbolic MX's
++ get_variable, ... should return splines
++ everything becomes sx
++ test on symbols done while constructing problem?
+
+- transform variables for objective
 - think on how environment should be copied with other label...
 
 - worries
@@ -23,12 +23,12 @@ Toolbox
     symbol name is unique, local name not!
 
 Notes/desires:
-* All MX symbol names are unique!
+* All SX symbol names are unique!
 * Local names (defined in a child) are not, but are human readable
 * All child-labels are unique! OptiLayer should guard this and change the label
-* Unique translation from MX symbol name to [child, local name]
-* Opposite is not true! This due to symbols: multiple MX symbols can point to
-  1 [child, local name].
+* Unique translation from SX symbol name to [child, local name, index]
+* Opposite is not true! This due to symbols: multiple SX symbols can point to
+  1 [child, local name, index].
 
 If we can retrieve a subset of the symbol_dict, we can act on single group:
 create group constraints/variables/parameters

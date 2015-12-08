@@ -1,7 +1,7 @@
 from optilayer import OptiLayer
 from fleet import get_fleet_vehicles
 from plots import Plots
-from casadi import MXFunction, NlpSolver, nlpIn, nlpOut
+from casadi import SXFunction, NlpSolver, nlpIn, nlpOut
 from codegeneration import get_nlp_solver, get_function
 from codegeneration import gen_code_nlp, gen_code_function
 import time
@@ -76,13 +76,14 @@ class Problem(OptiLayer):
     # ========================================================================
 
     def construct_problem(self):
+        OptiLayer.translate_symbols()
         variables = OptiLayer.construct_variables()
         parameters = OptiLayer.construct_parameters()
         constraints, lb, ub = OptiLayer.construct_constraints(
             variables, parameters)
         objective = OptiLayer.construct_objective(variables, parameters)
         self.problem, compile_time = self.compile_nlp(
-            MXFunction(nlpIn(x=variables, p=parameters),
+            SXFunction(nlpIn(x=variables, p=parameters),
                        nlpOut(f=objective, g=constraints)))
         for key, option in self.options['casadi'].items():
             if self.problem.hasOption(key):
