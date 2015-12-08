@@ -1,9 +1,6 @@
 from optilayer import OptiLayer
 from fleet import get_fleet_vehicles
 from plots import Plots
-from casadi import SXFunction, NlpSolver, nlpIn, nlpOut
-from codegeneration import get_nlp_solver, get_function
-from codegeneration import gen_code_nlp, gen_code_function
 import time
 
 
@@ -75,23 +72,6 @@ class Problem(OptiLayer):
     # Create and solve problem
     # ========================================================================
 
-    def construct_problem(self):
-        OptiLayer.translate_symbols()
-        variables = OptiLayer.construct_variables()
-        parameters = OptiLayer.construct_parameters()
-        constraints, lb, ub = OptiLayer.construct_constraints(
-            variables, parameters)
-        objective = OptiLayer.construct_objective(variables, parameters)
-        self.problem, compile_time = self.compile_nlp(
-            SXFunction(nlpIn(x=variables, p=parameters),
-                       nlpOut(f=objective, g=constraints)))
-        for key, option in self.options['casadi'].items():
-            if self.problem.hasOption(key):
-                self.problem.setOption(key, option)
-        self.problem.init()
-        OptiLayer.init_variables()
-        return compile_time
-
     def solve(self, current_time):
         self.current_time = current_time
         self.init_step()
@@ -120,38 +100,6 @@ class Problem(OptiLayer):
                 print "----|------------|------------"
             print "%3d | %.4e | %.4e " % (self.iteration, t_upd, current_time)
         self.update_times.append(t_upd)
-
-    # ========================================================================
-    # Methods to generate C code and build it
-    # ========================================================================
-
-    def compile_nlp(self, nlp):
-        codegen = self.options['codegen']
-        compile_time = 0.
-        if codegen['codegen']:
-            if not codegen['compileme']:
-                problem = get_nlp_solver('.builds/'+codegen['buildname'])
-            else:
-                nlp.init()
-                problem, compile_time = gen_code_nlp(
-                    NlpSolver(self.options['casadi']['solver'], nlp),
-                    '.builds/'+codegen['buildname'])
-            return problem, compile_time
-        else:
-            return NlpSolver(self.options['casadi']['solver'], nlp), 0.
-
-    def compile_function(self, function, name):
-        codegen = self.options['codegen']
-        compile_time = 0.
-        if codegen['codegen']:
-            if not codegen['compileme']:
-                function = get_function('.builds/'+codegen['buildname'], name)
-            else:
-                function, compile_time = gen_code_function(
-                    function, '.builds/'+codegen['buildname'], name)
-            return function, compile_time
-        else:
-            return function, 0.
 
     # ========================================================================
     # Methods encouraged to override (very basic implementation)

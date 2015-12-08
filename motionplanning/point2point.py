@@ -65,7 +65,7 @@ class Point2point(Problem):
                         else:
                             self.define_constraint(
                                 (y[l][k].derivative(d))(1.), 0., 0.)
-        self.construct_problem()
+        self.problem, compile_time = OptiLayer.construct_problem(self.options)
 
         self.knot_time = (int(self.vehicles[0].options['horizon_time']*1000.) /
                           self.vehicles[0].knot_intervals) / 1000.
