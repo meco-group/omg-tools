@@ -5,14 +5,27 @@ ADMM
 Toolbox
 - subfolders in motionplanning
 
+- rewrite for casadi 2.4
+- give solver ipopt as option (codegen)
+
+
 + guard label uniqueness
 + get_variable, get_parameter, get_symbol -> give back symbolic MX's
 + get_variable, ... should return splines
 + everything becomes sx
 + test on symbols done while constructing problem?
++ think on how environment should be copied with other label: solved now by
+  providing copy() method in Environment
 
+- rewrite OptiLayer: results are stored on OptiLayer level...
+  if you have multiple groups this crashes. OptiLayer object gets some children
+    * define OptiLayer class: gets the children and all previous class methods
+    * childeren are of type Opti
+    * composition of dictionary only in the end?
+
+  try to avoid class methods/attributes/...
+- point2point has construct_problem in __init__...
 - transform variables for objective
-- think on how environment should be copied with other label...
 
 - worries
     - environment defines constraints on already multiple vehicles

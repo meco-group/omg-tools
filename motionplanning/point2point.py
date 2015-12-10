@@ -7,7 +7,7 @@ import numpy as np
 class Point2point(Problem):
 
     def __init__(self, fleet, environment, options={}):
-        Problem.__init__(self, fleet, environment, options)
+        Problem.__init__(self, fleet, environment, options, label='p2p')
 
         g = [self.define_spline_variable(
             'g_'+str(vehicle.index), vehicle.n_y, basis=vehicle.basis)

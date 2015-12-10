@@ -1,5 +1,5 @@
 from casadi import SX, inf, SXFunction, nlpIn, nlpOut, NlpSolver
-from casadi import getSymbols, substitute
+from casadi import symvar, substitute
 from casadi.tools import struct, struct_SX, struct_symSX, entry
 from casadi.tools.structure import msymStruct
 from codegeneration import get_nlp_solver, get_function
@@ -49,7 +49,7 @@ class OptiLayer:
 
     @classmethod
     def _add_to_dict(cls, symbol, child, name):
-        for index, sym in enumerate(getSymbols(symbol)):
+        for index, sym in enumerate(symvar(symbol)):
             cls.symbol_dict[sym.getName()] = [child, name, index]
 
     def _add_label(self, name, label=None):
@@ -198,19 +198,17 @@ class OptiLayer:
     # ========================================================================
 
     @classmethod
-    def construct_problem(cls, options):
-        cls.translate_symbols()
-        variables = cls.construct_variables()
-        parameters = cls.construct_parameters()
-        constraints, lb, ub = cls.construct_constraints(variables, parameters)
-        objective = cls.construct_objective(variables, parameters)
+    def construct_problem(cls, options, group=None):
+        if group is None:
+            group = cls._children
+        cls.translate_symbols(group)
+        variables = cls.construct_variables(group)
+        parameters = cls.construct_parameters(group)
+        constraints, lb, ub = cls.construct_constraints(variables, parameters, group)
+        objective = cls.construct_objective(variables, parameters, group)
         problem, compile_time = cls.compile_nlp(
-            SXFunction(nlpIn(x=variables, p=parameters),
+            SXFunction('nlp', nlpIn(x=variables, p=parameters),
                        nlpOut(f=objective, g=constraints)), options)
-        for key, option in options['casadi'].items():
-            if problem.hasOption(key):
-                problem.setOption(key, option)
-        problem.init()
         cls.init_variables()
         return problem, compile_time
 
@@ -290,7 +288,9 @@ class OptiLayer:
 
     @classmethod
     def _substitute_symbols(cls, expr, variables, parameters):
-        for sym in getSymbols(expr):
+        if isinstance(expr, (int, float)):
+            return expr
+        for sym in symvar(expr):
             [child, name, index] = cls.symbol_dict[sym.getName()]
             if name in child._variables:
                 expr = substitute(expr, sym,
@@ -302,8 +302,8 @@ class OptiLayer:
 
     @classmethod
     def _evaluate_symbols(cls, expression, variables, parameters):
-        symbols = getSymbols(expression)
-        f = MXFunction(symbols, [expression])
+        symbols = symvar(expression)
+        f = SXFunction(symbols, [expression])
         f.init()
         f_in = []
         for sym in symbols:
@@ -324,15 +324,15 @@ class OptiLayer:
         compile_time = 0.
         if codegen['codegen']:
             if not codegen['compileme']:
-                problem = get_nlp_solver('.builds/'+codegen['buildname'])
+                problem = get_nlp_solver('.builds/'+codegen['buildname'],
+                                         options['solver'])
             else:
-                nlp.init()
                 problem, compile_time = gen_code_nlp(
-                    NlpSolver(options['casadi']['solver'], nlp),
-                    '.builds/'+codegen['buildname'])
+                    NlpSolver('solver', 'ipopt', nlp, options['solver']),
+                    '.builds/'+codegen['buildname'], options['solver'])
             return problem, compile_time
         else:
-            return NlpSolver(options['casadi']['solver'], nlp), 0.
+            return NlpSolver('solver', 'ipopt', nlp, options['solver']), 0.
 
     @classmethod
     def compile_function(cls, function, name, options):
@@ -361,7 +361,9 @@ class OptiLayer:
         return lb, ub
 
     @classmethod
-    def init_variables(cls):
+    def init_variables(cls, group=None):
+        if group is None:
+            group = cls._children
         variables = cls._var_struct(0.)
         for label, child in cls._children.items():
             var = child.init_variables()

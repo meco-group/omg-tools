@@ -6,7 +6,7 @@ from scipy.interpolate import splev, interp1d
 from scipy.integrate import odeint
 from numpy.random import normal
 import numpy as np
-
+import re
 
 class Vehicle(OptiLayer):
 
@@ -105,8 +105,7 @@ class Vehicle(OptiLayer):
         else:
             self.signal_length[name] = expr.shape[0]
         expr = [expr] if not isinstance(expr, list) else expr
-        self._signals[name] = SXFunction([self._y], expr)
-        self._signals[name].init()
+        self._signals[name] = SXFunction(name, [self._y], expr)
         self._signals_num[name] = self._generate_function(expr)
 
     def define_position(self, expr):
@@ -227,6 +226,13 @@ class Vehicle(OptiLayer):
             splt2 = a.split(')', br_in_between+1)
             expression = (splt[0]+'np.power('+')'.join(splt2[:br_in_between+1])
                           + ','+str(2)+')' + splt2[-1])
+        # find @i
+        cnt = 1
+        while expression.find('@'+str(cnt)) >= 0:
+            value = expression.split('@'+str(cnt)+'=')[1].split(',')[0]
+            expression = re.sub(r'@%d\b' % cnt, value, expression)
+            expression = ','.join(expression.split(',')[1:])
+            cnt += 1
         return expression
 
     # ========================================================================

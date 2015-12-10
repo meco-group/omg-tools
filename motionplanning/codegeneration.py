@@ -1,114 +1,71 @@
 import os
 from os import system
-from casadi import NL_X, NL_F, NL_G, NL_NUM_OUT
 from casadi import SXFunction, NlpSolver, ExternalFunction
 import time
 
 
-def gen_code_nlp(solver, directory, **kwargs):
-    # opt = ', '-O3', '-Os'
-
-    compileme = kwargs['compileme'] if 'compileme' in kwargs else True
-    opt = kwargs['opt'] if 'opt' in kwargs else ''
-    sx_cast = kwargs['sx_cast'] if 'sx_cast' in kwargs else True
+def gen_code_nlp(solver, directory, options,
+                 compileme=True, opt='', sx_cast=True):
+    # opt = '', '-O3', '-Os'
 
     if not os.path.isdir(directory):
         os.makedirs(directory)
 
     nlp = solver.nlp()
-    if 0:
-        grad_f = solver.gradF()
-        jac_g = solver.jacG()
-        hess_lag = solver.hessLag()
-    else:
-        grad_f = nlp.gradient(NL_X, NL_F)
-        grad_f.init()
-        jac_g = nlp.jacobian(NL_X, NL_G)
-        jac_g.init()
-        grad_lag = nlp.derivative(0, 1)
-        hess_lag = grad_lag.jacobian(NL_X, NL_NUM_OUT+NL_X, False, True)
-        hess_lag.init()
+    grad_f = nlp.gradient('x', 'f')
+    jac_g = nlp.jacobian('x', 'g')
+    hess_lag = solver.hessLag()
 
-    if sx_cast:
-        nlp = SXFunction(nlp)
-        grad_f = SXFunction(grad_f)
-        jac_g = SXFunction(jac_g)
-        hess_lag = SXFunction(hess_lag)
+    functions = {'nlp': nlp, 'grad_f': grad_f,
+                 'jac_g': jac_g, 'hess_lag': hess_lag}
 
-    nlp.init()
-    grad_f.init()
-    jac_g.init()
-    hess_lag.init()
+    if sx_cast:  # for much faster execution
+        functions = {name: SXFunction(fun) for name, fun in functions.items()}
 
-    src_nlp = directory+'/'+'nlp.c'
-    src_grad_f = directory+'/'+'grad_f.c'
-    src_jac_g = directory+'/'+'jac_g.c'
-    src_hess_lag = directory+'/'+'hess_lag.c'
+    src = {name: directory+'/'+name+'.c' for name in functions.keys()}
+    obj = {name: directory+'/'+name+'.so' for name in functions.keys()}
 
-    src = [src_nlp, src_grad_f, src_jac_g, src_hess_lag]
-    names = ['nlp', 'grad_f', 'jac_g', 'hess_lag']
-
-    obj_nlp = directory+'/'+'nlp.so'
-    obj_grad_f = directory+'/'+'grad_f.so'
-    obj_jac_g = directory+'/'+'jac_g.so'
-    obj_hess_lag = directory+'/'+'hess_lag.so'
-
-    obj = [obj_nlp, obj_grad_f, obj_jac_g, obj_hess_lag]
-
-    nlp.generateCode(src_nlp)
-    grad_f.generateCode(src_grad_f)
-    jac_g.generateCode(src_jac_g)
-    hess_lag.generateCode(src_hess_lag)
+    cwd = os.getcwd()
+    for name, fun in functions.items():
+        fun.generate(name)
+        os.rename(cwd+'/'+name+'.c', cwd+'/'+directory+'/'+name+'.c')
 
     if compileme:
         print 'Compiling...',
         t1 = time.time()
-        for i in range(4):
-            print names[i], '-',
+        for name, fun in functions.items():
+            print name + ' -',
             system('gcc -fPIC -shared -std=c99' +
-                   opt + ' ' + src[i] + ' -o ' + obj[i])
+                   opt + ' ' + src[name] + ' -o ' + obj[name])
         t2 = time.time()
         compile_time = t2 - t1
         print 'Compile time = ', (compile_time)*1e3, ' ms'
 
-    nlp = ExternalFunction('./'+obj_nlp)
-    grad_f = ExternalFunction('./'+obj_grad_f)
-    jac_g = ExternalFunction('./'+obj_jac_g)
-    hess_lag = ExternalFunction('./'+obj_hess_lag)
+    solver = get_nlp_solver(directory, options)
 
-    solver = NlpSolver('ipopt', nlp)
-    solver.setOption('grad_f', grad_f)
-    solver.setOption('jac_g', jac_g)
-    solver.setOption('hess_lag', hess_lag)
     if compileme:
         return solver, compile_time
     else:
         return solver
 
 
-def get_nlp_solver(directory):
-    obj_nlp = directory+'/'+'nlp.so'
-    obj_grad_f = directory+'/'+'grad_f.so'
-    obj_jac_g = directory+'/'+'jac_g.so'
-    obj_hess_lag = directory+'/'+'hess_lag.so'
+def get_nlp_solver(directory, options):
+    names = ['nlp', 'grad_f', 'jac_g', 'hess_lag']
+    obj = {name: directory+'/'+name+'.so' for name in names}
+    functions = {name: ExternalFunction(name, './'+ob)
+                 for name, ob in obj.items()}
 
-    nlp = ExternalFunction('./'+obj_nlp)
-    grad_f = ExternalFunction('./'+obj_grad_f)
-    jac_g = ExternalFunction('./'+obj_jac_g)
-    hess_lag = ExternalFunction('./'+obj_hess_lag)
+    options.update({'grad_f': functions['grad_f'],
+                    'jac_g': functions['jac_g'],
+                    'hess_lag': functions['hess_lag']})
 
-    solver = NlpSolver('ipopt', nlp)
-    solver.setOption('grad_f', grad_f)
-    solver.setOption('jac_g', jac_g)
-    solver.setOption('hess_lag', hess_lag)
+    solver = NlpSolver('solver', 'ipopt', functions['nlp'], options)
+
     return solver
 
 
-def gen_code_function(function, directory, name, **kwargs):
-
-    compileme = kwargs['compileme'] if 'compileme' in kwargs else True
-    opt = kwargs['opt'] if 'opt' in kwargs else ''
-    sx_cast = kwargs['sx_cast'] if 'sx_cast' in kwargs else False
+def gen_code_function(function, directory, name,
+                      compileme=True, opt='', sx_cast=True):
 
     if not os.path.isdir(directory):
         os.makedirs(directory)
@@ -120,7 +77,9 @@ def gen_code_function(function, directory, name, **kwargs):
     src = directory+'/'+name+'.c'
     obj = directory+'/'+name+'.so'
 
-    function.generateCode(src)
+    cwd = os.getcwd()
+    function.generate(name)
+    os.rename(cwd+'/'+name+'.c', cwd+'/'+directory+'/'+name+'.c')
 
     if compileme:
         print 'Compiling function...',
@@ -130,8 +89,8 @@ def gen_code_function(function, directory, name, **kwargs):
         compile_time = t2 - t1
         print 'Compile time = ', compile_time*1e3, ' ms'
 
-    function = ExternalFunction('./'+obj)
-    function.init()
+    function = get_function(directory, name)
+
     if compileme:
         return function, compile_time
     else:
@@ -140,6 +99,6 @@ def gen_code_function(function, directory, name, **kwargs):
 
 def get_function(directory, name):
     obj = directory+'/'+name+'.so'
-    function = ExternalFunction('./'+obj)
+    function = ExternalFunction(name, './'+obj)
     function.init()
     return function
