@@ -19,7 +19,7 @@ class Environment(OptiLayer):
             self.room['position'] = [0. for k in range(self.n_dim)]
 
         # objective for environment
-        self._objective = 0.
+        self._obj = 0.
 
         # add obstacles
         self.obstacles, self.No = [], 0
@@ -35,6 +35,13 @@ class Environment(OptiLayer):
 
     def set_options(self, options):
         self.options.update(options)
+
+    # ========================================================================
+    # Copy function
+    # ========================================================================
+
+    def copy(self):
+        return Environment(self.room, self.obstacles, self.options)
 
     # ========================================================================
     # Add obstacles
@@ -91,7 +98,7 @@ class Environment(OptiLayer):
                 t, T = self.define_symbol('t'), self.define_symbol('T')
                 eps = self.define_spline_variable(
                     'eps_'+str(vehicle.index)+str(obstacle.index))[0]
-                self._objective += (safety_weight *
+                self._obj += (safety_weight *
                                     definite_integral(eps, t/T, 1.))
                 self.define_constraint(eps - safety_distance, -inf, 0.)
                 self.define_constraint(-eps, -inf, 0.)
@@ -108,7 +115,7 @@ class Environment(OptiLayer):
                     b_hp + rad_obs + 0.5*(safety_distance-eps), -inf, 0.)
             self.define_constraint(sum(
                 [a_hp[k]*a_hp[k] for k in range(self.n_dim)])-1., -inf, 0.)
-        self.define_objective(self._objective)
+        self.define_objective(self._obj)
 
         # simple room constraint
         lim = self.get_canvas_limits()

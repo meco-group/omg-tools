@@ -43,8 +43,8 @@ class Problem(OptiLayer):
         self.fleet, self.vehicles = get_fleet_vehicles(fleet)
         self.environment = environment
         self.environment.add_vehicle(self.vehicles)
-        if 'opti_name' in kwargs:
-            OptiLayer.__init__(self, kwargs['opti_name'])
+        if 'label' in kwargs:
+            OptiLayer.__init__(self, kwargs['label'])
         else:
             OptiLayer.__init__(self, 'problem')
         self.set_default_options()
@@ -58,8 +58,7 @@ class Problem(OptiLayer):
 
     def set_default_options(self):
         self.options = {'verbose': 1, 'update_time': 0.1}
-        self.options['casadi'] = {'solver': 'ipopt', 'tol': 1e-3,
-                                  'linear_solver': 'ma57',
+        self.options['solver'] = {'tol': 1e-3, 'linear_solver': 'ma57',
                                   'warm_start_init_point': 'yes',
                                   'print_level': 0, 'print_time': 0}
         self.options['codegen'] = {

@@ -78,7 +78,7 @@ environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
 #   buildname: The name of c files (under directory .build)
 # There arer other options, set on a default value. Check them out with
 # problem.options
-codegen = {'compileme': False, 'codegen': True, 'buildname': 'holonomic'}
+codegen = {'compileme': True, 'codegen': True, 'buildname': 'holonomic'}
 problem = Point2point(vehicle, environment, options={'codegen': codegen})
 
 # Create simulator
