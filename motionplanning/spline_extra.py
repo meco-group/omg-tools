@@ -1,5 +1,4 @@
 import sys
-sys.path.append("/home/ruben/Documents/Work/Repositories/splines-py/")
 from spline import BSpline, BSplineBasis
 from scipy.interpolate import splev
 from casadi import SX, MX, mul, solve
