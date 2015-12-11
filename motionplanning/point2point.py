@@ -1,19 +1,18 @@
-from optilayer import OptiLayer
-from problem import Problem
-from spline_extra import definite_integral, evalspline, shift_over_knot
+from problem import FixedTProblem
+from spline_extra import definite_integral, evalspline
 import numpy as np
 
 
-class Point2point(Problem):
+class Point2point(FixedTProblem):
 
     def __init__(self, fleet, environment, options={}):
-        Problem.__init__(self, fleet, environment, options, label='p2p')
+        FixedTProblem.__init__(self, fleet, environment, options, label='p2p')
 
         g = [self.define_spline_variable(
             'g_'+str(vehicle.index), vehicle.n_y, basis=vehicle.basis)
             for vehicle in self.vehicles]
-        T = self.define_parameter('T')
-        t = self.define_parameter('t')
+        T = self.define_symbol('T')
+        t = self.define_symbol('t')
         t0 = t/T
 
         y0 = [self.define_parameter(
@@ -65,15 +64,12 @@ class Point2point(Problem):
                         else:
                             self.define_constraint(
                                 (y[l][k].derivative(d))(1.), 0., 0.)
-        self.problem, compile_time = OptiLayer.construct_problem(self.options)
 
         self.knot_time = (int(self.vehicles[0].options['horizon_time']*1000.) /
                           self.vehicles[0].knot_intervals) / 1000.
 
-    def get_parameters(self, current_time):
-        parameters = {}
-        parameters['T'] = self.vehicles[0].options['horizon_time']
-        parameters['t'] = np.round(current_time, 6) % self.knot_time
+    def set_parameters(self, current_time):
+        parameters = FixedTProblem.set_parameters(self, current_time)
         for vehicle in self.vehicles:
             parameters['y0_'+str(vehicle.index)] = vehicle.prediction['y']
             parameters['yT_'+str(vehicle.index)] = vehicle.yT
@@ -101,39 +97,6 @@ class Point2point(Problem):
                 objective += 0.5 * \
                     (err_nrm[k] + err_nrm[k+1])*vehicle.options['sample_time']
         return objective
-
-    def init_step(self):
-        # transform spline variables
-        if np.round(self.current_time, 6) % self.knot_time == 0:
-            OptiLayer.transform_spline_variables(
-                lambda coeffs, knots, degree: shift_over_knot(coeffs, knots,
-                                                              degree, 1))
-
-    def update(self, current_time, update_time):
-        for vehicle in self.vehicles:
-            y_coeffs = vehicle.get_variable('y', solution=True, spline=False)
-            """
-            This represents coefficients of spline in a basis, for which a part
-            of the corresponding time horizon lies in the past. Therefore,
-            we need to pass the current time relatively to the begin of this
-            time horizon. In this way, only the future, relevant, part will be
-            saved and plotted. Also an adapted time axis of the knots is
-            passed: Here the first knot is shifted towards the current time
-            point. In the future this approach should dissapear: when symbolic
-            knots are possible in the spline toolbox, we can transform the
-            spline every iteration (in the init_step method). In this way,
-            the current time coincides with the begin of the considered time
-            horizon (rel_current_time = 0.).
-            """
-            rel_current_time = np.round(current_time, 6) % self.knot_time
-            time_axis_knots = np.copy(
-                vehicle.knots)*vehicle.options['horizon_time']
-            time_axis_knots[:vehicle.degree+1] = rel_current_time
-            time_axis_knots += current_time - rel_current_time
-            vehicle.update(y_coeffs, current_time, update_time,
-                           rel_current_time=rel_current_time,
-                           time_axis_knots=time_axis_knots)
-        self.environment.update(current_time, update_time)
 
     def stop_criterium(self):
         for vehicle in self.vehicles:
