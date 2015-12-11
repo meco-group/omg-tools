@@ -394,8 +394,12 @@ class Vehicle(OptiLayer):
     def init_variables(self):
         variables = {'y': np.zeros((len(self.basis), self.n_y))}
         for k in range(self.n_y):
-            variables['y'][:, k] = np.linspace(
-                self.y0[k, 0], self.yT[k, 0], len(self.basis))
+            variables['y'][:, k] = np.r_[self.y0[k, 0]*np.ones(self.degree),
+                                         np.linspace(self.y0[k, 0],
+                                                     self.yT[k, 0],
+                                                     (len(self.basis) -
+                                                      2*self.degree)),
+                                         self.yT[k, 0]*np.ones(self.degree)]
         return variables
 
     def get_parameters(self, time):
