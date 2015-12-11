@@ -4,24 +4,31 @@ import sys
 sys.path.append("/home/ruben/Documents/Work/Programs/motionplanningtoolbox/")
 from motionplanning import *
 
-# Before we start let's start with some notes on the so called OptiLayer!
-# The OptiLayer is a general class for which classes Vehicle, Problem and
+# Before we start, first some notess on the so called OptiLayer!
+
+# optilayer.py provides 2 classes: OptiFather & OptiChild.
+# OptiChild is a general class for which classes Vehicle, Problem and
 # Environment inherit. It provides the functionality to define specific
 # variables, parameters, constraints and part of the objective on an object.
 # For example a Vehicle object will define its input constraints, while
 # a Point2point Problem object will define initial/terminal state constraints.
-# The OptiLayer puts everything together in order to retrieve one problem.
+# When initializing a problem object, it creates an OptiFather object which
+# puts everything together in order to retrieve one problem with one big set
+# of variables, parameters, constraints and with one objective.
+
 # It is also possible to define a 'symbol' on an object. Another object should
 # provide a variable or parameter with the same name.
 # Example: a problem object defines T (the total motion time) as _variable_ (in
 # order to eg. minimize it). A vehicle object also needs this T (for computing
-# derivatives). It can access it by defining a _symbol_ with name T.
+# derivatives of its splines). It can access it by defining a _symbol_
+# with name T.
 
 # By using the OptiLayer, (advanced) users can define eg. vehicle types in a
 # more high level way, by inheritting from Vehicle and use the functionality
-# from OptiLayer. This is done eg. in the Quadrotor and Holonomic class.
+# from OptiChild. This is done eg. in the Quadrotor and Holonomic class.
 # Also a problem is defined in more easy way. Take for example a look at the
-# Poin2point class, which derives from the more general Problem class.
+# Poin2point class, which derives from the more general FixedTProblem class,
+# which on its turn inherit from the more more general Problem class.
 
 # Ok, let's start with creating a vehicle: a holonomic one!
 vehicle = Holonomic()
@@ -30,10 +37,12 @@ vehicle = Holonomic()
 # In the Holonomic class default signals 'input', 'state' and 'position' are
 # defined. You can also define your own signal. This should be defined as a
 # function of the symbol 'y'. This symbol represent the splines (and their
-# their derivatives). It is in fact a matrix of symbols: 2 rows for 2 splines,
+# derivatives). It is in fact a matrix of symbols: 2 rows for 2 splines,
 # and the columns represent all the derivatives (up to vehicle.order).
 y = vehicle.get_signal('y')
-vehicle.define_signal('my_signal', y[0, 0]+y[1, 0])  # the sum of both splines
+# Let's create a signal which is just the sum of both splines
+vehicle.define_signal('my_signal', y[0, 0]+y[1, 0])
+
 # We provide our vehicle with a desired initial and terminal pose:
 vehicle.set_initial_pose([-1.5, -1.5])
 vehicle.set_terminal_pose([2., 2.])
@@ -42,11 +51,11 @@ vehicle.set_terminal_pose([2., 2.])
 # At start: continuity up to degree = 1
 vehicle.options['boundary_smoothness']['initial'] = 1
 # Collision avoidance where we try to keep a distance 0.1m (in a soft way),
-# but distance 0m in a hard way.
+# but distance 0m in a hard way:
 vehicle.set_options({'safety_distance': 0.1})
 # For simulation, we can add some input disturbance, which is Gaussian noise
 # with some mean (default 0) and stdev and which if filtered with some
-# cut-off frequency fc:
+# cut-off frequency fc (Hz):
 #   vehicle.set_input_disturbance(fc = 0.01, stdev = 0.05*np.ones(2))
 # Also we can simulate our system with an extra 1st order delay (model-plant
 # mismatch):
@@ -75,8 +84,9 @@ environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
 # We provide it with some options concerning the C code generation:
 #   codegen:   True -> we use code generation
 #   compileme: True -> we recompile the generated code
-#   buildname: The name of c files (under directory .build)
-# There arer other options, set on a default value. Check them out with
+#   buildname: The name of the subfolder (under /.build) where the c files are
+#              stored
+# There are other options, set on a default value. Check them out with
 # problem.options
 codegen = {'compileme': True, 'codegen': True, 'buildname': 'holonomic'}
 problem = Point2point(vehicle, environment, options={'codegen': codegen})
