@@ -100,11 +100,13 @@ class Plots:
         sgn_length = vehicles[0].signal_length[signal]
         if 'label' in kwargs:
             label = kwargs['label']
+            if not isinstance(label, list):
+                label = [label]
         else:
             if sgn_length > 1:
                 label = [signal+str(k) for k in range(sgn_length)]
             else:
-                label = signal
+                label = [signal]
         figure, axis = plt.subplots(
             vehicles[0].signal_length[signal], 1, squeeze=False)
         for k in range(sgn_length):
