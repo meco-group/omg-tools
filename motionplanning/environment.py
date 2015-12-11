@@ -1,14 +1,14 @@
-from optilayer import OptiLayer
+from optilayer import OptiChild
 from spline import BSplineBasis, BSpline
 from spline_extra import definite_integral
 from casadi import inf
 import numpy as np
 
 
-class Environment(OptiLayer):
+class Environment(OptiChild):
 
     def __init__(self, room, obstacles=[], options={}):
-        OptiLayer.__init__(self, 'environment')
+        OptiChild.__init__(self, 'environment')
 
         self.set_default_options()
         self.set_options(options)
@@ -99,7 +99,7 @@ class Environment(OptiLayer):
                 eps = self.define_spline_variable(
                     'eps_'+str(vehicle.index)+str(obstacle.index))[0]
                 self._obj += (safety_weight *
-                                    definite_integral(eps, t/T, 1.))
+                              definite_integral(eps, t/T, 1.))
                 self.define_constraint(eps - safety_distance, -inf, 0.)
                 self.define_constraint(-eps, -inf, 0.)
             else:
@@ -136,10 +136,7 @@ class Environment(OptiLayer):
     # Other required methods
     # ========================================================================
 
-    def init_variables(self):
-        return {}
-
-    def get_parameters(self, current_time):
+    def set_parameters(self, current_time):
         parameters = {}
         for obstacle in self.obstacles:
             # current time relative to begin of horizon + horizon time

@@ -1,6 +1,8 @@
-from optilayer import OptiLayer
+from optilayer import OptiFather, OptiChild
 from fleet import get_fleet_vehicles
 from plots import Plots
+from spline_extra import shift_over_knot
+import numpy as np
 import time
 
 
@@ -37,16 +39,13 @@ class Simulator:
         return stop
 
 
-class Problem(OptiLayer):
+class Problem(OptiChild):
 
-    def __init__(self, fleet, environment, options={}, **kwargs):
+    def __init__(self, fleet, environment, options={}, label='problem'):
+        OptiChild.__init__(self, label)
         self.fleet, self.vehicles = get_fleet_vehicles(fleet)
         self.environment = environment
         self.environment.add_vehicle(self.vehicles)
-        if 'label' in kwargs:
-            OptiLayer.__init__(self, kwargs['label'])
-        else:
-            OptiLayer.__init__(self, 'problem')
         self.set_default_options()
         self.set_options(options)
         self.iteration = 0
@@ -71,22 +70,25 @@ class Problem(OptiLayer):
     # Create and solve problem
     # ========================================================================
 
+    def init(self):
+        children = [vehicle for vehicle in self.vehicles]
+        children.extend([self.environment, self])
+        self.father = OptiFather(children)
+        self.problem, compile_time = self.father.construct_problem(self.options)
+
     def solve(self, current_time):
         self.current_time = current_time
         self.init_step()
-        # set parameters and initial guess
-        self.problem.setInput(OptiLayer.get_variables(), 'x0')
-        self.problem.setInput(OptiLayer.get_parameters(current_time), 'p')
-        # set lb & ub
-        lb, ub = OptiLayer.update_bounds(current_time)
-        self.problem.setInput(lb, 'lbg')
-        self.problem.setInput(ub, 'ubg')
+        # set initial guess, parameters, lb & ub
+        var = self.father.get_variables()
+        par = self.father.set_parameters(current_time)
+        lb, ub = self.father.update_bounds(current_time)
         # solve!
         t0 = time.time()
-        self.problem.evaluate()
+        self.problem({'x0': var, 'p': par, 'lbg': lb, 'ubg': ub})
         t1 = time.time()
         t_upd = t1-t0
-        OptiLayer.set_variables(self.problem.getOutput('x'))
+        self.father.set_variables(self.problem.getOutput('x'))
         stats = self.problem.getStats()
         if stats.get("return_status") != "Solve_Succeeded":
             print stats.get("return_status")
@@ -110,7 +112,7 @@ class Problem(OptiLayer):
     def init_variables(self):
         return {}
 
-    def get_parameters(self, time):
+    def set_parameters(self, time):
         return {}
 
     def final(self):
