@@ -39,7 +39,7 @@ def gen_code_nlp(solver, directory, options,
                    opt + ' ' + src[name] + ' -o ' + obj[name])
         t2 = time.time()
         compile_time = t2 - t1
-        print 'Compile time = ', (compile_time)*1e3, ' ms'
+        print 'Compile time = %5g s' % (compile_time)
 
     solver = get_nlp_solver(directory, options)
 
@@ -87,7 +87,7 @@ def gen_code_function(function, directory, name,
         system('gcc -fPIC -shared -std=c99' + opt + ' ' + src + ' -o ' + obj)
         t2 = time.time()
         compile_time = t2 - t1
-        print 'Compile time = ', compile_time*1e3, ' ms'
+        print 'Compile time = %5g s' % (compile_time)
 
     function = get_function(directory, name)
 
