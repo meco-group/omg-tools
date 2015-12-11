@@ -1,4 +1,3 @@
-import sys
 from spline import BSpline, BSplineBasis
 from scipy.interpolate import splev
 from casadi import SX, MX, mul, solve
@@ -32,7 +31,7 @@ def evalspline(s, x):
     return result
 
 
-def shiftSpline(coeffs, update_time, target_time, basis):
+def shift_spline(coeffs, update_time, target_time, basis):
     n_knots = len(basis) - basis.degree + 1
     knots_ = np.r_[round(update_time/target_time, 5)*np.ones(basis.degree),
                    np.linspace(round(update_time/target_time, 5), 1., n_knots),
@@ -40,16 +39,6 @@ def shiftSpline(coeffs, update_time, target_time, basis):
     B_ = BSplineBasis(knots_, basis.degree)
     T_tf = B_.transform(basis)
     return T_tf.dot(coeffs)
-
-
-def sampleSplines(coeffs, knots, degree, t_sample, der=0):
-    sampled_path = []
-    if not (isinstance(t_sample, np.ndarray) or isinstance(t_sample, list)):
-        t_sample = np.array([t_sample])
-    for k in range(coeffs.shape[1]):
-        s_ev = splev(t_sample, (knots, coeffs[:, k], degree), der)
-        sampled_path.append(np.hstack(s_ev))
-    return np.vstack(sampled_path)
 
 
 def running_integral(spline):
@@ -155,41 +144,6 @@ def integral_sqbasisMX(basis):
         if i >= L-degree-1:
             k += 1
     return B
-
-
-def integral_sqbasis_partial(basis, t_shift, B):
-    # Recompute only first subblock of integral of squared bases
-    knots = t_shift*np.ones(basis.degree+1)
-    basis = BSplineBasis(knots, basis.degree)
-    basis_prod = basis*basis
-    pairs, S = basis.pairs(basis)
-    b_self = basis(basis_prod._x)
-    basis_product = b_self[:, pairs[0]].multiply(b_self[:, pairs[1]])
-    T = basis_prod.transform(lambda y: basis_product.toarray()[y, :])
-    knots = basis_prod.knots
-    d = basis_prod.degree
-    K = np.array((knots[d + 1:] - knots[:-(d + 1)]) / (d + 1))
-
-    L = len(basis)
-    degree = basis.degree
-    for i in range(degree+1):
-        c1 = np.zeros(L)
-        c1[i] = 1
-        for j in range(i, i+degree+1):
-            c2 = np.zeros(L)
-            c2[j] = 1
-            coeffs_product = (c1[pairs[0].tolist()]*c2[pairs[1].tolist()])
-            c_prod = T.dot(coeffs_product)
-            bb = K.T.dot(c_prod)
-            B[i, j] = bb
-            B[j, i] = bb
-    return B
-
-
-def orth_basis_tf(basis):
-    B = integral_sqbasis(basis)
-    C = np.linalg.solve(B, np.identity(len(basis)))
-    return C, B
 
 
 def shift_knot1_fwd(coeffs, knots, degree, t_shift):
