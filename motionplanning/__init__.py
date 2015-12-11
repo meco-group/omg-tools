@@ -1,6 +1,6 @@
 import matplotlib
 
-from optilayer      import OptiLayer
+from optilayer      import OptiChild, OptiFather
 from environment    import Environment
 from environment    import Obstacle
 from shape          import *

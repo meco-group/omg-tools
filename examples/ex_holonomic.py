@@ -27,6 +27,7 @@ environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
 # create a point-to-point problem
 codegen = {'compileme': True, 'codegen': True, 'buildname': 'holonomic'}
 problem = Point2point(vehicle, environment, options={'codegen': codegen})
+problem.init()
 
 # create simulator
 simulator = Simulator(problem)

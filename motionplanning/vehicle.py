@@ -1,4 +1,4 @@
-from optilayer import OptiLayer, evalf
+from optilayer import OptiChild, evalf
 from spline import BSplineBasis
 from casadi import SX, MX, SXFunction
 from scipy.signal import filtfilt, butter
@@ -8,11 +8,11 @@ from numpy.random import normal
 import numpy as np
 import re
 
-class Vehicle(OptiLayer):
+class Vehicle(OptiChild):
 
     def __init__(self, n_y, degree, shape, options, **kwargs):
         self.index = 0
-        OptiLayer.__init__(self, 'vehicle')
+        OptiChild.__init__(self, 'vehicle')
         self.shape = shape
         self._signals = {}
         self._signals_num = {}
@@ -401,9 +401,6 @@ class Vehicle(OptiLayer):
                                                       2*self.degree)),
                                          self.yT[k, 0]*np.ones(self.degree)]
         return variables
-
-    def get_parameters(self, time):
-        return {}
 
     def get_checkpoints(self, y=None):
         if y is None:

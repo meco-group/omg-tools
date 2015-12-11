@@ -80,6 +80,7 @@ environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
 # problem.options
 codegen = {'compileme': True, 'codegen': True, 'buildname': 'holonomic'}
 problem = Point2point(vehicle, environment, options={'codegen': codegen})
+problem.init()
 
 # Create simulator
 # This allows to simulate a motion planning algorithm and allows to plot
