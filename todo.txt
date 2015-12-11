@@ -3,46 +3,18 @@ ADMM
 - multiple knots inside: does this still work?
 
 Toolbox
-- subfolders in motionplanning
-
-- rewrite for casadi 2.4
-- give solver ipopt as option (codegen)
-
-
-+ guard label uniqueness
-+ get_variable, get_parameter, get_symbol -> give back symbolic MX's
-+ get_variable, ... should return splines
-+ everything becomes sx
-+ test on symbols done while constructing problem?
-+ think on how environment should be copied with other label: solved now by
-  providing copy() method in Environment
-
-- rewrite OptiLayer: results are stored on OptiLayer level...
-  if you have multiple groups this crashes. OptiLayer object gets some children
-    * define OptiLayer class: gets the children and all previous class methods
-    * childeren are of type Opti
-    * composition of dictionary only in the end?
-
-  try to avoid class methods/attributes/...
 - point2point has construct_problem in __init__...
 - transform variables for objective
-
 - worries
     - environment defines constraints on already multiple vehicles
     - should admm be part of a children group? Yes, I think it should: it
       defines objective part and has parameters.
+- vehicle index... does it still mean something?
 
-+ create dictionary system: symbol_name:[child, local name]
-    symbol name is unique, local name not!
-
-Notes/desires:
+Notes:
 * All SX symbol names are unique!
 * Local names (defined in a child) are not, but are human readable
 * All child-labels are unique! OptiLayer should guard this and change the label
 * Unique translation from SX symbol name to [child, local name, index]
 * Opposite is not true! This due to symbols: multiple SX symbols can point to
   1 [child, local name, index].
-
-If we can retrieve a subset of the symbol_dict, we can act on single group:
-create group constraints/variables/parameters
-
