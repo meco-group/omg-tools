@@ -3,7 +3,17 @@ ADMM
 - multiple knots inside: does this still work?
 
 Toolbox
-- point2point has construct_problem in __init__...
+- make interprete_constraints in distributedProblem, where also dependency
+  of symbols and their indices is determined.
+- change optilayer for mx and try joris' trick for getting indices.
++ check on dictionary addition: no 2 symbol names allowed!
++ indices have to be sorted!
++ s_i not necessary
++ x_i based on get_variable (maybe in apart method)
++ q_ji_struct, q_ij_struct
+- multiple build names
+- check on linear eq constr based on jacobian, also G matrix = jacobian
+
 - transform variables for objective
 - worries
     - environment defines constraints on already multiple vehicles
