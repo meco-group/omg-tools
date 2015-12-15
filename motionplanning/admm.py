@@ -249,7 +249,10 @@ class ADMM(Problem):
         self.variables['l_ij'] = self.q_ij_struct(out[1])
 
     def communicate(self):
-        pass
+        for nghb_ind in self.q_ji.items():
+            self.variables['z_ji'][str(nghb_ind)] = self.neighbors[nghb_ind]['z_ij'].prefix(str(self.index))
+            self.variables['l_ji'][str(nghb_ind)] = self.neighbors[nghb_ind]['l_ij'].prefix(str(self.index))
+            self.variables['x_j'][str(nghb_ind)] = self.neighbors[nghb_ind]['x_i'].prefix(str(self.index))
 
     def init_step(self):
         self.problem.init_step()
@@ -271,11 +274,11 @@ class DistributedProblem(Problem):
         for index, vehicle in enumerate(self.vehicles):
             self.updaters[index] = ADMM(index, vehicle, problems[index],
                                         self.environment.copy(), self.options)
-        q_i, q_ij, q_ji, con = self.interprete_constraints(self.updaters)
+        q_i, q_ij, q_ji, con, nghb = self.interprete_constraints(self.updaters)
 
         for index, updater in self.updaters.items():
             updater.construct_problem(q_i[index], q_ij[index],
-                                      q_ji[index], con[index])
+                                      q_ji[index], con[index], nghb[index])
 
     def solve(self, current_time):
         it0 = self.iteration
@@ -293,7 +296,7 @@ class DistributedProblem(Problem):
                 updater.communicate()
             for updater in self.updaters:
                 t1 = updater.update_z(current_time)
-                t2 = updater.update_l()
+                t2 = updater.update_l(current_time)
                 t3, pr, dr = updater.get_residuals()
                 t_upd_z = max(t_upd_z, t1)
                 t_upd_l = max(t_upd_l, t2)
@@ -325,11 +328,12 @@ class DistributedProblem(Problem):
             symbol_dict.update(child.symbol_dict)
         return symbol_dict
 
-    def interprete_constraints(self, groups):
-        q_i = [{} for group in groups]
-        q_ij = [{} for group in groups]
-        q_ji = [{} for group in groups]
-        con = [[] for group in groups]
+    def interprete_constraints(self, updaters):
+        q_i = [{} for updater in updaters]
+        q_ij = [{} for updater in updaters]
+        q_ji = [{} for updater in updaters]
+        con = [[] for updater in updaters]
+        neighbors = [[] for updater in updaters]
 
         symbol_dict = self.compose_dictionary()
 
@@ -369,13 +373,15 @@ class DistributedProblem(Problem):
                                     q_ij[index][ch.index][ch][name].append(i)
                             q_ij[index][ch.index][ch][name].sort()
         # create q_ji: structure of local variables i seen from remote j
-        for index_i in range(len(groups)):
+        for index_i in range(len(updaters)):
             for index_j in q_ij[index_i].keys():
-                if index_j not in q_ji:
-                    q_ji[index_j] = {}
                 q_ji[index_j][index_i] = q_ij[index_i][index_j]
+        # extract neighbors
+        for index in range(len(updater)):
+            for nghb_ind in q_ij[index].keys():
+                neighbors[index].append(updaters[nghb_ind])
 
-        return q_i, q_ij, q_ji, con
+        return q_i, q_ij, q_ji, con, neighbors
 
 
 class FormationPoint2point(DistributedProblem):
