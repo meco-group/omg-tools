@@ -72,7 +72,6 @@ def gen_code_function(function, directory, name,
 
     if sx_cast:
         function = SXFunction(function)
-    function.init()
 
     src = directory+'/'+name+'.c'
     obj = directory+'/'+name+'.so'
@@ -82,7 +81,7 @@ def gen_code_function(function, directory, name,
     os.rename(cwd+'/'+name+'.c', cwd+'/'+directory+'/'+name+'.c')
 
     if compileme:
-        print 'Compiling function...',
+        print 'Compiling function '+name+'...',
         t1 = time.time()
         system('gcc -fPIC -shared -std=c99' + opt + ' ' + src + ' -o ' + obj)
         t2 = time.time()
@@ -100,5 +99,4 @@ def gen_code_function(function, directory, name,
 def get_function(directory, name):
     obj = directory+'/'+name+'.so'
     function = ExternalFunction(name, './'+obj)
-    function.init()
     return function
