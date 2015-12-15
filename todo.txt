@@ -1,0 +1,30 @@
+ADMM
+- rewrite shiftFirstKnotFwd with knot insertion
+- multiple knots inside: does this still work?
+
+Toolbox
+- make interprete_constraints in distributedProblem, where also dependency
+  of symbols and their indices is determined.
+- change optilayer for mx and try joris' trick for getting indices.
++ check on dictionary addition: no 2 symbol names allowed!
++ indices have to be sorted!
++ s_i not necessary
++ x_i based on get_variable (maybe in apart method)
++ q_ji_struct, q_ij_struct
+- multiple build names
+- check on linear eq constr based on jacobian, also G matrix = jacobian
+
+- transform variables for objective
+- worries
+    - environment defines constraints on already multiple vehicles
+    - should admm be part of a children group? Yes, I think it should: it
+      defines objective part and has parameters.
+- vehicle index... does it still mean something?
+
+Notes:
+* All SX symbol names are unique!
+* Local names (defined in a child) are not, but are human readable
+* All child-labels are unique! OptiLayer should guard this and change the label
+* Unique translation from SX symbol name to [child, local name, index]
+* Opposite is not true! This due to symbols: multiple SX symbols can point to
+  1 [child, local name, index].
