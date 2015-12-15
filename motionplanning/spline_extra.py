@@ -216,6 +216,7 @@ def shift_knot1_bwd(coeffs, knots, degree, t_shift):
 
 
 def shift_knot1_bwd_mx(coeffs, knots, degree, t_shift):
+    # knots are here original knots (before applying fwd operation)
     if isinstance(coeffs, list):
         return [shift_knot1_bwd_mx(c_i, knots, degree, t_shift)
                 for c_i in coeffs]
@@ -223,12 +224,21 @@ def shift_knot1_bwd_mx(coeffs, knots, degree, t_shift):
         typ = MX
     elif isinstance(coeffs, SX):
         typ = SX
-    knots2 = typ.zeros(knots.shape)
-    coeffs2 = typ.zeros(coeffs.shape)
-    for k in range(knots.size1()):
-        knots2[k] = knots[k]
+
+    knots1 = typ.zeros(len(knots), 1)
+    for k in range(knots1.size1()):
+        knots1[k] = knots[k]
     for k in range(degree+1):
-        knots2[k] = knots[0]-t_shift
+        knots1[k] = t_shift
+
+    knots2 = knots
+
+    # knots2 = typ.zeros(knots.shape)
+    coeffs2 = typ.zeros(coeffs.shape)
+    # for k in range(knots.size1()):
+        # knots2[k] = knots[k]
+    # for k in range(degree+1):
+        # knots2[k] = knots[0]-t_shift
     for n in range(coeffs.size2()):
         for k in range(coeffs.size1()):
             coeffs2[k, n] = coeffs[k, n]
