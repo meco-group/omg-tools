@@ -1,10 +1,11 @@
 from optilayer import OptiChild, OptiFather
 from problem import Problem
 from point2point import Point2point
-from casadi import symvar, vertcat, mul, MXFunction, sumRows
-from casadi.tools import struct, struct_MX, entry
+from casadi import symvar, mul, MXFunction, sumRows
+from casadi.tools import struct, entry
 from spline_extra import shift_knot1_fwd_mx
 from copy import deepcopy
+import numpy as np
 import time
 
 
@@ -43,15 +44,19 @@ class ADMM(Problem):
         for child in self.group.values():
             child.index = index
 
-    # def set_default_options(self):
-    #     self.options = {'rho': 0.1}
+    def set_default_options(self):
+        Problem.set_default_options(self)
+        self.options['admm'] = {'rho': 0.1}
 
-    # def set_options(self, options):
-    #     self.options.update(options)
+    def set_options(self, options):
+        Problem.set_options(self, options)
+        self.options.update(options)
 
     def construct_problem(self, q_i, q_ij, q_ji, constraints):
         self.construct_structs(q_i, q_ij, q_ji)
-        self.construct_updX()
+        self.construct_upd_x()
+        self.construct_upd_z()
+        self.construct_upd_l()
 
     def construct_structs(self, q_i, q_ij, q_ji):
         self.q_i = q_i
@@ -62,29 +67,61 @@ class ADMM(Problem):
         self.q_ij_struct = create_struct_from_dict(self.q_ij)
         self.q_ji_struct = create_struct_from_dict(self.q_ji)
 
-    def get_x_variables(self):
-        x = {}
+        self.variables = {}
+        self.variables['x_i'] = self.q_i_struct(0)
+        self.variables['x_j'] = self.q_ij_struct(0)
+        self.variables['z_i'] = self.q_i_struct(0)
+        self.variables['z_ij'] = self.q_ij_struct(0)
+        self.variables['z_ji'] = self.q_ji_struct(0)
+        self.variables['l_i'] = self.q_i_struct(0)
+        self.variables['l_ij'] = self.q_ij_struct(0)
+        self.variables['l_ji'] = self.q_ji_struct(0)
+
+    def get_x_variables(self, **kwargs):
+        sol = kwargs['solution'] if 'solution' in kwargs else False
+        x = self.q_i_struct(0) if sol else {}
         for child, q_i in self.q_i.items():
-            x[child.label] = {}
+            if not sol:
+                x[child.label] = {}
             for name, ind in q_i.items():
-                x[child.label][name] = child.get_variable(name, spline=False)[ind]
+                var = child.get_variable(name, spline=False, **kwargs)
+                if sol:
+                    x[child.label, name] = var.ravel()[ind]
+                else:
+                    x[child.label][name] = var[ind]
         return x
 
-    def transform_spline_variables(self, x, z, l, tf, t0):
-        for child, q_i in self.q_i.items():
-            for name, ind in q_i.items():
-                if name in child._splines:
-                    basis = child._splines[name]
-                    for l in range(child._variables[name].shape[1]):
-                        if set(range(l*len(basis), (l+1)*len(basis))) <= set(ind):
-                            sl = slice(l*len(basis), (l+1)*len(basis))
-                            x[child.label][name][sl] = tf(x[child.label][name][sl], basis.knots, basis.degree, t0)
-                            z[child.label, name][sl] = tf(z[child.label, name][sl], basis.knots, basis.degree, t0)
-                            l[child.label, name][sl] = tf(l[child.label, name][sl], basis.knots, basis.degree, t0)
+    def transform_spline(self, var, tf, t0, dic):
+        if isinstance(var, list):
+            for v in var:
+                self.transform_spline(v, tf, t0, dic)
+        elif isinstance(dic.keys()[0], OptiChild):
+            for child, q_i in dic.items():
+                for name, ind in q_i.items():
+                    if name in child._splines:
+                        basis = child._splines[name]
+                        for l in range(child._variables[name].shape[1]):
+                            sl_min = l*len(basis)
+                            sl_max = (l+1)*len(basis)
+                            if set(range(sl_min, sl_max)) <= set(ind):
+                                sl = slice(sl_min, sl_max)
+                                if isinstance(var, dict):
+                                    v = var[child.label][name][sl]
+                                    v = tf(v, basis.knots, basis.degree, t0)
+                                    var[child.label][name][sl] = v
+                                else:  # struct or prefix
+                                    v = var[child.label, name][sl]
+                                    v = tf(v, basis.knots, basis.degree, t0)
+                                    var[child.label, name][sl] = v
+        else:
+            for key in dic.keys():
+                if isinstance(var, struct):
+                    self.transform_spline(
+                        var.prefix[str(key)], tf, t0, dic[key])
+                elif isinstance(var, dict):
+                    self.transform_spline(var[key], tf, t0, dic[key])
 
-
-
-    def construct_updX(self):
+    def construct_upd_x(self):
         # define parameters
         z_i = self.define_parameter('z_i', self.q_i_struct.shape[0])
         z_ji = self.define_parameter('z_ji', self.q_ji_struct.shape[0])
@@ -103,26 +140,9 @@ class ADMM(Problem):
         # get (part of) variables
         x_i = self.get_x_variables()
         # transform spline variables: only consider future piece of spline
-        for child, q_i in self.q_i.items():
-            for name, ind in q_i.items():
-                if name in child._splines:
-                    basis = child._splines[name]
-                    for l in range(child._variables[name].shape[1]):
-                        if set(range(l*len(basis), (l+1)*len(basis))) <= set(ind):
-                            sl = slice(l*len(basis), (l+1)*len(basis))
-                            x_i[child.label][name][sl] = shift_knot1_fwd_mx(x_i[child.label][name][sl], basis.knots, basis.degree, t0)
-                            z_i[child.label, name][sl] = shift_knot1_fwd_mx(z_i[child.label, name][sl], basis.knots, basis.degree, t0)
-                            l_i[child.label, name][sl] = shift_knot1_fwd_mx(l_i[child.label, name][sl], basis.knots, basis.degree, t0)
-        for nghb_ind in self.q_ji.keys():
-            for child, q_ji in self.q_ji[nghb_ind].items():
-                for name, ind in q_ji.items():
-                    if name in child._splines:
-                        basis = child._splines[name]
-                        for l in range(child._variables[name].shape[1]):
-                            if set(range(l*len(basis), (l+1)*len(basis))) <= set(ind):
-                                sl = slice(l*len(basis), (l+1)*len(basis))
-                                z_ji[str(nghb_ind), child.label, name][sl] = shift_knot1_fwd_mx(z_ji[str(nghb_ind), child.label, name][sl], basis.knots, basis.degree, t0)
-                                l_ji[str(nghb_ind), child.label, name][sl] = shift_knot1_fwd_mx(l_ji[str(nghb_ind), child.label, name][sl], basis.knots, basis.degree, t0)
+        tf = shift_knot1_fwd_mx
+        self.transform_spline([x_i, z_i, l_i], tf, t0, self.q_i)
+        self.transform_spline([z_ji, l_ji], tf, t0, self.q_ji)
         # construct objective
         obj = 0.
         for child, q_i in self.q_i.items():
@@ -139,8 +159,58 @@ class ADMM(Problem):
         # construct problem
         self.father = OptiFather(self.group.values())
         options = deepcopy(self.options)
-        options['codegen']['buildname'] = self.options['codegen']['buildname'] + '_updx_' + str(self.index)
-        self.problem_updX, compile_time = self.father.construct_problem(options)
+        options['codegen']['buildname'] = (self.options['codegen']['buildname']
+                                           + '_updx_' + str(self.index))
+        self.problem_upd_x, compile_time = self.father.construct_problem(
+            options)
+        self.update_x(0.0)
+
+    def set_parameters(self, current_time):
+        parameters = {}
+        parameters['z_i'] = self.variables['z_i'].cat
+        parameters['z_ji'] = self.variables['z_ji'].cat
+        parameters['l_i'] = self.variables['l_i'].cat
+        parameters['l_ji'] = self.variables['l_ji'].cat
+        parameters['rho'] = self.options['admm']['rho']
+        return parameters
+
+    def construct_upd_z(self):
+        pass
+
+    def construct_upd_l(self):
+        pass
+
+    def update_x(self, current_time):
+        # set initial guess, parameters, lb & ub
+        var = self.father.get_variables()
+        par = self.father.set_parameters(current_time)
+        lb, ub = self.father.update_bounds(current_time)
+        # solve!
+        t0 = time.time()
+        self.problem_upd_x({'x0': var, 'p': par, 'lbg': lb, 'ubg': ub})
+        t1 = time.time()
+        t_upd = t1-t0
+        self.father.set_variables(self.problem_upd_x.getOutput('x'))
+        self.variables['x_i'] = self.get_x_variables(solution=True)
+        stats = self.problem_upd_x.getStats()
+        if stats.get('return_status') != 'Solve_Succeeded':
+            print 'upd_x %d: %s' % (self.index, stats.get('return_status'))
+        return t_upd
+
+    def update_z(self, current_time):
+        pass
+
+    def update_l(self):
+        pass
+
+    def communicate(self):
+        pass
+
+    def init_step(self):
+        self.problem.init_step()
+
+    def get_residuals(self):
+        pass
 
 
 class DistributedProblem(Problem):
@@ -161,6 +231,45 @@ class DistributedProblem(Problem):
         for index, updater in self.updaters.items():
             updater.construct_problem(q_i[index], q_ij[index],
                                       q_ji[index], con[index])
+
+    def solve(self, current_time):
+        it0 = self.iteration
+        while (self.iteration - it0) < self.max_iterations:
+            t_upd_x, t_upd_z, t_upd_l, t_res = 0., 0., 0., 0.
+            p_res, d_res = 0., 0.
+            for updater in self.updaters:
+                self.init_step()
+            for updater in self.updaters:
+                updater.communicate()
+            for updater in self.updaters:
+                t = updater.update_x(current_time)
+                t_upd_x = max(t_upd_x, t)
+            for updater in self.updaters:
+                updater.communicate()
+            for updater in self.updaters:
+                t1 = updater.update_z(current_time)
+                t2 = updater.update_l()
+                t3, pr, dr = updater.get_residuals()
+                t_upd_z = max(t_upd_z, t1)
+                t_upd_l = max(t_upd_l, t2)
+                t_res = max(t_res, t3)
+                p_res += pr**2
+                d_res += dr**2
+            p_res, d_res = np.sqrt(p_res), np.sqrt(d_res)
+
+            if self.options['verbose'] >= 1:
+                self.iteration += 1
+                if ((self.iteration - 1) % 20 == 0):
+                    print('----|----------------|------------|------------|'
+                          '------------|------------|------------')
+                    print('%3s | %14s | %10s | %10s | %10s | %10s | %10s ' %
+                          ('It', 'time', 'prim res', 'dual res',
+                           't upd_x', 't upd_z', 't upd_l', 't_res'))
+                    print('----|----------------|------------|------------|'
+                          '------------|------------|------------')
+                print('%3d | %.1e | %.4e | %.4e | %.4e | %.4e | %.4e ' %
+                      (self.iteration, current_time, p_res, d_res, t_upd_x,
+                       t_upd_z, t_upd_l, t_res))
 
     def compose_dictionary(self):
         children = self.vehicles
@@ -199,7 +308,8 @@ class DistributedProblem(Problem):
                         if i not in q_i[index][child][name]:
                             q_i[index][child][name].append(i)
                     q_i[index][child][name].sort()
-                # create q_ij: structure of remote variables j seen from local i
+                # create q_ij: structure of remote variables j seen from local
+                # i
                 for ch, dic_ch in dep.items():
                     if not (child == ch):
                         if ch.index not in q_ij[index]:
@@ -236,8 +346,11 @@ class FormationPoint2point(DistributedProblem):
         #     y[1][0].coeffs[0] - y[0][0].coeffs[0] - 0.5, 0., 0.)
         # self.define_constraint(
         #     y[1][0].coeffs[3:5] - y[0][0].coeffs[5:7], 0., 0.)
-        Dx = [0.5, 0]
+        Dx = [0., 0]
         for k in range(self.vehicles[0].n_y):
             self.define_constraint(y[1][k] - y[0][k] - Dx[k], 0., 0.)
+            self.define_constraint(y[2][k] - y[1][k] - Dx[k], 0., 0.)
+            self.define_constraint(y[3][k] - y[2][k] - Dx[k], 0., 0.)
+            self.define_constraint(y[0][k] - y[3][k] - Dx[k], 0., 0.)
 
         self.construct_subproblems(problems)
