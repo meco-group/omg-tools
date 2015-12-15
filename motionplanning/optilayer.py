@@ -1,6 +1,6 @@
-from casadi import SX, inf, SXFunction, nlpIn, nlpOut, NlpSolver
+from casadi import MX, inf, MXFunction, nlpIn, nlpOut, NlpSolver
 from casadi import symvar, substitute
-from casadi.tools import struct, struct_SX, struct_symSX, entry
+from casadi.tools import struct, struct_MX, struct_symMX, entry
 from codegeneration import get_nlp_solver, get_function
 from codegeneration import gen_code_nlp, gen_code_function
 from spline import BSpline
@@ -22,13 +22,15 @@ class OptiFather:
         for child in children:
             self.add(child)
 
-    def add(self, child):
-        child.father = self
-        self.children.update({child.label: child})
+    def add(self, children):
+        children = children if isinstance(children, list) else [children]
+        for child in children:
+            child.father = self
+            self.children.update({child.label: child})
 
     def add_to_dict(self, symbol, child, name):
-        for index, sym in enumerate(symvar(symbol)):
-            self.symbol_dict[sym.getName()] = [child, name, index]
+        for sym in symvar(symbol):
+            self.symbol_dict[sym.getName()] = [child, name]
 
     # ========================================================================
     # Problem composition
@@ -42,15 +44,14 @@ class OptiFather:
         constraints, lb, ub = self.construct_constraints(variables, parameters)
         objective = self.construct_objective(variables, parameters)
         problem, compile_time = self.compile_nlp(
-            SXFunction('nlp', nlpIn(x=variables, p=parameters),
+            MXFunction('nlp', nlpIn(x=variables, p=parameters),
                        nlpOut(f=objective, g=constraints)), options)
         self.init_variables()
         return problem, compile_time
 
     def compose_dictionary(self):
         for label, child in self.children.items():
-            for symbol_name, sym in child.symbol_dict.items():
-                self.symbol_dict[symbol_name] = [child, sym[0], sym[1]]
+            self.symbol_dict.update(child.symbol_dict)
 
     def translate_symbols(self):
         for label, child in self.children.items():
@@ -80,7 +81,7 @@ class OptiFather:
                 entries_child.append(entry(name, shape=var.shape))
             entries.append(entry(label, struct=struct(entries_child)))
         self._var_struct = struct(entries)
-        return struct_symSX(self._var_struct)
+        return struct_symMX(self._var_struct)
 
     def construct_parameters(self):
         entries = []
@@ -90,7 +91,7 @@ class OptiFather:
                 entries_child.append(entry(name, shape=par.shape))
             entries.append(entry(label, struct=struct(entries_child)))
         self._par_struct = struct(entries)
-        return struct_symSX(self._par_struct)
+        return struct_symMX(self._par_struct)
 
     def construct_constraints(self, variables, parameters):
         entries = []
@@ -99,7 +100,7 @@ class OptiFather:
                 expression = self._substitute_symbols(
                     constraint[0], variables, parameters)
                 entries.append(entry(child._add_label(name), expr=expression))
-        constraints = struct_SX(entries)
+        constraints = struct_MX(entries)
         self._lb, self._ub = constraints(0), constraints(0)
         self._constraint_shutdown = {}
         for child in self.children.values():
@@ -122,18 +123,16 @@ class OptiFather:
         if isinstance(expr, (int, float)):
             return expr
         for sym in symvar(expr):
-            [child, name, index] = self.symbol_dict[sym.getName()]
+            [child, name] = self.symbol_dict[sym.getName()]
             if name in child._variables:
-                expr = substitute(expr, sym,
-                                  variables[child.label, name, index])
+                expr = substitute(expr, sym, variables[child.label, name])
             elif name in child._parameters:
-                expr = substitute(expr, sym,
-                                  parameters[child.label, name, index])
+                expr = substitute(expr, sym, parameters[child.label, name])
         return expr
 
     def _evaluate_symbols(self, expression, variables, parameters):
         symbols = symvar(expression)
-        f = SXFunction(symbols, [expression])
+        f = MXFunction(symbols, [expression])
         f.init()
         f_in = []
         for sym in symbols:
@@ -257,9 +256,16 @@ class OptiChild:
         self.symbol_dict = {}
         self._constraint_cnt = 0
 
+    def __str__(self):
+        return self.label
+
+    __repr__ = __str__
+
     def add_to_dict(self, symbol, name):
-        for index, sym in enumerate(symvar(symbol)):
-            self.symbol_dict[sym.getName()] = [name, index]
+        for sym in symvar(symbol):
+            if sym in self.symbol_dict:
+                raise ValueError('Symbol already added for %s' % self.label)
+            self.symbol_dict[sym.getName()] = [self, name]
 
     def _add_label(self, name):
         return name + '_' + self.label
@@ -283,41 +289,41 @@ class OptiChild:
     # ========================================================================
 
     def define_symbol(self, name, size0=1, size1=1):
-        return self._define_sx(name, size0, size1, self._symbols)
+        return self._define_mx(name, size0, size1, self._symbols)
 
     def define_variable(self, name, size0=1, size1=1):
-        return self._define_sx(name, size0, size1, self._variables)
+        return self._define_mx(name, size0, size1, self._variables)
 
     def define_parameter(self, name, size0=1, size1=1):
-        return self._define_sx(name, size0, size1, self._parameters)
+        return self._define_mx(name, size0, size1, self._parameters)
 
     def define_spline_symbol(self, name, size0=1, size1=1, **kwargs):
         basis = kwargs['basis'] if 'basis' in kwargs else self.basis
-        return self._define_sx_spline(name, size0, size1, self._symbols, basis)
+        return self._define_mx_spline(name, size0, size1, self._symbols, basis)
 
     def define_spline_variable(self, name, size0=1, size1=1, **kwargs):
         basis = kwargs['basis'] if 'basis' in kwargs else self.basis
-        return self._define_sx_spline(name, size0, size1,
+        return self._define_mx_spline(name, size0, size1,
                                       self._variables, basis)
 
     def define_spline_parameter(self, name, size0=1, size1=1, **kwargs):
         basis = kwargs['basis'] if 'basis' in kwargs else self.basis
-        return self._define_sx_spline(name, size0, size1,
+        return self._define_mx_spline(name, size0, size1,
                                       self._parameters, basis)
 
-    def _define_sx(self, name, size0, size1, dictionary):
+    def _define_mx(self, name, size0, size1, dictionary):
         symbol_name = self._add_label(name)
-        dictionary[name] = SX.sym(symbol_name, size0, size1)
+        dictionary[name] = MX.sym(symbol_name, size0, size1)
         self.add_to_dict(dictionary[name], name)
         return dictionary[name]
 
-    def _define_sx_spline(self, name, size0, size1, dictionary, basis):
+    def _define_mx_spline(self, name, size0, size1, dictionary, basis):
         if size1 > 1:
-            return [self._define_sx_spline(name+str(l), size0,
+            return [self._define_mx_spline(name+str(l), size0,
                                            1, dictionary, basis)
                     for l in range(size1)]
         else:
-            coeffs = self._define_sx(name, len(basis), size0, dictionary)
+            coeffs = self._define_mx(name, len(basis), size0, dictionary)
             self._splines[name] = basis
             return [BSpline(basis, coeffs[:, k]) for k in range(size0)]
 
@@ -340,7 +346,7 @@ class OptiChild:
     def get_variable(self, name, **kwargs):
         if 'solution' in kwargs and kwargs['solution']:
             return self.father.get_variables(self.label, name)
-        if name in self._splines and 'spline' in kwargs and kwargs['spline']:
+        if name in self._splines and not('spline' in kwargs and not kwargs['spline']):
             basis = self._splines[name]
             coeffs = self._variables[name]
             return [BSpline(basis, coeffs[:, k]) for k in range(coeffs.shape[1])]
@@ -350,7 +356,7 @@ class OptiChild:
     def get_parameter(self, name, **kwargs):
         if 'solution' in kwargs and kwargs['solution']:
             return self.father.get_parameters(self.label, name)
-        if name in self._splines and 'spline' in kwargs and kwargs['spline']:
+        if name in self._splines and not('spline' in kwargs and not kwargs['spline']):
             basis = self._splines[name]
             coeffs = self._parameters[name]
             return [BSpline(basis, coeffs[:, k]) for k in range(coeffs.shape[1])]
