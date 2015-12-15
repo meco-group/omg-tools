@@ -178,7 +178,39 @@ class ADMM(Problem):
         pass
 
     def construct_upd_l(self):
-        pass
+        # create parameters
+        x_i = struct_symMX(self.q_i_struct)
+        z_i = struct_symMX(self.q_i_struct)
+        z_ij = struct_symMX(self.q_ij_struct)
+        l_i = struct_symMX(self.q_i_struct)
+        l_ij = struct_symMX(self.q_ij_struct)
+        x_j = struct_symMX(self.q_ji_struct)
+        t = MX.sym('t')
+        T = MX.sym('T')
+        rho = MX.sym('rho')
+        t0 = t/T
+        # transform spline variables: only consider future piece of spline
+        tf = shift_knot1_fwd_mx
+        self.transform_spline([x_i, z_i, l_i], tf, t0, self.q_i)
+        self.transform_spline([z_ij, l_ij], tf, t0, self.q_ij)
+        self.transform_spline(x_j, tf, t0, self.q_ji)
+        # update lambda
+        l_i_new = self.q_i_struct(l_i.cat + rho*(x_i.cat - z_i.cat))
+        l_ij_new = self.q_ij_struct(l_ij.cat + rho*(x_j.cat - z_ij.cat))
+        # transform back
+        tf = shift_knot1_bwd_mx
+        self.transform_spline(l_i_new, tf, t0, self.q_i)
+        self.transform_spline(l_ij_new, tf, t0, self.q_ij)
+        # create problem
+        inp = [x_i, z_i, z_ij, l_i, l_ij, x_j, t, T, rho]
+        out = [l_i_new, l_ij_new]
+        fun = MXFunction('upd_l', inp, out)
+        options = deepcopy(self.options)
+        options['codegen']['buildname'] = (self.options['codegen']['buildname']
+                                           + '_updl_' + str(self.index))
+        prob, compile_time = self.father.compile_function(fun, 'upd_l', options)
+        self.problem_upd_l = prob
+        self.update_l(0.0)
 
     def update_x(self, current_time):
         # set initial guess, parameters, lb & ub
@@ -200,8 +232,21 @@ class ADMM(Problem):
     def update_z(self, current_time):
         pass
 
-    def update_l(self):
-        pass
+    def update_l(self, current_time):
+        # set inputs
+        x_i = self.variables['x_i']
+        z_i = self.variables['z_i']
+        z_ij = self.variables['z_ij']
+        l_i = self.variables['l_i']
+        l_ij = self.variables['l_ij']
+        x_j = self.variables['x_j']
+        t = np.round(current_time, 6) % self.problem.knot_time
+        T = self.problem.vehicles[0].options['horizon_time']
+        rho = self.options['admm']['rho']
+        inp = [x_i, z_i, z_ij, l_i, l_ij, x_j, t, T, rho]
+        out = self.problem_upd_l(inp)
+        self.variables['l_i'] = self.q_i_struct(out[0])
+        self.variables['l_ij'] = self.q_ij_struct(out[1])
 
     def communicate(self):
         pass
