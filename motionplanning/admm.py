@@ -1,9 +1,9 @@
 from optilayer import OptiChild, OptiFather
 from problem import Problem
 from point2point import Point2point
-from casadi import symvar, mul, MXFunction, sumRows
-from casadi.tools import struct, entry
-from spline_extra import shift_knot1_fwd_mx
+from casadi import symvar, mul, SX, MX, SXFunction, MXFunction, sumRows
+from casadi.tools import struct, struct_symMX, entry
+from spline_extra import shift_knot1_fwd_mx, shift_knot1_bwd_mx
 from copy import deepcopy
 import numpy as np
 import time
@@ -52,7 +52,8 @@ class ADMM(Problem):
         Problem.set_options(self, options)
         self.options.update(options)
 
-    def construct_problem(self, q_i, q_ij, q_ji, constraints):
+    def construct_problem(self, q_i, q_ij, q_ji, constraints, neighbors):
+        self.neighbors = neighbors
         self.construct_structs(q_i, q_ij, q_ji)
         self.construct_upd_x()
         self.construct_upd_z()
@@ -100,6 +101,10 @@ class ADMM(Problem):
                 for name, ind in q_i.items():
                     if name in child._splines:
                         basis = child._splines[name]
+                        v1 = SX.sym('v', len(basis))
+                        t = SX.sym('t')
+                        v2 = tf(v1, basis.knots, basis.degree, t)
+                        fun = SXFunction('tf', [v1, t], [v2])
                         for l in range(child._variables[name].shape[1]):
                             sl_min = l*len(basis)
                             sl_max = (l+1)*len(basis)
@@ -107,11 +112,13 @@ class ADMM(Problem):
                                 sl = slice(sl_min, sl_max)
                                 if isinstance(var, dict):
                                     v = var[child.label][name][sl]
-                                    v = tf(v, basis.knots, basis.degree, t0)
+                                    # v = tf(v, basis.knots, basis.degree, t0)
+                                    v = fun([v, t0])[0]
                                     var[child.label][name][sl] = v
                                 else:  # struct or prefix
                                     v = var[child.label, name][sl]
-                                    v = tf(v, basis.knots, basis.degree, t0)
+                                    # v = tf(v, basis.knots, basis.degree, t0)
+                                    v = fun([v, t0])[0]
                                     var[child.label, name][sl] = v
         else:
             for key in dic.keys():
@@ -161,9 +168,8 @@ class ADMM(Problem):
         options = deepcopy(self.options)
         options['codegen']['buildname'] = (self.options['codegen']['buildname']
                                            + '_updx_' + str(self.index))
-        self.problem_upd_x, compile_time = self.father.construct_problem(
-            options)
-        self.update_x(0.0)
+        prob, compile_time = self.father.construct_problem(options)
+        self.problem_upd_x = prob
 
     def set_parameters(self, current_time):
         parameters = {}
