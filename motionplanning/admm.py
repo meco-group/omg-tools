@@ -167,7 +167,7 @@ class ADMM(Problem):
         self.father = OptiFather(self.group.values())
         options = deepcopy(self.options)
         options['codegen']['buildname'] = (self.options['codegen']['buildname']
-                                           + '_updx_' + str(self.index))
+                                           + '/admm'+str(self.index)+'/updx')
         prob, compile_time = self.father.construct_problem(options)
         self.problem_upd_x = prob
 
@@ -213,7 +213,7 @@ class ADMM(Problem):
         fun = MXFunction('upd_l', inp, out)
         options = deepcopy(self.options)
         options['codegen']['buildname'] = (self.options['codegen']['buildname']
-                                           + '_updl_' + str(self.index))
+                                           + '/admm'+str(self.index)+'/updl')
         prob, compile_time = self.father.compile_function(fun, 'upd_l', options)
         self.problem_upd_l = prob
         self.update_l(0.0)
@@ -383,7 +383,7 @@ class DistributedProblem(Problem):
             for index_j in q_ij[index_i].keys():
                 q_ji[index_j][index_i] = q_ij[index_i][index_j]
         # extract neighbors
-        for index in range(len(updater)):
+        for index in range(len(updaters)):
             for nghb_ind in q_ij[index].keys():
                 neighbors[index].append(updaters[nghb_ind])
 
