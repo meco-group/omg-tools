@@ -1,4 +1,4 @@
-from optilayer import OptiChild, OptiFather
+from optilayer import OptiFather
 from problem import Problem
 from point2point import Point2point
 from casadi import symvar, mul, SX, MX, SXFunction, MXFunction, sumRows
@@ -52,8 +52,7 @@ class ADMM(Problem):
         Problem.set_options(self, options)
         self.options.update(options)
 
-    def construct_problem(self, q_i, q_ij, q_ji, constraints, neighbors):
-        self.neighbors = neighbors
+    def construct_problem(self, q_i, q_ij, q_ji, constraints):
         self.construct_structs(q_i, q_ij, q_ji)
         self.construct_upd_x()
         self.construct_upd_z()
@@ -68,15 +67,15 @@ class ADMM(Problem):
         self.q_ij_struct = create_struct_from_dict(self.q_ij)
         self.q_ji_struct = create_struct_from_dict(self.q_ji)
 
-        self.variables = {}
-        self.variables['x_i'] = self.q_i_struct(0)
-        self.variables['x_j'] = self.q_ij_struct(0)
-        self.variables['z_i'] = self.q_i_struct(0)
-        self.variables['z_ij'] = self.q_ij_struct(0)
-        self.variables['z_ji'] = self.q_ji_struct(0)
-        self.variables['l_i'] = self.q_i_struct(0)
-        self.variables['l_ij'] = self.q_ij_struct(0)
-        self.variables['l_ji'] = self.q_ji_struct(0)
+        self.var_admm = {}
+        self.var_admm['x_i'] = self.q_i_struct(0)
+        self.var_admm['x_j'] = self.q_ij_struct(0)
+        self.var_admm['z_i'] = self.q_i_struct(0)
+        self.var_admm['z_ij'] = self.q_ij_struct(0)
+        self.var_admm['z_ji'] = self.q_ji_struct(0)
+        self.var_admm['l_i'] = self.q_i_struct(0)
+        self.var_admm['l_ij'] = self.q_ij_struct(0)
+        self.var_admm['l_ji'] = self.q_ji_struct(0)
 
     def get_x_variables(self, **kwargs):
         sol = kwargs['solution'] if 'solution' in kwargs else False
@@ -96,7 +95,14 @@ class ADMM(Problem):
         if isinstance(var, list):
             for v in var:
                 self.transform_spline(v, tf, t0, dic)
-        elif isinstance(dic.keys()[0], OptiChild):
+        elif isinstance(dic.keys()[0], ADMM):
+            for key in dic.keys():
+                if isinstance(var, struct):
+                    self.transform_spline(
+                        var.prefix[str(key)], tf, t0, dic[key])
+                elif isinstance(var, dict):
+                    self.transform_spline(var[str(key)], tf, t0, dic[key])
+        else:
             for child, q_i in dic.items():
                 for name, ind in q_i.items():
                     if name in child._splines:
@@ -120,13 +126,6 @@ class ADMM(Problem):
                                     # v = tf(v, basis.knots, basis.degree, t0)
                                     v = fun([v, t0])[0]
                                     var[child.label, name][sl] = v
-        else:
-            for key in dic.keys():
-                if isinstance(var, struct):
-                    self.transform_spline(
-                        var.prefix[str(key)], tf, t0, dic[key])
-                elif isinstance(var, dict):
-                    self.transform_spline(var[key], tf, t0, dic[key])
 
     def construct_upd_x(self):
         # define parameters
@@ -158,9 +157,9 @@ class ADMM(Problem):
                 z = z_i[child.label, name]
                 l = l_i[child.label, name]
                 obj += mul(l.T, x-z) + 0.5*rho*mul((x-z).T, (x-z))
-                for n_i in self.q_ji.keys():
-                    z = z_ji[str(n_i), child.label, name]
-                    l = l_ji[str(n_i), child.label, name]
+                for nghb in self.q_ji.keys():
+                    z = z_ji[str(nghb), child.label, name]
+                    l = l_ji[str(nghb), child.label, name]
                     obj += mul(l.T, x-z) + 0.5*rho*mul((x-z).T, (x-z))
         self.define_objective(obj)
         # construct problem
@@ -170,13 +169,25 @@ class ADMM(Problem):
                                            + '/admm'+str(self.index)+'/updx')
         prob, compile_time = self.father.construct_problem(options)
         self.problem_upd_x = prob
+        self.init_var_admm()
+
+    def init_var_admm(self):
+        for nghb, q_ji in self.q_ji.items():
+            for child, q in q_ji.items():
+                for name, ind in q.items():
+                    var = self.father._var_result[child.label, name][ind]
+                    self.var_admm['z_ji'][str(nghb), child.label, name] = var
+        for child, q in self.q_i.items():
+            for name, ind in q.items():
+                var = self.father._var_result[child.label, name][ind]
+                self.var_admm['z_i'][child.label, name] = var
 
     def set_parameters(self, current_time):
         parameters = {}
-        parameters['z_i'] = self.variables['z_i'].cat
-        parameters['z_ji'] = self.variables['z_ji'].cat
-        parameters['l_i'] = self.variables['l_i'].cat
-        parameters['l_ji'] = self.variables['l_ji'].cat
+        parameters['z_i'] = self.var_admm['z_i'].cat
+        parameters['z_ji'] = self.var_admm['z_ji'].cat
+        parameters['l_i'] = self.var_admm['l_i'].cat
+        parameters['l_ji'] = self.var_admm['l_ji'].cat
         parameters['rho'] = self.options['admm']['rho']
         return parameters
 
@@ -214,7 +225,8 @@ class ADMM(Problem):
         options = deepcopy(self.options)
         options['codegen']['buildname'] = (self.options['codegen']['buildname']
                                            + '/admm'+str(self.index)+'/updl')
-        prob, compile_time = self.father.compile_function(fun, 'upd_l', options)
+        prob, compile_time = self.father.compile_function(
+            fun, 'upd_l', options)
         self.problem_upd_l = prob
         self.update_l(0.0)
 
@@ -229,7 +241,7 @@ class ADMM(Problem):
         t1 = time.time()
         t_upd = t1-t0
         self.father.set_variables(self.problem_upd_x.getOutput('x'))
-        self.variables['x_i'] = self.get_x_variables(solution=True)
+        self.var_admm['x_i'] = self.get_x_variables(solution=True)
         stats = self.problem_upd_x.getStats()
         if stats.get('return_status') != 'Solve_Succeeded':
             print 'upd_x %d: %s' % (self.index, stats.get('return_status'))
@@ -240,25 +252,28 @@ class ADMM(Problem):
 
     def update_l(self, current_time):
         # set inputs
-        x_i = self.variables['x_i']
-        z_i = self.variables['z_i']
-        z_ij = self.variables['z_ij']
-        l_i = self.variables['l_i']
-        l_ij = self.variables['l_ij']
-        x_j = self.variables['x_j']
+        x_i = self.var_admm['x_i']
+        z_i = self.var_admm['z_i']
+        z_ij = self.var_admm['z_ij']
+        l_i = self.var_admm['l_i']
+        l_ij = self.var_admm['l_ij']
+        x_j = self.var_admm['x_j']
         t = np.round(current_time, 6) % self.problem.knot_time
         T = self.problem.vehicles[0].options['horizon_time']
         rho = self.options['admm']['rho']
         inp = [x_i, z_i, z_ij, l_i, l_ij, x_j, t, T, rho]
         out = self.problem_upd_l(inp)
-        self.variables['l_i'] = self.q_i_struct(out[0])
-        self.variables['l_ij'] = self.q_ij_struct(out[1])
+        self.var_admm['l_i'] = self.q_i_struct(out[0])
+        self.var_admm['l_ij'] = self.q_ij_struct(out[1])
 
     def communicate(self):
-        for nghb_ind in self.q_ji.items():
-            self.variables['z_ji'][str(nghb_ind)] = self.neighbors[nghb_ind]['z_ij'].prefix(str(self.index))
-            self.variables['l_ji'][str(nghb_ind)] = self.neighbors[nghb_ind]['l_ij'].prefix(str(self.index))
-            self.variables['x_j'][str(nghb_ind)] = self.neighbors[nghb_ind]['x_i'].prefix(str(self.index))
+        for nghb in self.q_ji.keys():
+            z_ji = nghb.var_admm['z_ij'].prefix(str(self))
+            l_ji = nghb.var_admm['l_ij'].prefix(str(self))
+            x_j = nghb.var_admm['x_i'].prefix(str(self))
+            self.var_admm['z_ji'][str(nghb)] = z_ji
+            self.var_admm['l_ji'][str(nghb)] = l_ji
+            self.var_admm['x_j'][str(nghb)] = x_j
 
     def init_step(self):
         self.problem.init_step()
@@ -276,15 +291,15 @@ class DistributedProblem(Problem):
         self.problems = problems
         if len(problems) != len(self.vehicles):
             raise ValueError('Number of vehicles and problems do not match!')
-        self.updaters = {}
+        self.updaters = []
         for index, vehicle in enumerate(self.vehicles):
-            self.updaters[index] = ADMM(index, vehicle, problems[index],
-                                        self.environment.copy(), self.options)
-        q_i, q_ij, q_ji, con, nghb = self.interprete_constraints(self.updaters)
+            admm = ADMM(index, vehicle, problems[index],
+                        self.environment.copy(), self.options)
+            self.updaters.append(admm)
+        q_i, q_ij, q_ji, con = self.interprete_constraints(self.updaters)
 
-        for index, updater in self.updaters.items():
-            updater.construct_problem(q_i[index], q_ij[index],
-                                      q_ji[index], con[index], nghb[index])
+        for ind, upd in enumerate(self.updaters):
+            upd.construct_problem(q_i[ind], q_ij[ind], q_ji[ind], con[ind])
 
     def solve(self, current_time):
         it0 = self.iteration
@@ -293,8 +308,6 @@ class DistributedProblem(Problem):
             p_res, d_res = 0., 0.
             for updater in self.updaters:
                 self.init_step()
-            for updater in self.updaters:
-                updater.communicate()
             for updater in self.updaters:
                 t = updater.update_x(current_time)
                 t_upd_x = max(t_upd_x, t)
@@ -310,6 +323,8 @@ class DistributedProblem(Problem):
                 p_res += pr**2
                 d_res += dr**2
             p_res, d_res = np.sqrt(p_res), np.sqrt(d_res)
+            for updater in self.updaters:
+                updater.communicate()
 
             if self.options['verbose'] >= 1:
                 self.iteration += 1
@@ -339,7 +354,6 @@ class DistributedProblem(Problem):
         q_ij = [{} for updater in updaters]
         q_ji = [{} for updater in updaters]
         con = [[] for updater in updaters]
-        neighbors = [[] for updater in updaters]
 
         symbol_dict = self.compose_dictionary()
 
@@ -351,7 +365,7 @@ class DistributedProblem(Problem):
                     dep[child] = {}
                 dep[child][name] = indices
             for child, dic in dep.items():
-                # create q_i: structure of local variables
+                # q_i: structure of local variables i
                 index = child.index
                 con[index].append(constraint)
                 if child not in q_i[index]:
@@ -363,31 +377,27 @@ class DistributedProblem(Problem):
                         if i not in q_i[index][child][name]:
                             q_i[index][child][name].append(i)
                     q_i[index][child][name].sort()
-                # create q_ij: structure of remote variables j seen from local
-                # i
+                # q_ij: structure of remote variables j seen from local i
                 for ch, dic_ch in dep.items():
                     if not (child == ch):
-                        if ch.index not in q_ij[index]:
-                            q_ij[index][ch.index] = {}
-                        if ch not in q_ij[index][ch.index]:
-                            q_ij[index][ch.index][ch] = {}
+                        upd = updaters[ch.index]
+                        if upd not in q_ij[index]:
+                            q_ij[index][upd] = {}
+                        if ch not in q_ij[index][upd]:
+                            q_ij[index][upd][ch] = {}
                         for name, indices in dic_ch.items():
-                            if name not in q_ij[index][ch.index][ch]:
-                                q_ij[index][ch.index][ch][name] = []
+                            if name not in q_ij[index][upd][ch]:
+                                q_ij[index][upd][ch][name] = []
                             for i in indices:
-                                if i not in q_ij[index][ch.index][ch][name]:
-                                    q_ij[index][ch.index][ch][name].append(i)
-                            q_ij[index][ch.index][ch][name].sort()
-        # create q_ji: structure of local variables i seen from remote j
-        for index_i in range(len(updaters)):
-            for index_j in q_ij[index_i].keys():
-                q_ji[index_j][index_i] = q_ij[index_i][index_j]
-        # extract neighbors
-        for index in range(len(updaters)):
-            for nghb_ind in q_ij[index].keys():
-                neighbors[index].append(updaters[nghb_ind])
+                                if i not in q_ij[index][upd][ch][name]:
+                                    q_ij[index][upd][ch][name].append(i)
+                            q_ij[index][upd][ch][name].sort()
+        # q_ji: structure of local variables i seen from remote j
+        for upd1 in updaters:
+            for upd2 in q_ij[upd1.index].keys():
+                q_ji[upd2.index][upd1] = q_ij[upd1.index][upd2]
 
-        return q_i, q_ij, q_ji, con, neighbors
+        return q_i, q_ij, q_ji, con
 
 
 class FormationPoint2point(DistributedProblem):
