@@ -1,7 +1,8 @@
 from optilayer import OptiFather
 from problem import Problem
 from point2point import Point2point
-from casadi import symvar, mul, SX, MX, SXFunction, MXFunction, sumRows
+from casadi import symvar, mul, SX, MX, SXFunction, MXFunction
+from casadi import sumRows, vertcat, horzcat, jacobian, solve
 from casadi.tools import struct, struct_symMX, entry
 from spline_extra import shift_knot1_fwd_mx, shift_knot1_bwd_mx
 from copy import deepcopy
@@ -53,6 +54,7 @@ class ADMM(Problem):
         self.options.update(options)
 
     def construct_problem(self, q_i, q_ij, q_ji, constraints):
+        self.constraints = constraints
         self.construct_structs(q_i, q_ij, q_ji)
         self.construct_upd_x()
         self.construct_upd_z()
@@ -191,8 +193,85 @@ class ADMM(Problem):
         parameters['rho'] = self.options['admm']['rho']
         return parameters
 
+    def _check_for_lineq(self):
+        g = []
+        for con in self.constraints:
+            lb, ub = con[1], con[2]
+            g = vertcat([g, con[0] - lb])
+            if not isinstance(lb, np.ndarray):
+                lb, ub = [lb], [ub]
+            for k in range(len(lb)):
+                if lb[k] != ub[k]:
+                    return False, None
+        sym, jac = [], []
+        for child, q_i in self.q_i.items():
+            for name, ind in q_i.items():
+                var = child.get_variable(name, spline=False)
+                jj = jacobian(g, var)
+                jac = horzcat([jac, jj[:, ind]])
+                sym.append(var)
+        for nghb in self.q_ij.keys():
+            for child, q_ij in self.q_ij[nghb].items():
+                for name, ind in q_ij.items():
+                    var = child.get_variable(name, spline=False)
+                    jj = jacobian(g, var)
+                    jac = horzcat([jac, jj[:, ind]])
+                    sym.append(var)
+        if len(symvar(jac)) != 0:
+            return False, None
+        A_fun = MXFunction('A', sym, [jac])
+        b_fun = MXFunction('b', sym, [-g])
+        sym_num = [np.zeros(s.shape) for s in sym]
+        A = A_fun(sym_num)[0].toArray()
+        b = b_fun(sym_num)[0].toArray()
+        return True, A, b
+
     def construct_upd_z(self):
-        pass
+        # check if we have linear equality constraints
+        lineq, A, b = self._check_for_lineq()
+        if not lineq:
+            raise ValueError(('Awtch, only linear equality interaction '
+                              'constraints are allowed for now...'))
+        x_i = struct_symMX(self.q_i_struct)
+        x_j = struct_symMX(self.q_ji_struct)
+        l_i = struct_symMX(self.q_i_struct)
+        l_ij = struct_symMX(self.q_ij_struct)
+        t = MX.sym('t')
+        T = MX.sym('T')
+        rho = MX.sym('rho')
+        t0 = t/T
+        # transform spline variables: only consider future piece of spline
+        tf = shift_knot1_fwd_mx
+        self.transform_spline([x_i, l_i], tf, t0, self.q_i)
+        self.transform_spline(l_ij, tf, t0, self.q_ij)
+        self.transform_spline(x_j, tf, t0, self.q_ji)
+        # Build KKT system
+        E = rho*MX.eye(A.shape[1])
+        l, x = vertcat([l_i.cat, l_ij.cat]), vertcat([x_i.cat, x_j.cat])
+        f = -(l + rho*x)
+        G = vertcat([horzcat([E, A.T]),
+                     horzcat([A, MX.zeros(A.shape[0], A.shape[0])])])
+        h = vertcat([-f, b])
+        z = solve(G, h)
+        l_qi = self.q_i_struct.shape[0]
+        l_qij = self.q_ij_struct.shape[0]
+        z_i_new = self.q_i_struct(z[:l_qi])
+        z_ij_new = self.q_ij_struct(z[l_qi:l_qi+l_qij])
+        # transform back
+        tf = shift_knot1_bwd_mx
+        self.transform_spline(z_i_new, tf, t0, self.q_i)
+        self.transform_spline(z_ij_new, tf, t0, self.q_ij)
+        # create problem
+        inp = [x_i, l_i, l_ij, x_j, t, T, rho]
+        out = [z_i_new, z_ij_new]
+        fun = MXFunction('upd_z', inp, out)
+        options = deepcopy(self.options)
+        options['codegen']['buildname'] = (self.options['codegen']['buildname']
+                                           + '/admm'+str(self.index)+'/updz')
+        prob, compile_time = self.father.compile_function(
+            fun, 'upd_z', options)
+        self.problem_upd_z = prob
+        self.update_z(0.0)
 
     def construct_upd_l(self):
         # create parameters
@@ -228,7 +307,6 @@ class ADMM(Problem):
         prob, compile_time = self.father.compile_function(
             fun, 'upd_l', options)
         self.problem_upd_l = prob
-        self.update_l(0.0)
 
     def update_x(self, current_time):
         # set initial guess, parameters, lb & ub
@@ -248,7 +326,18 @@ class ADMM(Problem):
         return t_upd
 
     def update_z(self, current_time):
-        pass
+        # set inputs
+        x_i = self.var_admm['x_i']
+        l_i = self.var_admm['l_i']
+        l_ij = self.var_admm['l_ij']
+        x_j = self.var_admm['x_j']
+        t = np.round(current_time, 6) % self.problem.knot_time
+        T = self.problem.vehicles[0].options['horizon_time']
+        rho = self.options['admm']['rho']
+        inp = [x_i, l_i, l_ij, x_j, t, T, rho]
+        out = self.problem_upd_z(inp)
+        self.var_admm['z_i'] = self.q_i_struct(out[0])
+        self.var_admm['z_ij'] = self.q_ij_struct(out[1])
 
     def update_l(self, current_time):
         # set inputs
@@ -413,7 +502,7 @@ class FormationPoint2point(DistributedProblem):
         #     y[1][0].coeffs[0] - y[0][0].coeffs[0] - 0.5, 0., 0.)
         # self.define_constraint(
         #     y[1][0].coeffs[3:5] - y[0][0].coeffs[5:7], 0., 0.)
-        Dx = [0., 0]
+        Dx = [1., 2.]
         for k in range(self.vehicles[0].n_y):
             self.define_constraint(y[1][k] - y[0][k] - Dx[k], 0., 0.)
             self.define_constraint(y[2][k] - y[1][k] - Dx[k], 0., 0.)
