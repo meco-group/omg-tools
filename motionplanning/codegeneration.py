@@ -31,7 +31,7 @@ def gen_code_nlp(solver, directory, options,
         os.rename(cwd+'/'+name+'.c', cwd+'/'+directory+'/'+name+'.c')
 
     if compileme:
-        print 'Compiling...',
+        print 'Compiling ...',
         t1 = time.time()
         for name, fun in functions.items():
             print name + ' -',
@@ -81,7 +81,7 @@ def gen_code_function(function, directory, name,
     os.rename(cwd+'/'+name+'.c', cwd+'/'+directory+'/'+name+'.c')
 
     if compileme:
-        print 'Compiling function '+name+'...',
+        print 'Compiling '+name+' ...',
         t1 = time.time()
         system('gcc -fPIC -shared -std=c99' + opt + ' ' + src + ' -o ' + obj)
         t2 = time.time()

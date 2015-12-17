@@ -3,8 +3,11 @@ ADMM
 - multiple knots inside: does this still work?
 
 Toolbox
-- init variables based on init variables of children
-- check on linear eq constr based on jacobian, also G matrix = jacobian
+- build only once per vehicle type
+- write update for distr problem (environment??)
+- rewrite fleet
+- parameters for interaction constraints (rel formation...)
+- clean up spline_extra
 
 - worries
     - environment defines constraints on already multiple vehicles
