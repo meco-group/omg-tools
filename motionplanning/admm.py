@@ -78,6 +78,8 @@ class ADMM(Problem):
         self.var_admm['l_i'] = self.q_i_struct(0)
         self.var_admm['l_ij'] = self.q_ij_struct(0)
         self.var_admm['l_ji'] = self.q_ji_struct(0)
+        self.var_admm['z_i_p'] = self.q_i_struct(0)
+        self.var_admm['z_ij_p'] = self.q_ij_struct(0)
 
     def get_x_variables(self, **kwargs):
         sol = kwargs['solution'] if 'solution' in kwargs else False
@@ -326,6 +328,9 @@ class ADMM(Problem):
         return t_upd
 
     def update_z(self, current_time):
+        # save previous result
+        self.var_admm['z_i_p'] = self.var_admm['z_i']
+        self.var_admm['z_ij_p'] = self.var_admm['z_ij']
         # set inputs
         x_i = self.var_admm['x_i']
         l_i = self.var_admm['l_i']
@@ -368,7 +373,17 @@ class ADMM(Problem):
         self.problem.init_step()
 
     def get_residuals(self):
-        pass
+        x_i = self.var_admm['x_i'].cat
+        z_i = self.var_admm['z_i'].cat
+        x_j = self.var_admm['x_j'].cat
+        z_ij = self.var_admm['z_ij'].cat
+        z_i_p = self.var_admm['z_i_p'].cat
+        z_ij_p = self.var_admm['z_ij_p'].cat
+        rho = self.options['admm']['rho']
+
+        pr = np.norm(x_i-z_i)**2 + np.norm(x_j-z_ij)**2
+        dr = rho*(np.norm(z_i-z_i_p)**2 + np.norm(z_ij-z_ij_p)**2)
+        return pr, dr
 
 
 class DistributedProblem(Problem):
