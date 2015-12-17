@@ -32,7 +32,6 @@ class ADMM(Problem):
         for child in self.group.values():
             child.index = index
 
-
     # ========================================================================
     # ADMM options
     # ========================================================================
@@ -112,7 +111,7 @@ class ADMM(Problem):
         if not self._lineq_updz:
             self._construct_upd_z_nlp()
         x_i = struct_symMX(self.q_i_struct)
-        x_j = struct_symMX(self.q_ji_struct)
+        x_j = struct_symMX(self.q_ij_struct)
         l_i = struct_symMX(self.q_i_struct)
         l_ij = struct_symMX(self.q_ij_struct)
         t = MX.sym('t')
@@ -122,8 +121,7 @@ class ADMM(Problem):
         # transform spline variables: only consider future piece of spline
         tf = shift_knot1_fwd_mx
         self._transform_spline([x_i, l_i], tf, t0, self.q_i)
-        self._transform_spline(l_ij, tf, t0, self.q_ij)
-        self._transform_spline(x_j, tf, t0, self.q_ji)
+        self._transform_spline([x_j, l_ij], tf, t0, self.q_ij)
         # Build KKT system
         E = rho*MX.eye(A.shape[1])
         l, x = vertcat([l_i.cat, l_ij.cat]), vertcat([x_i.cat, x_j.cat])
@@ -234,7 +232,7 @@ class ADMM(Problem):
         z_ij = struct_symMX(self.q_ij_struct)
         l_i = struct_symMX(self.q_i_struct)
         l_ij = struct_symMX(self.q_ij_struct)
-        x_j = struct_symMX(self.q_ji_struct)
+        x_j = struct_symMX(self.q_ij_struct)
         t = MX.sym('t')
         T = MX.sym('T')
         rho = MX.sym('rho')
@@ -242,8 +240,7 @@ class ADMM(Problem):
         # transform spline variables: only consider future piece of spline
         tf = shift_knot1_fwd_mx
         self._transform_spline([x_i, z_i, l_i], tf, t0, self.q_i)
-        self._transform_spline([z_ij, l_ij], tf, t0, self.q_ij)
-        self._transform_spline(x_j, tf, t0, self.q_ji)
+        self._transform_spline([x_j, z_ij, l_ij], tf, t0, self.q_ij)
         # update lambda
         l_i_new = self.q_i_struct(l_i.cat + rho*(x_i.cat - z_i.cat))
         l_ij_new = self.q_ij_struct(l_ij.cat + rho*(x_j.cat - z_ij.cat))
