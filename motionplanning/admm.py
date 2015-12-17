@@ -1,8 +1,8 @@
 from optilayer import OptiFather
 from problem import Problem
-from point2point import Point2point
+from distributedproblem import DistributedProblem
 from casadi import symvar, mul, SX, MX, SXFunction, MXFunction
-from casadi import sumRows, vertcat, horzcat, jacobian, solve
+from casadi import vertcat, horzcat, jacobian, solve
 from casadi.tools import struct, struct_symMX, entry
 from spline_extra import shift_knot1_fwd_mx, shift_knot1_bwd_mx
 from copy import deepcopy
@@ -10,24 +10,11 @@ import numpy as np
 import time
 
 
-def get_dependency(expression):
-    t0 = time.time()
-    sym = symvar(expression)
-    f = MXFunction('f', sym, [expression])
-    dep = {}
-    for index, sym in enumerate(sym):
-        J = f.jacSparsity(index, 0)
-        dep[sym] = sorted(sumRows(J).find())
-    t1 = time.time()
-    print(t1-t0)*1000
-    return dep
-
-
-def create_struct_from_dict(dictionary):
+def _create_struct_from_dict(dictionary):
     entries = []
     for key, data in dictionary.items():
         if isinstance(data, dict):
-            stru = create_struct_from_dict(data)
+            stru = _create_struct_from_dict(data)
             entries.append(entry(str(key), struct=stru))
         else:
             entries.append(entry(key, shape=len(data)))
@@ -45,43 +32,167 @@ class ADMM(Problem):
         for child in self.group.values():
             child.index = index
 
+
+    # ========================================================================
+    # ADMM options
+    # ========================================================================
+
     def set_default_options(self):
         Problem.set_default_options(self)
         self.options['admm'] = {'rho': 0.1}
 
-    def set_options(self, options):
-        Problem.set_options(self, options)
-        self.options.update(options)
+    # ========================================================================
+    # Create problem
+    # ========================================================================
 
-    def construct_problem(self, q_i, q_ij, q_ji, constraints):
-        self.constraints = constraints
-        self.construct_structs(q_i, q_ij, q_ji)
+    def init(self):
+        self.q_i_struct = _create_struct_from_dict(self.q_i)
+        self.q_ij_struct = _create_struct_from_dict(self.q_ij)
+        self.q_ji_struct = _create_struct_from_dict(self.q_ji)
+
+        self.var_admm = {}
+        for key in ['x_i', 'z_i', 'z_i_p', 'l_i']:
+            self.var_admm[key] = self.q_i_struct(0)
+        for key in ['x_j', 'z_ij', 'z_ij_p', 'l_ij']:
+            self.var_admm[key] = self.q_ij_struct(0)
+        for key in ['z_ji', 'l_ji']:
+            self.var_admm[key] = self.q_ji_struct(0)
+
         self.construct_upd_x()
         self.construct_upd_z()
         self.construct_upd_l()
 
-    def construct_structs(self, q_i, q_ij, q_ji):
-        self.q_i = q_i
-        self.q_ij = q_ij
-        self.q_ji = q_ji
+    def construct_upd_x(self):
+        # define parameters
+        z_i = self.define_parameter('z_i', self.q_i_struct.shape[0])
+        z_ji = self.define_parameter('z_ji', self.q_ji_struct.shape[0])
+        l_i = self.define_parameter('l_i', self.q_i_struct.shape[0])
+        l_ji = self.define_parameter('l_ji', self.q_ji_struct.shape[0])
+        rho = self.define_parameter('rho')
+        # put them in the struct format
+        z_i = self.q_i_struct(z_i)
+        z_ji = self.q_ji_struct(z_ji)
+        l_i = self.q_i_struct(l_i)
+        l_ji = self.q_ji_struct(l_ji)
+        # get time info
+        t = self.define_symbol('t')
+        T = self.define_symbol('T')
+        t0 = t/T
+        # get (part of) variables
+        x_i = self._get_x_variables()
+        # transform spline variables: only consider future piece of spline
+        tf = shift_knot1_fwd_mx
+        self._transform_spline([x_i, z_i, l_i], tf, t0, self.q_i)
+        self._transform_spline([z_ji, l_ji], tf, t0, self.q_ji)
+        # construct objective
+        obj = 0.
+        for child, q_i in self.q_i.items():
+            for name in q_i.keys():
+                x = x_i[child.label][name]
+                z = z_i[child.label, name]
+                l = l_i[child.label, name]
+                obj += mul(l.T, x-z) + 0.5*rho*mul((x-z).T, (x-z))
+                for nghb in self.q_ji.keys():
+                    z = z_ji[str(nghb), child.label, name]
+                    l = l_ji[str(nghb), child.label, name]
+                    obj += mul(l.T, x-z) + 0.5*rho*mul((x-z).T, (x-z))
+        self.define_objective(obj)
+        # construct problem
+        self.father = OptiFather(self.group.values())
+        options = deepcopy(self.options)
+        options['codegen']['buildname'] = (self.options['codegen']['buildname']
+                                           + '/admm'+str(self.index)+'/updx')
+        prob, compile_time = self.father.construct_problem(options)
+        self.problem_upd_x = prob
+        self.init_var_admm()
 
-        self.q_i_struct = create_struct_from_dict(self.q_i)
-        self.q_ij_struct = create_struct_from_dict(self.q_ij)
-        self.q_ji_struct = create_struct_from_dict(self.q_ji)
+    def construct_upd_z(self):
+        # check if we have linear equality constraints
+        lineq, A, b = self._check_for_lineq()
+        if not lineq:
+            raise ValueError(('Awtch, only linear equality interaction '
+                              'constraints are allowed for now...'))
+        x_i = struct_symMX(self.q_i_struct)
+        x_j = struct_symMX(self.q_ji_struct)
+        l_i = struct_symMX(self.q_i_struct)
+        l_ij = struct_symMX(self.q_ij_struct)
+        t = MX.sym('t')
+        T = MX.sym('T')
+        rho = MX.sym('rho')
+        t0 = t/T
+        # transform spline variables: only consider future piece of spline
+        tf = shift_knot1_fwd_mx
+        self._transform_spline([x_i, l_i], tf, t0, self.q_i)
+        self._transform_spline(l_ij, tf, t0, self.q_ij)
+        self._transform_spline(x_j, tf, t0, self.q_ji)
+        # Build KKT system
+        E = rho*MX.eye(A.shape[1])
+        l, x = vertcat([l_i.cat, l_ij.cat]), vertcat([x_i.cat, x_j.cat])
+        f = -(l + rho*x)
+        G = vertcat([horzcat([E, A.T]),
+                     horzcat([A, MX.zeros(A.shape[0], A.shape[0])])])
+        h = vertcat([-f, b])
+        z = solve(G, h)
+        l_qi = self.q_i_struct.shape[0]
+        l_qij = self.q_ij_struct.shape[0]
+        z_i_new = self.q_i_struct(z[:l_qi])
+        z_ij_new = self.q_ij_struct(z[l_qi:l_qi+l_qij])
+        # transform back
+        tf = shift_knot1_bwd_mx
+        self._transform_spline(z_i_new, tf, t0, self.q_i)
+        self._transform_spline(z_ij_new, tf, t0, self.q_ij)
+        # create problem
+        inp = [x_i, l_i, l_ij, x_j, t, T, rho]
+        out = [z_i_new, z_ij_new]
+        fun = MXFunction('upd_z', inp, out)
+        options = deepcopy(self.options)
+        options['codegen']['buildname'] = (self.options['codegen']['buildname']
+                                           + '/admm'+str(self.index)+'/updz')
+        prob, compile_time = self.father.compile_function(
+            fun, 'upd_z', options)
+        self.problem_upd_z = prob
+        self.update_z(0.0)
 
-        self.var_admm = {}
-        self.var_admm['x_i'] = self.q_i_struct(0)
-        self.var_admm['x_j'] = self.q_ij_struct(0)
-        self.var_admm['z_i'] = self.q_i_struct(0)
-        self.var_admm['z_ij'] = self.q_ij_struct(0)
-        self.var_admm['z_ji'] = self.q_ji_struct(0)
-        self.var_admm['l_i'] = self.q_i_struct(0)
-        self.var_admm['l_ij'] = self.q_ij_struct(0)
-        self.var_admm['l_ji'] = self.q_ji_struct(0)
-        self.var_admm['z_i_p'] = self.q_i_struct(0)
-        self.var_admm['z_ij_p'] = self.q_ij_struct(0)
+    def construct_upd_l(self):
+        # create parameters
+        x_i = struct_symMX(self.q_i_struct)
+        z_i = struct_symMX(self.q_i_struct)
+        z_ij = struct_symMX(self.q_ij_struct)
+        l_i = struct_symMX(self.q_i_struct)
+        l_ij = struct_symMX(self.q_ij_struct)
+        x_j = struct_symMX(self.q_ji_struct)
+        t = MX.sym('t')
+        T = MX.sym('T')
+        rho = MX.sym('rho')
+        t0 = t/T
+        # transform spline variables: only consider future piece of spline
+        tf = shift_knot1_fwd_mx
+        self._transform_spline([x_i, z_i, l_i], tf, t0, self.q_i)
+        self._transform_spline([z_ij, l_ij], tf, t0, self.q_ij)
+        self._transform_spline(x_j, tf, t0, self.q_ji)
+        # update lambda
+        l_i_new = self.q_i_struct(l_i.cat + rho*(x_i.cat - z_i.cat))
+        l_ij_new = self.q_ij_struct(l_ij.cat + rho*(x_j.cat - z_ij.cat))
+        # transform back
+        tf = shift_knot1_bwd_mx
+        self._transform_spline(l_i_new, tf, t0, self.q_i)
+        self._transform_spline(l_ij_new, tf, t0, self.q_ij)
+        # create problem
+        inp = [x_i, z_i, z_ij, l_i, l_ij, x_j, t, T, rho]
+        out = [l_i_new, l_ij_new]
+        fun = MXFunction('upd_l', inp, out)
+        options = deepcopy(self.options)
+        options['codegen']['buildname'] = (self.options['codegen']['buildname']
+                                           + '/admm'+str(self.index)+'/updl')
+        prob, compile_time = self.father.compile_function(
+            fun, 'upd_l', options)
+        self.problem_upd_l = prob
 
-    def get_x_variables(self, **kwargs):
+    # ========================================================================
+    # Auxiliary methods
+    # ========================================================================
+
+    def _get_x_variables(self, **kwargs):
         sol = kwargs['solution'] if 'solution' in kwargs else False
         x = self.q_i_struct(0) if sol else {}
         for child, q_i in self.q_i.items():
@@ -95,17 +206,17 @@ class ADMM(Problem):
                     x[child.label][name] = var[ind]
         return x
 
-    def transform_spline(self, var, tf, t0, dic):
+    def _transform_spline(self, var, tf, t0, dic):
         if isinstance(var, list):
             for v in var:
-                self.transform_spline(v, tf, t0, dic)
+                self._transform_spline(v, tf, t0, dic)
         elif isinstance(dic.keys()[0], ADMM):
             for key in dic.keys():
                 if isinstance(var, struct):
-                    self.transform_spline(
+                    self._transform_spline(
                         var.prefix[str(key)], tf, t0, dic[key])
                 elif isinstance(var, dict):
-                    self.transform_spline(var[str(key)], tf, t0, dic[key])
+                    self._transform_spline(var[str(key)], tf, t0, dic[key])
         else:
             for child, q_i in dic.items():
                 for name, ind in q_i.items():
@@ -130,70 +241,6 @@ class ADMM(Problem):
                                     # v = tf(v, basis.knots, basis.degree, t0)
                                     v = fun([v, t0])[0]
                                     var[child.label, name][sl] = v
-
-    def construct_upd_x(self):
-        # define parameters
-        z_i = self.define_parameter('z_i', self.q_i_struct.shape[0])
-        z_ji = self.define_parameter('z_ji', self.q_ji_struct.shape[0])
-        l_i = self.define_parameter('l_i', self.q_i_struct.shape[0])
-        l_ji = self.define_parameter('l_ji', self.q_ji_struct.shape[0])
-        rho = self.define_parameter('rho')
-        # put them in the struct format
-        z_i = self.q_i_struct(z_i)
-        z_ji = self.q_ji_struct(z_ji)
-        l_i = self.q_i_struct(l_i)
-        l_ji = self.q_ji_struct(l_ji)
-        # get time info
-        t = self.define_symbol('t')
-        T = self.define_symbol('T')
-        t0 = t/T
-        # get (part of) variables
-        x_i = self.get_x_variables()
-        # transform spline variables: only consider future piece of spline
-        tf = shift_knot1_fwd_mx
-        self.transform_spline([x_i, z_i, l_i], tf, t0, self.q_i)
-        self.transform_spline([z_ji, l_ji], tf, t0, self.q_ji)
-        # construct objective
-        obj = 0.
-        for child, q_i in self.q_i.items():
-            for name in q_i.keys():
-                x = x_i[child.label][name]
-                z = z_i[child.label, name]
-                l = l_i[child.label, name]
-                obj += mul(l.T, x-z) + 0.5*rho*mul((x-z).T, (x-z))
-                for nghb in self.q_ji.keys():
-                    z = z_ji[str(nghb), child.label, name]
-                    l = l_ji[str(nghb), child.label, name]
-                    obj += mul(l.T, x-z) + 0.5*rho*mul((x-z).T, (x-z))
-        self.define_objective(obj)
-        # construct problem
-        self.father = OptiFather(self.group.values())
-        options = deepcopy(self.options)
-        options['codegen']['buildname'] = (self.options['codegen']['buildname']
-                                           + '/admm'+str(self.index)+'/updx')
-        prob, compile_time = self.father.construct_problem(options)
-        self.problem_upd_x = prob
-        self.init_var_admm()
-
-    def init_var_admm(self):
-        for nghb, q_ji in self.q_ji.items():
-            for child, q in q_ji.items():
-                for name, ind in q.items():
-                    var = self.father._var_result[child.label, name][ind]
-                    self.var_admm['z_ji'][str(nghb), child.label, name] = var
-        for child, q in self.q_i.items():
-            for name, ind in q.items():
-                var = self.father._var_result[child.label, name][ind]
-                self.var_admm['z_i'][child.label, name] = var
-
-    def set_parameters(self, current_time):
-        parameters = {}
-        parameters['z_i'] = self.var_admm['z_i'].cat
-        parameters['z_ji'] = self.var_admm['z_ji'].cat
-        parameters['l_i'] = self.var_admm['l_i'].cat
-        parameters['l_ji'] = self.var_admm['l_ji'].cat
-        parameters['rho'] = self.options['admm']['rho']
-        return parameters
 
     def _check_for_lineq(self):
         g = []
@@ -228,87 +275,29 @@ class ADMM(Problem):
         b = b_fun(sym_num)[0].toArray()
         return True, A, b
 
-    def construct_upd_z(self):
-        # check if we have linear equality constraints
-        lineq, A, b = self._check_for_lineq()
-        if not lineq:
-            raise ValueError(('Awtch, only linear equality interaction '
-                              'constraints are allowed for now...'))
-        x_i = struct_symMX(self.q_i_struct)
-        x_j = struct_symMX(self.q_ji_struct)
-        l_i = struct_symMX(self.q_i_struct)
-        l_ij = struct_symMX(self.q_ij_struct)
-        t = MX.sym('t')
-        T = MX.sym('T')
-        rho = MX.sym('rho')
-        t0 = t/T
-        # transform spline variables: only consider future piece of spline
-        tf = shift_knot1_fwd_mx
-        self.transform_spline([x_i, l_i], tf, t0, self.q_i)
-        self.transform_spline(l_ij, tf, t0, self.q_ij)
-        self.transform_spline(x_j, tf, t0, self.q_ji)
-        # Build KKT system
-        E = rho*MX.eye(A.shape[1])
-        l, x = vertcat([l_i.cat, l_ij.cat]), vertcat([x_i.cat, x_j.cat])
-        f = -(l + rho*x)
-        G = vertcat([horzcat([E, A.T]),
-                     horzcat([A, MX.zeros(A.shape[0], A.shape[0])])])
-        h = vertcat([-f, b])
-        z = solve(G, h)
-        l_qi = self.q_i_struct.shape[0]
-        l_qij = self.q_ij_struct.shape[0]
-        z_i_new = self.q_i_struct(z[:l_qi])
-        z_ij_new = self.q_ij_struct(z[l_qi:l_qi+l_qij])
-        # transform back
-        tf = shift_knot1_bwd_mx
-        self.transform_spline(z_i_new, tf, t0, self.q_i)
-        self.transform_spline(z_ij_new, tf, t0, self.q_ij)
-        # create problem
-        inp = [x_i, l_i, l_ij, x_j, t, T, rho]
-        out = [z_i_new, z_ij_new]
-        fun = MXFunction('upd_z', inp, out)
-        options = deepcopy(self.options)
-        options['codegen']['buildname'] = (self.options['codegen']['buildname']
-                                           + '/admm'+str(self.index)+'/updz')
-        prob, compile_time = self.father.compile_function(
-            fun, 'upd_z', options)
-        self.problem_upd_z = prob
-        self.update_z(0.0)
+    # ========================================================================
+    # Methods related to solving the problem
+    # ========================================================================
 
-    def construct_upd_l(self):
-        # create parameters
-        x_i = struct_symMX(self.q_i_struct)
-        z_i = struct_symMX(self.q_i_struct)
-        z_ij = struct_symMX(self.q_ij_struct)
-        l_i = struct_symMX(self.q_i_struct)
-        l_ij = struct_symMX(self.q_ij_struct)
-        x_j = struct_symMX(self.q_ji_struct)
-        t = MX.sym('t')
-        T = MX.sym('T')
-        rho = MX.sym('rho')
-        t0 = t/T
-        # transform spline variables: only consider future piece of spline
-        tf = shift_knot1_fwd_mx
-        self.transform_spline([x_i, z_i, l_i], tf, t0, self.q_i)
-        self.transform_spline([z_ij, l_ij], tf, t0, self.q_ij)
-        self.transform_spline(x_j, tf, t0, self.q_ji)
-        # update lambda
-        l_i_new = self.q_i_struct(l_i.cat + rho*(x_i.cat - z_i.cat))
-        l_ij_new = self.q_ij_struct(l_ij.cat + rho*(x_j.cat - z_ij.cat))
-        # transform back
-        tf = shift_knot1_bwd_mx
-        self.transform_spline(l_i_new, tf, t0, self.q_i)
-        self.transform_spline(l_ij_new, tf, t0, self.q_ij)
-        # create problem
-        inp = [x_i, z_i, z_ij, l_i, l_ij, x_j, t, T, rho]
-        out = [l_i_new, l_ij_new]
-        fun = MXFunction('upd_l', inp, out)
-        options = deepcopy(self.options)
-        options['codegen']['buildname'] = (self.options['codegen']['buildname']
-                                           + '/admm'+str(self.index)+'/updl')
-        prob, compile_time = self.father.compile_function(
-            fun, 'upd_l', options)
-        self.problem_upd_l = prob
+    def init_var_admm(self):
+        for nghb, q_ji in self.q_ji.items():
+            for child, q in q_ji.items():
+                for name, ind in q.items():
+                    var = self.father._var_result[child.label, name][ind]
+                    self.var_admm['z_ji'][str(nghb), child.label, name] = var
+        for child, q in self.q_i.items():
+            for name, ind in q.items():
+                var = self.father._var_result[child.label, name][ind]
+                self.var_admm['z_i'][child.label, name] = var
+
+    def set_parameters(self, current_time):
+        parameters = {}
+        parameters['z_i'] = self.var_admm['z_i'].cat
+        parameters['z_ji'] = self.var_admm['z_ji'].cat
+        parameters['l_i'] = self.var_admm['l_i'].cat
+        parameters['l_ji'] = self.var_admm['l_ji'].cat
+        parameters['rho'] = self.options['admm']['rho']
+        return parameters
 
     def update_x(self, current_time):
         # set initial guess, parameters, lb & ub
@@ -321,7 +310,7 @@ class ADMM(Problem):
         t1 = time.time()
         t_upd = t1-t0
         self.father.set_variables(self.problem_upd_x.getOutput('x'))
-        self.var_admm['x_i'] = self.get_x_variables(solution=True)
+        self.var_admm['x_i'] = self._get_x_variables(solution=True)
         stats = self.problem_upd_x.getStats()
         if stats.get('return_status') != 'Solve_Succeeded':
             print 'upd_x %d: %s' % (self.index, stats.get('return_status'))
@@ -386,28 +375,26 @@ class ADMM(Problem):
         return pr, dr
 
 
-class DistributedProblem(Problem):
+class ADMMProblem(DistributedProblem):
 
-    def __init__(self, fleet, environment, options):
-        Problem.__init__(self, fleet, environment, options)
+    def __init__(self, problems, options):
+        DistributedProblem.__init__(self, problems, ADMM, options)
 
-    def construct_subproblems(self, problems):
-        self.problems = problems
-        if len(problems) != len(self.vehicles):
-            raise ValueError('Number of vehicles and problems do not match!')
-        self.updaters = []
-        for index, vehicle in enumerate(self.vehicles):
-            admm = ADMM(index, vehicle, problems[index],
-                        self.environment.copy(), self.options)
-            self.updaters.append(admm)
-        q_i, q_ij, q_ji, con = self.interprete_constraints(self.updaters)
+    # ========================================================================
+    # ADMM options
+    # ========================================================================
 
-        for ind, upd in enumerate(self.updaters):
-            upd.construct_problem(q_i[ind], q_ij[ind], q_ji[ind], con[ind])
+    def set_default_options(self):
+        Problem.set_default_options(self)
+        self.options['admm'] = {'max_iter': 1, 'rho': 0.1}
+
+    # ========================================================================
+    # Perform ADMM sequence
+    # ========================================================================
 
     def solve(self, current_time):
         it0 = self.iteration
-        while (self.iteration - it0) < self.max_iterations:
+        while (self.iteration - it0) < self.options['admm']['max_iter']:
             t_upd_x, t_upd_z, t_upd_l, t_res = 0., 0., 0., 0.
             p_res, d_res = 0., 0.
             for updater in self.updaters:
@@ -429,7 +416,6 @@ class DistributedProblem(Problem):
             p_res, d_res = np.sqrt(p_res), np.sqrt(d_res)
             for updater in self.updaters:
                 updater.communicate()
-
             if self.options['verbose'] >= 1:
                 self.iteration += 1
                 if ((self.iteration - 1) % 20 == 0):
@@ -443,85 +429,3 @@ class DistributedProblem(Problem):
                 print('%3d | %.1e | %.4e | %.4e | %.4e | %.4e | %.4e ' %
                       (self.iteration, current_time, p_res, d_res, t_upd_x,
                        t_upd_z, t_upd_l, t_res))
-
-    def compose_dictionary(self):
-        children = self.vehicles
-        children.extend(self.problems)
-        children.append(self.environment)
-        symbol_dict = {}
-        for child in children:
-            symbol_dict.update(child.symbol_dict)
-        return symbol_dict
-
-    def interprete_constraints(self, updaters):
-        q_i = [{} for updater in updaters]
-        q_ij = [{} for updater in updaters]
-        q_ji = [{} for updater in updaters]
-        con = [[] for updater in updaters]
-
-        symbol_dict = self.compose_dictionary()
-
-        for constraint in self._constraints.values():
-            dep = {}
-            for sym, indices in get_dependency(constraint[0]).items():
-                child, name = symbol_dict[sym.getName()]
-                if child not in dep:
-                    dep[child] = {}
-                dep[child][name] = indices
-            for child, dic in dep.items():
-                # q_i: structure of local variables i
-                index = child.index
-                con[index].append(constraint)
-                if child not in q_i[index]:
-                    q_i[index][child] = {}
-                for name, indices in dic.items():
-                    if name not in q_i[index][child]:
-                        q_i[index][child][name] = []
-                    for i in indices:
-                        if i not in q_i[index][child][name]:
-                            q_i[index][child][name].append(i)
-                    q_i[index][child][name].sort()
-                # q_ij: structure of remote variables j seen from local i
-                for ch, dic_ch in dep.items():
-                    if not (child == ch):
-                        upd = updaters[ch.index]
-                        if upd not in q_ij[index]:
-                            q_ij[index][upd] = {}
-                        if ch not in q_ij[index][upd]:
-                            q_ij[index][upd][ch] = {}
-                        for name, indices in dic_ch.items():
-                            if name not in q_ij[index][upd][ch]:
-                                q_ij[index][upd][ch][name] = []
-                            for i in indices:
-                                if i not in q_ij[index][upd][ch][name]:
-                                    q_ij[index][upd][ch][name].append(i)
-                            q_ij[index][upd][ch][name].sort()
-        # q_ji: structure of local variables i seen from remote j
-        for upd1 in updaters:
-            for upd2 in q_ij[upd1.index].keys():
-                q_ji[upd2.index][upd1] = q_ij[upd1.index][upd2]
-
-        return q_i, q_ij, q_ji, con
-
-
-class FormationPoint2point(DistributedProblem):
-
-    def __init__(self, fleet, environment, options={}):
-        DistributedProblem.__init__(self, fleet, environment, options)
-
-        problems = [Point2point(vehicle, environment, options)
-                    for vehicle in self.vehicles]
-        y = [vehicle.get_variable('y') for vehicle in self.vehicles]
-
-        # self.define_constraint(
-        #     y[1][0].coeffs[0] - y[0][0].coeffs[0] - 0.5, 0., 0.)
-        # self.define_constraint(
-        #     y[1][0].coeffs[3:5] - y[0][0].coeffs[5:7], 0., 0.)
-        Dx = [1., 2.]
-        for k in range(self.vehicles[0].n_y):
-            self.define_constraint(y[1][k] - y[0][k] - Dx[k], 0., 0.)
-            self.define_constraint(y[2][k] - y[1][k] - Dx[k], 0., 0.)
-            self.define_constraint(y[3][k] - y[2][k] - Dx[k], 0., 0.)
-            self.define_constraint(y[0][k] - y[3][k] - Dx[k], 0., 0.)
-
-        self.construct_subproblems(problems)

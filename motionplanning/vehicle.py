@@ -8,6 +8,7 @@ from numpy.random import normal
 import numpy as np
 import re
 
+
 class Vehicle(OptiChild):
 
     def __init__(self, n_y, degree, shape, options, **kwargs):
