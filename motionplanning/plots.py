@@ -2,7 +2,6 @@ import os
 import matplotlib
 matplotlib.use('TKAgg')
 import matplotlib.pyplot as plt
-from matplotlib2tikz import save as tikz_save
 import numpy as np
 
 # color definition
@@ -250,6 +249,7 @@ class Plots:
         self.update(t=index, plots=plot)
 
     def save(self, signal, name='plot', path='images/', **kwargs):
+        from matplotlib2tikz import save as tikz_save
         directory = path
         if not os.path.isdir(directory):
             os.makedirs(directory)
@@ -274,6 +274,7 @@ class Plots:
                 break
 
     def save_movie(self, signal, name='movie', path='movies/', **kwargs):
+        from matplotlib2tikz import save as tikz_save
         directory = path + name
         if not os.path.isdir(directory):
             os.makedirs(directory)
