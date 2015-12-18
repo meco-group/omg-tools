@@ -1,5 +1,6 @@
 import os
 from os import system
+from shutil import move
 from casadi import SXFunction, NlpSolver, ExternalFunction
 import time
 
@@ -28,7 +29,7 @@ def gen_code_nlp(solver, directory, options,
     cwd = os.getcwd()
     for name, fun in functions.items():
         fun.generate(name)
-        os.rename(cwd+'/'+name+'.c', cwd+'/'+directory+'/'+name+'.c')
+        move(cwd+'/'+name+'.c', cwd+'/'+directory+'/'+name+'.c')
 
     if compileme:
         print 'Compiling...',

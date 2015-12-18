@@ -88,7 +88,7 @@ environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
 #              stored
 # There are other options, set on a default value. Check them out with
 # problem.options
-codegen = {'compileme': True, 'codegen': True, 'buildname': 'holonomic'}
+codegen = {'compileme': True, 'codegen': False, 'buildname': 'holonomic'}
 problem = Point2point(vehicle, environment, options={'codegen': codegen})
 problem.init()
 
@@ -115,10 +115,10 @@ simulator.plot.show('input')
 simulator.plot.show('my_signal')
 # Show movie of some signal
 simulator.plot.show_movie('2d', repeat=False)
-# Save a plot as Tikz
-simulator.plot.save('my_signal', name='MySignals')
-# Save a movie as multiple Tikz
-simulator.plot.save_movie('input', number_of_frames=4)
-simulator.plot.save_movie('2d', number_of_frames=4, name='quadrotor_2d')
+# Save a plot as Tikz: you need matplotlib2tikz for this!
+# simulator.plot.save('my_signal', name='MySignals')
+# Save a movie as multiple Tikz: you need matplotlib2tikz for this!
+# simulator.plot.save_movie('input', number_of_frames=4)
+# simulator.plot.save_movie('2d', number_of_frames=4, name='quadrotor_2d')
 
 matplotlib.pyplot.show(block=True)
