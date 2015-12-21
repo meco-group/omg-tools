@@ -61,10 +61,16 @@ class Problem(OptiChild):
                                   'warm_start_init_point': 'yes',
                                   'print_level': 0, 'print_time': 0}
         self.options['codegen'] = {
-            'codegen': True, 'compileme': True, 'buildname': 'problem'}
+            'jit': False, 'jit_options': {'flags': ['-O0']}}
 
     def set_options(self, options):
-        self.options.update(options)
+        if 'solver' in options:
+            self.options['solver'].update(options['solver'])
+        if 'codegen' in options:
+            self.options['codegen'].update(options['codegen'])
+        for key in options:
+            if key not in ['solver', 'codegen']:
+                self.options[key] = options[key]
 
     # ========================================================================
     # Create and solve problem
