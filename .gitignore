@@ -4,3 +4,4 @@
 */images/*
 .*
 !.gitignore
+jit_tmp.c

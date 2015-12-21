@@ -81,14 +81,12 @@ environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
                                   trajectory=trajectory))
 
 # Create a point-to-point problem
-# We provide it with some options concerning the C code generation:
-#   codegen:   True -> we use code generation
-#   compileme: True -> we recompile the generated code
-#   buildname: The name of the subfolder (under /.build) where the c files are
-#              stored
+# We can provide it with some options concerning the jit code compilation:
+codegen = {'jit': False}
+codegen = {'jit': True, 'jit_options': {'flags': ['-O3']}}
+# Compilation of the code takes some time, while execution is slightly faster
 # There are other options, set on a default value. Check them out with
 # problem.options
-codegen = {'compileme': True, 'codegen': True, 'buildname': 'holonomic'}
 problem = Point2point(vehicle, environment, options={'codegen': codegen})
 problem.init()
 
@@ -115,9 +113,9 @@ simulator.plot.show('input')
 simulator.plot.show('my_signal')
 # Show movie of some signal
 simulator.plot.show_movie('2d', repeat=False)
-# Save a plot as Tikz
+# Save a plot as Tikz: you need matplotlib2tikz for this!
 simulator.plot.save('my_signal', name='MySignals')
-# Save a movie as multiple Tikz
+# Save a movie as multiple Tikz: you need matplotlib2tikz for this!
 simulator.plot.save_movie('input', number_of_frames=4)
 simulator.plot.save_movie('2d', number_of_frames=4, name='quadrotor_2d')
 
