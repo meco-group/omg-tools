@@ -16,8 +16,7 @@ environment.add_obstacle(Obstacle({'position': [-0.6, -5.4]},
                                   shape=Rectangle(width=0.2, height=12.)))
 
 # create a point-to-point problem
-codegen = {'compileme': True, 'codegen': True, 'buildname': 'quadrotor'}
-problem = Point2point(vehicle, environment, options={'codegen': codegen})
+problem = Point2point(vehicle, environment)
 problem.init()
 
 # create simulator

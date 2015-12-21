@@ -1,10 +1,9 @@
-from casadi import MX, inf, MXFunction, nlpIn, nlpOut, NlpSolver
-from casadi import symvar, substitute
-from casadi.tools import struct, struct_MX, struct_symMX, entry
-from codegeneration import get_nlp_solver, get_function
-from codegeneration import gen_code_nlp, gen_code_function
+from casadi import MX, inf, MXFunction, nlpIn, nlpOut, NlpSolver, SX
+from casadi import symvar, substitute, SXFunction
+from casadi.tools import struct, struct_MX, struct_symMX, entry, struct_symSX
 from spline import BSpline
 from itertools import groupby
+import time
 import numpy as np
 import copy
 
@@ -43,11 +42,10 @@ class OptiFather:
         parameters = self.construct_parameters()
         constraints, lb, ub = self.construct_constraints(variables, parameters)
         objective = self.construct_objective(variables, parameters)
-        problem, compile_time = self.compile_nlp(
-            MXFunction('nlp', nlpIn(x=variables, p=parameters),
-                       nlpOut(f=objective, g=constraints)), options)
+        problem, buildtime = self.create_nlp(variables, parameters,
+                                             objective, constraints, options)
         self.init_variables()
-        return problem, compile_time
+        return problem, buildtime
 
     def compose_dictionary(self):
         for label, child in self.children.items():
@@ -58,7 +56,8 @@ class OptiFather:
             for name, symbol in child._symbols.items():
                 sym_def = []
                 for _label, _child in self.children.items():
-                    if (name in _child._variables) or (name in _child._parameters):
+                    if (name in _child._variables or
+                            name in _child._parameters):
                         sym_def.append(_child)
                 if len(sym_def) > 1:
                     raise ValueError('Symbol %s, defined in %s, is defined'
@@ -147,33 +146,43 @@ class OptiFather:
     # Methods related to c code generation
     # ========================================================================
 
-    def compile_nlp(self, nlp, options):
-        codegen = options['codegen']
-        compile_time = 0.
-        if codegen['codegen']:
-            if not codegen['compileme']:
-                problem = get_nlp_solver('.builds/'+codegen['buildname'],
-                                         options['solver'])
-            else:
-                problem, compile_time = gen_code_nlp(
-                    NlpSolver('solver', 'ipopt', nlp, options['solver']),
-                    '.builds/'+codegen['buildname'], options['solver'])
-            return problem, compile_time
-        else:
-            return NlpSolver('solver', 'ipopt', nlp, options['solver']), 0.
+    def create_nlp(self, var, par, obj, con, options):
+        jit = options['codegen']
+        print 'Building nlp... ',
+        if jit['jit']:
+            print('[jit compilation with flags %s]' %
+                  (','.join(jit['jit_options']['flags']))),
+        t0 = time.time()
+        nlp = MXFunction('nlp', nlpIn(x=var, p=par), nlpOut(f=obj, g=con))
+        solver = NlpSolver('solver', 'ipopt', nlp, options['solver'])
+        grad_f, jac_g = nlp.gradient('x', 'f'), nlp.jacobian('x', 'g')
+        hess_lag = solver.hessLag()
+        var, par = struct_symSX(var), struct_symSX(par)
+        nlp = SXFunction('nlp', [var, par], nlp([var, par]), jit)
+        grad_f = SXFunction('grad_f', [var, par], grad_f([var, par]), jit)
+        jac_g = SXFunction('jac_g', [var, par], jac_g([var, par]), jit)
+        lam_f, lam_g = SX.sym('lam_f'), SX.sym('lam_g', con.size)
+        hess_lag = SXFunction('hess_lag', [var, par, lam_f, lam_g],
+                              hess_lag([var, par, lam_f, lam_g]), jit)
+        options['solver'].update({'grad_f': grad_f, 'jac_g': jac_g,
+                                  'hess_lag': hess_lag})
+        problem = NlpSolver('solver', 'ipopt', nlp, options['solver'])
+        t1 = time.time()
+        print 'in %5f s' % (t1-t0)
+        return problem, (t1-t0)
 
-    def compile_function(self, function, name, options):
-        codegen = options['codegen']
-        compile_time = 0.
-        if codegen['codegen']:
-            if not codegen['compileme']:
-                function = get_function('.builds/'+codegen['buildname'], name)
-            else:
-                function, compile_time = gen_code_function(
-                    function, '.builds/'+codegen['buildname'], name)
-            return function, compile_time
-        else:
-            return function, 0.
+    def create_function(self, inp, out):
+        jit = options['codegen']
+        print 'Building function... ',
+        if jit['jit']:
+            print('[jit compilation with flags %s]' %
+                  (','.join(jit['jit_options']['flags']))),
+        t0 = time.time()
+        inp, out = SX(inp), SX(out)
+        fun = SXFunction(inp, out, jit)
+        t1 = time.time()
+        print 'in %5f s' % (t1-t0)
+        return fun, (t1-t0)
 
     # ========================================================================
     # Problem evaluation
