@@ -56,10 +56,21 @@ class ADMM(Problem):
         for key in ['z_ji', 'l_ji']:
             self.var_admm[key] = self.q_ji_struct(0)
 
+        self.create_functions(self.problem.vehicles[0].basis)
         self.construct_upd_x()
         self.construct_upd_z()
         self.construct_upd_l()
 
+    def create_functions(self, basis):
+        coeffs = SX.sym('v', len(basis))
+        t0 = SX.sym('t0')
+        inp = [coeffs, t0]
+        out_fwd = [shift_knot1_fwd_mx(coeffs, basis.knots, basis.degree, t0)]
+        out_bwd = [shift_knot1_bwd_mx(coeffs, basis.knots, basis.degree, t0)]
+        shift_knot1_fwd_SX = SXFunction('shift_knot1_fwd', inp, out_fwd)
+        shift_knot1_bwd_SX = SXFunction('shift_knot1_bwd', inp, out_bwd)
+        self.shift_knot1_fwd = lambda cfs, t0: shift_knot1_fwd_SX([cfs, t0])[0]
+        self.shift_knot1_bwd = lambda cfs, t0: shift_knot1_bwd_SX([cfs, t0])[0]
     def construct_upd_x(self):
         # define parameters
         z_i = self.define_parameter('z_i', self.q_i_struct.shape[0])
@@ -79,9 +90,9 @@ class ADMM(Problem):
         # get (part of) variables
         x_i = self._get_x_variables()
         # transform spline variables: only consider future piece of spline
-        tf = shift_knot1_fwd_mx
-        self._transform_spline([x_i, z_i, l_i], tf, t0, self.q_i)
-        self._transform_spline([z_ji, l_ji], tf, t0, self.q_ji)
+        tf = lambda cfs: self.shift_knot1_fwd(cfs, t0)
+        self._transform_spline([x_i, z_i, l_i], tf, self.q_i)
+        self._transform_spline([z_ji, l_ji], tf, self.q_ji)
         # construct objective
         obj = 0.
         for child, q_i in self.q_i.items():
@@ -113,11 +124,17 @@ class ADMM(Problem):
         t = SX.sym('t')
         T = SX.sym('T')
         rho = SX.sym('rho')
+        inp = [x_i.cat, l_i.cat, l_ij.cat, x_j.cat, t, T, rho]
         t0 = t/T
+        # put symbols in SX structs (necessary for transformation)
+        x_i = self.q_i_struct(x_i)
+        x_j = self.q_ij_struct(x_j)
+        l_i = self.q_i_struct(l_i)
+        l_ij = self.q_ij_struct(l_ij)
         # transform spline variables: only consider future piece of spline
-        tf = shift_knot1_fwd_mx
-        self._transform_spline([x_i, l_i], tf, t0, self.q_i)
-        self._transform_spline([x_j, l_ij], tf, t0, self.q_ij)
+        tf = lambda cfs: self.shift_knot1_fwd(cfs, t0)
+        self._transform_spline([x_i, l_i], tf, self.q_i)
+        self._transform_spline([x_j, l_ij], tf, self.q_ij)
         # Build KKT system
         E = rho*SX.eye(A.shape[1])
         l, x = vertcat([l_i.cat, l_ij.cat]), vertcat([x_i.cat, x_j.cat])
@@ -131,13 +148,11 @@ class ADMM(Problem):
         z_i_new = self.q_i_struct(z[:l_qi])
         z_ij_new = self.q_ij_struct(z[l_qi:l_qi+l_qij])
         # transform back
-        tf = shift_knot1_bwd_mx
-        self._transform_spline(z_i_new, tf, t0, self.q_i)
-        self._transform_spline(z_ij_new, tf, t0, self.q_ij)
-        # create problem
-        inp = [x_i.cat, l_i.cat, l_ij.cat, x_j.cat, t, T, rho]
+        tf = lambda cfs: self.shift_knot1_bwd(cfs, t0)
+        self._transform_spline(z_i_new, tf, self.q_i)
+        self._transform_spline(z_ij_new, tf, self.q_ij)
         out = [z_i_new.cat, z_ij_new.cat]
-
+        # create problem
         prob, compile_time = self.father.create_function(
             'upd_z', inp, out, self.options)
         self.problem_upd_z = prob
@@ -161,9 +176,9 @@ class ADMM(Problem):
         t, T, rho = par['t'], par['T'], par['rho']
         t0 = t/T
         # transform spline variables: only consider future piece of spline
-        tf = shift_knot1_fwd_mx
-        self._transform_spline([x_i, z_i, l_i], tf, t0, self.q_i)
-        self._transform_spline([x_j, z_ij, l_ij], tf, t0, self.q_ij)
+        tf = lambda cfs: self.shift_knot1_fwd(cfs, t0)
+        self._transform_spline([x_i, z_i, l_i], tf, self.q_i)
+        self._transform_spline([x_j, z_ij, l_ij], tf, self.q_ij)
         # construct constraints
         constraints, lb, ub = [], [], []
         for con in self.constraints:
@@ -226,20 +241,27 @@ class ADMM(Problem):
         T = SX.sym('T')
         rho = SX.sym('rho')
         t0 = t/T
+        inp = [x_i, z_i, z_ij, l_i, l_ij, x_j, t, T, rho]
+        # put symbols in SX structs (necessary for transformation)
+        x_i = self.q_i_struct(x_i)
+        z_i = self.q_i_struct(z_i)
+        z_ij = self.q_ij_struct(z_ij)
+        l_i = self.q_i_struct(l_i)
+        l_ij = self.q_ij_struct(l_ij)
+        x_j = self.q_ij_struct(x_j)
         # transform spline variables: only consider future piece of spline
-        tf = shift_knot1_fwd_mx
-        self._transform_spline([x_i, z_i, l_i], tf, t0, self.q_i)
-        self._transform_spline([x_j, z_ij, l_ij], tf, t0, self.q_ij)
+        tf = lambda cfs: self.shift_knot1_fwd(cfs, t0)
+        self._transform_spline([x_i, z_i, l_i], tf, self.q_i)
+        self._transform_spline([x_j, z_ij, l_ij], tf, self.q_ij)
         # update lambda
         l_i_new = self.q_i_struct(l_i.cat + rho*(x_i.cat - z_i.cat))
         l_ij_new = self.q_ij_struct(l_ij.cat + rho*(x_j.cat - z_ij.cat))
         # transform back
-        tf = shift_knot1_bwd_mx
-        self._transform_spline(l_i_new, tf, t0, self.q_i)
-        self._transform_spline(l_ij_new, tf, t0, self.q_ij)
-        # create problem
-        inp = [x_i, z_i, z_ij, l_i, l_ij, x_j, t, T, rho]
+        tf = lambda cfs: self.shift_knot1_bwd(cfs, t0)
+        self._transform_spline(l_i_new, tf, self.q_i)
+        self._transform_spline(l_ij_new, tf, self.q_ij)
         out = [l_i_new, l_ij_new]
+        # create problem
         prob, compile_time = self.father.create_function(
             'upd_l', inp, out, self.options)
         self.problem_upd_l = prob
@@ -262,26 +284,21 @@ class ADMM(Problem):
                     x[child.label][name] = var[ind]
         return x
 
-    def _transform_spline(self, var, tf, t0, dic):
+    def _transform_spline(self, var, tf, dic):
         if isinstance(var, list):
             for v in var:
-                self._transform_spline(v, tf, t0, dic)
+                self._transform_spline(v, tf, dic)
         elif isinstance(dic.keys()[0], ADMM):
             for key in dic.keys():
                 if isinstance(var, struct):
-                    self._transform_spline(
-                        var.prefix[str(key)], tf, t0, dic[key])
+                    self._transform_spline(var.prefix[str(key)], tf, dic[key])
                 elif isinstance(var, dict):
-                    self._transform_spline(var[str(key)], tf, t0, dic[key])
+                    self._transform_spline(var[str(key)], tf, dic[key])
         else:
+            basis = self.problem.vehicles[0].basis
             for child, q_i in dic.items():
                 for name, ind in q_i.items():
                     if name in child._splines:
-                        basis = child._splines[name]
-                        v1 = SX.sym('v', len(basis))
-                        t = SX.sym('t')
-                        v2 = tf(v1, basis.knots, basis.degree, t)
-                        fun = SXFunction('tf', [v1, t], [v2])
                         for l in range(child._variables[name].shape[1]):
                             sl_min = l*len(basis)
                             sl_max = (l+1)*len(basis)
@@ -289,14 +306,10 @@ class ADMM(Problem):
                                 sl = slice(sl_min, sl_max)
                                 if isinstance(var, dict):
                                     v = var[child.label][name][sl]
-                                    # v = tf(v, basis.knots, basis.degree, t0)
-                                    v = fun([v, t0])[0]
-                                    var[child.label][name][sl] = v
-                                else:  # struct or prefix
-                                    v = var[child.label, name][sl]
-                                    # v = tf(v, basis.knots, basis.degree, t0)
-                                    v = fun([v, t0])[0]
-                                    var[child.label, name][sl] = v
+                                    var[child.label][name][sl] = tf(v)
+                                else:
+                                    v = var[child.label, name, sl]
+                                    var[child.label, name, sl] = tf(v)
 
     def _check_for_lineq(self):
         g = []
