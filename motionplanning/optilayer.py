@@ -148,10 +148,11 @@ class OptiFather:
 
     def create_nlp(self, var, par, obj, con, options):
         jit = options['codegen']
-        print 'Building nlp... ',
-        if jit['jit']:
-            print('[jit compilation with flags %s]' %
-                  (','.join(jit['jit_options']['flags']))),
+        if options['verbose'] >= 2:
+            print 'Building nlp... ',
+            if jit['jit']:
+                print('[jit compilation with flags %s]' %
+                      (','.join(jit['jit_options']['flags']))),
         t0 = time.time()
         nlp = MXFunction('nlp', nlpIn(x=var, p=par), nlpOut(f=obj, g=con))
         solver = NlpSolver('solver', 'ipopt', nlp, options['solver'])
@@ -168,20 +169,26 @@ class OptiFather:
                                   'hess_lag': hess_lag})
         problem = NlpSolver('solver', 'ipopt', nlp, options['solver'])
         t1 = time.time()
-        print 'in %5f s' % (t1-t0)
+        if options['verbose'] >= 2:
+            print 'in %5f s' % (t1-t0)
         return problem, (t1-t0)
 
-    def create_function(self, inp, out):
+    def create_function(self, name, inp, out, options):
         jit = options['codegen']
-        print 'Building function... ',
-        if jit['jit']:
-            print('[jit compilation with flags %s]' %
-                  (','.join(jit['jit_options']['flags']))),
+        if options['verbose'] >= 2:
+            print 'Building function %s ... ' % name,
+            if jit['jit']:
+                print('[jit compilation with flags %s]' %
+                      (','.join(jit['jit_options']['flags']))),
         t0 = time.time()
-        inp, out = SX(inp), SX(out)
-        fun = SXFunction(inp, out, jit)
+        # inp = [SX(i) for i in inp]
+        # out = [SX(i) for i in out]
+        # inp, out = struct_symSX(inp), struct_symSX(out)
+        fun = SXFunction(name, inp, out, jit)
+        # fun.expand()
         t1 = time.time()
-        print 'in %5f s' % (t1-t0)
+        if options['verbose'] >= 2:
+            print 'in %5f s' % (t1-t0)
         return fun, (t1-t0)
 
     # ========================================================================

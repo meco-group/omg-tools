@@ -83,7 +83,7 @@ environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
 # Create a point-to-point problem
 # We can provide it with some options concerning the jit code compilation:
 codegen = {'jit': False}
-codegen = {'jit': True, 'jit_options': {'flags': ['-O3']}}
+# codegen = {'jit': True, 'jit_options': {'flags': ['-O3']}}
 # Compilation of the code takes some time, while execution is slightly faster
 # There are other options, set on a default value. Check them out with
 # problem.options

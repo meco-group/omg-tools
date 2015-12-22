@@ -56,7 +56,7 @@ class Problem(OptiChild):
     # ========================================================================
 
     def set_default_options(self):
-        self.options = {'verbose': 1, 'update_time': 0.1}
+        self.options = {'verbose': 2, 'update_time': 0.1}
         self.options['solver'] = {'tol': 1e-3, 'linear_solver': 'ma57',
                                   'warm_start_init_point': 'yes',
                                   'print_level': 0, 'print_time': 0}
