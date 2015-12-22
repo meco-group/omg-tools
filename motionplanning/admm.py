@@ -461,11 +461,15 @@ class ADMMProblem(DistributedProblem):
 
     def set_default_options(self):
         Problem.set_default_options(self)
-        self.options['admm'] = {'max_iter': 1, 'rho': 0.1}
+        self.options['admm'] = {'max_iter': 1, 'rho': 2., 'init': 5}
 
     # ========================================================================
     # Perform ADMM sequence
     # ========================================================================
+
+    def initialize(self):
+        for k in range(self.options['admm']['init']):
+            self.solve(0.0)
 
     def solve(self, current_time):
         it0 = self.iteration
