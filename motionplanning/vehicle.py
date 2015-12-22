@@ -401,6 +401,9 @@ class Vehicle(OptiChild):
                                                      (len(self.basis) -
                                                       2*self.degree)),
                                          self.yT[k, 0]*np.ones(self.degree)]
+        # for k in range(self.n_y):
+        #     variables['y'][:, k] = np.linspace(self.y0[k, 0], self.yT[k, 0], len(self.basis))
+
         return variables
 
     def get_checkpoints(self, y=None):

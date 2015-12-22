@@ -4,14 +4,22 @@ ADMM
 
 Toolbox
 + solve issue with create function -> only jit for SX
-- write update for distr problem (environment??)
-- rewrite fleet
++ write update for distr problem (environment??)
++ rewrite fleet
++ admm: initial iterations
++ clean up basis stuff
+- overlook plots
+    - getVehicleTypes?
+    - vehicle index?
+- compute objective + average and max update time
+- compare 2 initial values
 - build only once per vehicle type
+- implement stability shzl upd z
 - parameters for interaction constraints (rel formation...)
 - clean up spline_extra
 
 - worries
-    - environment defines constraints on already multiple vehicles
+    + environment defines constraints on already multiple vehicles
     - vehicle index... does it still mean something?
 
 Notes:
