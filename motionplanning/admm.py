@@ -522,13 +522,13 @@ class ADMMProblem(DistributedProblem):
             if self.options['verbose'] >= 1:
                 self.iteration += 1
                 if ((self.iteration - 1) % 20 == 0):
-                    print('----|----------------|------------|------------|'
-                          '------------|------------|------------')
-                    print('%3s | %14s | %10s | %10s | %10s | %10s | %10s ' %
-                          ('It', 'time', 'prim res', 'dual res',
+                    print('----|------|----------|----------|'
+                          '----------|----------|----------|----------')
+                    print('%3s | %4s | %8s | %8s | %8s | %8s | %8s | %8s ' %
+                          ('It', 't', 'prim res', 'dual res',
                            't upd_x', 't upd_z', 't upd_l', 't_res'))
-                    print('----|----------------|------------|------------|'
-                          '------------|------------|------------')
-                print('%3d | %.1e | %.4e | %.4e | %.4e | %.4e | %.4e ' %
+                    print('----|------|----------|----------|'
+                          '----------|----------|----------|----------')
+                print('%3d | %4.1f | %.2e | %.2e | %.2e | %.2e | %.2e | %.2e ' %
                       (self.iteration, current_time, p_res, d_res, t_upd_x,
                        t_upd_z, t_upd_l, t_res))
