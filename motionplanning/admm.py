@@ -446,8 +446,19 @@ class ADMM(Problem):
             self.var_admm['l_ji'][str(nghb)] = l_ji
             self.var_admm['x_j'][str(nghb)] = x_j
 
-    def init_step(self):
-        self.problem.init_step()
+    def init_step(self, current_time):
+        self.problem.init_step(current_time)
+        # transform spline variables
+        if ((current_time > 0. and
+             np.round(current_time, 6) % self.problem.knot_time == 0)):
+            basis = self.problem.vehicles[0].basis
+            tf = lambda cfs: shift_over_knot(cfs, basis.knots, basis.degree, 1)
+            for key in ['x_i', 'z_i', 'z_i_p', 'l_i']:
+                self._transform_spline(self.var_admm[key], tf, self.q_i)
+            for key in ['x_j', 'z_ij', 'z_ij_p', 'l_ij']:
+                self._transform_spline(self.var_admm[key], tf, self.q_ij)
+            for key in ['z_ji', 'l_ji']:
+                self._transform_spline(self.var_admm[key], tf, self.q_ji)
 
     def get_residuals(self):
         x_i = self.var_admm['x_i'].cat
