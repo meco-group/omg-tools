@@ -477,7 +477,7 @@ class ADMMProblem(DistributedProblem):
             t_upd_x, t_upd_z, t_upd_l, t_res = 0., 0., 0., 0.
             p_res, d_res = 0., 0.
             for updater in self.updaters:
-                self.init_step()
+                updater.init_step(current_time)
             for updater in self.updaters:
                 t = updater.update_x(current_time)
                 t_upd_x = max(t_upd_x, t)
