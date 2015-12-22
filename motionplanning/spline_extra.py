@@ -233,12 +233,14 @@ def shift_knot1_bwd_mx(coeffs, knots, degree, t_shift):
 
     knots2 = knots
 
-    # knots2 = typ.zeros(knots.shape)
+    # knots2 = typ.zeros(knots.shape[0])
     coeffs2 = typ.zeros(coeffs.shape)
-    # for k in range(knots.size1()):
-        # knots2[k] = knots[k]
-    # for k in range(degree+1):
-        # knots2[k] = knots[0]-t_shift
+    # for k in range(knots.shape[0]):
+    #     knots2[k] = knots[k]
+    # # for k in range(degree+1):
+    # #     knots2[k] = knots[0]-t_shift
+
+
     for n in range(coeffs.size2()):
         for k in range(coeffs.size1()):
             coeffs2[k, n] = coeffs[k, n]
@@ -260,8 +262,8 @@ def shift_knot1_bwd_mx(coeffs, knots, degree, t_shift):
     for i in range(1, degree+1):
         A_tmp = typ.zeros((degree-i+1, degree-i+2))
         for j in range(degree-i+1):
-            A_tmp[j, j] = -(degree+1-i)/(knots[j+degree+1] - knots[j+i])
-            A_tmp[j, j+1] = (degree+1-i)/(knots[j+degree+1] - knots[j+i])
+            A_tmp[j, j] = -(degree+1-i)/(knots1[j+degree+1] - knots1[j+i])
+            A_tmp[j, j+1] = (degree+1-i)/(knots1[j+degree+1] - knots1[j+i])
         A_ = mul(A_tmp, A_)
         for n in range(coeffs.size2()):
             b0_[i, n] = mul(A_[0, :], coeffs[:degree+1, n])
