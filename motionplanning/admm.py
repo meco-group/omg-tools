@@ -3,9 +3,10 @@ from problem import Problem
 from distributedproblem import DistributedProblem
 from casadi import symvar, mul, SX, MX, SXFunction, MXFunction, reshape
 from casadi import vertcat, horzcat, jacobian, solve, substitute
-from casadi.tools import struct, struct_symMX, struct_symSX, entry
-from spline_extra import shift_knot1_fwd_mx, shift_knot1_bwd_mx
+from casadi.tools import struct, struct_symMX, struct_symSX, entry, structure
+from spline_extra import shift_knot1_fwd_mx, shift_knot1_bwd_mx, shift_over_knot
 import numpy as np
+import numpy.linalg as la
 import time
 
 
@@ -71,6 +72,7 @@ class ADMM(Problem):
         shift_knot1_bwd_SX = SXFunction('shift_knot1_bwd', inp, out_bwd)
         self.shift_knot1_fwd = lambda cfs, t0: shift_knot1_fwd_SX([cfs, t0])[0]
         self.shift_knot1_bwd = lambda cfs, t0: shift_knot1_bwd_SX([cfs, t0])[0]
+
     def construct_upd_x(self):
         # define parameters
         z_i = self.define_parameter('z_i', self.q_i_struct.shape[0])
@@ -279,7 +281,7 @@ class ADMM(Problem):
             for name, ind in q_i.items():
                 var = child.get_variable(name, spline=False, **kwargs)
                 if sol:
-                    x[child.label, name] = var.ravel()[ind]
+                    x[child.label, name] = var.T.ravel()[ind]
                 else:
                     x[child.label][name] = var[ind]
         return x
@@ -369,6 +371,8 @@ class ADMM(Problem):
         return parameters
 
     def update_x(self, current_time):
+        self.current_time = current_time
+        self.problem.current_time = current_time
         # set initial guess, parameters, lb & ub
         var = self.father.get_variables()
         par = self.father.set_parameters(current_time)
@@ -380,13 +384,14 @@ class ADMM(Problem):
         t_upd = t1-t0
         self.father.set_variables(self.problem_upd_x.getOutput('x'))
         self.var_admm['x_i'] = self._get_x_variables(solution=True)
-        # stats = self.problem_upd_x.getStats()
-        # if (stats.get('return_status') != 'Solve_Succeeded'):
-        #     print 'upd_x %d: %s' % (self.index, stats.get('return_status'))
+        stats = self.problem_upd_x.getStats()
+        if (stats.get('return_status') != 'Solve_Succeeded'):
+            print 'upd_x %d: %s' % (self.index, stats.get('return_status'))
         return t_upd
 
     def update_z(self, current_time):
         # save previous result
+        t0 = time.time()
         self.var_admm['z_i_p'] = self.var_admm['z_i']
         self.var_admm['z_ij_p'] = self.var_admm['z_ij']
         current_time = np.round(current_time, 6) % self.problem.knot_time
@@ -418,8 +423,10 @@ class ADMM(Problem):
             out = self.problem_upd_z.getOutput('x')
             out = self._var_struct_updz(out)
             z_i, z_ij = out['z_i'], out['z_ij']
-        self.var_admm['z_i'] = z_i
-        self.var_admm['z_ij'] = z_ij
+        self.var_admm['z_i'] = self.q_i_struct(z_i)
+        self.var_admm['z_ij'] = self.q_ij_struct(z_ij)
+        t1 = time.time()
+        return t1-t0
 
     def update_l(self, current_time):
         # set inputs
@@ -439,9 +446,9 @@ class ADMM(Problem):
 
     def communicate(self):
         for nghb in self.q_ji.keys():
-            z_ji = nghb.var_admm['z_ij'].prefix(str(self))
-            l_ji = nghb.var_admm['l_ij'].prefix(str(self))
-            x_j = nghb.var_admm['x_i'].prefix(str(self))
+            z_ji = nghb.var_admm['z_ij'].prefix[str(self)]
+            l_ji = nghb.var_admm['l_ij'].prefix[str(self)]
+            x_j = nghb.var_admm['x_i']
             self.var_admm['z_ji'][str(nghb)] = z_ji
             self.var_admm['l_ji'][str(nghb)] = l_ji
             self.var_admm['x_j'][str(nghb)] = x_j
@@ -461,6 +468,7 @@ class ADMM(Problem):
                 self._transform_spline(self.var_admm[key], tf, self.q_ji)
 
     def get_residuals(self):
+        t0 = time.time()
         x_i = self.var_admm['x_i'].cat
         z_i = self.var_admm['z_i'].cat
         x_j = self.var_admm['x_j'].cat
@@ -469,9 +477,10 @@ class ADMM(Problem):
         z_ij_p = self.var_admm['z_ij_p'].cat
         rho = self.options['admm']['rho']
 
-        pr = np.norm(x_i-z_i)**2 + np.norm(x_j-z_ij)**2
-        dr = rho*(np.norm(z_i-z_i_p)**2 + np.norm(z_ij-z_ij_p)**2)
-        return pr, dr
+        pr = la.norm(x_i-z_i)**2 + la.norm(x_j-z_ij)**2
+        dr = rho*(la.norm(z_i-z_i_p)**2 + la.norm(z_ij-z_ij_p)**2)
+        t1 = time.time()
+        return t1-t0, pr, dr
 
 
 class ADMMProblem(DistributedProblem):
@@ -496,6 +505,7 @@ class ADMMProblem(DistributedProblem):
             self.solve(0.0)
 
     def solve(self, current_time):
+        self.current_time = current_time
         it0 = self.iteration
         while (self.iteration - it0) < self.options['admm']['max_iter']:
             t_upd_x, t_upd_z, t_upd_l, t_res = 0., 0., 0., 0.
