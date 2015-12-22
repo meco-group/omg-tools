@@ -2,10 +2,9 @@ from optilayer import OptiFather
 from problem import Problem
 from distributedproblem import DistributedProblem
 from casadi import symvar, mul, SX, MX, SXFunction, MXFunction, reshape
-from casadi import vertcat, horzcat, jacobian, solve, substitute, nlpIn, nlpOut
-from casadi.tools import struct, struct_symMX, entry
+from casadi import vertcat, horzcat, jacobian, solve, substitute
+from casadi.tools import struct, struct_symMX, struct_symSX, entry
 from spline_extra import shift_knot1_fwd_mx, shift_knot1_bwd_mx
-from copy import deepcopy
 import numpy as np
 import time
 
@@ -98,10 +97,7 @@ class ADMM(Problem):
         self.define_objective(obj)
         # construct problem
         self.father = OptiFather(self.group.values())
-        options = deepcopy(self.options)
-        options['codegen']['buildname'] = (self.options['codegen']['buildname']
-                                           + '/admm'+str(self.index)+'/updx')
-        prob, compile_time = self.father.construct_problem(options)
+        prob, compile_time = self.father.construct_problem(self.options)
         self.problem_upd_x = prob
         self.init_var_admm()
 
@@ -110,24 +106,24 @@ class ADMM(Problem):
         self._lineq_updz, A, b = self._check_for_lineq()
         if not self._lineq_updz:
             self._construct_upd_z_nlp()
-        x_i = struct_symMX(self.q_i_struct)
-        x_j = struct_symMX(self.q_ij_struct)
-        l_i = struct_symMX(self.q_i_struct)
-        l_ij = struct_symMX(self.q_ij_struct)
-        t = MX.sym('t')
-        T = MX.sym('T')
-        rho = MX.sym('rho')
+        x_i = struct_symSX(self.q_i_struct)
+        x_j = struct_symSX(self.q_ij_struct)
+        l_i = struct_symSX(self.q_i_struct)
+        l_ij = struct_symSX(self.q_ij_struct)
+        t = SX.sym('t')
+        T = SX.sym('T')
+        rho = SX.sym('rho')
         t0 = t/T
         # transform spline variables: only consider future piece of spline
         tf = shift_knot1_fwd_mx
         self._transform_spline([x_i, l_i], tf, t0, self.q_i)
         self._transform_spline([x_j, l_ij], tf, t0, self.q_ij)
         # Build KKT system
-        E = rho*MX.eye(A.shape[1])
+        E = rho*SX.eye(A.shape[1])
         l, x = vertcat([l_i.cat, l_ij.cat]), vertcat([x_i.cat, x_j.cat])
         f = -(l + rho*x)
         G = vertcat([horzcat([E, A.T]),
-                     horzcat([A, MX.zeros(A.shape[0], A.shape[0])])])
+                     horzcat([A, SX.zeros(A.shape[0], A.shape[0])])])
         h = vertcat([-f, b])
         z = solve(G, h)
         l_qi = self.q_i_struct.shape[0]
@@ -139,14 +135,11 @@ class ADMM(Problem):
         self._transform_spline(z_i_new, tf, t0, self.q_i)
         self._transform_spline(z_ij_new, tf, t0, self.q_ij)
         # create problem
-        inp = [x_i, l_i, l_ij, x_j, t, T, rho]
-        out = [z_i_new, z_ij_new]
-        fun = MXFunction('upd_z', inp, out)
-        options = deepcopy(self.options)
-        options['codegen']['buildname'] = (self.options['codegen']['buildname']
-                                           + '/admm'+str(self.index)+'/updz')
-        prob, compile_time = self.father.compile_function(
-            fun, 'upd_z', options)
+        inp = [x_i.cat, l_i.cat, l_ij.cat, x_j.cat, t, T, rho]
+        out = [z_i_new.cat, z_ij_new.cat]
+
+        prob, compile_time = self.father.create_function(
+            'upd_z', inp, out, self.options)
         self.problem_upd_z = prob
 
     def _construct_upd_z_nlp(self):
@@ -191,7 +184,7 @@ class ADMM(Problem):
                         if sym.getName() in child.symbol_dict:
                             name = child.symbol_dict[sym.getName()][1]
                             v = z_ij[nghb.label, label, name]
-                            ind  = self.q_ij[nghb][child][name]
+                            ind = self.q_ij[nghb][child][name]
                             sym2 = MX.zeros(sym.size())
                             sym2[ind] = v
                             sym2 = reshape(sym2, sym.shape)
@@ -217,25 +210,21 @@ class ADMM(Problem):
                     l = l_ij[str(nghb), child.label, name]
                     obj += mul(l.T, x-z) + 0.5*rho*mul((x-z).T, (x-z))
         # construct problem
-        options = deepcopy(self.options)
-        options['codegen']['buildname'] = (self.options['codegen']['buildname']
-                                           + '/admm'+str(self.index)+'/updz')
-        prob, compile_time = self.father.compile_nlp(
-            MXFunction('nlp', nlpIn(x=var, p=par),
-                       nlpOut(f=obj, g=vertcat(constraints))), self.options)
+        prob, compile_time = self.father.create_nlp(var, par, obj,
+                                                    constraints, self.options)
         self.problem_upd_z = prob
 
     def construct_upd_l(self):
         # create parameters
-        x_i = struct_symMX(self.q_i_struct)
-        z_i = struct_symMX(self.q_i_struct)
-        z_ij = struct_symMX(self.q_ij_struct)
-        l_i = struct_symMX(self.q_i_struct)
-        l_ij = struct_symMX(self.q_ij_struct)
-        x_j = struct_symMX(self.q_ij_struct)
-        t = MX.sym('t')
-        T = MX.sym('T')
-        rho = MX.sym('rho')
+        x_i = struct_symSX(self.q_i_struct)
+        z_i = struct_symSX(self.q_i_struct)
+        z_ij = struct_symSX(self.q_ij_struct)
+        l_i = struct_symSX(self.q_i_struct)
+        l_ij = struct_symSX(self.q_ij_struct)
+        x_j = struct_symSX(self.q_ij_struct)
+        t = SX.sym('t')
+        T = SX.sym('T')
+        rho = SX.sym('rho')
         t0 = t/T
         # transform spline variables: only consider future piece of spline
         tf = shift_knot1_fwd_mx
@@ -251,12 +240,8 @@ class ADMM(Problem):
         # create problem
         inp = [x_i, z_i, z_ij, l_i, l_ij, x_j, t, T, rho]
         out = [l_i_new, l_ij_new]
-        fun = MXFunction('upd_l', inp, out)
-        options = deepcopy(self.options)
-        options['codegen']['buildname'] = (self.options['codegen']['buildname']
-                                           + '/admm'+str(self.index)+'/updl')
-        prob, compile_time = self.father.compile_function(
-            fun, 'upd_l', options)
+        prob, compile_time = self.father.create_function(
+            'upd_l', inp, out, self.options)
         self.problem_upd_l = prob
 
     # ========================================================================
@@ -382,9 +367,9 @@ class ADMM(Problem):
         t_upd = t1-t0
         self.father.set_variables(self.problem_upd_x.getOutput('x'))
         self.var_admm['x_i'] = self._get_x_variables(solution=True)
-        stats = self.problem_upd_x.getStats()
-        if stats.get('return_status') != 'Solve_Succeeded':
-            print 'upd_x %d: %s' % (self.index, stats.get('return_status'))
+        # stats = self.problem_upd_x.getStats()
+        # if (stats.get('return_status') != 'Solve_Succeeded'):
+        #     print 'upd_x %d: %s' % (self.index, stats.get('return_status'))
         return t_upd
 
     def update_z(self, current_time):

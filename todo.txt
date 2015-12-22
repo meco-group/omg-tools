@@ -3,9 +3,10 @@ ADMM
 - multiple knots inside: does this still work?
 
 Toolbox
-- build only once per vehicle type
++ solve issue with create function -> only jit for SX
 - write update for distr problem (environment??)
 - rewrite fleet
+- build only once per vehicle type
 - parameters for interaction constraints (rel formation...)
 - clean up spline_extra
 
