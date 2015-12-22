@@ -49,6 +49,7 @@ class Plots:
         self.clr_w = [
             mix_with_white(self.clr[l]) for l in range(len(self.clr))]
         self.set_options(options)
+        plt.ion()
         plt.show()
 
     # ========================================================================
@@ -74,7 +75,6 @@ class Plots:
     # ========================================================================
 
     def create(self, signal, **kwargs):
-        plt.ion()
         if 'vehicles' in kwargs:
             vehicles = kwargs['vehicles']
         else:
