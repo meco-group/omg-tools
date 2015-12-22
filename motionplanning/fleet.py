@@ -1,4 +1,6 @@
-from vehicle import *
+from vehicle import Vehicle
+import numpy as np
+
 
 def get_fleet_vehicles(var):
     if isinstance(var, Fleet):
@@ -13,31 +15,52 @@ def get_fleet_vehicles(var):
 
 
 class Fleet:
-    def __init__(self, vehicles = [], interconnection = 'circular'):
+
+    def __init__(self, vehicles=[], interconnection='circular'):
         self.vehicles = vehicles if isinstance(vehicles, list) else [vehicles]
         self.interconnection = interconnection
-        self.setNeighbors()
+        self.set_neighbors()
 
-    def addVehicle(self, vehicles):
+    def add_vehicle(self, vehicles):
         self.vehicles.extend(vehicles)
-        self.setNeighbors()
+        self.set_neighbors()
 
-    def getNeighbors(self, l):
-        return self.nghb_list[l]
+    def get_neighbors(self, vehicle):
+        return self.nghb_list[vehicle]
 
-    def setNeighbors(self):
+    def set_neighbors(self):
         self.N = len(self.vehicles)
-        self.nghb_list = []
-        for l in range(self.N):
+        self.nghb_list = {}
+        for l, vehicle in enumerate(self.vehicles):
             if self.interconnection == 'circular':
-                nghb_ind    = [(self.N+l+1)%self.N, (self.N+l-1)%self.N]
+                nghb_ind = [(self.N+l+1) % self.N, (self.N+l-1) % self.N]
             if self.interconnection == 'full':
-                nghb_ind    = [k for k in range(self.N) if k!= l]
-            self.nghb_list.append(nghb_ind)
-        self.configuration  = [np.zeros(veh.n_y) for veh in self.vehicles]
+                nghb_ind = [k for k in range(self.N) if k != l]
+            self.nghb_list[vehicle] = [self.vehicles[ind] for ind in nghb_ind]
+        self.configuration = [np.zeros(veh.n_y) for veh in self.vehicles]
+
+    def set_configuration(self, **kwargs):
+        if 'polyhedron':
+            poly = kwargs['polyhedron']
+            if self.N != poly.n_faces:
+                raise ValueError('Configuration polyhedron shape should have '
+                                 'as many vertices as vehicles in the fleet!')
+            self.configuration = {
+                veh: poly.vertices[:, l] for l, veh in enumerate(self.vehicles)}
+        if 'points' in kwargs:
+            self.configuration = kwargs['points']
+        self.rel_pos = {}
+        for veh in self.vehicles:
+            self.rel_pos[veh] = {}
+            for nghb in self.get_neighbors(veh):
+                self.rel_pos[veh][nghb] = self.configuration[
+                    veh] - self.configuration[nghb]
+
+    def get_rel_pos(self, vehicle):
+        return self.rel_pos[vehicle]
 
     def getVehicleTypes(self):
-        vehicle_types  = {}
+        vehicle_types = {}
         for l in range(self.N):
             typename = self.vehicles[l].__class__.__name__
             if typename in vehicle_types:
@@ -46,28 +69,18 @@ class Fleet:
                 vehicle_types[typename] = [l]
         return vehicle_types
 
-    def setConfiguration(self, **kwargs):
-        if 'polyhedron' in kwargs:
-            self.configuration = [kwargs['polyhedron'].vertices[:,l] for l in range(self.N)]
-        if 'points' in kwargs:
-            self.configuration = kwargs['points']
-        self.rel_pos = [[self.configuration[l] - self.configuration[nghb_ind] for nghb_ind in self.getNeighbors(l)] for l in range(self.N)]
-
-    def getRelPos(self, l):
-        return self.rel_pos[l]
-
-    def setInitialPosition(self, position):
-        if isinstance(position,list) and len(position) == self.N:
-            positions = position
+    def set_initial_pose(self, pose):
+        if isinstance(pose, list) and len(pose) == self.N:
+            poses = pose
         else:
-            positions = [position+self.configuration[l] for l in range(self.N)]
-        for l in range(self.N):
-            self.vehicles[l].setInitialPosition(positions[l])
+            poses = [pose+self.configuration[veh] for veh in self.vehicles]
+        for l, veh in enumerate(self.vehicles):
+            veh.set_initial_pose(poses[l])
 
-    def setTerminalPosition(self, position):
-        if isinstance(position,list) and len(position) == self.N:
-            positions = position
+    def set_terminal_pose(self, pose):
+        if isinstance(pose, list) and len(pose) == self.N:
+            poses = pose
         else:
-            positions = [position+self.configuration[l] for l in range(self.N)]
-        for l in range(self.N):
-            self.vehicles[l].setTerminalPosition(positions[l])
+            poses = [pose+self.configuration[veh] for veh in self.vehicles]
+        for l, veh in enumerate(self.vehicles):
+            veh.set_terminal_pose(poses[l])
