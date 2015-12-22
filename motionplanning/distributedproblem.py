@@ -94,8 +94,9 @@ class DistributedProblem(Problem):
     # Methods required for simulation
     # ========================================================================
 
-    def update(self):
-        pass
+    def update_vehicles(self, current_time, update_time):
+        for problem in self.problems:
+            problem.update_vehicles(current_time, update_time)
 
     def stop_criterium(self):
         stop = True
