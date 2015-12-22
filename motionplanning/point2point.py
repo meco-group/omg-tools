@@ -9,18 +9,18 @@ class Point2point(FixedTProblem):
         FixedTProblem.__init__(self, fleet, environment, options, label='p2p')
 
         g = [self.define_spline_variable(
-            'g_'+str(vehicle.index), vehicle.n_y, basis=vehicle.basis)
-            for vehicle in self.vehicles]
+             'g_'+str(l), vehicle.n_y, basis=vehicle.basis)
+             for l, vehicle in enumerate(self.vehicles)]
         T = self.define_symbol('T')
         t = self.define_symbol('t')
         t0 = t/T
 
         y0 = [self.define_parameter(
-            'y0_'+str(vehicle.index), vehicle.n_y, vehicle.order+1)
-            for vehicle in self.vehicles]
+            'y0_'+str(l), vehicle.n_y, vehicle.order+1)
+            for l, vehicle in enumerate(self.vehicles)]
         yT = [self.define_parameter(
-            'yT_'+str(vehicle.index), vehicle.n_y, vehicle.order+1)
-            for vehicle in self.vehicles]
+            'yT_'+str(l), vehicle.n_y, vehicle.order+1)
+            for l, vehicle in enumerate(self.vehicles)]
 
         y = [vehicle.splines for vehicle in self.vehicles]
 
@@ -70,9 +70,9 @@ class Point2point(FixedTProblem):
 
     def set_parameters(self, current_time):
         parameters = FixedTProblem.set_parameters(self, current_time)
-        for vehicle in self.vehicles:
-            parameters['y0_'+str(vehicle.index)] = vehicle.prediction['y']
-            parameters['yT_'+str(vehicle.index)] = vehicle.yT
+        for l, vehicle in enumerate(self.vehicles):
+            parameters['y0_'+str(l)] = vehicle.prediction['y']
+            parameters['yT_'+str(l)] = vehicle.yT
         return parameters
 
     def final(self):
