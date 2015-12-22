@@ -23,6 +23,7 @@ class Simulator:
 
     def run(self):
         current_time = 0.
+        self.problem.initialize()
         stop = False
         while not stop:
             stop = self.update(current_time)
@@ -124,6 +125,9 @@ class Problem(OptiChild):
         return {}
 
     def final(self):
+        pass
+
+    def initialize(self):
         pass
 
     # ========================================================================
