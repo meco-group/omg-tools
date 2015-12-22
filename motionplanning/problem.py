@@ -12,6 +12,7 @@ class Simulator:
         self.set_default_options()
         self.set_options(options)
         self.problem = problem
+        self.environment = problem.environment
         self.plot = Plots(problem.fleet, problem.environment)
 
     def set_default_options(self):
@@ -32,7 +33,8 @@ class Simulator:
         # solve problem
         self.problem.solve(current_time)
         # update vehicle(s) and environment
-        self.problem.update(current_time, self.options['update_time'])
+        self.problem.update_vehicles(current_time, self.options['update_time'])
+        self.environment.update(current_time, self.options['update_time'])
         self.plot.update()
         # check termination criteria
         stop = self.problem.stop_criterium()
@@ -128,7 +130,7 @@ class Problem(OptiChild):
     # Methods required to override (no general implementation possible)
     # ========================================================================
 
-    def update(self, current_time):
+    def update_vehicles(self, current_time):
         raise NotImplementedError('Please implement this method!')
 
     def stop_criterium(self):
