@@ -429,6 +429,7 @@ class ADMM(Problem):
         return t1-t0
 
     def update_l(self, current_time):
+        t0 = time.time()
         # set inputs
         x_i = self.var_admm['x_i']
         z_i = self.var_admm['z_i']
@@ -443,6 +444,40 @@ class ADMM(Problem):
         out = self.problem_upd_l(inp)
         self.var_admm['l_i'] = self.q_i_struct(out[0])
         self.var_admm['l_ij'] = self.q_ij_struct(out[1])
+        # if  (self.label == 'admm0' and current_time > 0.5):
+        #     from spline import BSpline, BSplineBasis
+        #     import matplotlib
+        #     matplotlib.use('TKAgg')
+        #     import matplotlib.pyplot as plt
+
+        #     inp = [x_i, z_i, z_ij, l_i, l_ij, x_j, t, T, 0.]
+        #     out = self.problem_upd_l(inp)
+        #     self.var_admm['l_i'] = self.q_i_struct(out[0])
+        #     self.var_admm['l_ij'] = self.q_ij_struct(out[1])
+
+        #     l1 = l_ij['admm1','vehicle1'].toArray().ravel()[:13]
+        #     l2 = self.var_admm['l_ij']['admm1','vehicle1'].toArray().ravel()[:13]
+        #     # l1 = l_i['vehicle0'].toArray().ravel()[:13]
+        #     # l2 = self.var_admm['l_i']['vehicle0'].toArray().ravel()[:13]
+        #     l3 = self.shift_knot1_fwd(l1, t/T)
+        #     l2b = self.shift_knot1_bwd(l3, t/T)
+        #     basis = self.problem.vehicles[0].basis
+        #     degree = basis.degree
+        #     knots1 = basis.knots
+        #     knots2 = knots1.copy()
+        #     knots2[:degree+1] = t/T
+        #     basis2 = BSplineBasis(knots2, degree)
+        #     l1_spl = BSpline(basis, l1)
+        #     l2_spl = BSpline(basis, l2)
+        #     # l3_spl = BSpline(basis, l3)
+        #     tt = np.linspace(0., 1. , 1000)
+        #     plt.figure()
+        #     plt.plot(tt, l1_spl(tt), tt, l2_spl(tt))
+        #     # plt.plot(tt, l1_spl(tt), tt, l2_spl(tt), tt, l3_spl(tt))
+        #     plt.show()
+
+        t1 = time.time()
+        return t1-t0
 
     def communicate(self):
         for nghb in self.q_ji.keys():
