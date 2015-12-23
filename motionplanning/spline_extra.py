@@ -1,6 +1,6 @@
 from spline import BSpline, BSplineBasis
 from scipy.interpolate import splev
-from casadi import SX, MX, mul, solve
+from casadi import SX, MX, mul, solve, SXFunction
 import numpy as np
 
 
@@ -215,80 +215,16 @@ def shift_knot1_bwd(coeffs, knots, degree, t_shift):
     return coeffs2
 
 
-def shift_knot1_bwd_mx(coeffs, knots, degree, t_shift):
-    # knots are here original knots (before applying fwd operation)
-    if isinstance(coeffs, list):
-        return [shift_knot1_bwd_mx(c_i, knots, degree, t_shift)
-                for c_i in coeffs]
-    if isinstance(coeffs, MX):
-        typ = MX
-    elif isinstance(coeffs, SX):
-        typ = SX
+def shift_knot1_fwd_mx(cfs, knots, degree, t0):
+    if isinstance(cfs, list):
+        return [shift_knot1_fwd_mx(c_i, knots, degree, t0)
+                for c_i in cfs]
+    coeffs = SX.sym('coeffs', cfs.shape)
+    t_shift = SX.sym('t0')
 
-    knots1 = typ.zeros(len(knots), 1)
-    for k in range(knots1.size1()):
-        knots1[k] = knots[k]
-    for k in range(degree+1):
-        knots1[k] = t_shift
-
-    knots2 = knots
-
-    # knots2 = typ.zeros(knots.shape[0])
-    coeffs2 = typ.zeros(coeffs.shape)
-    # for k in range(knots.shape[0]):
-    #     knots2[k] = knots[k]
-    # # for k in range(degree+1):
-    # #     knots2[k] = knots[0]-t_shift
-
-
-    for n in range(coeffs.size2()):
-        for k in range(coeffs.size1()):
-            coeffs2[k, n] = coeffs[k, n]
-    A = typ.eye(degree+1)
-    A0 = typ.zeros((degree+1, degree+1))
-    A0[0, 0] = 1.
-    for i in range(1, degree+1):
-        A_tmp = typ.zeros((degree-i+1, degree-i+2))
-        for j in range(degree-i+1):
-            A_tmp[j, j] = -(degree+1-i)/(knots2[j+degree+1] - knots2[j+i])
-            A_tmp[j, j+1] = (degree+1-i)/(knots2[j+degree+1] - knots2[j+i])
-        A = mul(A_tmp, A)
-        A0[i, :] = A[0, :]
-
-    b0_ = typ.zeros((degree+1, coeffs.size2()))
-    for n in range(coeffs.size2()):
-        b0_[0, n] = coeffs[0, n]
-    A_ = typ.eye(degree+1)
-    for i in range(1, degree+1):
-        A_tmp = typ.zeros((degree-i+1, degree-i+2))
-        for j in range(degree-i+1):
-            A_tmp[j, j] = -(degree+1-i)/(knots1[j+degree+1] - knots1[j+i])
-            A_tmp[j, j+1] = (degree+1-i)/(knots1[j+degree+1] - knots1[j+i])
-        A_ = mul(A_tmp, A_)
-        for n in range(coeffs.size2()):
-            b0_[i, n] = mul(A_[0, :], coeffs[:degree+1, n])
-
-    for n in range(coeffs.size2()):
-        b0 = typ.zeros((degree+1, 1))
-        for i in range(degree, -1, -1):
-            b0[i] = b0_[i, n]
-            for j in range(i+1, degree+1):
-                b0[i] -= b0[j]*(t_shift**(j-i))/np.math.factorial(j-i)
-        coeffs2[:degree+1, n] = solve(A0, b0)
-    return coeffs2
-
-
-def shift_knot1_fwd_mx(coeffs, knots, degree, t_shift):
-    if isinstance(coeffs, list):
-        return [shift_knot1_fwd_mx(c_i, knots, degree, t_shift)
-                for c_i in coeffs]
-    if isinstance(coeffs, MX):
-        typ = MX
-    elif isinstance(coeffs, SX):
-        typ = SX
     basis = BSplineBasis(knots, degree)
-    knots2 = typ.zeros(len(knots), 1)
-    coeffs2 = typ.zeros(coeffs.shape)
+    knots2 = SX.zeros(len(knots), 1)
+    coeffs2 = SX.zeros(coeffs.shape)
     for k in range(len(knots)):
         knots2[k] = knots[k]
     for k in range(degree+1):
@@ -296,11 +232,11 @@ def shift_knot1_fwd_mx(coeffs, knots, degree, t_shift):
     for n in range(coeffs.size2()):
         for k in range(coeffs.size1()):
             coeffs2[k, n] = coeffs[k, n]
-    A = typ.eye(degree)
-    A0 = typ.zeros((degree, degree))
+    A = SX.eye(degree)
+    A0 = SX.zeros((degree, degree))
     A0[0, 0] = 1.
     for i in range(1, degree):
-        A_tmp = typ.zeros((degree-i, degree-i+1))
+        A_tmp = SX.zeros((degree-i, degree-i+1))
         for j in range(degree-i):
             A_tmp[j, j] = -(degree+1-i)/(knots2[j+degree+1] - knots2[j+i])
             A_tmp[j, j+1] = (degree+1-i)/(knots2[j+degree+1] - knots2[j+i])
@@ -308,7 +244,7 @@ def shift_knot1_fwd_mx(coeffs, knots, degree, t_shift):
         A0[i, :] = A[0, :]
 
     for n in range(coeffs.size2()):
-        b0 = typ.zeros((degree, 1))
+        b0 = SX.zeros((degree, 1))
         spline = BSpline(basis, coeffs[:, n])
         b0[0] = evalspline(spline, knots[0]+t_shift)
         for i in range(1, degree):
@@ -319,7 +255,71 @@ def shift_knot1_fwd_mx(coeffs, knots, degree, t_shift):
             else:
                 b0[i] = evalspline(spline.derivative(i), knots[0]+t_shift)
         coeffs2[:degree, n] = solve(A0, b0)
-    return coeffs2
+    fun = SXFunction('fun', [coeffs, t_shift], [coeffs2])
+    return fun([cfs, t0])[0]
+
+
+def shift_knot1_bwd_mx(cfs, knots, degree, t0):
+    # knots are here original knots (before applying fwd operation)
+    if isinstance(cfs, list):
+        return [shift_knot1_bwd_mx(c_i, knots, degree, t0)
+                for c_i in cfs]
+
+    coeffs = SX.sym('coeffs', cfs.shape)
+    t_shift = SX.sym('t0')
+
+    knots1 = SX.zeros(len(knots), 1)
+    for k in range(knots1.size1()):
+        knots1[k] = knots[k]
+    for k in range(degree+1):
+        knots1[k] = t_shift
+
+    knots2 = knots
+
+    # knots2 = typ.zeros(knots.shape[0])
+    coeffs2 = SX.zeros(coeffs.shape)
+    # for k in range(knots.shape[0]):
+    #     knots2[k] = knots[k]
+    # # for k in range(degree+1):
+    # #     knots2[k] = knots[0]-t_shift
+
+
+    for n in range(coeffs.size2()):
+        for k in range(coeffs.size1()):
+            coeffs2[k, n] = coeffs[k, n]
+    A = SX.eye(degree+1)
+    A0 = SX.zeros((degree+1, degree+1))
+    A0[0, 0] = 1.
+    for i in range(1, degree+1):
+        A_tmp = SX.zeros((degree-i+1, degree-i+2))
+        for j in range(degree-i+1):
+            A_tmp[j, j] = -(degree+1-i)/(knots2[j+degree+1] - knots2[j+i])
+            A_tmp[j, j+1] = (degree+1-i)/(knots2[j+degree+1] - knots2[j+i])
+        A = mul(A_tmp, A)
+        A0[i, :] = A[0, :]
+
+    b0_ = SX.zeros((degree+1, coeffs.size2()))
+    for n in range(coeffs.size2()):
+        b0_[0, n] = coeffs[0, n]
+    A_ = SX.eye(degree+1)
+    for i in range(1, degree+1):
+        A_tmp = SX.zeros((degree-i+1, degree-i+2))
+        for j in range(degree-i+1):
+            A_tmp[j, j] = -(degree+1-i)/(knots1[j+degree+1] - knots1[j+i])
+            A_tmp[j, j+1] = (degree+1-i)/(knots1[j+degree+1] - knots1[j+i])
+        A_ = mul(A_tmp, A_)
+        for n in range(coeffs.size2()):
+            b0_[i, n] = mul(A_[0, :], coeffs[:degree+1, n])
+
+    for n in range(coeffs.size2()):
+        b0 = SX.zeros((degree+1, 1))
+        for i in range(degree, -1, -1):
+            b0[i] = b0_[i, n]
+            for j in range(i+1, degree+1):
+                b0[i] -= b0[j]*(t_shift**(j-i))/np.math.factorial(j-i)
+        coeffs2[:degree+1, n] = solve(A0, b0)
+    fun = SXFunction('fun', [coeffs, t_shift], [coeffs2])
+    return fun([cfs, t0])[0]
 
 
 def shift_over_knot(coeffs, knots, degree, N_shift=2):

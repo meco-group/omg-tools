@@ -56,22 +56,9 @@ class ADMM(Problem):
             self.var_admm[key] = self.q_ij_struct(0)
         for key in ['z_ji', 'l_ji']:
             self.var_admm[key] = self.q_ji_struct(0)
-
-        self.create_functions(self.problem.vehicles[0].basis)
         self.construct_upd_x()
         self.construct_upd_z()
         self.construct_upd_l()
-
-    def create_functions(self, basis):
-        coeffs = SX.sym('v', len(basis))
-        t0 = SX.sym('t0')
-        inp = [coeffs, t0]
-        out_fwd = [shift_knot1_fwd_mx(coeffs, basis.knots, basis.degree, t0)]
-        out_bwd = [shift_knot1_bwd_mx(coeffs, basis.knots, basis.degree, t0)]
-        shift_knot1_fwd_SX = SXFunction('shift_knot1_fwd', inp, out_fwd)
-        shift_knot1_bwd_SX = SXFunction('shift_knot1_bwd', inp, out_bwd)
-        self.shift_knot1_fwd = lambda cfs, t0: shift_knot1_fwd_SX([cfs, t0])[0]
-        self.shift_knot1_bwd = lambda cfs, t0: shift_knot1_bwd_SX([cfs, t0])[0]
 
     def construct_upd_x(self):
         # define parameters
@@ -92,7 +79,9 @@ class ADMM(Problem):
         # get (part of) variables
         x_i = self._get_x_variables()
         # transform spline variables: only consider future piece of spline
-        tf = lambda cfs: self.shift_knot1_fwd(cfs, t0)
+        # tf = lambda cfs: self.shift_knot1_fwd(cfs, t0)
+        # tf = shift_knot1_fwd_mx
+        tf = lambda cfs, knots, deg: shift_knot1_fwd_mx(cfs, knots, deg, t0)
         self._transform_spline([x_i, z_i, l_i], tf, self.q_i)
         self._transform_spline([z_ji, l_ji], tf, self.q_ji)
         # construct objective
@@ -134,7 +123,8 @@ class ADMM(Problem):
         l_i = self.q_i_struct(l_i)
         l_ij = self.q_ij_struct(l_ij)
         # transform spline variables: only consider future piece of spline
-        tf = lambda cfs: self.shift_knot1_fwd(cfs, t0)
+        # tf = lambda cfs: self.shift_knot1_fwd(cfs, t0)
+        tf = lambda cfs, knots, deg: shift_knot1_fwd_mx(cfs, knots, deg, t0)
         self._transform_spline([x_i, l_i], tf, self.q_i)
         self._transform_spline([x_j, l_ij], tf, self.q_ij)
         # Build KKT system
@@ -150,7 +140,7 @@ class ADMM(Problem):
         z_i_new = self.q_i_struct(z[:l_qi])
         z_ij_new = self.q_ij_struct(z[l_qi:l_qi+l_qij])
         # transform back
-        tf = lambda cfs: self.shift_knot1_bwd(cfs, t0)
+        tf = lambda cfs, knots, deg: shift_knot1_bwd_mx(cfs, knots, deg, t0)
         self._transform_spline(z_i_new, tf, self.q_i)
         self._transform_spline(z_ij_new, tf, self.q_ij)
         out = [z_i_new.cat, z_ij_new.cat]
@@ -178,7 +168,7 @@ class ADMM(Problem):
         t, T, rho = par['t'], par['T'], par['rho']
         t0 = t/T
         # transform spline variables: only consider future piece of spline
-        tf = lambda cfs: self.shift_knot1_fwd(cfs, t0)
+        tf = lambda cfs, knots, deg: shift_knot1_fwd_mx(cfs, knots, deg, t0)
         self._transform_spline([x_i, z_i, l_i], tf, self.q_i)
         self._transform_spline([x_j, z_ij, l_ij], tf, self.q_ij)
         # construct constraints
@@ -252,14 +242,15 @@ class ADMM(Problem):
         l_ij = self.q_ij_struct(l_ij)
         x_j = self.q_ij_struct(x_j)
         # transform spline variables: only consider future piece of spline
-        tf = lambda cfs: self.shift_knot1_fwd(cfs, t0)
+        # tf = lambda cfs: self.shift_knot1_fwd(cfs, t0)
+        tf = lambda cfs, knots, deg: shift_knot1_fwd_mx(cfs, knots, deg, t0)
         self._transform_spline([x_i, z_i, l_i], tf, self.q_i)
         self._transform_spline([x_j, z_ij, l_ij], tf, self.q_ij)
         # update lambda
         l_i_new = self.q_i_struct(l_i.cat + rho*(x_i.cat - z_i.cat))
         l_ij_new = self.q_ij_struct(l_ij.cat + rho*(x_j.cat - z_ij.cat))
         # transform back
-        tf = lambda cfs: self.shift_knot1_bwd(cfs, t0)
+        tf = lambda cfs, knots, deg: shift_knot1_bwd_mx(cfs, knots, deg, t0)
         self._transform_spline(l_i_new, tf, self.q_i)
         self._transform_spline(l_ij_new, tf, self.q_ij)
         out = [l_i_new, l_ij_new]
@@ -297,10 +288,12 @@ class ADMM(Problem):
                 elif isinstance(var, dict):
                     self._transform_spline(var[str(key)], tf, dic[key])
         else:
-            basis = self.problem.vehicles[0].basis
             for child, q_i in dic.items():
                 for name, ind in q_i.items():
                     if name in child._splines:
+                        basis = child._splines[name]
+                        knots = basis.knots
+                        deg = basis.degree
                         for l in range(child._variables[name].shape[1]):
                             sl_min = l*len(basis)
                             sl_max = (l+1)*len(basis)
@@ -308,10 +301,12 @@ class ADMM(Problem):
                                 sl = slice(sl_min, sl_max)
                                 if isinstance(var, dict):
                                     v = var[child.label][name][sl]
-                                    var[child.label][name][sl] = tf(v)
+                                    v = tf(v, basis.knots, basis.degree)
+                                    var[child.label][name][sl] = v
                                 else:
                                     v = var[child.label, name, sl]
-                                    var[child.label, name, sl] = tf(v)
+                                    v = tf(v, basis.knots, basis.degree)
+                                    var[child.label, name, sl] = v
 
     def _check_for_lineq(self):
         g = []
@@ -493,8 +488,7 @@ class ADMM(Problem):
         # transform spline variables
         if ((current_time > 0. and
              np.round(current_time, 6) % self.problem.knot_time == 0)):
-            basis = self.problem.vehicles[0].basis
-            tf = lambda cfs: shift_over_knot(cfs, basis.knots, basis.degree, 1)
+            tf = lambda cfs, knots, degree: shift_over_knot(cfs, knots, degree, 1)
             for key in ['x_i', 'z_i', 'z_i_p', 'l_i']:
                 self._transform_spline(self.var_admm[key], tf, self.q_i)
             for key in ['x_j', 'z_ij', 'z_ij_p', 'l_ij']:
