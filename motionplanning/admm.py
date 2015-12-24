@@ -262,7 +262,7 @@ class ADMM(Problem):
 
     def _struct2dict(self, var, dic):
         if isinstance(var, list):
-            return [_dict(v, dic) for v in var]
+            return [self._struct2dict(v, dic) for v in var]
         elif isinstance(dic.keys()[0], ADMM):
             ret = {}
             for nghb in dic.keys():
@@ -270,7 +270,8 @@ class ADMM(Problem):
                 for child, q in dic[nghb].items():
                     ret[nghb.label][child.label] = {}
                     for name in q.keys():
-                        ret[nghb.label][child.label][name] = var[nghb.label, child.label, name]
+                        ret[nghb.label][child.label][name] = var[
+                            nghb.label, child.label, name]
             return ret
         else:
             ret = {}
@@ -282,7 +283,7 @@ class ADMM(Problem):
 
     def _dict2struct(self, var, stru):
         if isinstance(var, list):
-            return [_struct(v, stru) for v in var]
+            return [self._dict2struct(v, stru) for v in var]
         elif 'admm' in var.keys()[0]:
             chck = var.values()[0].values()[0].values()[0]
             if isinstance(chck, SX):
@@ -333,15 +334,14 @@ class ADMM(Problem):
         elif isinstance(dic.keys()[0], ADMM):
             ret = {}
             for nghb in dic.keys():
-                ret[nghb.label] = self._transform_spline(var[nghb.label], tf, dic[nghb])
+                ret[nghb.label] = self._transform_spline(
+                    var[nghb.label], tf, dic[nghb])
             return ret
         else:
             for child, q_i in dic.items():
                 for name, ind in q_i.items():
                     if name in child._splines:
                         basis = child._splines[name]
-                        knots = basis.knots
-                        deg = basis.degree
                         for l in range(child._variables[name].shape[1]):
                             sl_min = l*len(basis)
                             sl_max = (l+1)*len(basis)
@@ -484,38 +484,6 @@ class ADMM(Problem):
         out = self.problem_upd_l(inp)
         self.var_admm['l_i'] = self.q_i_struct(out[0])
         self.var_admm['l_ij'] = self.q_ij_struct(out[1])
-        # if  (self.label == 'admm0' and current_time > 0.5):
-        #     from spline import BSpline, BSplineBasis
-        #     import matplotlib
-        #     matplotlib.use('TKAgg')
-        #     import matplotlib.pyplot as plt
-
-        #     inp = [x_i, z_i, z_ij, l_i, l_ij, x_j, t, T, 0.]
-        #     out = self.problem_upd_l(inp)
-        #     self.var_admm['l_i'] = self.q_i_struct(out[0])
-        #     self.var_admm['l_ij'] = self.q_ij_struct(out[1])
-
-        #     l1 = l_ij['admm1','vehicle1'].toArray().ravel()[:13]
-        #     l2 = self.var_admm['l_ij']['admm1','vehicle1'].toArray().ravel()[:13]
-        #     # l1 = l_i['vehicle0'].toArray().ravel()[:13]
-        #     # l2 = self.var_admm['l_i']['vehicle0'].toArray().ravel()[:13]
-        #     l3 = self.shift_knot1_fwd(l1, t/T)
-        #     l2b = self.shift_knot1_bwd(l3, t/T)
-        #     basis = self.problem.vehicles[0].basis
-        #     degree = basis.degree
-        #     knots1 = basis.knots
-        #     knots2 = knots1.copy()
-        #     knots2[:degree+1] = t/T
-        #     basis2 = BSplineBasis(knots2, degree)
-        #     l1_spl = BSpline(basis, l1)
-        #     l2_spl = BSpline(basis, l2)
-        #     # l3_spl = BSpline(basis, l3)
-        #     tt = np.linspace(0., 1. , 1000)
-        #     plt.figure()
-        #     plt.plot(tt, l1_spl(tt), tt, l2_spl(tt))
-        #     # plt.plot(tt, l1_spl(tt), tt, l2_spl(tt), tt, l3_spl(tt))
-        #     plt.show()
-
         t1 = time.time()
         return t1-t0
 
@@ -533,13 +501,16 @@ class ADMM(Problem):
         # transform spline variables
         if ((current_time > 0. and
              np.round(current_time, 6) % self.problem.knot_time == 0)):
-            tf = lambda cfs, knots, degree: shift_over_knot(cfs, knots, degree, 1)
+            tf = lambda cfs, knots, deg: shift_over_knot(cfs, knots, deg, 1)
             for key in ['x_i', 'z_i', 'z_i_p', 'l_i']:
-                self._transform_spline(self.var_admm[key], tf, self.q_i)
+                self.var_admm[key] = self._transform_spline(
+                    self.var_admm[key], tf, self.q_i)
             for key in ['x_j', 'z_ij', 'z_ij_p', 'l_ij']:
-                self._transform_spline(self.var_admm[key], tf, self.q_ij)
+                self.var_admm[key] = self._transform_spline(
+                    self.var_admm[key], tf, self.q_ij)
             for key in ['z_ji', 'l_ji']:
-                self._transform_spline(self.var_admm[key], tf, self.q_ji)
+                self.var_admm[key] = self._transform_spline(
+                    self.var_admm[key], tf, self.q_ji)
 
     def get_residuals(self):
         t0 = time.time()
