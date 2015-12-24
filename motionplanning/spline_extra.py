@@ -283,7 +283,6 @@ def shift_knot1_bwd_mx(cfs, knots, degree, t0):
     # # for k in range(degree+1):
     # #     knots2[k] = knots[0]-t_shift
 
-
     for n in range(coeffs.size2()):
         for k in range(coeffs.size1()):
             coeffs2[k, n] = coeffs[k, n]

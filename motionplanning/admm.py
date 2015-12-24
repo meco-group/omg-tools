@@ -1,7 +1,7 @@
 from optilayer import OptiFather
 from problem import Problem
 from distributedproblem import DistributedProblem
-from casadi import symvar, mul, SX, MX, SXFunction, MXFunction, reshape
+from casadi import symvar, mul, SX, MX, DMatrix, MXFunction, reshape
 from casadi import vertcat, horzcat, jacobian, solve, substitute
 from casadi.tools import struct, struct_symMX, struct_symSX, entry, structure
 from spline_extra import shift_knot1_fwd_mx, shift_knot1_bwd_mx, shift_over_knot
@@ -79,8 +79,6 @@ class ADMM(Problem):
         # get (part of) variables
         x_i = self._get_x_variables()
         # transform spline variables: only consider future piece of spline
-        # tf = lambda cfs: self.shift_knot1_fwd(cfs, t0)
-        # tf = shift_knot1_fwd_mx
         tf = lambda cfs, knots, deg: shift_knot1_fwd_mx(cfs, knots, deg, t0)
         self._transform_spline([x_i, z_i, l_i], tf, self.q_i)
         self._transform_spline([z_ji, l_ji], tf, self.q_ji)
@@ -123,7 +121,6 @@ class ADMM(Problem):
         l_i = self.q_i_struct(l_i)
         l_ij = self.q_ij_struct(l_ij)
         # transform spline variables: only consider future piece of spline
-        # tf = lambda cfs: self.shift_knot1_fwd(cfs, t0)
         tf = lambda cfs, knots, deg: shift_knot1_fwd_mx(cfs, knots, deg, t0)
         self._transform_spline([x_i, l_i], tf, self.q_i)
         self._transform_spline([x_j, l_ij], tf, self.q_ij)
@@ -242,7 +239,6 @@ class ADMM(Problem):
         l_ij = self.q_ij_struct(l_ij)
         x_j = self.q_ij_struct(x_j)
         # transform spline variables: only consider future piece of spline
-        # tf = lambda cfs: self.shift_knot1_fwd(cfs, t0)
         tf = lambda cfs, knots, deg: shift_knot1_fwd_mx(cfs, knots, deg, t0)
         self._transform_spline([x_i, z_i, l_i], tf, self.q_i)
         self._transform_spline([x_j, z_ij, l_ij], tf, self.q_ij)
@@ -251,6 +247,7 @@ class ADMM(Problem):
         l_ij_new = self.q_ij_struct(l_ij.cat + rho*(x_j.cat - z_ij.cat))
         # transform back
         tf = lambda cfs, knots, deg: shift_knot1_bwd_mx(cfs, knots, deg, t0)
+        # tf = shift_knot1_bwd_mx
         self._transform_spline(l_i_new, tf, self.q_i)
         self._transform_spline(l_ij_new, tf, self.q_ij)
         out = [l_i_new, l_ij_new]
@@ -262,6 +259,55 @@ class ADMM(Problem):
     # ========================================================================
     # Auxiliary methods
     # ========================================================================
+
+    def _struct2dict(self, var, dic):
+        if isinstance(var, list):
+            return [_dict(v, dic) for v in var]
+        elif isinstance(dic.keys()[0], ADMM):
+            ret = {}
+            for nghb in dic.keys():
+                ret[nghb.label] = {}
+                for child, q in dic[nghb].items():
+                    ret[nghb.label][child.label] = {}
+                    for name in q.keys():
+                        ret[nghb.label][child.label][name] = var[nghb.label, child.label, name]
+            return ret
+        else:
+            ret = {}
+            for child, q in dic.items():
+                ret[child.label] = {}
+                for name in q.keys():
+                    ret[child.label][name] = var[child.label, name]
+            return ret
+
+    def _dict2struct(self, var, stru):
+        if isinstance(var, list):
+            return [_struct(v, stru) for v in var]
+        elif 'admm' in var.keys()[0]:
+            chck = var.values()[0].values()[0].values()[0]
+            if isinstance(chck, SX):
+                ret = structure.SXStruct(stru)
+            elif isinstance(chck, MX):
+                ret = structure.MXStruct(stru)
+            elif isinstance(chck, DMatrix):
+                ret = stru(0)
+            for nghb in var.keys():
+                for child, q in var[nghb].items():
+                    for name in q.keys():
+                        ret[nghb, child, name] = var[nghb][child][name]
+            return ret
+        else:
+            chck = var.values()[0].values()[0]
+            if isinstance(chck, SX):
+                ret = structure.SXStruct(stru)
+            elif isinstance(chck, MX):
+                ret = structure.MXStruct(stru)
+            elif isinstance(chck, DMatrix):
+                ret = stru(0)
+            for child, q in var.items():
+                for name in q.keys():
+                    ret[child, name] = var[child][name]
+            return ret
 
     def _get_x_variables(self, **kwargs):
         sol = kwargs['solution'] if 'solution' in kwargs else False
@@ -279,14 +325,16 @@ class ADMM(Problem):
 
     def _transform_spline(self, var, tf, dic):
         if isinstance(var, list):
-            for v in var:
-                self._transform_spline(v, tf, dic)
+            return [self._transform_spline(v, tf, dic) for v in var]
+        elif isinstance(var, struct):
+            var = self._struct2dict(var, dic)
+            var = self._transform_spline(var, tf, dic)
+            return self._dict2struct(var, _create_struct_from_dict(dic))
         elif isinstance(dic.keys()[0], ADMM):
-            for key in dic.keys():
-                if isinstance(var, struct):
-                    self._transform_spline(var.prefix[str(key)], tf, dic[key])
-                elif isinstance(var, dict):
-                    self._transform_spline(var[str(key)], tf, dic[key])
+            ret = {}
+            for nghb in dic.keys():
+                ret[nghb.label] = self._transform_spline(var[nghb.label], tf, dic[nghb])
+            return ret
         else:
             for child, q_i in dic.items():
                 for name, ind in q_i.items():
@@ -299,14 +347,10 @@ class ADMM(Problem):
                             sl_max = (l+1)*len(basis)
                             if set(range(sl_min, sl_max)) <= set(ind):
                                 sl = slice(sl_min, sl_max)
-                                if isinstance(var, dict):
-                                    v = var[child.label][name][sl]
-                                    v = tf(v, basis.knots, basis.degree)
-                                    var[child.label][name][sl] = v
-                                else:
-                                    v = var[child.label, name, sl]
-                                    v = tf(v, basis.knots, basis.degree)
-                                    var[child.label, name, sl] = v
+                                v = var[child.label][name][sl]
+                                v = tf(v, basis.knots, basis.degree)
+                                var[child.label][name][sl] = v
+            return var
 
     def _check_for_lineq(self):
         g = []
@@ -339,6 +383,7 @@ class ADMM(Problem):
         sym_num = [np.zeros(s.shape) for s in sym]
         A = A_fun(sym_num)[0].toArray()
         b = b_fun(sym_num)[0].toArray()
+
         return True, A, b
 
     # ========================================================================
