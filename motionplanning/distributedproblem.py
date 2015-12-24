@@ -82,7 +82,7 @@ class DistributedProblem(Problem):
                 upd2.q_ji[upd1] = upd1.q_ij[upd2]
 
     def _compose_dictionary(self):
-        children = self.vehicles
+        children = [veh for veh in self.vehicles]
         children.extend(self.problems)
         children.append(self.environment)
         symbol_dict = {}
@@ -103,6 +103,22 @@ class DistributedProblem(Problem):
         for problem in self.problems:
             stop *= problem.stop_criterium()
         return stop
+
+    def final(self):
+        obj = self.compute_objective()
+        print '\nWe reached our target!'
+        print '%-18s %6g' % ('Objective:', obj)
+        print '%-18s %6g ms' % ('Max update time:',
+                                max(self.update_times)*1000.)
+        print '%-18s %6g ms' % ('Av update time:',
+                                (sum(self.update_times)*1000. /
+                                 len(self.update_times)))
+
+    def compute_objective(self):
+        obj = 0.
+        for problem in self.problems:
+            obj += problem.compute_objective()
+        return obj
 
     # ========================================================================
     # Methods required to override (no general implementation possible)
