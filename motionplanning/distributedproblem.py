@@ -28,7 +28,8 @@ class DistributedProblem(Problem):
         self.updaters = []
         for index, vehicle in enumerate(self.vehicles):
             updater = self.updater_type(index, vehicle, self.problems[index],
-                                        self.environment.copy(), self.options)
+                                        self.environment.copy(), self,
+                                        self.options)
             self.updaters.append(updater)
         self.interprete_constraints(self.updaters)
         for updater in self.updaters:
@@ -38,20 +39,32 @@ class DistributedProblem(Problem):
         for upd in updaters:
             upd.q_i, upd.q_ij, upd.q_ji = {}, {}, {}
             upd.constraints = []
+            upd.par_i = {}
 
         symbol_dict = self._compose_dictionary()
 
         for constraint in self._constraints.values():
             dep = {}
+            par = {}
             for sym, indices in get_dependency(constraint[0]).items():
-                child, name = symbol_dict[sym.getName()]
-                if child not in dep:
-                    dep[child] = {}
-                dep[child][name] = indices
+                symname = sym.getName()
+                if symname in symbol_dict:
+                    child, name = symbol_dict[sym.getName()]
+                    if child not in dep:
+                        dep[child] = {}
+                    dep[child][name] = indices
+                elif symname in self.symbol_dict:
+                    name = self.symbol_dict[symname][1]
+                    if name in self._parameters:
+                        par[name] = sym
+
             for child, dic in dep.items():
                 # q_i: structure of local variables i
                 upd = updaters[child.index]
                 upd.constraints.append(constraint)
+                for name, sym in par.items():
+                    if name not in upd.par_i:
+                        upd.par_i[name] = sym
                 if child not in upd.q_i:
                     upd.q_i[child] = {}
                 for name, indices in dic.items():

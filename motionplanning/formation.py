@@ -12,6 +12,23 @@ class FormationPoint2point(ADMMProblem):
         ADMMProblem.__init__(self, problems, options)
         self.fleet = fleet
 
+        # define parameters
+        rel_poses = {veh: self.define_parameter('rp_'+str(l), veh.n_y, len(self.fleet.get_neighbors(veh))) for l, veh in enumerate(self.vehicles)}
+
+        # formation constraints
+        _couples = {veh: [] for veh in self.vehicles}
+        for veh in self.vehicles:
+            rp = rel_poses[veh]
+            for l, nghb in enumerate(self.fleet.get_neighbors(veh)):
+                if veh not in _couples[nghb]:
+                    _couples[veh].append(nghb)
+                    y_veh = veh.get_variable('y')
+                    y_nghb = nghb.get_variable('y')
+                    rel_pos = rp[:, l]
+                    for k in range(veh.n_y):
+                        self.define_constraint(
+                            y_veh[k] - y_nghb[k] - rel_pos[k], 0., 0.)
+
         # terminal constraints (stability issue)
         for veh in self.vehicles:
             y = veh.get_variable('y')
@@ -19,19 +36,14 @@ class FormationPoint2point(ADMMProblem):
                 for d in range(1, veh.degree+1):
                     self.define_constraint(y[k].derivative(d)(1.), 0., 0.)
 
-        # formation constraints
-        _couples = {veh: [] for veh in self.vehicles}
-        for veh in self.vehicles:
-            rp = self.fleet.get_rel_pos(veh)
+    def set_parameters(self, current_time):
+        parameters = {}
+        for l, veh in enumerate(self.vehicles):
+            rel_pos, rp_ = self.fleet.get_rel_pos(veh), []
             for nghb in self.fleet.get_neighbors(veh):
-                if veh not in _couples[nghb]:
-                    _couples[veh].append(nghb)
-                    y_veh = veh.get_variable('y')
-                    y_nghb = nghb.get_variable('y')
-                    rel_pos = rp[nghb]
-                    for k in range(veh.n_y):
-                        self.define_constraint(
-                            y_veh[k] - y_nghb[k] - rel_pos[k], 0., 0.)
+                rp_.append(np.c_[rel_pos[nghb]])
+            parameters['rp_'+str(l)] = np.hstack(rp_)
+        return parameters
 
     def get_interaction_error(self):
         error = 0.
