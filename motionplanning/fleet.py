@@ -40,7 +40,7 @@ class Fleet:
         self.configuration = [np.zeros(veh.n_y) for veh in self.vehicles]
 
     def set_configuration(self, **kwargs):
-        if 'polyhedron':
+        if 'polyhedron' in kwargs:
             poly = kwargs['polyhedron']
             if self.N != poly.n_faces:
                 raise ValueError('Configuration polyhedron shape should have '
@@ -48,7 +48,8 @@ class Fleet:
             self.configuration = {
                 veh: poly.vertices[:, l] for l, veh in enumerate(self.vehicles)}
         if 'points' in kwargs:
-            self.configuration = kwargs['points']
+            points = kwargs['points']
+            self.configuration = {veh: points[l] for l, veh in enumerate(self.vehicles)}
         self.rel_pos = {}
         for veh in self.vehicles:
             self.rel_pos[veh] = {}
