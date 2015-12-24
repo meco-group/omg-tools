@@ -3,24 +3,20 @@ ADMM
 - multiple knots inside: does this still work?
 
 Toolbox
-+ solve issue with create function -> only jit for SX
-+ write update for distr problem (environment??)
-+ rewrite fleet
-+ admm: initial iterations
-+ clean up basis stuff
++ interaction constraint violation
++ parameters for interaction constraints (rel formation...)
+? build only once per vehicle type
+- rendez-vous
+    - questionmark: works, but some bug related to rel position...
+    - platform landing: different n_y per vehicle
 - overlook plots
     - getVehicleTypes?
     - vehicle index?
-- compute objective + average and max update time
-- compare 2 initial values
-- build only once per vehicle type
-- implement stability shzl upd z
-- parameters for interaction constraints (rel formation...)
 - clean up spline_extra
 
-- worries
-    + environment defines constraints on already multiple vehicles
-    - vehicle index... does it still mean something?
+- dual initialisation: first compose correct basis of lambda.
+    int_0^T (l(t) * c(t)) = l_cfs^T*c_cfs
+    also mu initialisation: dual slackness = l_cfs^T*c_cfs
 
 Notes:
 * All SX symbol names are unique!
