@@ -64,7 +64,11 @@ class Vehicle(OptiChild):
                                                'terminal': self.degree}
 
     def set_options(self, options):
-        self.options.update(options)
+        if 'boundary_smoothness' in options:
+            self.options['boundary_smoothness'].update(options['boundary_smoothness'])
+        for key in options:
+            if key not in ['boundary_smoothness']:
+                self.options[key] = options[key]
         if self.options['1storder_delay']:
             self.integrate_plant = self._integrate_plant
         else:
