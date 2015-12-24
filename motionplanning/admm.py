@@ -168,7 +168,8 @@ class ADMM(Problem):
                                         entry('x_j', struct=self.q_ij_struct),
                                         entry('l_i', struct=self.q_i_struct),
                                         entry('l_ij', struct=self.q_ij_struct),
-                                        entry('t'), entry('T'), entry('rho')])
+                                        entry('t'), entry('T'), entry('rho'),
+                                        entry('par', struct=self.par_struct)])
         par = struct_symMX(self._par_struct_updz)
         x_i, x_j = self.q_i_struct(par['x_i']), self.q_ij_struct(par['x_j'])
         l_i, l_ij = self.q_i_struct(par['l_i']), self.q_ij_struct(par['l_ij'])
@@ -204,6 +205,9 @@ class ADMM(Problem):
                             sym2 = reshape(sym2, sym.shape)
                             c = substitute(c, sym, sym2)
                             break
+                for name, s in self.par_i.items():
+                    if s.getName() == sym.getName():
+                        c = substitute(c, sym, par['par', name])
             constraints.append(c)
             lb.append(con[1])
             ub.append(con[2])
@@ -484,6 +488,7 @@ class ADMM(Problem):
             par['t'] = current_time
             par['T'] = horizon_time
             par['rho'] = rho
+            par['par'] = self.set_parameters_upd_z(current_time)
             lb, ub = self.lb_updz, self.ub_updz
             self.problem_upd_z({'p': par, 'lbg': lb, 'ubg': ub})
             out = self.problem_upd_z.getOutput('x')
