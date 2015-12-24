@@ -31,4 +31,3 @@ class FormationPoint2point(ADMMProblem):
                     for k in range(veh.n_y):
                         self.define_constraint(
                             y_veh[k] - y_nghb[k] - rel_pos[k], 0., 0.)
-
