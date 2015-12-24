@@ -35,15 +35,19 @@ class OptiFather:
     # Problem composition
     # ========================================================================
 
-    def construct_problem(self, options):
+    def construct_problem(self, options, build=None):
         self.compose_dictionary()
         self.translate_symbols()
         variables = self.construct_variables()
         parameters = self.construct_parameters()
         constraints, lb, ub = self.construct_constraints(variables, parameters)
         objective = self.construct_objective(variables, parameters)
-        problem, buildtime = self.create_nlp(variables, parameters,
+        if build is None:
+            problem, buildtime = self.create_nlp(variables, parameters,
                                              objective, constraints, options)
+        else:
+            problem = build
+            buildtime = 0.
         self.init_variables()
         return problem, buildtime
 
@@ -181,11 +185,7 @@ class OptiFather:
                 print('[jit compilation with flags %s]' %
                       (','.join(jit['jit_options']['flags']))),
         t0 = time.time()
-        # inp = [SX(i) for i in inp]
-        # out = [SX(i) for i in out]
-        # inp, out = struct_symSX(inp), struct_symSX(out)
         fun = SXFunction(name, inp, out, jit)
-        # fun.expand()
         t1 = time.time()
         if options['verbose'] >= 2:
             print 'in %5f s' % (t1-t0)

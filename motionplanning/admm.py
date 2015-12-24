@@ -49,7 +49,7 @@ class ADMM(Problem):
     # Create problem
     # ========================================================================
 
-    def init(self):
+    def init(self, build=None):
         self.q_i_struct = _create_struct_from_dict(self.q_i)
         self.q_ij_struct = _create_struct_from_dict(self.q_ij)
         self.q_ji_struct = _create_struct_from_dict(self.q_ji)
@@ -62,11 +62,11 @@ class ADMM(Problem):
             self.var_admm[key] = self.q_ij_struct(0)
         for key in ['z_ji', 'l_ji']:
             self.var_admm[key] = self.q_ji_struct(0)
-        self.construct_upd_x()
+        self.construct_upd_x(build)
         self.construct_upd_z()
         self.construct_upd_l()
 
-    def construct_upd_x(self):
+    def construct_upd_x(self, build):
         # define parameters
         z_i = self.define_parameter('z_i', self.q_i_struct.shape[0])
         z_ji = self.define_parameter('z_ji', self.q_ji_struct.shape[0])
@@ -103,7 +103,7 @@ class ADMM(Problem):
         self.define_objective(obj)
         # construct problem
         self.father = OptiFather(self.group.values())
-        prob, compile_time = self.father.construct_problem(self.options)
+        prob, compile_time = self.father.construct_problem(self.options, build)
         self.problem_upd_x = prob
         self.init_var_admm()
 
@@ -412,145 +412,145 @@ class ADMM(Problem):
         for nghb, q_ji in self.q_ji.items():
             for child, q in q_ji.items():
                 for name, ind in q.items():
-                    var=self.father._var_result[child.label, name][ind]
-                    self.var_admm['z_ji'][str(nghb), child.label, name]=var
+                    var = self.father._var_result[child.label, name][ind]
+                    self.var_admm['z_ji'][str(nghb), child.label, name] = var
         for child, q in self.q_i.items():
             for name, ind in q.items():
-                var=self.father._var_result[child.label, name][ind]
-                self.var_admm['z_i'][child.label, name]=var
+                var = self.father._var_result[child.label, name][ind]
+                self.var_admm['z_i'][child.label, name] = var
 
     def set_parameters(self, current_time):
-        parameters={}
-        parameters['z_i']=self.var_admm['z_i'].cat
-        parameters['z_ji']=self.var_admm['z_ji'].cat
-        parameters['l_i']=self.var_admm['l_i'].cat
-        parameters['l_ji']=self.var_admm['l_ji'].cat
-        parameters['rho']=self.options['admm']['rho']
+        parameters = {}
+        parameters['z_i'] = self.var_admm['z_i'].cat
+        parameters['z_ji'] = self.var_admm['z_ji'].cat
+        parameters['l_i'] = self.var_admm['l_i'].cat
+        parameters['l_ji'] = self.var_admm['l_ji'].cat
+        parameters['rho'] = self.options['admm']['rho']
         return parameters
 
     def update_x(self, current_time):
-        self.current_time=current_time
-        self.problem.current_time=current_time
+        self.current_time = current_time
+        self.problem.current_time = current_time
         # set initial guess, parameters, lb & ub
-        var=self.father.get_variables()
-        par=self.father.set_parameters(current_time)
-        lb, ub=self.father.update_bounds(current_time)
+        var = self.father.get_variables()
+        par = self.father.set_parameters(current_time)
+        lb, ub = self.father.update_bounds(current_time)
         # solve!
-        t0=time.time()
+        t0 = time.time()
         self.problem_upd_x({'x0': var, 'p': par, 'lbg': lb, 'ubg': ub})
-        t1=time.time()
-        t_upd=t1-t0
+        t1 = time.time()
+        t_upd = t1-t0
         self.father.set_variables(self.problem_upd_x.getOutput('x'))
-        self.var_admm['x_i']=self._get_x_variables(solution=True)
-        stats=self.problem_upd_x.getStats()
+        self.var_admm['x_i'] = self._get_x_variables(solution=True)
+        stats = self.problem_upd_x.getStats()
         if (stats.get('return_status') != 'Solve_Succeeded'):
             print 'upd_x %d: %s' % (self.index, stats.get('return_status'))
         return t_upd
 
     def set_parameters_upd_z(self, current_time):
-        parameters=self.par_struct(0)
-        global_par=self.distr_problem.set_parameters(current_time)
+        parameters = self.par_struct(0)
+        global_par = self.distr_problem.set_parameters(current_time)
         for name in self.par_i:
-            parameters[name]=global_par[name]
+            parameters[name] = global_par[name]
         return parameters
 
     def update_z(self, current_time):
         # save previous result
-        t0=time.time()
-        self.var_admm['z_i_p']=self.var_admm['z_i']
-        self.var_admm['z_ij_p']=self.var_admm['z_ij']
-        current_time=np.round(current_time, 6) % self.problem.knot_time
-        horizon_time=self.problem.vehicles[0].options['horizon_time']
-        rho=self.options['admm']['rho']
+        t0 = time.time()
+        self.var_admm['z_i_p'] = self.var_admm['z_i']
+        self.var_admm['z_ij_p'] = self.var_admm['z_ij']
+        current_time = np.round(current_time, 6) % self.problem.knot_time
+        horizon_time = self.problem.vehicles[0].options['horizon_time']
+        rho = self.options['admm']['rho']
         if self._lineq_updz:
             # set inputs
-            x_i=self.var_admm['x_i']
-            l_i=self.var_admm['l_i']
-            l_ij=self.var_admm['l_ij']
-            x_j=self.var_admm['x_j']
-            t=current_time
-            T=horizon_time
-            par=self.set_parameters_upd_z(current_time)
-            inp=[x_i, l_i, l_ij, x_j, t, T, rho, par]
-            out=self.problem_upd_z(inp)
-            z_i, z_ij=out[0], out[1]
+            x_i = self.var_admm['x_i']
+            l_i = self.var_admm['l_i']
+            l_ij = self.var_admm['l_ij']
+            x_j = self.var_admm['x_j']
+            t = current_time
+            T = horizon_time
+            par = self.set_parameters_upd_z(current_time)
+            inp = [x_i, l_i, l_ij, x_j, t, T, rho, par]
+            out = self.problem_upd_z(inp)
+            z_i, z_ij = out[0], out[1]
         else:
             # set parameters
-            par=self._par_struct_updz(0)
-            par['x_i']=self.var_admm['x_i']
-            par['l_i']=self.var_admm['l_i']
-            par['l_ij']=self.var_admm['l_ij']
-            par['x_j']=self.var_admm['x_j']
-            par['t']=current_time
-            par['T']=horizon_time
-            par['rho']=rho
-            lb, ub=self.lb_updz, self.ub_updz
+            par = self._par_struct_updz(0)
+            par['x_i'] = self.var_admm['x_i']
+            par['l_i'] = self.var_admm['l_i']
+            par['l_ij'] = self.var_admm['l_ij']
+            par['x_j'] = self.var_admm['x_j']
+            par['t'] = current_time
+            par['T'] = horizon_time
+            par['rho'] = rho
+            lb, ub = self.lb_updz, self.ub_updz
             self.problem_upd_z({'p': par, 'lbg': lb, 'ubg': ub})
-            out=self.problem_upd_z.getOutput('x')
-            out=self._var_struct_updz(out)
-            z_i, z_ij=out['z_i'], out['z_ij']
-        self.var_admm['z_i']=self.q_i_struct(z_i)
-        self.var_admm['z_ij']=self.q_ij_struct(z_ij)
-        t1=time.time()
+            out = self.problem_upd_z.getOutput('x')
+            out = self._var_struct_updz(out)
+            z_i, z_ij = out['z_i'], out['z_ij']
+        self.var_admm['z_i'] = self.q_i_struct(z_i)
+        self.var_admm['z_ij'] = self.q_ij_struct(z_ij)
+        t1 = time.time()
         return t1-t0
 
     def update_l(self, current_time):
-        t0=time.time()
+        t0 = time.time()
         # set inputs
-        x_i=self.var_admm['x_i']
-        z_i=self.var_admm['z_i']
-        z_ij=self.var_admm['z_ij']
-        l_i=self.var_admm['l_i']
-        l_ij=self.var_admm['l_ij']
-        x_j=self.var_admm['x_j']
-        t=np.round(current_time, 6) % self.problem.knot_time
-        T=self.problem.vehicles[0].options['horizon_time']
-        rho=self.options['admm']['rho']
-        inp=[x_i, z_i, z_ij, l_i, l_ij, x_j, t, T, rho]
-        out=self.problem_upd_l(inp)
-        self.var_admm['l_i']=self.q_i_struct(out[0])
-        self.var_admm['l_ij']=self.q_ij_struct(out[1])
-        t1=time.time()
+        x_i = self.var_admm['x_i']
+        z_i = self.var_admm['z_i']
+        z_ij = self.var_admm['z_ij']
+        l_i = self.var_admm['l_i']
+        l_ij = self.var_admm['l_ij']
+        x_j = self.var_admm['x_j']
+        t = np.round(current_time, 6) % self.problem.knot_time
+        T = self.problem.vehicles[0].options['horizon_time']
+        rho = self.options['admm']['rho']
+        inp = [x_i, z_i, z_ij, l_i, l_ij, x_j, t, T, rho]
+        out = self.problem_upd_l(inp)
+        self.var_admm['l_i'] = self.q_i_struct(out[0])
+        self.var_admm['l_ij'] = self.q_ij_struct(out[1])
+        t1 = time.time()
         return t1-t0
 
     def communicate(self):
         for nghb in self.q_ji.keys():
-            z_ji=nghb.var_admm['z_ij'].prefix[str(self)]
-            l_ji=nghb.var_admm['l_ij'].prefix[str(self)]
-            x_j=nghb.var_admm['x_i']
-            self.var_admm['z_ji'][str(nghb)]=z_ji
-            self.var_admm['l_ji'][str(nghb)]=l_ji
-            self.var_admm['x_j'][str(nghb)]=x_j
+            z_ji = nghb.var_admm['z_ij'].prefix[str(self)]
+            l_ji = nghb.var_admm['l_ij'].prefix[str(self)]
+            x_j = nghb.var_admm['x_i']
+            self.var_admm['z_ji'][str(nghb)] = z_ji
+            self.var_admm['l_ji'][str(nghb)] = l_ji
+            self.var_admm['x_j'][str(nghb)] = x_j
 
     def init_step(self, current_time):
         self.problem.init_step(current_time)
         # transform spline variables
         if ((current_time > 0. and
              np.round(current_time, 6) % self.problem.knot_time == 0)):
-            tf=lambda cfs, knots, deg: shift_over_knot(cfs, knots, deg, 1)
+            tf = lambda cfs, knots, deg: shift_over_knot(cfs, knots, deg, 1)
             for key in ['x_i', 'z_i', 'z_i_p', 'l_i']:
-                self.var_admm[key]=self._transform_spline(
+                self.var_admm[key] = self._transform_spline(
                     self.var_admm[key], tf, self.q_i)
             for key in ['x_j', 'z_ij', 'z_ij_p', 'l_ij']:
-                self.var_admm[key]=self._transform_spline(
+                self.var_admm[key] = self._transform_spline(
                     self.var_admm[key], tf, self.q_ij)
             for key in ['z_ji', 'l_ji']:
-                self.var_admm[key]=self._transform_spline(
+                self.var_admm[key] = self._transform_spline(
                     self.var_admm[key], tf, self.q_ji)
 
     def get_residuals(self):
-        t0=time.time()
-        x_i=self.var_admm['x_i'].cat
-        z_i=self.var_admm['z_i'].cat
-        x_j=self.var_admm['x_j'].cat
-        z_ij=self.var_admm['z_ij'].cat
-        z_i_p=self.var_admm['z_i_p'].cat
-        z_ij_p=self.var_admm['z_ij_p'].cat
-        rho=self.options['admm']['rho']
+        t0 = time.time()
+        x_i = self.var_admm['x_i'].cat
+        z_i = self.var_admm['z_i'].cat
+        x_j = self.var_admm['x_j'].cat
+        z_ij = self.var_admm['z_ij'].cat
+        z_i_p = self.var_admm['z_i_p'].cat
+        z_ij_p = self.var_admm['z_ij_p'].cat
+        rho = self.options['admm']['rho']
 
-        pr=la.norm(x_i-z_i)**2 + la.norm(x_j-z_ij)**2
-        dr=rho*(la.norm(z_i-z_i_p)**2 + la.norm(z_ij-z_ij_p)**2)
-        t1=time.time()
+        pr = la.norm(x_i-z_i)**2 + la.norm(x_j-z_ij)**2
+        dr = rho*(la.norm(z_i-z_i_p)**2 + la.norm(z_ij-z_ij_p)**2)
+        t1 = time.time()
         return t1-t0, pr, dr
 
 
@@ -565,7 +565,7 @@ class ADMMProblem(DistributedProblem):
 
     def set_default_options(self):
         Problem.set_default_options(self)
-        self.options['admm']={'max_iter': 1, 'rho': 2., 'init': 5}
+        self.options['admm'] = {'max_iter': 1, 'rho': 2., 'init': 5}
 
     def set_options(self, options):
         if 'admm' in options:
@@ -581,28 +581,28 @@ class ADMMProblem(DistributedProblem):
             self.solve(0.0)
 
     def solve(self, current_time):
-        self.current_time=current_time
-        it0=self.iteration
+        self.current_time = current_time
+        it0 = self.iteration
         while (self.iteration - it0) < self.options['admm']['max_iter']:
-            t_upd_x, t_upd_z, t_upd_l, t_res=0., 0., 0., 0.
-            p_res, d_res=0., 0.
+            t_upd_x, t_upd_z, t_upd_l, t_res = 0., 0., 0., 0.
+            p_res, d_res = 0., 0.
             for updater in self.updaters:
                 updater.init_step(current_time)
             for updater in self.updaters:
-                t=updater.update_x(current_time)
-                t_upd_x=max(t_upd_x, t)
+                t = updater.update_x(current_time)
+                t_upd_x = max(t_upd_x, t)
             for updater in self.updaters:
                 updater.communicate()
             for updater in self.updaters:
-                t1=updater.update_z(current_time)
-                t2=updater.update_l(current_time)
-                t3, pr, dr=updater.get_residuals()
-                t_upd_z=max(t_upd_z, t1)
-                t_upd_l=max(t_upd_l, t2)
-                t_res=max(t_res, t3)
+                t1 = updater.update_z(current_time)
+                t2 = updater.update_l(current_time)
+                t3, pr, dr = updater.get_residuals()
+                t_upd_z = max(t_upd_z, t1)
+                t_upd_l = max(t_upd_l, t2)
+                t_res = max(t_res, t3)
                 p_res += pr**2
                 d_res += dr**2
-            p_res, d_res=np.sqrt(p_res), np.sqrt(d_res)
+            p_res, d_res = np.sqrt(p_res), np.sqrt(d_res)
             for updater in self.updaters:
                 updater.communicate()
             if self.options['verbose'] >= 1:
