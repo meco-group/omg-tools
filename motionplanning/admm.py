@@ -593,19 +593,3 @@ class ADMMProblem(DistributedProblem):
                       (self.iteration, current_time, p_res, d_res, t_upd_x,
                        t_upd_z, t_upd_l, t_res))
             self.update_times.append(t_upd_x + t_upd_z + t_upd_l + t_res)
-
-    def final(self):
-        obj = self.compute_objective()
-        print '\nWe reached our target!'
-        print '%-18s %6g' % ('Objective:', obj)
-        print '%-18s %6g ms' % ('Max update time:',
-                                max(self.update_times)*1000.)
-        print '%-18s %6g ms' % ('Av update time:',
-                                (sum(self.update_times)*1000. /
-                                 len(self.update_times)))
-
-    def compute_objective(self):
-        obj = 0.
-        for problem in self.problems:
-            obj += problem.compute_objective()
-        return obj
