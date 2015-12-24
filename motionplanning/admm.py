@@ -570,6 +570,11 @@ class ADMMProblem(DistributedProblem):
         Problem.set_default_options(self)
         self.options['admm'] = {'max_iter': 1, 'rho': 2., 'init': 5}
 
+    def set_options(self, options):
+        if 'admm' in options:
+            self.options['admm'].update(options.pop('admm'))
+        Problem.set_options(self, options)
+
     # ========================================================================
     # Perform ADMM sequence
     # ========================================================================
