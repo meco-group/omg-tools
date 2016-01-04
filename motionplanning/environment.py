@@ -77,29 +77,25 @@ class Environment(OptiChild):
 
             self._add_vehicleconstraints(vehicle)
 
-    def _add_vehicleconstraints(self, vehicle):
-        safety_distance = vehicle.options['safety_distance']
-        safety_weight = vehicle.options['safety_weight']
+    def _add_vehicleconstraints(self, veh):
+        safety_distance = veh.options['safety_distance']
+        safety_weight = veh.options['safety_weight']
 
-        chck_veh, rad_veh = vehicle.get_checkpoints()
-        for obstacle in self.obstacles:
+        chck_veh, rad_veh = veh.get_checkpoints()
+        for obs in self.obstacles:
             chck_obs = self.define_spline_parameter(
-                'chck_'+str(obstacle.index), self.n_dim,
-                obstacle.shape.n_chck, basis=obstacle.basis)
-            if obstacle.shape.n_chck == 1:
+                'chck_'+str(obs), self.n_dim,
+                obs.shape.n_chck, basis=obs.basis)
+            if obs.shape.n_chck == 1:
                 chck_obs = [chck_obs]
-            rad_obs = self.define_parameter('rad_'+str(obstacle.index))
+            rad_obs = self.define_parameter('rad_'+str(obs))
 
-            a_hp = self.define_spline_variable(
-                'a_' + str(vehicle.index)+str(obstacle.index), self.n_dim)
-            b_hp = self.define_spline_variable(
-                'b_' + str(vehicle.index)+str(obstacle.index))[0]
+            a_hp = self.define_spline_variable('a_'+str(veh)+str(obs), self.n_dim)
+            b_hp = self.define_spline_variable('b_'+str(veh)+str(obs))[0]
             if safety_distance > 0.:
                 t, T = self.define_symbol('t'), self.define_symbol('T')
-                eps = self.define_spline_variable(
-                    'eps_'+str(vehicle.index)+str(obstacle.index))[0]
-                self._obj += (safety_weight *
-                              definite_integral(eps, t/T, 1.))
+                eps = self.define_spline_variable('eps_'+str(veh)+str(obs))[0]
+                self._obj += (safety_weight*definite_integral(eps, t/T, 1.))
                 self.define_constraint(eps - safety_distance, -inf, 0.)
                 self.define_constraint(-eps, -inf, 0.)
             else:
@@ -149,12 +145,12 @@ class Environment(OptiChild):
             chck_obs, rad_obs = obstacle.get_checkpoints(x_obs)
             for l, chck in enumerate(chck_obs):
                 if len(chck_obs) == 1:
-                    name = 'chck_'+str(obstacle.index)
+                    name = 'chck_'+str(obstacle)
                 else:
-                    name = 'chck_'+str(obstacle.index)+str(l)
+                    name = 'chck_'+str(obstacle)+str(l)
                 parameters[name] = np.hstack([np.c_[chck[k].coeffs]
                                              for k in range(self.n_dim)])
-            parameters['rad_'+str(obstacle.index)] = rad_obs
+            parameters['rad_'+str(obstacle)] = rad_obs
         return parameters
 
     def draw(self, t=-1):
@@ -174,6 +170,7 @@ class Obstacle:
         self.shape = shape
         self.n_dim = shape.n_dim
         self.basis = BSplineBasis([0, 0, 0, 1, 1, 1], 2)
+        self.index = 0
 
         self.path = {}
         self.path['time'] = np.array([0.])
@@ -192,6 +189,9 @@ class Obstacle:
             self.vel_traj, self.vel_index = trajectory['velocity'], 0
         if 'acceleration' in trajectory:
             self.acc_traj, self.acc_index = trajectory['acceleration'], 0
+
+    def __str__(self):
+        return 'obstacle'+str(self.index)
 
     def draw(self, t=-1):
         return np.c_[self.path['position'][:, t]] + self.shape.draw()
