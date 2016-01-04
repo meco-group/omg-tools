@@ -49,7 +49,8 @@ class Fleet:
                 veh: poly.vertices[:, l] for l, veh in enumerate(self.vehicles)}
         if 'points' in kwargs:
             points = kwargs['points']
-            self.configuration = {veh: points[l] for l, veh in enumerate(self.vehicles)}
+            self.configuration = {veh: points[l]
+                                  for l, veh in enumerate(self.vehicles)}
         self.rel_pos = {}
         for veh in self.vehicles:
             self.rel_pos[veh] = {}
