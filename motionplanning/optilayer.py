@@ -153,7 +153,7 @@ class OptiFather:
     def create_nlp(self, var, par, obj, con, options):
         jit = options['codegen']
         if options['verbose'] >= 2:
-            print 'Building nlp... ',
+            print 'Building nlp ... ',
             if jit['jit']:
                 print('[jit compilation with flags %s]' %
                       (','.join(jit['jit_options']['flags']))),
@@ -344,6 +344,8 @@ class OptiChild:
             return [BSpline(basis, coeffs[:, k]) for k in range(size0)]
 
     def define_constraint(self, expr, lb, ub, shutdown=False, name=None):
+        if isinstance(expr, (float, int)):
+            return
         if name is None:
             name = 'c'+str(self._constraint_cnt)
             self._constraint_cnt += 1
