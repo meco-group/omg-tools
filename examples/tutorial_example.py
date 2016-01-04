@@ -63,7 +63,7 @@ vehicle.set_options({'safety_distance': 0.1})
 
 # Now, we create an environment
 # An environment is determined by a room with certain shape
-environment = Environment(room={'shape': Square(2.5)})
+environment = Environment(room={'shape': Square(5.)})
 # Also we can add some obstacles
 # Let's first define a recangular shape
 rectangle = Rectangle(width=3., height=0.2)

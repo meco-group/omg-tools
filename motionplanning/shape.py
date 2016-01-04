@@ -102,7 +102,7 @@ class SymmetricPolyhedron(Polyhedron):
 class Square(SymmetricPolyhedron):
 
     def __init__(self, width, orientation=0.):
-        SymmetricPolyhedron.__init__(self, np.sqrt(2)*width, 4, orientation)
+        SymmetricPolyhedron.__init__(self, width/np.sqrt(2), 4, orientation)
 
 
 class Rectangle(Polyhedron):
