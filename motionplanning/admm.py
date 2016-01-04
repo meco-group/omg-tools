@@ -4,7 +4,7 @@ from distributedproblem import DistributedProblem
 from casadi import symvar, mul, SX, MX, DMatrix, MXFunction, reshape
 from casadi import vertcat, horzcat, jacobian, solve, substitute
 from casadi.tools import struct, struct_symMX, struct_symSX, entry, structure
-from spline_extra import shift_knot1_fwd_mx, shift_knot1_bwd_mx, shift_over_knot
+from spline_extra import shift_knot1_fwd, shift_knot1_bwd, shift_over_knot
 import numpy as np
 import numpy.linalg as la
 import time
@@ -85,7 +85,7 @@ class ADMM(Problem):
         # get (part of) variables
         x_i = self._get_x_variables()
         # transform spline variables: only consider future piece of spline
-        tf = lambda cfs, knots, deg: shift_knot1_fwd_mx(cfs, knots, deg, t0)
+        tf = lambda cfs, knots, deg: shift_knot1_fwd(cfs, knots, deg, t0)
         self._transform_spline([x_i, z_i, l_i], tf, self.q_i)
         self._transform_spline([z_ji, l_ji], tf, self.q_ji)
         # construct objective
@@ -128,7 +128,7 @@ class ADMM(Problem):
         l_i = self.q_i_struct(l_i)
         l_ij = self.q_ij_struct(l_ij)
         # transform spline variables: only consider future piece of spline
-        tf = lambda cfs, knots, deg: shift_knot1_fwd_mx(cfs, knots, deg, t0)
+        tf = lambda cfs, knots, deg: shift_knot1_fwd(cfs, knots, deg, t0)
         self._transform_spline([x_i, l_i], tf, self.q_i)
         self._transform_spline([x_j, l_ij], tf, self.q_ij)
         # fill in parameters
@@ -147,7 +147,7 @@ class ADMM(Problem):
         z_i_new = self.q_i_struct(z[:l_qi])
         z_ij_new = self.q_ij_struct(z[l_qi:l_qi+l_qij])
         # transform back
-        tf = lambda cfs, knots, deg: shift_knot1_bwd_mx(cfs, knots, deg, t0)
+        tf = lambda cfs, knots, deg: shift_knot1_bwd(cfs, knots, deg, t0)
         self._transform_spline(z_i_new, tf, self.q_i)
         self._transform_spline(z_ij_new, tf, self.q_ij)
         out = [z_i_new.cat, z_ij_new.cat]
@@ -176,7 +176,7 @@ class ADMM(Problem):
         t, T, rho = par['t'], par['T'], par['rho']
         t0 = t/T
         # transform spline variables: only consider future piece of spline
-        tf = lambda cfs, knots, deg: shift_knot1_fwd_mx(cfs, knots, deg, t0)
+        tf = lambda cfs, knots, deg: shift_knot1_fwd(cfs, knots, deg, t0)
         self._transform_spline([x_i, z_i, l_i], tf, self.q_i)
         self._transform_spline([x_j, z_ij, l_ij], tf, self.q_ij)
         # construct constraints
@@ -253,14 +253,13 @@ class ADMM(Problem):
         l_ij = self.q_ij_struct(l_ij)
         x_j = self.q_ij_struct(x_j)
         # transform spline variables: only consider future piece of spline
-        tf = lambda cfs, knots, deg: shift_knot1_fwd_mx(cfs, knots, deg, t0)
+        tf = lambda cfs, knots, deg: shift_knot1_fwd(cfs, knots, deg, t0)
         self._transform_spline([x_i, z_i, l_i], tf, self.q_i)
         self._transform_spline([x_j, z_ij, l_ij], tf, self.q_ij)
         # update lambda
         l_i_new = self.q_i_struct(l_i.cat + rho*(x_i.cat - z_i.cat))
         l_ij_new = self.q_ij_struct(l_ij.cat + rho*(x_j.cat - z_ij.cat))
-        tf = lambda cfs, knots, deg: shift_knot1_bwd_mx(cfs, knots, deg, t0)
-        # tf = shift_knot1_bwd_mx
+        tf = lambda cfs, knots, deg: shift_knot1_bwd(cfs, knots, deg, t0)
         self._transform_spline(l_i_new, tf, self.q_i)
         self._transform_spline(l_ij_new, tf, self.q_ij)
         out = [l_i_new, l_ij_new]
