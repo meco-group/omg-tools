@@ -4,8 +4,7 @@ ADMM
 
 Toolbox
 ? build only once per vehicle type
-- clean up spline_extra
-+ read ipopt tutorial
+- spline_extra: still take a look to shift_over_knot and its assumption...
 - dual initialisation: first compose correct basis of lambda.
     int_0^T (l(t) * c(t)) = l_cfs^T*c_cfs
     also mu initialisation: dual slackness = l_cfs^T*c_cfs
