@@ -12,7 +12,6 @@ import re
 class Vehicle(OptiChild):
 
     def __init__(self, n_y, degree, shape, options, **kwargs):
-        self.index = 0
         OptiChild.__init__(self, 'vehicle')
         self.shape = shape
         self._signals = {}
