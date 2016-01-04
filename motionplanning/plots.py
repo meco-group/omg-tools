@@ -4,11 +4,11 @@ matplotlib.use('TKAgg')
 import matplotlib.pyplot as plt
 import numpy as np
 
-# color definition
-kul_blue = [17./255., 110./255., 138./255.]
-kul_red = [138./255.,  31./255.,  17./255.]
-kul_green = [17./255., 138./255.,  19./255.]
-kul_lightblue = [106./255., 194./255., 238./255.]
+# color definition (rgb)
+blue = [17., 110., 138.]
+red = [138.,  31.,  17.]
+green = [17., 138.,  19.]
+lightblue = [106., 194., 238.]
 
 
 def mix_with_white(color, perc_white=80.):
@@ -19,15 +19,6 @@ def mix_with_white(color, perc_white=80.):
     return [r_m, g_m, b_m]
 
 
-def get_color_tmpl(number):
-    color = [kul_blue, kul_red, kul_green, kul_lightblue]
-    ind = 0
-    while number > len(color):
-        color.append(color[ind])
-        ind += 1
-    return color[:number]
-
-
 class Plots:
 
     def __init__(self, fleet, environment, options={}):
@@ -35,22 +26,24 @@ class Plots:
         self.vehicles = fleet.vehicles
         self.environment = environment
 
-        self.vehicle_types = {}
-        for vehicle in self.vehicles:
-            typename = vehicle.__class__.__name__
-            if typename in self.vehicle_types:
-                self.vehicle_types[typename].append(vehicle)
-            else:
-                self.vehicle_types[typename] = [vehicle]
-
         self.other_plt = {}
         self.plots = []
-        self.clr = get_color_tmpl(fleet.N)
-        self.clr_w = [
-            mix_with_white(self.clr[l]) for l in range(len(self.clr))]
+
+        # default colors
+        self.set_color_template([blue, red, green, lightblue])
+
         self.set_options(options)
         plt.ion()
         plt.show()
+
+    def set_color_template(self, colors):
+        colors = [[c/255. for c in color] for color in colors]
+        ind = 0
+        while self.fleet.N > len(colors):
+            colors.append(colors[ind])
+            ind += 1
+        self.clr = {veh: colors[l] for l, veh in enumerate(self.vehicles)}
+        self.clr_w = {veh: mix_with_white(c) for veh, c in self.clr.items()}
 
     # ========================================================================
     # Plot options
@@ -83,7 +76,6 @@ class Plots:
             plots = self._init_2d_plot(vehicles)
             self.plots.append(plots)
         else:
-            vehicles = self._get_vehicle_objects(vehicles)
             vehicle_types = self._sort_vehicles(vehicles)
             plots = []
             for vehicle_type, vehicles in vehicle_types.items():
@@ -106,25 +98,22 @@ class Plots:
                 label = [signal+str(k) for k in range(sgn_length)]
             else:
                 label = [signal]
-        figure, axis = plt.subplots(
-            vehicles[0].signal_length[signal], 1, squeeze=False)
+        figure, axis = plt.subplots(sgn_length, 1, squeeze=False)
         for k in range(sgn_length):
             axis[k, 0].set_xlabel('t (s)')
             axis[k, 0].set_ylabel(label[k])
-        plt_traj = [[axis[k, 0].plot([], [], '-',
-                                     color=self.clr_w[veh.index])[0]
+        plt_traj = [[axis[k, 0].plot([], [], '-', color=self.clr_w[veh])[0]
                      for k in range(sgn_length)] for veh in vehicles]
-        plt_path = [[axis[k, 0].plot([], [], '-',
-                                     color=self.clr[veh.index])[0]
+        plt_path = [[axis[k, 0].plot([], [], '-', color=self.clr[veh])[0]
                      for k in range(sgn_length)] for veh in vehicles]
         for key, other in self.other_plt.items():
             plt_other[key] = [[axis[k, 0].plot([], [], other['symbol'],
-                                               color=self.clr[veh.index])[0]
+                                               color=self.clr[veh])[0]
                                for k in range(veh.signal_length[signal])]
                               for veh in vehicles]
         return {'type': 'curve', 'figure': figure, 'axis': axis,
-                'plt_traj': plt_traj, 'plt_path': plt_path,
-                'plt_other': plt_other, 'signal': signal, 'vehicles': vehicles}
+                'trajectory': plt_traj, 'path': plt_path,
+                'other': plt_other, 'signal': signal, 'vehicles': vehicles}
 
     def _init_2d_plot(self, vehicles):
         figure = plt.figure()
@@ -136,13 +125,13 @@ class Plots:
         plt_2d['environment'] = [
             axis.plot([], [], 'k-')[0] for l in range(self.environment.No)]
         plt_2d['trajectory'] = [axis.plot(
-            [], [], '-', color=self.clr_w[veh.index])[0] for veh in vehicles]
+            [], [], '-', color=self.clr_w[veh])[0] for veh in vehicles]
         plt_2d['path'] = [axis.plot(
-            [], [], '-', color=self.clr[veh.index])[0] for veh in vehicles]
+            [], [], '-', color=self.clr[veh])[0] for veh in vehicles]
         plt_2d['vehicle'] = [axis.plot(
-            [], [], '-', color=self.clr[veh.index])[0] for veh in vehicles]
+            [], [], '-', color=self.clr[veh])[0] for veh in vehicles]
         return {'type': '2d', 'figure': figure, 'axis': axis,
-                'plt_2d': plt_2d, 'vehicles': self.vehicles}
+                '2d': plt_2d, 'vehicles': vehicles}
 
     def _sort_vehicles(self, vehicles):
         vehicle_types = {}
@@ -153,12 +142,6 @@ class Plots:
             else:
                 vehicle_types[veh_type] = [vehicle]
         return vehicle_types
-
-    def _get_vehicle_objects(self, vehicles):
-        vehicles = vehicles if isinstance(vehicles, list) else [vehicles]
-        if isinstance(vehicles[0], (int, long)):
-            vehicles = [self.vehicles[index] for index in vehicles]
-        return vehicles
 
     # ========================================================================
     # Plot update
@@ -174,28 +157,27 @@ class Plots:
                 self._update_2d_plot(plot, t)
 
     def _update_curve_plot(self, plot, t=-1):
-        plt_traj, plt_path, plt_other = plot[
-            'plt_traj'], plot['plt_path'], plot['plt_other']
+        plt_traj = plot['trajectory']
+        plt_path = plot['path']
+        plt_other = plot['other']
         signal, vehicles = plot['signal'], plot['vehicles']
-        cnt = 0
-        for veh in vehicles:
+        for l, veh in enumerate(vehicles):
             for k in range(veh.signal_length[signal]):
-                plt_traj[cnt][k].set_data(
+                plt_traj[l][k].set_data(
                     veh.trajectories['time'][t].ravel(),
                     veh.trajectories[signal][t][k, :, :].ravel())
                 if t == -1:
-                    plt_path[cnt][k].set_data(
+                    plt_path[l][k].set_data(
                         veh.path['time'].ravel(),
                         veh.path[signal][k, :, :].ravel())
                 else:
-                    plt_path[cnt][k].set_data(
+                    plt_path[l][k].set_data(
                         veh.path['time'][:t+1].ravel(),
                         veh.path[signal][k, :, :t+1].ravel())
                 for key, other in self.other_plt.items():
-                    plt_other[key][cnt][k].set_data(
+                    plt_other[key][l][k].set_data(
                         other['time'](veh, t).ravel(),
                         other['data'](veh, signal, k, t).ravel())
-            cnt += 1
         fig, ax = plot['figure'], plot['axis']
         for i in range(ax.shape[0]):
             for j in range(ax.shape[1]):
@@ -204,26 +186,24 @@ class Plots:
         fig.canvas.draw()
 
     def _update_2d_plot(self, plot, t=-1):
-        plt_2d, vehicles = plot['plt_2d'], plot['vehicles']
+        plt_2d, vehicles = plot['2d'], plot['vehicles']
         environment = self.environment.draw(t)
         for l, env in enumerate(environment):
             plt_2d['environment'][l].set_data(
                 env[0, :].ravel(), env[1, :].ravel())
-        cnt = 0
-        for veh in vehicles:
+        for l, veh in enumerate(vehicles):
             if t == -1:
                 pos_path = veh.path['position'][:, :]
             else:
                 pos_path = veh.path['position'][:, :, :t+1]
             pos_traj = veh.trajectories['position'][t]
             veh_cnt = veh.draw(t)
-            plt_2d['trajectory'][cnt].set_data(pos_traj[0, :].ravel(),
-                                               pos_traj[1, :].ravel())
-            plt_2d['path'][cnt].set_data(pos_path[0, :].ravel(),
-                                         pos_path[1, :].ravel())
-            plt_2d['vehicle'][cnt].set_data(veh_cnt[0].ravel(),
-                                        veh_cnt[1].ravel())
-            cnt += 1
+            plt_2d['trajectory'][l].set_data(pos_traj[0, :].ravel(),
+                                             pos_traj[1, :].ravel())
+            plt_2d['path'][l].set_data(pos_path[0, :].ravel(),
+                                       pos_path[1, :].ravel())
+            plt_2d['vehicle'][l].set_data(veh_cnt[0].ravel(),
+                                          veh_cnt[1].ravel())
         plot['figure'].canvas.draw()
 
     # ========================================================================
