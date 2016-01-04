@@ -9,6 +9,7 @@ from fleet import Fleet
 from vehicle import Vehicle
 from quadrotor import Quadrotor
 from holonomic import Holonomic
+from platform import Platform
 
 from plots import Plots
 from problem import Simulator
