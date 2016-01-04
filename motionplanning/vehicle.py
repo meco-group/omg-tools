@@ -50,6 +50,10 @@ class Vehicle(OptiChild):
         self.set_default_options()
         self.set_options(options)
 
+        # default y0 & yT
+        self.y0 = np.zeros((self.n_y, self.order+1))
+        self.yT = np.zeros((self.n_y, self.order+1))
+
     # ========================================================================
     # Vehicle options
     # ========================================================================
@@ -252,7 +256,6 @@ class Vehicle(OptiChild):
             self.path[name] = np.zeros(signal.shape + (1,))
             self.path[name][:, :, 0] = self.get_signal(name, y0)
         self.path['time'] = np.array([0.])
-        # self.plant.set_state(self.get_state(y0))
 
     def set_terminal_condition(self, yT):
         self.yT = yT
