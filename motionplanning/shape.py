@@ -79,6 +79,7 @@ class Polyhedron(Shape2D):
 class SymmetricPolyhedron(Polyhedron):
 
     def __init__(self, radius, n_faces, orientation=0.):
+        # radius of outer circle (the one through the vertices)
         self.radius = radius
         self.n_faces = n_faces
         Polyhedron.__init__(self, self.getVertices(), orientation)
@@ -89,7 +90,7 @@ class SymmetricPolyhedron(Polyhedron):
         dth = (2*np.pi)/self.n_faces
         for l in range(self.n_faces):
             A[l, :] = np.array([np.sin(l*dth), np.cos(l*dth)])
-            B[l] = self.radius
+            B[l] = self.radius*np.cos(np.pi/self.n_faces)
         vertices = np.zeros((2, self.n_faces))
         for l in range(self.n_faces):
             a = np.vstack((A[l, :], A[(l+1) % self.n_faces, :]))
@@ -100,8 +101,8 @@ class SymmetricPolyhedron(Polyhedron):
 
 class Square(SymmetricPolyhedron):
 
-    def __init__(self, radius, orientation=0.):
-        SymmetricPolyhedron.__init__(self, radius, 4, orientation)
+    def __init__(self, width, orientation=0.):
+        SymmetricPolyhedron.__init__(self, width/np.sqrt(2), 4, orientation)
 
 
 class Rectangle(Polyhedron):

@@ -12,6 +12,7 @@ class Simulator:
         self.set_default_options()
         self.set_options(options)
         self.problem = problem
+        self.environment = problem.environment
         self.plot = Plots(problem.fleet, problem.environment)
 
     def set_default_options(self):
@@ -22,6 +23,7 @@ class Simulator:
 
     def run(self):
         current_time = 0.
+        self.problem.initialize()
         stop = False
         while not stop:
             stop = self.update(current_time)
@@ -32,7 +34,8 @@ class Simulator:
         # solve problem
         self.problem.solve(current_time)
         # update vehicle(s) and environment
-        self.problem.update(current_time, self.options['update_time'])
+        self.problem.update_vehicles(current_time, self.options['update_time'])
+        self.environment.update(current_time, self.options['update_time'])
         self.plot.update()
         # check termination criteria
         stop = self.problem.stop_criterium()
@@ -49,6 +52,7 @@ class Problem(OptiChild):
         self.set_default_options()
         self.set_options(options)
         self.iteration = 0
+        self.current_time = 0.0
         self.update_times = []
 
     # ========================================================================
@@ -56,7 +60,7 @@ class Problem(OptiChild):
     # ========================================================================
 
     def set_default_options(self):
-        self.options = {'verbose': 1, 'update_time': 0.1}
+        self.options = {'verbose': 2, 'update_time': 0.1}
         self.options['solver'] = {'tol': 1e-3, 'linear_solver': 'ma57',
                                   'warm_start_init_point': 'yes',
                                   'print_level': 0, 'print_time': 0}
@@ -84,7 +88,7 @@ class Problem(OptiChild):
 
     def solve(self, current_time):
         self.current_time = current_time
-        self.init_step()
+        self.init_step(current_time)
         # set initial guess, parameters, lb & ub
         var = self.father.get_variables()
         par = self.father.set_parameters(current_time)
@@ -112,7 +116,7 @@ class Problem(OptiChild):
     # Methods encouraged to override (very basic implementation)
     # ========================================================================
 
-    def init_step(self):
+    def init_step(self, current_time):
         pass
 
     def init_variables(self):
@@ -124,11 +128,14 @@ class Problem(OptiChild):
     def final(self):
         pass
 
+    def initialize(self):
+        pass
+
     # ========================================================================
     # Methods required to override (no general implementation possible)
     # ========================================================================
 
-    def update(self, current_time):
+    def update_vehicles(self, current_time):
         raise NotImplementedError('Please implement this method!')
 
     def stop_criterium(self):
@@ -139,8 +146,8 @@ class FixedTProblem(Problem):
 
     def __init__(self, fleet, environment, options={}, label='problem'):
         Problem.__init__(self, fleet, environment, options, label)
-        T = self.define_parameter('T')
-        t = self.define_parameter('t')
+        self.define_parameter('T')
+        self.define_parameter('t')
 
     def set_parameters(self, current_time):
         parameters = {}
@@ -148,16 +155,14 @@ class FixedTProblem(Problem):
         parameters['t'] = np.round(current_time, 6) % self.knot_time
         return parameters
 
-    def init_step(self):
+    def init_step(self, current_time):
         # transform spline variables
-        if (self.current_time > 0. and
-            np.round(self.current_time, 6) % self.knot_time == 0):
+        if (current_time > 0. and np.round(current_time, 6) % self.knot_time == 0):
             self.father.transform_spline_variables(
                 lambda coeffs, knots, degree: shift_over_knot(coeffs, knots,
                                                               degree, 1))
 
-
-    def update(self, current_time, update_time):
+    def update_vehicles(self, current_time, update_time):
         for vehicle in self.vehicles:
             y_coeffs = vehicle.get_variable('y', solution=True, spline=False)
             """
@@ -181,12 +186,11 @@ class FixedTProblem(Problem):
             vehicle.update(y_coeffs, current_time, update_time,
                            rel_current_time=rel_current_time,
                            time_axis_knots=time_axis_knots)
-        self.environment.update(current_time, update_time)
 
 
 class FreeTProblem(Problem):
 
     def __init__(self, fleet, environment, options={}, label='problem'):
         Problem.__init__(self, fleet, environment, options, label)
-        T = self.define_variable('T')
+        self.define_variable('T')
         raise NotImplementedError('Please implement this class!')

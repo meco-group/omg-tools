@@ -49,7 +49,7 @@ vehicle.set_terminal_pose([2., 2.])
 # We are also changing some (default) options. Options are stored by the
 # attribute vehicle.options.
 # At start: continuity up to degree = 1
-vehicle.options['boundary_smoothness']['initial'] = 1
+vehicle.set_options({'boundary_smoothness': {'initial': 1}})
 # Collision avoidance where we try to keep a distance 0.1m (in a soft way),
 # but distance 0m in a hard way:
 vehicle.set_options({'safety_distance': 0.1})
@@ -63,7 +63,7 @@ vehicle.set_options({'safety_distance': 0.1})
 
 # Now, we create an environment
 # An environment is determined by a room with certain shape
-environment = Environment(room={'shape': Square(2.5)})
+environment = Environment(room={'shape': Square(5.)})
 # Also we can add some obstacles
 # Let's first define a recangular shape
 rectangle = Rectangle(width=3., height=0.2)

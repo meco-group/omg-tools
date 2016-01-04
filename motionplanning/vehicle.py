@@ -8,6 +8,7 @@ from numpy.random import normal
 import numpy as np
 import re
 
+
 class Vehicle(OptiChild):
 
     def __init__(self, n_y, degree, shape, options, **kwargs):
@@ -49,6 +50,10 @@ class Vehicle(OptiChild):
         self.set_default_options()
         self.set_options(options)
 
+        # default y0 & yT
+        self.y0 = np.zeros((self.n_y, self.order+1))
+        self.yT = np.zeros((self.n_y, self.order+1))
+
     # ========================================================================
     # Vehicle options
     # ========================================================================
@@ -63,7 +68,11 @@ class Vehicle(OptiChild):
                                                'terminal': self.degree}
 
     def set_options(self, options):
-        self.options.update(options)
+        if 'boundary_smoothness' in options:
+            self.options['boundary_smoothness'].update(options['boundary_smoothness'])
+        for key in options:
+            if key not in ['boundary_smoothness']:
+                self.options[key] = options[key]
         if self.options['1storder_delay']:
             self.integrate_plant = self._integrate_plant
         else:
@@ -247,7 +256,6 @@ class Vehicle(OptiChild):
             self.path[name] = np.zeros(signal.shape + (1,))
             self.path[name][:, :, 0] = self.get_signal(name, y0)
         self.path['time'] = np.array([0.])
-        # self.plant.set_state(self.get_state(y0))
 
     def set_terminal_condition(self, yT):
         self.yT = yT
@@ -400,6 +408,9 @@ class Vehicle(OptiChild):
                                                      (len(self.basis) -
                                                       2*self.degree)),
                                          self.yT[k, 0]*np.ones(self.degree)]
+        # for k in range(self.n_y):
+        #     variables['y'][:, k] = np.linspace(self.y0[k, 0], self.yT[k, 0], len(self.basis))
+
         return variables
 
     def get_checkpoints(self, y=None):

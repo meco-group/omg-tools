@@ -1,22 +1,26 @@
 import sys
 sys.path.append("/home/ruben/Documents/Work/Programs/motionplanningtoolbox/")
 from motionplanning import *
+import numpy as np
 
+# create fleet
+N = 4
 
-# create vehicle
-vehicle = Holonomic()
+vehicles = [Holonomic() for l in range(N)]
+for veh in vehicles:
+    veh.set_options({'boundary_smoothness': {'initial': 1}})
+    # veh.set_options({'safety_distance': 0.1})
+    # veh.set_options({'1storder_delay': True, 'time_constant': 0.1})
+    # veh.set_input_disturbance(fc=0.01, stdev=0.05*np.ones(2))
 
-# at start only constraints up to 1st derivative
-vehicle.options['boundary_smoothness']['initial'] = 1
-vehicle.set_options({'safety_distance': 0.1})
-# vehicle.set_options({'1storder_delay': True, 'time_constant': 0.1})
-# vehicle.set_input_disturbance(fc = 0.01, stdev = 0.05*np.ones(2))
+fleet = Fleet(vehicles)
+fleet.set_configuration(polyhedron=SymmetricPolyhedron(0.2, N, np.pi/4.))
 
-vehicle.set_initial_pose([-1.5, -1.5])
-vehicle.set_terminal_pose([2., 2.])
+fleet.set_initial_pose([-1.5, -1.5])
+fleet.set_terminal_pose([2., 2.])
 
 # create environment
-environment = Environment(room={'shape': Square(2.5)})
+environment = Environment(room={'shape': Square(5.)})
 rectangle = Rectangle(width=3., height=0.2)
 environment.add_obstacle(Obstacle({'position': [-2.1, -0.5]}, shape=rectangle))
 environment.add_obstacle(Obstacle({'position': [1.7, -0.5]}, shape=rectangle))
@@ -24,8 +28,9 @@ trajectory = {'velocity': np.vstack([[3., -0.15, 0.0], [4., 0., 0.15]])}
 environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
                                   trajectory=trajectory))
 
-# create a point-to-point problem
-problem = Point2point(vehicle, environment)
+# create a formation point-to-point problem
+options = {'codegen': {'jit': False}, 'admm': {'rho': 2.}}
+problem = FormationPoint2point(fleet, environment, options=options)
 problem.init()
 
 # create simulator
