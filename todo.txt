@@ -3,17 +3,12 @@ ADMM
 - multiple knots inside: does this still work?
 
 Toolbox
-+ interaction constraint violation
-+ parameters for interaction constraints (rel formation...)
 ? build only once per vehicle type
-- rendez-vous
-    - questionmark: works, but some bug related to rel position...
-    - platform landing: different n_y per vehicle
 - overlook plots
     - getVehicleTypes?
     - vehicle index?
 - clean up spline_extra
-
+- read ipopt tutorial
 - dual initialisation: first compose correct basis of lambda.
     int_0^T (l(t) * c(t)) = l_cfs^T*c_cfs
     also mu initialisation: dual slackness = l_cfs^T*c_cfs
