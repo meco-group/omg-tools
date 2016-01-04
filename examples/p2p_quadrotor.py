@@ -11,7 +11,7 @@ vehicle.set_options({'safety_distance': 0.1})
 # vehicle.set_input_disturbance(0.01, 0.1*np.ones(2))
 
 # create environment
-environment = Environment(room={'shape': Square(5.)})
+environment = Environment(room={'shape': Square(10.)})
 environment.add_obstacle(Obstacle({'position': [-0.6, -5.4]},
                                   shape=Rectangle(width=0.2, height=12.)))
 

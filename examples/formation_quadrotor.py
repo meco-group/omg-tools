@@ -19,7 +19,7 @@ fleet.set_initial_pose([-4., -4.])
 fleet.set_terminal_pose([4., 4.])
 
 # create environment
-environment = Environment(room={'shape': Square(5.)})
+environment = Environment(room={'shape': Square(10.)})
 environment.add_obstacle(Obstacle({'position': [-0.6, 3.7]},
                                   shape=Rectangle(width=0.2, height=3.)))
 environment.add_obstacle(Obstacle({'position': [-0.6, -5.4]},

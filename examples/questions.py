@@ -20,20 +20,19 @@ vehicles = [Quadrotor(0.2, veh_opt) for l in range(N)]
 fleet = Fleet(vehicles)
 fleet.set_configuration(points=configuration)
 
-initpos = []
+init_pos = []
 Dth = 2*np.pi/N
 Th0 = 6*np.pi/N
 R = 4.
 for l in range(N):
-    initpos.append([R*np.cos(Th0-l*Dth), R*np.sin(Th0-l*Dth)])
-fleet.set_initial_pose(initpos)
-fleet.set_terminal_pose([0., 0.])
+    init_pos.append([R*np.cos(Th0-l*Dth), R*np.sin(Th0-l*Dth)])
+fleet.set_initial_pose(init_pos)
 
 # create environment
-environment = Environment(room={'shape': Square(5.)})
+environment = Environment(room={'shape': Square(10.)})
 
 # create a formation point-to-point problem
-options = {'codegen': {'jit': False}, 'admm': {'rho': 0.5}}
+options = {'codegen': {'jit': False}, 'admm': {'rho': 3.}}
 problem = RendezVous(fleet, environment, options=options)
 problem.init()
 
