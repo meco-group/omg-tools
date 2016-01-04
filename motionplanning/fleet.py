@@ -61,16 +61,6 @@ class Fleet:
     def get_rel_pos(self, vehicle):
         return self.rel_pos[vehicle]
 
-    def getVehicleTypes(self):
-        vehicle_types = {}
-        for l in range(self.N):
-            typename = self.vehicles[l].__class__.__name__
-            if typename in vehicle_types:
-                vehicle_types[typename].append(l)
-            else:
-                vehicle_types[typename] = [l]
-        return vehicle_types
-
     def set_initial_pose(self, pose):
         if isinstance(pose, list) and len(pose) == self.N:
             poses = pose
