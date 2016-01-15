@@ -8,6 +8,11 @@ Toolbox
 - dual initialisation: first compose correct basis of lambda.
     int_0^T (l(t) * c(t)) = l_cfs^T*c_cfs
     also mu initialisation: dual slackness = l_cfs^T*c_cfs
+?? if update_time = 0., needs 3 iterations iso 1 (when no tf is done with tol=1e-3, should check with tol>1e-3) ??
+?? dual init without tf performs better than with tf ?? maybe there is a mistake in the tf...
+?? how is sign of multipliers defined ? it is not consistent
+(not always pos with neg constr)
+?? sometimes dual infeasibility is same as previous iteration, sometimes not.
 
 Notes:
 * All SX symbol names are unique!
