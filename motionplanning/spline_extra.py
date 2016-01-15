@@ -5,6 +5,9 @@ import numpy as np
 
 
 def evalspline(s, x):
+    # Evaluate spline with symbolic variable
+    # This is possible not the best way to implement this. The conditional node
+    # from casadi should be considered
     Bl = s.basis
     coeffs = s.coeffs
     k = Bl.knots
@@ -32,6 +35,7 @@ def evalspline(s, x):
 
 
 def running_integral(spline):
+    # Compute running integral from spline
     basis = spline.basis
     coeffs = spline.coeffs
     knots = basis.knots
@@ -49,6 +53,7 @@ def running_integral(spline):
 
 
 def definite_integral(spline, a, b):
+    # Compute definite integral of spline in interval [a, b]
     spline_int = running_integral(spline)
     int_0a = evalspline(spline_int, a)
     int_0b = evalspline(spline_int, b)
@@ -56,23 +61,30 @@ def definite_integral(spline, a, b):
     return int_ab
 
 
-def shift_spline(coeffs, update_time, target_time, basis):
+def shift_spline(coeffs, t_shift, basis):
+    # Extract spline piece in [t_shift, T] and express it in an equidistant
+    # basis. This is not exact as de knot positions change.
     n_knots = len(basis) - basis.degree + 1
-    knots_ = np.r_[round(update_time/target_time, 5)*np.ones(basis.degree),
-                   np.linspace(round(update_time/target_time, 5), 1., n_knots),
-                   np.ones(basis.degree)]
-    B_ = BSplineBasis(knots_, basis.degree)
-    T_tf = B_.transform(basis)
+    knots = basis.knots
+    degree = basis.degree
+    knots2 = np.r_[t_shift*np.ones(degree),
+                   np.linspace(t_shift, knots[-1], n_knots),
+                   knots[-1]*np.ones(degree)]
+
+    basis2 = BSplineBasis(knots2, degree)
+    T_tf = basis2.transform(basis)
     return T_tf.dot(coeffs)
 
 
 def shift_knot1_fwd(cfs, knots, degree, t_shift):
+    # Extract spline piece in [t_shift, T] and express it in a basis composed
+    # of the original future knots and shift first knots. This is exact.
     if isinstance(cfs, list):
         return [shift_knot1_fwd(c_i, knots, degree, t_shift) for c_i in cfs]
     elif isinstance(cfs, (MX, SX)):
         return _shift_knot1_fwd_sym(cfs, knots, degree, t_shift)
     else:
-        return _shift_knot1_fwd_num(cfs, knots, degree, t_shift)
+        return _shift_knot1_fwd_num2(cfs, knots, degree, t_shift)
 
 
 def _shift_knot1_fwd_sym(cfs, knots, degree, t_shift):
@@ -115,7 +127,7 @@ def _shift_knot1_fwd_sym(cfs, knots, degree, t_shift):
 def _shift_knot1_fwd_num(coeffs, knots, degree, t_shift):
     if t_shift > (knots[degree+1]-knots[degree]):
         raise ValueError('t_shift is bigger than knot distance!')
-    coeffs = np.array(coeffs)
+    coeffs = np.c_[coeffs]
     knots2 = np.copy(knots)
     knots2[:degree+1] = (knots[0]+float(t_shift))*np.ones(degree+1)
     coeffs2 = np.copy(coeffs)
@@ -137,9 +149,30 @@ def _shift_knot1_fwd_num(coeffs, knots, degree, t_shift):
     return coeffs2
 
 
+# def _shift_knot1_fwd_num2(coeffs, knots, degree, t_shift):
+#     if t_shift > (knots[degree+1]-knots[degree]):
+#         raise ValueError('t_shift is bigger than knot distance!')
+#     basis1 = BSplineBasis(knots, degree)
+#     knots2 = np.copy(knots)
+#     knots2[:degree+1] = (knots[0]+float(t_shift))*np.ones(degree+1)
+#     basis2 = BSplineBasis(knots2, degree)
+#     T_tf = basis2.transform(basis1)
+#     return T_tf.dot(coeffs)
+
+def _shift_knot1_fwd_num2(coeffs, knots, degree, t_shift):
+    if t_shift > (knots[degree+1]-knots[degree]):
+        raise ValueError('t_shift is bigger than knot distance!')
+    basis1 = BSplineBasis(knots, degree)
+    knots2 = np.copy(knots)
+    knots2[:degree+1] = (knots[0]+float(t_shift))*np.ones(degree+1)
+    basis2 = BSplineBasis(knots2, degree)
+    T_tf = basis2.transform(basis1)
+    return T_tf.dot(coeffs)
+
 def shift_knot1_bwd(cfs, knots, degree, t_shift):
-    # knots is the 'original' knot sequence: the one that you want to arrive
-    # after performing the backward shift
+    # This is the reverse transformation of shift_knot1_fwd. Given your original
+    # knot sequence ('knots') and transformed coefficients ('cfs'), give original
+    # coefficients before the time shift.
     if isinstance(cfs, list):
         return [shift_knot1_bwd(c_i, knots, degree, t_shift) for c_i in cfs]
     elif isinstance(cfs, (MX, SX)):
@@ -197,12 +230,12 @@ def _shift_knot1_bwd_sym(cfs, knots, degree, t_shift):
 
 
 def _shift_knot1_bwd_num(coeffs, knots, degree, t_shift):
-    coeffs = np.array(coeffs)
+    coeffs = np.c_[coeffs]
     t_shift = float(t_shift)
-    knots1 = np.copy(knots1)
+    knots1 = np.copy(knots)
     knots1[:degree+1] = (knots[0]+t_shift)*np.ones(degree+1)
     coeffs2 = np.copy(coeffs)
-    knots2 = np.copy(knots2)
+    knots2 = np.copy(knots)
     A = np.identity(degree+1)
     A0 = np.zeros((degree+1, degree+1))
     A0[0, 0] = 1.
@@ -235,11 +268,22 @@ def _shift_knot1_bwd_num(coeffs, knots, degree, t_shift):
     return coeffs2
 
 
-def shift_over_knot(coeffs, knots, degree, N_shift=1):
+# def _shift_knot1_bwd_num2(coeffs, knots, degree, t_shift):
+#     basis1 = BSplineBasis(knots, degree)
+#     knots2 = np.copy(knots)
+#     knots2[:degree+1] = (knots[0]+float(t_shift))*np.ones(degree+1)
+#     basis2 = BSplineBasis(knots2, degree)
+#     T_tf = basis1.transform(basis2)
+#     return T_tf.dot(coeffs)
+
+
+def shift_over_knot_old(coeffs, knots, degree, N_shift=1):
+    # Move horizon to [knot[N_shift], T+knot[N_shift]]. The spline is extrapolated
+    # in the interval [T, T+knot[N_shift]]
     # Assumption: spline has zero derivatives at the end!
     if isinstance(coeffs, list):
         return [shift_over_knot(c_i, knots, degree, N_shift) for c_i in coeffs]
-    coeffs = np.array(coeffs)
+    coeffs = np.c_[coeffs]
     coeffs2 = np.zeros(coeffs.shape)
     coeffs2[:-1, :] = coeffs[1:, :]
     coeffs2[-1, :] = coeffs2[-2, :]
@@ -263,3 +307,108 @@ def shift_over_knot(coeffs, knots, degree, N_shift=1):
                               (knots, coeffs[:, n].ravel(), degree), der=i)
             coeffs2[:degree-1, n] = np.linalg.solve(A0, b0).ravel()
     return coeffs2
+
+
+def shift_over_knot(coeffs, knots, degree, N_shift=2):
+    # No assumption on zero derivatives at end
+    if isinstance(coeffs, list):
+        return [shift_over_knot_old(c_i, knots, degree, N_shift)
+                for c_i in coeffs]
+    coeffs = np.c_[coeffs]
+    L = coeffs.shape[0]
+    A = np.identity(L)
+    A0 = np.zeros((degree, L))
+    A0[0, 0] = 1.
+    for i in range(1, degree+1):
+        A_tmp = np.zeros((L-i, L-i+1))
+        for j in range(L-i):
+            A_tmp[j, j] = -(degree+1-i)/(knots[j+degree+1] - knots[j+i])
+            A_tmp[j, j+1] = (degree+1-i)/(knots[j+degree+1] - knots[j+i])
+        A = A_tmp.dot(A)
+        if i < degree:
+            A0[i, :] = A[0, :]
+    A = np.vstack((A, A0))
+
+    coeffs2 = np.zeros(coeffs.shape)
+    for n in range(coeffs.shape[1]):
+        coeffs_n = coeffs[:, n]
+        dcoeffs = A.dot(coeffs_n)
+        b = np.zeros((L-degree, 1))
+        b0 = np.zeros((degree, 1))
+        for j in range(N_shift):
+            b[j] = dcoeffs[N_shift]
+        for j in range(N_shift, L-degree-1):
+            b[j] = dcoeffs[j+1]
+        b[L-degree-1] = b[L-degree-2]
+        for i in range(degree):
+            b0[i] = splev(knots[degree+N_shift],
+                          (knots, coeffs_n.ravel(), degree), der=i)
+        b = np.vstack((b, b0))
+        coeffs2_n = np.linalg.solve(A, b).ravel()
+
+        # This is not necessary if der=0 constraints are added in upd x and z.
+        # But is included for certainty (wrt numerical effects)
+        # coeffs2_n[-1] = splev(knots[-1],
+        #                       (knots, coeffs_n.ravel(), degree), der=0)
+        # for i in range(degree+1):
+        #     coeffs2_n[-2-i] = coeffs2_n[-1]
+
+        coeffs2[:, n] = coeffs2_n
+    return coeffs2
+
+def integral_sqbasis(basis):
+    # Compute integral of squared bases.
+    basis_prod = basis*basis
+    pairs, S = basis.pairs(basis)
+    b_self = basis(basis_prod._x)
+    basis_product = b_self[:, pairs[0]].multiply(b_self[:, pairs[1]])
+    T = basis_prod.transform(lambda y: basis_product.toarray()[y, :])
+
+    knots = basis_prod.knots
+    d = basis_prod.degree
+    K = np.array((knots[d + 1:] - knots[:-(d + 1)]) / (d + 1))
+
+    L = len(basis)
+    B = np.zeros((L, L))
+    degree = basis.degree
+    k = 0
+    for i in range(L):
+        c1 = np.zeros(L)
+        c1[i] = 1
+        for j in range(i, i+degree+1-k):
+            c2 = np.zeros(L)
+            c2[j] = 1
+            coeffs_product = (c1[pairs[0].tolist()]*c2[pairs[1].tolist()])
+            c_prod = T.dot(coeffs_product)
+            bb = K.T.dot(c_prod)
+            B[i, j] = bb
+            B[j, i] = bb
+        if i >= L-degree-1:
+            k += 1
+    return B
+
+def def_integral_sqbasisMX(basis, a, b):
+    # Compute integral of squared bases.
+    L = len(basis)
+    degree = basis.degree
+    if isinstance(a, MX) or isinstance(b, MX):
+        B = MX.zeros(L, L)
+    elif isinstance(a, SX) or isinstance(b, SX):
+        B = SX.zeros(L, L)
+    else:
+        B = np.zeros((L, L))
+    k = 0
+    for i in range(L):
+        c1 = np.zeros(L)
+        c1[i] = 1
+        for j in range(i, i+degree+1-k):
+            c2 = np.zeros(L)
+            c2[j] = 1
+            s1 = BSpline(basis, c1)
+            s2 = BSpline(basis, c2)
+            bb = definite_integral((s1*s2), a, b)
+            B[i, j] = bb
+            B[j, i] = bb
+        if i >= L-degree-1:
+            k += 1
+    return B
