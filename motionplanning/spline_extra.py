@@ -3,7 +3,6 @@ from scipy.interpolate import splev
 from casadi import SX, MX, mul, solve, SXFunction
 import numpy as np
 
-
 def evalspline(s, x):
     # Evaluate spline with symbolic variable
     # This is possible not the best way to implement this. The conditional node
@@ -70,291 +69,133 @@ def shift_spline(coeffs, t_shift, basis):
     knots2 = np.r_[t_shift*np.ones(degree),
                    np.linspace(t_shift, knots[-1], n_knots),
                    knots[-1]*np.ones(degree)]
-
     basis2 = BSplineBasis(knots2, degree)
     T_tf = basis2.transform(basis)
     return T_tf.dot(coeffs)
 
 
-def shift_knot1_fwd(cfs, knots, degree, t_shift):
-    # Extract spline piece in [t_shift, T] and express it in a basis composed
-    # of the original future knots and shift first knots. This is exact.
-    if isinstance(cfs, list):
-        return [shift_knot1_fwd(c_i, knots, degree, t_shift) for c_i in cfs]
-    elif isinstance(cfs, (MX, SX)):
-        return _shift_knot1_fwd_sym(cfs, knots, degree, t_shift)
+def extrapolate(coeffs, t_extra, basis):
+    T = extrapolate_T(basis, t_extra)
+    return T.dot(coeffs)
+
+
+def extrapolate_T(basis, t_extra):
+    # Create transformation matrix that extrapolates the spline over an extra
+    # knot interval of t_extra long.
+    knots = basis.knots
+    deg = basis.degree
+    N = len(basis)
+    knots2 = np.r_[knots[:-deg], (knots[-1]+t_extra)*np.ones(deg+1)]
+    basis2 = BSplineBasis(knots2, deg)
+    B = basis.eval_basis(knots[-2*deg:-deg]).toarray()[:, -deg:]
+    A = basis2.eval_basis(knots[-2*deg:-deg]).toarray()[:, -deg-1:-1]
+    _T = np.linalg.solve(A, B)
+    _T[abs(_T) < 1e-10] = 0.
+    T = np.zeros((N+1, N))
+    T[:N-deg,:N-deg] = np.eye(N-deg)
+    T[N-deg:-1, N-deg:] = _T
+    # last row of T such that degree th derivative is continuous
+    a1, a2 = np.identity(deg+1), np.identity(deg+1)
+    for i in range(1, deg+1):
+        a1_tmp = np.zeros((deg+1-i, deg+1-i+1))
+        a2_tmp = np.zeros((deg+1-i, deg+1-i+1))
+        for j in range(deg+1-i):
+            a1_tmp[j, j] = -(deg+1-i)/(knots[j+N] - knots[j+N-deg-1+i])
+            a1_tmp[j, j+1] = (deg+1-i)/(knots[j+N] - knots[j+N-deg-1+i])
+            a2_tmp[j, j] = -(deg+1-i)/(knots2[j+N+1] - knots2[j+N-deg+i])
+            a2_tmp[j, j+1] = (deg+1-i)/(knots2[j+N+1] - knots2[j+N-deg+i])
+        a1, a2 = a1_tmp.dot(a1), a2_tmp.dot(a2)
+    T[-1, -deg-1] = a1[:, 0]/a2[:, -1]
+    T[-1, -deg:] = (a1[:, 1:]-a2[:, :-1].dot(_T))/a2[:, -1]
+    return T
+
+
+def shift_over_knot(coeffs, basis):
+    T = shiftoverknot_T(basis)
+    return T.dot(coeffs)
+
+
+def shiftoverknot_T(basis):
+    # Create transformation matrix that moves the horizon to
+    # [knot[degree+1], T+knots[-1]-knots[-deg-2]]. The spline is extrapolated
+    # in the interval the spline over an extra knot interval
+    # [T, T+knot[N_shift]] of t_extra long. Move horizon to
+    # [knot[N_shift], T+knot[N_shift]]. The spline is extrapolated in last
+    # interval.
+    knots = basis.knots
+    deg = basis.degree
+    t_shift = knots[deg+1] - knots[0]
+    T = np.diag(np.ones(len(basis)-1), 1)
+    _T = np.eye(deg+1)
+    for k in range(deg):
+        _t = np.zeros((deg+1+k+1, deg+1+k))
+        for j in range(deg+1+k+1):
+            if j >= deg+1:
+                _t[j, j-1] = 1.
+            elif j <= k:
+                _t[j, j] = 1.
+            else:
+                _t[j, j-1] = (knots[j+deg-k]-t_shift)/(knots[j+deg-k]-knots[j])
+                _t[j, j] = (t_shift-knots[j])/(knots[j+deg-k]-knots[j])
+        _T = _t.dot(_T)
+    T[:deg, :deg+1] = _T[deg+1:, :]
+    T_extr = extrapolate_T(basis, knots[-1] - knots[-deg-2])
+    T[-deg-1:, -deg-1:] = T_extr[-deg-1:, -deg-1:]
+    return T
+
+
+def shift_knot1_fwd(cfs, basis, t_shift):
+    T = shiftfirstknot_T(basis, t_shift)
+    if isinstance(t_shift, (SX, MX)):
+        return mul(T, cfs)
     else:
-        return _shift_knot1_fwd_num2(cfs, knots, degree, t_shift)
+        return T.dot(cfs)
 
 
-def _shift_knot1_fwd_sym(cfs, knots, degree, t_shift):
-    coeffs = SX.sym('coeffs', cfs.shape)
-    t0 = SX.sym('t_shift')
-    knots2 = SX.zeros(len(knots), 1)
-    coeffs2 = SX.zeros(coeffs.shape)
-    for k in range(len(knots)):
-        if k in range(degree+1):
-            knots2[k] = knots[0]+t0
-        else:
-            knots2[k] = knots[k]
-    for n in range(coeffs.size2()):
-        for k in range(coeffs.size1()):
-            coeffs2[k, n] = coeffs[k, n]
-    A = SX.eye(degree)
-    A0 = SX.zeros((degree, degree))
-    A0[0, 0] = 1.
-    for i in range(1, degree):
-        A_tmp = SX.zeros((degree-i, degree-i+1))
-        for j in range(degree-i):
-            A_tmp[j, j] = -(degree+1-i)/(knots2[j+degree+1] - knots2[j+i])
-            A_tmp[j, j+1] = (degree+1-i)/(knots2[j+degree+1] - knots2[j+i])
-        A = mul(A_tmp, A)
-        A0[i, :] = A[0, :]
-    basis = BSplineBasis(knots, degree)
-    for n in range(coeffs.size2()):
-        spline = BSpline(basis, coeffs[:, n])
-        b0 = SX.zeros((degree, 1))
-        b0[0] = evalspline(spline, knots[0]+t0)
-        for i in range(1, degree):
-            ds = spline.derivative(i)
-            ds.coeffs = SX(ds.coeffs)
-            b0[i] = evalspline(ds, knots[0]+t0)
-        coeffs2[:degree, n] = solve(A0, b0)
-    fun = SXFunction('fun', [coeffs, t0], [coeffs2])
-    return fun([cfs, t_shift])[0]
-
-
-def _shift_knot1_fwd_num(coeffs, knots, degree, t_shift):
-    if t_shift > (knots[degree+1]-knots[degree]):
-        raise ValueError('t_shift is bigger than knot distance!')
-    coeffs = np.c_[coeffs]
-    knots2 = np.copy(knots)
-    knots2[:degree+1] = (knots[0]+float(t_shift))*np.ones(degree+1)
-    coeffs2 = np.copy(coeffs)
-    A = np.identity(degree)
-    A0 = np.zeros((degree, degree))
-    A0[0, 0] = 1.
-    for i in range(1, degree):
-        A_tmp = np.zeros((degree-i, degree-i+1))
-        for j in range(degree-i):
-            A_tmp[j, j] = -(degree+1-i)/(knots2[j+degree+1] - knots2[j+i])
-            A_tmp[j, j+1] = (degree+1-i)/(knots2[j+degree+1] - knots2[j+i])
-        A = A_tmp.dot(A)
-        A0[i, :] = A[0, :]
-    for n in range(coeffs.shape[1]):
-        b0 = np.zeros((degree, 1))
-        for i in range(degree):
-            b0[i] = splev(knots2[0], (knots, coeffs[:, n], degree), der=i)
-        coeffs2[:degree, n] = np.linalg.solve(A0, b0).ravel()
-    return coeffs2
-
-
-# def _shift_knot1_fwd_num2(coeffs, knots, degree, t_shift):
-#     if t_shift > (knots[degree+1]-knots[degree]):
-#         raise ValueError('t_shift is bigger than knot distance!')
-#     basis1 = BSplineBasis(knots, degree)
-#     knots2 = np.copy(knots)
-#     knots2[:degree+1] = (knots[0]+float(t_shift))*np.ones(degree+1)
-#     basis2 = BSplineBasis(knots2, degree)
-#     T_tf = basis2.transform(basis1)
-#     return T_tf.dot(coeffs)
-
-def _shift_knot1_fwd_num2(coeffs, knots, degree, t_shift):
-    if t_shift > (knots[degree+1]-knots[degree]):
-        raise ValueError('t_shift is bigger than knot distance!')
-    basis1 = BSplineBasis(knots, degree)
-    knots2 = np.copy(knots)
-    knots2[:degree+1] = (knots[0]+float(t_shift))*np.ones(degree+1)
-    basis2 = BSplineBasis(knots2, degree)
-    T_tf = basis2.transform(basis1)
-    return T_tf.dot(coeffs)
-
-def shift_knot1_bwd(cfs, knots, degree, t_shift):
-    # This is the reverse transformation of shift_knot1_fwd. Given your original
-    # knot sequence ('knots') and transformed coefficients ('cfs'), give original
-    # coefficients before the time shift.
-    if isinstance(cfs, list):
-        return [shift_knot1_bwd(c_i, knots, degree, t_shift) for c_i in cfs]
-    elif isinstance(cfs, (MX, SX)):
-        return _shift_knot1_bwd_sym(cfs, knots, degree, t_shift)
+def shift_knot1_bwd(cfs, basis, t_shift):
+    T, Tinv = shiftfirstknot_T(basis, t_shift, inverse=True)
+    if isinstance(t_shift, (SX, MX)):
+        return mul(Tinv, cfs)
     else:
-        return _shift_knot1_bwd_num(cfs, knots, degree, t_shift)
+        return Tinv.dot(cfs)
 
 
-def _shift_knot1_bwd_sym(cfs, knots, degree, t_shift):
-    coeffs = SX.sym('coeffs', cfs.shape)
-    t0 = SX.sym('t_shift')
+def shiftfirstknot_T(basis, t_shift, inverse=False):
+    # Create transformation matrix that shift the first (degree+1) knots over
+    # t_shift. With inverse = True, the inverse transformation is also computed.
+    knots, deg = basis.knots, basis.degree
+    N = len(basis)
+    if isinstance(t_shift, SX):
+        typ, sym = SX, True
+    elif isinstance(t_shift, MX):
+        typ, sym = MX, True
+    else:
+        typ, sym = np, False
+    _T = typ.eye(deg+1)
+    for k in range(deg+1):
+        _t = typ.zeros((deg+1+k+1, deg+1+k))
+        for j in range(deg+1+k+1):
+            if j >= deg+1:
+                _t[j, j-1] = 1.
+            elif j <= k:
+                _t[j, j] = 1.
+            else:
+                _t[j, j-1] = (knots[j+deg-k]-t_shift)/(knots[j+deg-k]-knots[j])
+                _t[j, j] = (t_shift-knots[j])/(knots[j+deg-k]-knots[j])
+        _T = mul(_t, _T) if sym else _t.dot(_T)
+    T = typ.eye(N)
+    T[:deg+1, :deg+1] = _T[deg+1:, :]
+    if inverse:  # T is upper triangular: easy inverse
+        Tinv = typ.eye(len(basis))
+        for i in range(deg, -1, -1):
+            Tinv[i, i] = 1./T[i, i]
+            for j in range(deg, i, -1):
+                Tinv[i, j] = (-1./T[i, i])*sum([T[i, k]*Tinv[k, j]
+                                                for k in range(i+1, deg+2)])
+        return T, Tinv
+    else:
+        return T
 
-    knots1 = SX.zeros(len(knots), 1)
-    for k in range(knots1.size1()):
-        if k in range(degree+1):
-            knots1[k] = knots[0]+t0
-        else:
-            knots1[k] = knots[k]
-    knots2 = knots
-    coeffs2 = SX.zeros(coeffs.shape)
-    for n in range(coeffs.size2()):
-        for k in range(coeffs.size1()):
-            coeffs2[k, n] = coeffs[k, n]
-    A = SX.eye(degree+1)
-    A0 = SX.zeros((degree+1, degree+1))
-    A0[0, 0] = 1.
-    for i in range(1, degree+1):
-        A_tmp = SX.zeros((degree-i+1, degree-i+2))
-        for j in range(degree-i+1):
-            A_tmp[j, j] = -(degree+1-i)/(knots2[j+degree+1] - knots2[j+i])
-            A_tmp[j, j+1] = (degree+1-i)/(knots2[j+degree+1] - knots2[j+i])
-        A = mul(A_tmp, A)
-        A0[i, :] = A[0, :]
-    b0_ = SX.zeros((degree+1, coeffs.size2()))
-    for n in range(coeffs.size2()):
-        b0_[0, n] = coeffs[0, n]
-    A_ = SX.eye(degree+1)
-    for i in range(1, degree+1):
-        A_tmp = SX.zeros((degree-i+1, degree-i+2))
-        for j in range(degree-i+1):
-            A_tmp[j, j] = -(degree+1-i)/(knots1[j+degree+1] - knots1[j+i])
-            A_tmp[j, j+1] = (degree+1-i)/(knots1[j+degree+1] - knots1[j+i])
-        A_ = mul(A_tmp, A_)
-        for n in range(coeffs.size2()):
-            b0_[i, n] = mul(A_[0, :], coeffs[:degree+1, n])
-    for n in range(coeffs.size2()):
-        b0 = SX.zeros((degree+1, 1))
-        for i in range(degree, -1, -1):
-            b0[i] = b0_[i, n]
-            for j in range(i+1, degree+1):
-                b0[i] -= b0[j]*(t0**(j-i))/np.math.factorial(j-i)
-        coeffs2[:degree+1, n] = solve(A0, b0)
-    fun = SXFunction('fun', [coeffs, t0], [coeffs2])
-    return fun([cfs, t_shift])[0]
-
-
-def _shift_knot1_bwd_num(coeffs, knots, degree, t_shift):
-    coeffs = np.c_[coeffs]
-    t_shift = float(t_shift)
-    knots1 = np.copy(knots)
-    knots1[:degree+1] = (knots[0]+t_shift)*np.ones(degree+1)
-    coeffs2 = np.copy(coeffs)
-    knots2 = np.copy(knots)
-    A = np.identity(degree+1)
-    A0 = np.zeros((degree+1, degree+1))
-    A0[0, 0] = 1.
-    for i in range(1, degree+1):
-        A_tmp = np.zeros((degree-i+1, degree-i+2))
-        for j in range(degree-i+1):
-            A_tmp[j, j] = -(degree+1-i)/(knots2[j+degree+1] - knots2[j+i])
-            A_tmp[j, j+1] = (degree+1-i)/(knots2[j+degree+1] - knots2[j+i])
-        A = A_tmp.dot(A)
-        A0[i, :] = A[0, :]
-    b0_ = np.zeros((degree+1, coeffs.shape[1]))
-    for n in range(coeffs.shape[1]):
-        b0_[0, n] = coeffs[0, n]
-    A_ = np.identity(degree+1)
-    for i in range(1, degree+1):
-        A_tmp = np.zeros((degree-i+1, degree-i+2))
-        for j in range(degree-i+1):
-            A_tmp[j, j] = -(degree+1-i)/(knots1[j+degree+1] - knots1[j+i])
-            A_tmp[j, j+1] = (degree+1-i)/(knots1[j+degree+1] - knots1[j+i])
-        A_ = A_tmp.dot(A_)
-        for n in range(coeffs.shape[1]):
-            b0_[i, n] = A_[0, :].dot(coeffs[:degree+1, n])
-    for n in range(coeffs.shape[1]):
-        b0 = np.zeros((degree+1, 1))
-        for i in range(degree, -1, -1):
-            b0[i] = b0_[i, n]
-            for j in range(i+1, degree+1):
-                b0[i] -= b0[j]*(t_shift**(j-i))/np.math.factorial(j-i)
-        coeffs2[:degree+1, n] = np.linalg.solve(A0, b0).ravel()
-    return coeffs2
-
-
-# def _shift_knot1_bwd_num2(coeffs, knots, degree, t_shift):
-#     basis1 = BSplineBasis(knots, degree)
-#     knots2 = np.copy(knots)
-#     knots2[:degree+1] = (knots[0]+float(t_shift))*np.ones(degree+1)
-#     basis2 = BSplineBasis(knots2, degree)
-#     T_tf = basis1.transform(basis2)
-#     return T_tf.dot(coeffs)
-
-
-def shift_over_knot_old(coeffs, knots, degree, N_shift=1):
-    # Move horizon to [knot[N_shift], T+knot[N_shift]]. The spline is extrapolated
-    # in the interval [T, T+knot[N_shift]]
-    # Assumption: spline has zero derivatives at the end!
-    if isinstance(coeffs, list):
-        return [shift_over_knot(c_i, knots, degree, N_shift) for c_i in coeffs]
-    coeffs = np.c_[coeffs]
-    coeffs2 = np.zeros(coeffs.shape)
-    coeffs2[:-1, :] = coeffs[1:, :]
-    coeffs2[-1, :] = coeffs2[-2, :]
-    for i in range(degree+1):
-        coeffs2[-2-i, :] = coeffs2[-1, :]
-    if degree > 1:
-        A = np.identity(degree-1)
-        A0 = np.zeros((degree-1, degree-1))
-        A0[0, 0] = 1.
-        for i in range(1, degree-1):
-            A_tmp = np.zeros((degree-i-1, degree-i))
-            for j in range(degree-i-1):
-                A_tmp[j, j] = -(degree+1-i)/(knots[j+degree+1] - knots[j+i])
-                A_tmp[j, j+1] = (degree+1-i)/(knots[j+degree+1] - knots[j+i])
-            A = A_tmp.dot(A)
-            A0[i, :] = A[0, :]
-        for n in range(coeffs.shape[1]):
-            b0 = np.zeros((degree-1, 1))
-            for i in range(degree-1):
-                b0[i] = splev(knots[degree+N_shift],
-                              (knots, coeffs[:, n].ravel(), degree), der=i)
-            coeffs2[:degree-1, n] = np.linalg.solve(A0, b0).ravel()
-    return coeffs2
-
-
-def shift_over_knot(coeffs, knots, degree, N_shift=2):
-    # No assumption on zero derivatives at end
-    if isinstance(coeffs, list):
-        return [shift_over_knot_old(c_i, knots, degree, N_shift)
-                for c_i in coeffs]
-    coeffs = np.c_[coeffs]
-    L = coeffs.shape[0]
-    A = np.identity(L)
-    A0 = np.zeros((degree, L))
-    A0[0, 0] = 1.
-    for i in range(1, degree+1):
-        A_tmp = np.zeros((L-i, L-i+1))
-        for j in range(L-i):
-            A_tmp[j, j] = -(degree+1-i)/(knots[j+degree+1] - knots[j+i])
-            A_tmp[j, j+1] = (degree+1-i)/(knots[j+degree+1] - knots[j+i])
-        A = A_tmp.dot(A)
-        if i < degree:
-            A0[i, :] = A[0, :]
-    A = np.vstack((A, A0))
-
-    coeffs2 = np.zeros(coeffs.shape)
-    for n in range(coeffs.shape[1]):
-        coeffs_n = coeffs[:, n]
-        dcoeffs = A.dot(coeffs_n)
-        b = np.zeros((L-degree, 1))
-        b0 = np.zeros((degree, 1))
-        for j in range(N_shift):
-            b[j] = dcoeffs[N_shift]
-        for j in range(N_shift, L-degree-1):
-            b[j] = dcoeffs[j+1]
-        b[L-degree-1] = b[L-degree-2]
-        for i in range(degree):
-            b0[i] = splev(knots[degree+N_shift],
-                          (knots, coeffs_n.ravel(), degree), der=i)
-        b = np.vstack((b, b0))
-        coeffs2_n = np.linalg.solve(A, b).ravel()
-
-        # This is not necessary if der=0 constraints are added in upd x and z.
-        # But is included for certainty (wrt numerical effects)
-        # coeffs2_n[-1] = splev(knots[-1],
-        #                       (knots, coeffs_n.ravel(), degree), der=0)
-        # for i in range(degree+1):
-        #     coeffs2_n[-2-i] = coeffs2_n[-1]
-
-        coeffs2[:, n] = coeffs2_n
-    return coeffs2
 
 def integral_sqbasis(basis):
     # Compute integral of squared bases.
@@ -386,6 +227,7 @@ def integral_sqbasis(basis):
         if i >= L-degree-1:
             k += 1
     return B
+
 
 def def_integral_sqbasisMX(basis, a, b):
     # Compute integral of squared bases.
