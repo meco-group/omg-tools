@@ -33,7 +33,8 @@ class Fleet:
         self.nghb_list = {}
         for l, vehicle in enumerate(self.vehicles):
             if self.interconnection == 'circular':
-                nghb_ind = [(self.N+l+1) % self.N, (self.N+l-1) % self.N]
+                nghb_ind = [(self.N + l + 1) %
+                            self.N, (self.N + l - 1) % self.N]
             if self.interconnection == 'full':
                 nghb_ind = [k for k in range(self.N) if k != l]
             self.nghb_list[vehicle] = [self.vehicles[ind] for ind in nghb_ind]
@@ -65,7 +66,7 @@ class Fleet:
         if isinstance(pose, list) and len(pose) == self.N:
             poses = pose
         else:
-            poses = [pose+self.configuration[veh] for veh in self.vehicles]
+            poses = [pose + self.configuration[veh] for veh in self.vehicles]
         for l, veh in enumerate(self.vehicles):
             veh.set_initial_pose(poses[l])
 
@@ -73,6 +74,6 @@ class Fleet:
         if isinstance(pose, list) and len(pose) == self.N:
             poses = pose
         else:
-            poses = [pose+self.configuration[veh] for veh in self.vehicles]
+            poses = [pose + self.configuration[veh] for veh in self.vehicles]
         for l, veh in enumerate(self.vehicles):
             veh.set_terminal_pose(poses[l])
