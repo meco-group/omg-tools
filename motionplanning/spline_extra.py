@@ -1,7 +1,7 @@
 from spline import BSpline, BSplineBasis
-from scipy.interpolate import splev
-from casadi import SX, MX, mul, solve, SXFunction
+from casadi import SX, MX, mul
 import numpy as np
+
 
 def evalspline(s, x):
     # Evaluate spline with symbolic variable
