@@ -44,7 +44,7 @@ class OptiFather:
         objective = self.construct_objective(variables, parameters)
         if build is None:
             problem, buildtime = self.create_nlp(variables, parameters,
-                                             objective, constraints, options)
+                                            objective, constraints, options)
         else:
             problem = build
             buildtime = 0.
@@ -103,6 +103,7 @@ class OptiFather:
                 expression = self._substitute_symbols(
                     constraint[0], variables, parameters)
                 entries.append(entry(child._add_label(name), expr=expression))
+        self._con_struct = struct(entries)
         constraints = struct_MX(entries)
         self._lb, self._ub = constraints(0), constraints(0)
         self._constraint_shutdown = {}
@@ -209,6 +210,7 @@ class OptiFather:
             for name, v in var.items():
                 variables[label, name] = v
         self._var_result = variables
+        self._dual_var_result = self._con_struct(0.)
 
     def set_variables(self, variables):
         self._var_result = self._var_struct(variables)
@@ -246,16 +248,53 @@ class OptiFather:
                                       self._var_result, self._par_result)
 
     # ========================================================================
-    # Variable manipulation
+    # Spline tranformations
     # ========================================================================
 
-    def transform_spline_variables(self, transformation):
+    def init_transformations(self, init_primal_transform, init_dual_transform):
+        # primal
+        _init_tf = {}
         for label, child in self.children.items():
-            for name, basis in child._splines.items():
+            for name, spl in child._splines_prim.items():
                 if name in child._variables:
-                    self._var_result[label, name] = transformation(
-                        self._var_result[label, name],
-                        basis.knots, basis.degree)
+                    basis = spl['basis']
+                    if basis not in _init_tf:
+                        _init_tf[basis] = init_primal_transform(basis)
+                    child._splines_prim[name]['init'] = _init_tf[basis]
+        # dual
+        _init_tf = {}
+        for label, child in self.children.items():
+            for name, spl in child._splines_dual.items():
+                basis = spl['basis']
+                if basis not in _init_tf:
+                    _init_tf[basis] = init_dual_transform(basis)
+                child._splines_dual[name]['init'] = _init_tf[basis]
+
+    def transform_primal_splines(self, transform_fun):
+        for label, child in self.children.items():
+            for name, spl in child._splines_prim.items():
+                if name in child._variables:
+                    basis = spl['basis']
+                    init = spl['init']
+                    if init is not None:
+                        self._var_result[label, name] = transform_fun(
+                            self._var_result[label, name], basis, init)
+                    else:
+                        self._var_result[label, name] = transform_fun(
+                            self._var_result[label, name], basis)
+
+    def transform_dual_splines(self, transform_fun):
+        for label, child in self.children.items():
+            for name, spl in child._splines_dual.items():
+                basis = spl['basis']
+                init = spl['init']
+                if init is not None:
+                    init = spl['init']
+                    self._dual_var_result[label, name] = transform_fun(
+                        self._dual_var_result[label, name], basis, init)
+                else:
+                    self._dual_var_result[label, name] = transform_fun(
+                        self._dual_var_result[label, name], basis)
 
 
 class OptiChild:
@@ -266,7 +305,8 @@ class OptiChild:
         self._variables = {}
         self._parameters = {}
         self._symbols = {}
-        self._splines = {}
+        self._splines_prim = {}
+        self._splines_dual = {}
         self._constraints = {}
         self._objective = 0.
         self.symbol_dict = {}
@@ -340,7 +380,7 @@ class OptiChild:
                     for l in range(size1)]
         else:
             coeffs = self._define_mx(name, len(basis), size0, dictionary)
-            self._splines[name] = basis
+            self._splines_prim[name] = {'basis': basis}
             return [BSpline(basis, coeffs[:, k]) for k in range(size0)]
 
     def define_constraint(self, expr, lb, ub, shutdown=False, name=None):
@@ -355,6 +395,7 @@ class OptiChild:
             self._constraints[name] = (
                 expr.coeffs, lb*np.ones(expr.coeffs.shape[0]),
                 ub*np.ones(expr.coeffs.shape[0]), shutdown)
+            self._splines_dual[name] = {'basis': expr.basis}
         else:
             self._constraints[name] = (expr, lb, ub, shutdown)
 
@@ -364,9 +405,9 @@ class OptiChild:
     def get_variable(self, name, **kwargs):
         if 'solution' in kwargs and kwargs['solution']:
             return self.father.get_variables(self.label, name)
-        if name in self._splines and not('spline' in kwargs and not kwargs['spline']):
-            basis = self._splines[name]
-            coeffs = self._variables[name]
+        if name in self._splines_prim and not('spline' in kwargs and not kwargs['spline']):
+            basis = self._splines_prim[name]
+            coeffs = self._variable_var[name]
             return [BSpline(basis, coeffs[:, k]) for k in range(coeffs.shape[1])]
         else:
             return self._variables[name]
@@ -374,8 +415,8 @@ class OptiChild:
     def get_parameter(self, name, **kwargs):
         if 'solution' in kwargs and kwargs['solution']:
             return self.father.get_parameters(self.label, name)
-        if name in self._splines and not('spline' in kwargs and not kwargs['spline']):
-            basis = self._splines[name]
+        if name in self._splines_prim and not('spline' in kwargs and not kwargs['spline']):
+            basis = self._splines_prim[name]
             coeffs = self._parameters[name]
             return [BSpline(basis, coeffs[:, k]) for k in range(coeffs.shape[1])]
         else:
