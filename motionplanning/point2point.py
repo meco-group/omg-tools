@@ -65,9 +65,9 @@ class Point2point(FixedTProblem):
             for k in range(vehicle.n_y):
                 for d in range(max(bs['initial'], bs['internal'])+1):
                     if (d > bs['initial']) and (d <= bs['internal']):
-                        shutdown = lambda t: (t == 0.)
+                        shutdown=lambda t: (t == 0.)
                     elif (d > bs['internal']) and (d <= bs['initial']):
-                        shutdown = lambda t: (t > 0.)
+                        shutdown=lambda t: (t > 0.)
                     else:
                         shutdown = False
                     if d == 0:

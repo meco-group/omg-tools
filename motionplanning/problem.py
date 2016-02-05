@@ -1,7 +1,7 @@
 from optilayer import OptiFather, OptiChild
 from fleet import get_fleet_vehicles
 from plots import Plots
-from spline_extra import shift_over_knot
+from spline_extra import shiftoverknot_T, integral_sqbasis
 import numpy as np
 import time
 
@@ -85,6 +85,8 @@ class Problem(OptiChild):
         children.extend([self.environment, self])
         self.father = OptiFather(children)
         self.problem, compile_time = self.father.construct_problem(self.options)
+        self.father.init_transformations(self.init_primal_transform,
+                                         self.init_dual_transform)
 
     def solve(self, current_time):
         self.current_time = current_time
@@ -131,6 +133,12 @@ class Problem(OptiChild):
     def initialize(self):
         pass
 
+    def init_primal_transform(self, basis):
+        return None
+
+    def init_dual_transform(self, basis):
+        return None
+
     # ========================================================================
     # Methods required to override (no general implementation possible)
     # ========================================================================
@@ -158,9 +166,19 @@ class FixedTProblem(Problem):
     def init_step(self, current_time):
         # transform spline variables
         if (current_time > 0. and np.round(current_time, 6) % self.knot_time == 0):
-            self.father.transform_spline_variables(
-                lambda coeffs, knots, degree: shift_over_knot(coeffs, knots,
-                                                              degree, 1))
+            self.father.transform_primal_splines(lambda coeffs, basis, T:
+                                                 T.dot(coeffs))
+            # self.father.transform_dual_splines(lambda coeffs, basis, T:
+            #                                    T.dot(coeffs))
+
+    def init_primal_transform(self, basis):
+        return shiftoverknot_T(basis)
+
+    # def init_dual_transform(self, basis):
+    #     B = integral_sqbasis(basis)
+    #     Binv = np.linalg.solve(B, np.eye(len(basis)))
+    #     T = shiftoverknot_T(basis)
+    #     return B.dot(T).dot(Binv)
 
     def update_vehicles(self, current_time, update_time):
         for vehicle in self.vehicles:
