@@ -1,20 +1,9 @@
 TODO
 ? build only once per vehicle type
-- dual initialisation: first compose correct basis of lambda.
-    int_0^T (l(t) * c(t)) = l_cfs^T*c_cfs
-    also mu initialisation: dual slackness = l_cfs^T*c_cfs
+? dual initialization. What is the meaning of the dual vars of the corresponding
+  relaxed primal problem?? This is probably one of the millenium questions...
 
-+ rewrite shift_1knot with explicit transformation matrix, based on knot insertion
-+ shift knot bw
-- rewrite shift_over_knot with extrapolation and knot insertion
-- make test script with used tf's
-- check how to deal with mu if there are non-spline inequalities (which are not shifted)
-- think of good way to implement tf's (of duals) in toolbox
-
-??
-- dual infeasibility mostly not the same as the one of last iteration prev problem
-- mu: this is h_i*l_i right? This is not equal for all (some serious outliers)
-- dual var is sometimes negative??
+- refactor admm for new transformations
 
 Notes:
 * All SX symbol names are unique!
