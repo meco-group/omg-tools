@@ -406,8 +406,8 @@ class OptiChild:
         if 'solution' in kwargs and kwargs['solution']:
             return self.father.get_variables(self.label, name)
         if name in self._splines_prim and not('spline' in kwargs and not kwargs['spline']):
-            basis = self._splines_prim[name]
-            coeffs = self._variable_var[name]
+            basis = self._splines_prim[name]['basis']
+            coeffs = self._variables[name]
             return [BSpline(basis, coeffs[:, k]) for k in range(coeffs.shape[1])]
         else:
             return self._variables[name]
@@ -416,7 +416,7 @@ class OptiChild:
         if 'solution' in kwargs and kwargs['solution']:
             return self.father.get_parameters(self.label, name)
         if name in self._splines_prim and not('spline' in kwargs and not kwargs['spline']):
-            basis = self._splines_prim[name]
+            basis = self._splines_prim[name]['basis']
             coeffs = self._parameters[name]
             return [BSpline(basis, coeffs[:, k]) for k in range(coeffs.shape[1])]
         else:

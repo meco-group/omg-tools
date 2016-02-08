@@ -3,7 +3,8 @@ TODO
 ? dual initialization. What is the meaning of the dual vars of the corresponding
   relaxed primal problem?? This is probably one of the millenium questions...
 
-- refactor admm for new transformations
+- admm: reorganize such that initial transformation information can be stored
+- check if keeping duals keeps complementary slackness
 
 Notes:
 * All SX symbol names are unique!
