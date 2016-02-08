@@ -1,5 +1,5 @@
 import sys
-sys.path.append("/home/ruben/Documents/Work/Programs/motionplanningtoolbox/")
+sys.path.append("/home/ruben/Dropbox/Work/Programs/motionplanningtoolbox/")
 from motionplanning import *
 
 

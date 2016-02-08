@@ -1,5 +1,5 @@
 from spline import BSpline, BSplineBasis
-from casadi import SX, MX, mul
+from casadi import SX, MX, mul, SXFunction, MXFunction
 import numpy as np
 
 
@@ -145,18 +145,28 @@ def shiftoverknot_T(basis):
 
 
 def shift_knot1_fwd(cfs, basis, t_shift):
-    T = shiftfirstknot_T(basis, t_shift)
-    if isinstance(t_shift, (SX, MX)):
-        return mul(T, cfs)
+    if isinstance(cfs, (SX, MX)):
+        cfs_sym = MX.sym('cfs', cfs.shape)
+        t_shift_sym = MX.sym('t_shift')
+        T = shiftfirstknot_T(basis, t_shift_sym)
+        cfs2_sym = mul(T, cfs_sym)
+        fun = MXFunction('fun', [cfs_sym, t_shift_sym], [cfs2_sym])
+        return fun([cfs, t_shift])[0]
     else:
+        T = shiftfirstknot_T(basis, t_shift)
         return T.dot(cfs)
 
 
 def shift_knot1_bwd(cfs, basis, t_shift):
-    T, Tinv = shiftfirstknot_T(basis, t_shift, inverse=True)
-    if isinstance(t_shift, (SX, MX)):
-        return mul(Tinv, cfs)
+    if isinstance(cfs, (SX, MX)):
+        cfs_sym = SX.sym('cfs', cfs.shape)
+        t_shift_sym = SX.sym('t_shift')
+        T, Tinv = shiftfirstknot_T(basis, t_shift_sym, inverse=True)
+        cfs2_sym = mul(Tinv, cfs_sym)
+        fun = SXFunction('fun', [cfs_sym, t_shift_sym], [cfs2_sym])
+        return fun([cfs, t_shift])[0]
     else:
+        T, Tinv = shiftfirstknot_T(basis, t_shift, inverse=True)
         return Tinv.dot(cfs)
 
 
