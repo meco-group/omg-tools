@@ -102,7 +102,7 @@ def extrapolate_T(basis, t_extra):
         a1, a2 = a[:, :m], a[:, m:]
         b1, b2 = b[:, :m], b[:, m:]
         A[:(deg+1-m), -(deg+1):-m] = a2
-        B[:(deg+1-m), :m] = b1 - a1 # this should be zeros
+        B[:(deg+1-m), :m] = b1 - a1  # this should be zeros
         B[:(deg+1-m), m:] = b2
     else:
         A[0, -(deg+1)] = 1.
@@ -254,33 +254,6 @@ def integral_sqbasis(basis):
             coeffs_product = (c1[pairs[0].tolist()]*c2[pairs[1].tolist()])
             c_prod = T.dot(coeffs_product)
             bb = K.T.dot(c_prod)
-            B[i, j] = bb
-            B[j, i] = bb
-        if i >= L-degree-1:
-            k += 1
-    return B
-
-
-def def_integral_sqbasisMX(basis, a, b):
-    # Compute integral of squared bases.
-    L = len(basis)
-    degree = basis.degree
-    if isinstance(a, MX) or isinstance(b, MX):
-        B = MX.zeros(L, L)
-    elif isinstance(a, SX) or isinstance(b, SX):
-        B = SX.zeros(L, L)
-    else:
-        B = np.zeros((L, L))
-    k = 0
-    for i in range(L):
-        c1 = np.zeros(L)
-        c1[i] = 1
-        for j in range(i, i+degree+1-k):
-            c2 = np.zeros(L)
-            c2[j] = 1
-            s1 = BSpline(basis, c1)
-            s2 = BSpline(basis, c2)
-            bb = definite_integral((s1*s2), a, b)
             B[i, j] = bb
             B[j, i] = bb
         if i >= L-degree-1:
