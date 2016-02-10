@@ -85,28 +85,50 @@ def extrapolate_T(basis, t_extra):
     knots = basis.knots
     deg = basis.degree
     N = len(basis)
-    knots2 = np.r_[knots[:-deg], (knots[-1]+t_extra)*np.ones(deg+1)]
+    m = 1  # number of repeating internal knots
+    while knots[-deg-2-m] >= knots[-deg-2]:
+        m += 1
+    knots2 = np.r_[knots[:-deg-1], knots[-deg-1]*np.ones(m),
+                   (knots[-1]+t_extra)*np.ones(deg+1)]
     basis2 = BSplineBasis(knots2, deg)
-    B = basis.eval_basis(knots[-2*deg:-deg]).toarray()[:, -deg:]
-    A = basis2.eval_basis(knots[-2*deg:-deg]).toarray()[:, -deg-1:-1]
+    A = np.zeros((deg+1, deg+1))
+    B = np.zeros((deg+1, deg+1))
+    # (deg+1-m) relations based on evaluation of basis functions on (deg+1-m)
+    # last greville points
+    if m < deg+1:
+        eval_points = basis.greville()[-(deg+1-m):]
+        a = basis2.eval_basis(eval_points).toarray()[:, -(deg+1+m):-m]
+        b = basis.eval_basis(eval_points).toarray()[:, -(deg+1):]
+        a1, a2 = a[:, :m], a[:, m:]
+        b1, b2 = b[:, :m], b[:, m:]
+        A[:(deg+1-m), -(deg+1):-m] = a2
+        B[:(deg+1-m), :m] = b1 - a1 # this should be zeros
+        B[:(deg+1-m), m:] = b2
+    else:
+        A[0, -(deg+1)] = 1.
+        B[0, -1] = 1.
+    # m relations based on continuity of m last derivatives
+    A1, B1 = np.identity(deg+1), np.identity(deg+1)
+    for i in range(1, deg+1):
+        A1_tmp = np.zeros((deg+1-i, deg+1-i+1))
+        B1_tmp = np.zeros((deg+1-i, deg+1-i+1))
+        for j in range(deg+1-i):
+            B1_tmp[j, j] = -(deg+1-i)/(knots[j+N] - knots[j+N-deg-1+i])
+            B1_tmp[j, j+1] = (deg+1-i)/(knots[j+N] - knots[j+N-deg-1+i])
+            A1_tmp[j, j] = -(deg+1-i)/(knots2[j+N+m] - knots2[j+N-deg-1+m+i])
+            A1_tmp[j, j+1] = (deg+1-i)/(knots2[j+N+m] - knots2[j+N-deg-1+m+i])
+        A1, B1 = A1_tmp.dot(A1), B1_tmp.dot(B1)
+        if i >= deg+1-m:
+            b1 = B1[-1, :]
+            a1 = A1[-(deg-i+1), :]
+            A[i, :] = a1
+            B[i, :] = b1
+    # put everything in transformation matrix
     _T = np.linalg.solve(A, B)
     _T[abs(_T) < 1e-10] = 0.
-    T = np.zeros((N+1, N))
-    T[:N-deg,:N-deg] = np.eye(N-deg)
-    T[N-deg:-1, N-deg:] = _T
-    # last row of T such that degree th derivative is continuous
-    a1, a2 = np.identity(deg+1), np.identity(deg+1)
-    for i in range(1, deg+1):
-        a1_tmp = np.zeros((deg+1-i, deg+1-i+1))
-        a2_tmp = np.zeros((deg+1-i, deg+1-i+1))
-        for j in range(deg+1-i):
-            a1_tmp[j, j] = -(deg+1-i)/(knots[j+N] - knots[j+N-deg-1+i])
-            a1_tmp[j, j+1] = (deg+1-i)/(knots[j+N] - knots[j+N-deg-1+i])
-            a2_tmp[j, j] = -(deg+1-i)/(knots2[j+N+1] - knots2[j+N-deg+i])
-            a2_tmp[j, j+1] = (deg+1-i)/(knots2[j+N+1] - knots2[j+N-deg+i])
-        a1, a2 = a1_tmp.dot(a1), a2_tmp.dot(a2)
-    T[-1, -deg-1] = a1[:, 0]/a2[:, -1]
-    T[-1, -deg:] = (a1[:, 1:]-a2[:, :-1].dot(_T))/a2[:, -1]
+    T = np.zeros((N+m, N))
+    T[:N, :N] = np.eye(N)
+    T[-(deg+1):, -(deg+1):] = _T
     return T
 
 
@@ -118,14 +140,14 @@ def shift_over_knot(coeffs, basis):
 def shiftoverknot_T(basis):
     # Create transformation matrix that moves the horizon to
     # [knot[degree+1], T+knots[-1]-knots[-deg-2]]. The spline is extrapolated
-    # in the interval the spline over an extra knot interval
-    # [T, T+knot[N_shift]] of t_extra long. Move horizon to
-    # [knot[N_shift], T+knot[N_shift]]. The spline is extrapolated in last
-    # interval.
+    # over the last knot interval.
     knots = basis.knots
     deg = basis.degree
+    m = 1  # number of repeating internal knots
+    while knots[-deg-2-m] >= knots[-deg-2]:
+        m += 1
     t_shift = knots[deg+1] - knots[0]
-    T = np.diag(np.ones(len(basis)-1), 1)
+    T = np.diag(np.ones(len(basis)-m), m)
     _T = np.eye(deg+1)
     for k in range(deg):
         _t = np.zeros((deg+1+k+1, deg+1+k))
@@ -140,7 +162,7 @@ def shiftoverknot_T(basis):
         _T = _t.dot(_T)
     T[:deg, :deg+1] = _T[deg+1:, :]
     T_extr = extrapolate_T(basis, knots[-1] - knots[-deg-2])
-    T[-deg-1:, -deg-1:] = T_extr[-deg-1:, -deg-1:]
+    T[-(deg+1):, -(deg+1):] = T_extr[-(deg+1):, -(deg+1):]
     return T
 
 
