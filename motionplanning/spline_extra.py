@@ -241,9 +241,12 @@ def shift_over_knot(coeffs, knots, degree, N_shift=1):
         return [shift_over_knot(c_i, knots, degree, N_shift) for c_i in coeffs]
     coeffs = np.array(coeffs)
     coeffs2 = np.zeros(coeffs.shape)
+    # copy old into new but kick out first coeff
     coeffs2[:-1, :] = coeffs[1:, :]
+    # last coeff value = second last coeff
     coeffs2[-1, :] = coeffs2[-2, :]
     for i in range(degree+1):
+        # the last degree + 1 coeffs are made equal
         coeffs2[-2-i, :] = coeffs2[-1, :]
     if degree > 1:
         A = np.identity(degree-1)

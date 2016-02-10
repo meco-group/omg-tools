@@ -16,6 +16,7 @@ class Holonomic(Vehicle):
         self.amax = bounds['amax'] if 'amax' in bounds else 1.
 
         # define physical signals
+        # y was defined in the Vehicle.__init__()
         y = self.get_signal('y')
 
         y0, dy0, ddy0 = y[0, 0], y[0, 1], y[0, 2]
@@ -49,6 +50,7 @@ class Holonomic(Vehicle):
 
     def set_terminal_pose(self, position):
         y = np.zeros((self.n_y, self.order+1))
+        # select n_y of order 0, i.e. x and y position
         y[:, 0] = position
         self.set_terminal_condition(y)
 
@@ -58,7 +60,9 @@ class Holonomic(Vehicle):
 
     def get_y(self, state, input):
         y = np.zeros((self.n_y, self.order+1))
+        # state = position
         y[:, 0] = state[:, 0]
+        # velocity = input
         y[:, 1] = input[:, 0]
         return y, 1
 
