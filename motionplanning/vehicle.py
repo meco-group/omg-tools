@@ -186,9 +186,11 @@ class Vehicle(OptiChild):
             n_samp = state.shape[2]
             y = np.zeros((self.n_y, self.order+1, n_samp))
             for k in range(n_samp):
+                # fill in first part of y e.g. pos and vel
                 y[:, :, k], deg = self._get_y(state[:, :, k], input[:, :, k])
             sample_time = self.options['sample_time']
             for d in range(deg+1, self.order+1):
+                # fill in second part e.g. acceleration
                 for k in range(self.n_y):
                     y[k, d, :] = np.gradient(y[k, d-1, :], sample_time)
             return y
@@ -263,9 +265,17 @@ class Vehicle(OptiChild):
     # Update and simulation related functions
     # ========================================================================
 
-    def update(self, y_coeffs, current_time, update_time, **kwargs):
-        horizon_time = self.options['horizon_time']
+    def update(self, y_coeffs, current_time, update_time, horizon_time,
+               **kwargs):
+
         sample_time = self.options['sample_time']
+        # check if arrived almost at the end of movement, make sure to only
+        # update until remaining time (horizon_time)
+        if horizon_time < update_time:
+            update_time = horizon_time
+        # note: horizon_time cannot become < sample_time since stop_criterium
+        # is activated when remaining time (= horizon_time) < update_time and
+        # update_time > sample_time
         self._update_trajectory(y_coeffs, current_time, update_time,
                                 horizon_time, sample_time, **kwargs)
         self._predict(update_time, sample_time)
@@ -295,6 +305,7 @@ class Vehicle(OptiChild):
         self.trajectory_kn = self.get_signals(y_coeffs, horizon_time,
                                               time_spline_ev_knots)
         self.trajectory_kn['time'] = time_axis_knots
+
         self._add_to_memory(self.trajectories, self.trajectory,
                             int(update_time/sample_time))
         self._add_to_memory(self.trajectories_kn, self.trajectory_kn,
@@ -306,10 +317,15 @@ class Vehicle(OptiChild):
             y_pred = self.trajectory['y'][:, :, n_samp]
         else:
             input = self.trajectory['input']
+            # self.path = which path did the robot already cover at this time
+            # -1 gets e.g. current pos/vel/acc = state + inputs
             y0 = self.path['y'][:, :, -1]
+            # get y based on current y (y0) & input over a certain predict_time
             y = self.integrate_model(y0, input, sample_time, predict_time)
+            # which elements are selected here?
             y_pred = y[:, :, -1]
             n_samp = int(predict_time/sample_time)
+
         for key in self._signals.keys():
             self.prediction[key] = self.get_signal(key, y_pred)
         self._add_to_memory(self.predictions, self.prediction,
@@ -329,16 +345,20 @@ class Vehicle(OptiChild):
                                        np.linspace(sample_time, follow_time,
                                                    n_samp)), axis=1)
         for key in self._signals.keys():
+            # append current info to path: position, input, velocity,...
             self.path[key] = np.dstack(
                 (self.path[key], self.get_signal(key, y)))
 
     def integrate_model(self, y0, input, sample_time, integration_time):
+        # make interpolation function which returns the input at a certain time
         u_interp = self._get_input_interpolator(input, sample_time)
         n_samp = int(integration_time/sample_time)+1
         time_axis = np.linspace(0., (n_samp-1)*sample_time, n_samp)
         y = np.zeros((self.n_y, self.order+1, n_samp))
         state0 = self.get_state(y0).ravel()
         state = np.zeros((self.n_st, 1, n_samp))
+        # solves d_input/dt = f(input, time)
+        # gives state for next points in time, specified by time_axis
         state[:, 0, :] = odeint(self._update_ode_model, state0, time_axis,
                                 args=(u_interp,)).T
         y = self._get_y(state, input[:, :, :n_samp])
@@ -346,30 +366,47 @@ class Vehicle(OptiChild):
 
     def _update_ode_model(self, state, time, u_interp):
         u = u_interp(time)
+        # is located in the vehicle subclass, represents ODE of the vehicle
         return self.model_update(state, u)
 
     def _integrate_plant(self, y0, input, sample_time, integration_time):
+        # make interpolation function which returns the input at a certain time
         u_interp = self._get_input_interpolator(input, sample_time)
         n_samp = int(integration_time/sample_time)+1
+        # time_axis is [0, integration time]
         time_axis = np.linspace(0., (n_samp-1)*sample_time, n_samp)
         y = np.zeros((self.n_y, self.order+1, n_samp))
         state0_a = self.get_state(y0).ravel()
         state0_b = self.get_input(y0).ravel()
+        # current state
         state0 = np.r_[state0_a, state0_b]
+        # state + inputs
         state = np.zeros((self.n_st+self.n_in, 1, n_samp))
+        # u_interp is passed as an extra argument to _update_ode_plant()
+        # that function gives the derivative of the state and input, based
+        # on the current state and u_interp. These derivatives form the input
+        # of odeint. odeint returns the future states.
         state[:, 0, :] = odeint(self._update_ode_plant, state0, time_axis,
                                 args=(u_interp,)).T
+        # get the pos, vel,... given the current state and the inputs
         y = self._get_y(state[:self.n_st, :, :], state[-self.n_in:, :, :])
         return y
 
     def _update_ode_plant(self, state, time, u_interp):
+        # note: time can be a vector, then the multiple corresponding states
+        # are returned
         u = u_interp(time)
+        # put input into plant model, returns derivatives of state and input
         return self.plant_update(state, u)
 
     def _get_input_interpolator(self, input, sample_time):
+        # this function generates a function to which interpolates between
+        # different inputs
         n_samp = input.shape[2]
         time_axis = np.linspace(0, (n_samp-1)*sample_time, n_samp)
-        return interp1d(time_axis, input[:, 0, :], kind='linear')
+        # turn off error message, fill with last input value when extrapolating
+        return interp1d(time_axis, input[:, 0, :], kind='linear',
+                        bounds_error=False, fill_value=input[:, 0, -1])
 
     def plant_update(self, state, input):
         tau = self.options['time_constant']

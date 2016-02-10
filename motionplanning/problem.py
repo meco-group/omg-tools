@@ -93,6 +93,7 @@ class Problem(OptiChild):
         var = self.father.get_variables()
         par = self.father.set_parameters(current_time)
         lb, ub = self.father.update_bounds(current_time)
+
         # solve!
         t0 = time.time()
         self.problem({'x0': var, 'p': par, 'lbg': lb, 'ubg': ub})
@@ -135,62 +136,8 @@ class Problem(OptiChild):
     # Methods required to override (no general implementation possible)
     # ========================================================================
 
-    def update_vehicles(self, current_time):
+    def update_vehicles(self, current_time, update_time):
         raise NotImplementedError('Please implement this method!')
 
     def stop_criterium(self):
         raise NotImplementedError('Please implement this method!')
-
-
-class FixedTProblem(Problem):
-
-    def __init__(self, fleet, environment, options={}, label='problem'):
-        Problem.__init__(self, fleet, environment, options, label)
-        self.define_parameter('T')
-        self.define_parameter('t')
-
-    def set_parameters(self, current_time):
-        parameters = {}
-        parameters['T'] = self.vehicles[0].options['horizon_time']
-        parameters['t'] = np.round(current_time, 6) % self.knot_time
-        return parameters
-
-    def init_step(self, current_time):
-        # transform spline variables
-        if (current_time > 0. and np.round(current_time, 6) % self.knot_time == 0):
-            self.father.transform_spline_variables(
-                lambda coeffs, knots, degree: shift_over_knot(coeffs, knots,
-                                                              degree, 1))
-
-    def update_vehicles(self, current_time, update_time):
-        for vehicle in self.vehicles:
-            y_coeffs = vehicle.get_variable('y', solution=True, spline=False)
-            """
-            This represents coefficients of spline in a basis, for which a part
-            of the corresponding time horizon lies in the past. Therefore,
-            we need to pass the current time relatively to the begin of this
-            time horizon. In this way, only the future, relevant, part will be
-            saved and plotted. Also an adapted time axis of the knots is
-            passed: Here the first knot is shifted towards the current time
-            point. In the future this approach should dissapear: when symbolic
-            knots are possible in the spline toolbox, we can transform the
-            spline every iteration (in the init_step method). In this way,
-            the current time coincides with the begin of the considered time
-            horizon (rel_current_time = 0.).
-            """
-            rel_current_time = np.round(current_time, 6) % self.knot_time
-            time_axis_knots = np.copy(
-                vehicle.knots)*vehicle.options['horizon_time']
-            time_axis_knots[:vehicle.degree+1] = rel_current_time
-            time_axis_knots += current_time - rel_current_time
-            vehicle.update(y_coeffs, current_time, update_time,
-                           rel_current_time=rel_current_time,
-                           time_axis_knots=time_axis_knots)
-
-
-class FreeTProblem(Problem):
-
-    def __init__(self, fleet, environment, options={}, label='problem'):
-        Problem.__init__(self, fleet, environment, options, label)
-        self.define_variable('T')
-        raise NotImplementedError('Please implement this class!')
