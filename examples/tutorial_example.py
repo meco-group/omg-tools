@@ -2,9 +2,10 @@
 # provide an install script to automate this...
 import sys
 sys.path.append("/home/ruben/Documents/Work/Programs/motionplanningtoolbox/")
+# sys.path.append("/home/tim/Dropbox/EigenDocumenten/Doctoraat/MotionPlanning/motion-planning-toolbox")
 from motionplanning import *
 
-# Before we start, first some notess on the so called OptiLayer!
+# Before we start, first some notes on the so called OptiLayer!
 
 # optilayer.py provides 2 classes: OptiFather & OptiChild.
 # OptiChild is a general class for which classes Vehicle, Problem and
@@ -16,8 +17,9 @@ from motionplanning import *
 # puts everything together in order to retrieve one problem with one big set
 # of variables, parameters, constraints and with one objective.
 
-# It is also possible to define a 'symbol' on an object. Another object should
-# provide a variable or parameter with the same name.
+# It is also possible to define a 'symbol' on an object. This is useful to
+# access variables or parameters which are defined in another object. The
+# symbol should have the same name as the corresponding variable or parameter.
 # Example: a problem object defines T (the total motion time) as _variable_ (in
 # order to eg. minimize it). A vehicle object also needs this T (for computing
 # derivatives of its splines). It can access it by defining a _symbol_
@@ -87,7 +89,18 @@ codegen = {'jit': False}
 # Compilation of the code takes some time, while execution is slightly faster
 # There are other options, set on a default value. Check them out with
 # problem.options
-problem = Point2point(vehicle, environment, options={'codegen': codegen})
+# We can also select the type of problem to be solved. There are two options:
+# freeT: in this case the goal function of the optimization problem is the
+#        motion time, so this formulates a purely time-optimal problem. During
+#        movement the time horizon decreases since the remaining motion time
+#        decreases.
+# fixedT: in this case a certain motion time is proposed and the vehicle is
+#         'pulled' towards its goal position. During movement the time horizon
+#         stays the same since the proposed motion time stays the same.
+freeTProblem = False
+problem = Point2point(vehicle, environment,
+                      options={'codegen': codegen,
+                               'freeTProblem': freeTProblem})
 problem.init()
 
 # Create simulator
@@ -97,9 +110,11 @@ simulator = Simulator(problem)
 simulator.plot.set_options({'knots': True})  # let's plot our spline knots
 # If you _create_ a plot with certain signal name, it will plot its progress
 # during simulating.
-simulator.plot.create('input', label=['Thrust force (N/kg)',
-                                      'Pitch rate (rad/s)'])
-# You can also provide the name '2d': this plots a 2d space with the vehicles
+simulator.plot.create('input', label=['x-velocity (m/s)',
+                                      'y-velocity (m/s)'])
+simulator.plot.create('a', label=['x-acceleration (m/s^2)',
+                                  'y-acceleration (m/s^2)'])
+# You can also provide the name '2d': this plots a 2d space with the vehicle
 # movement.
 simulator.plot.create('2d')
 
@@ -110,6 +125,7 @@ simulator.run()
 simulator.plot.show('2d', time=2.)
 # or show (defined) signal
 simulator.plot.show('input')
+simulator.plot.show('a')
 simulator.plot.show('my_signal')
 # Show movie of some signal
 simulator.plot.show_movie('2d', repeat=False)
@@ -117,6 +133,6 @@ simulator.plot.show_movie('2d', repeat=False)
 simulator.plot.save('my_signal', name='MySignals')
 # Save a movie as multiple Tikz: you need matplotlib2tikz for this!
 simulator.plot.save_movie('input', number_of_frames=4)
-simulator.plot.save_movie('2d', number_of_frames=4, name='quadrotor_2d')
+simulator.plot.save_movie('2d', number_of_frames=4, name='holonomic')
 
 matplotlib.pyplot.show(block=True)
