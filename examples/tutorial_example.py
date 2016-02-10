@@ -1,7 +1,7 @@
 # Add the toolbox to your python path and import it! In the future we should
 # provide an install script to automate this...
 import sys
-sys.path.append("/home/ruben/Documents/Work/Programs/motionplanningtoolbox/")
+sys.path.append("/home/ruben/Dropbox/Work/Programs/motionplanningtoolbox/")
 # sys.path.append("/home/tim/Dropbox/EigenDocumenten/Doctoraat/MotionPlanning/motion-planning-toolbox")
 from motionplanning import *
 
