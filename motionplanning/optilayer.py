@@ -71,7 +71,7 @@ class OptiFather:
                                       ','.join([sd.label for sd in sym_def])))
                 elif len(sym_def) == 0:
                     raise ValueError('Symbol %s, defined in %s, is not defined'
-                                     'as parameter or variable by any object' %
+                                     ' as parameter or variable by any object' %
                                      (name, label))
                 else:
                     self.add_to_dict(symbol, sym_def[0], name)
