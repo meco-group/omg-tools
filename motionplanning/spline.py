@@ -4,7 +4,7 @@ import numpy as np
 import scipy.linalg as la
 import casadi as cas
 from scipy.sparse import csr_matrix
-from piecewise import PiecewisePolynomial as ppoly
+# from piecewise import PiecewisePolynomial as ppoly
 # from scipy.sparse.linalg import spsolve
 from collections import Counter
 import md5

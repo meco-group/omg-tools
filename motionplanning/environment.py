@@ -1,7 +1,7 @@
 from optilayer import OptiChild
 from spline import BSplineBasis, BSpline
 from spline_extra import definite_integral
-from casadi import inf
+from casadi import inf, vertcat
 import numpy as np
 
 
@@ -20,6 +20,10 @@ class Environment(OptiChild):
 
         # objective for environment
         self._obj = 0.
+
+        # time parameters
+        self.t = self.define_symbol('t')
+        self.T = self.define_symbol('T')
 
         # add obstacles
         self.obstacles, self.No = [], 0
@@ -83,19 +87,25 @@ class Environment(OptiChild):
 
         chck_veh, rad_veh = veh.get_checkpoints()
         for obs in self.obstacles:
-            chck_obs = self.define_spline_parameter(
-                'chck_'+str(obs), self.n_dim,
-                obs.shape.n_chck, basis=obs.basis)
-            if obs.shape.n_chck == 1:
-                chck_obs = [chck_obs]
-            rad_obs = self.define_parameter('rad_'+str(obs))
+            x = self.define_parameter('x_'+str(obs), self.n_dim)
+            v = self.define_parameter('v_'+str(obs), self.n_dim)
+            a = self.define_parameter('a_'+str(obs), self.n_dim)
 
             a_hp = self.define_spline_variable('a_'+str(veh)+str(obs), self.n_dim)
             b_hp = self.define_spline_variable('b_'+str(veh)+str(obs))[0]
+            # pos, vel, acc at time zero of time horizon
+            v0 = v - self.t*a
+            x0 = x - self.t*v0 - 0.5*(self.t**2)*a
+            a0 = a
+            # pos spline over time horizon
+            x_obs = [BSpline(obs.basis, vertcat([x0[k], 0.5*v0[k]*self.T + x0[k], x0[k] +
+                                          v0[k]*self.T + 0.5*a0[k]*(self.T**2)]))
+                     for k in range(self.n_dim)]
+            chck_obs, rad_obs = obs.get_checkpoints(x_obs)
+
             if safety_distance > 0.:
-                t, T = self.define_symbol('t'), self.define_symbol('T')
                 eps = self.define_spline_variable('eps_'+str(veh)+str(obs))[0]
-                self._obj += (safety_weight*definite_integral(eps, t/T, 1.))
+                self._obj += (safety_weight*definite_integral(eps, self.t/self.T, 1.))
                 self.define_constraint(eps - safety_distance, -inf, 0.)
                 self.define_constraint(-eps, -inf, 0.)
             else:
@@ -135,22 +145,11 @@ class Environment(OptiChild):
     def set_parameters(self, current_time):
         parameters = {}
         for obstacle in self.obstacles:
-            # current time relative to begin of horizon + horizon time
-            knot_time = (int(self.options['horizon_time']*1000.) /
-                         self.knot_intervals)/1000.
-            t = np.round(current_time, 6) % knot_time
-            T = self.options['horizon_time']
-            x_obs = obstacle.get_positionspline(t, T)
-            # checkpoints
-            chck_obs, rad_obs = obstacle.get_checkpoints(x_obs)
-            for l, chck in enumerate(chck_obs):
-                if len(chck_obs) == 1:
-                    name = 'chck_'+str(obstacle)
-                else:
-                    name = 'chck_'+str(obstacle)+str(l)
-                parameters[name] = np.hstack([np.c_[chck[k].coeffs]
-                                             for k in range(self.n_dim)])
-            parameters['rad_'+str(obstacle)] = rad_obs
+            x_obs, v_obs, a_obs = obstacle.get_kinematics()
+
+            parameters['x_'+str(obstacle)] = x_obs
+            parameters['v_'+str(obstacle)] = v_obs
+            parameters['a_'+str(obstacle)] = a_obs
         return parameters
 
     def draw(self, t=-1):
@@ -196,6 +195,13 @@ class Obstacle:
     def draw(self, t=-1):
         return np.c_[self.path['position'][:, t]] + self.shape.draw()
 
+    def get_kinematics(self):
+        # current observed pos, vel, acc of obstacle
+        x = self.path['position'][:, -1]
+        v = self.path['velocity'][:, -1]
+        a = self.path['acceleration'][:, -1]
+        return x, v, a
+
     def get_positionspline(self, current_time, horizon_time):
         # current observed pos, vel, acc of obstacle
         x = self.path['position'][:, -1]
@@ -209,8 +215,8 @@ class Obstacle:
         x0 = x - t*v0 - 0.5*(t**2)*a
         a0 = a
         # pos spline over time horizon
-        return [BSpline(self.basis, [x0[k], 0.5*v0[k]*T + x0[k], x0[k] +
-                                     v0[k]*T + 0.5*a0[k]*(T**2)])
+        return [BSpline(self.basis, vertcat([x0[k], 0.5*v0[k]*T + x0[k], x0[k] +
+                                             v0[k]*T + 0.5*a0[k]*(T**2)]))
                 for k in range(self.n_dim)]
 
     def get_checkpoints(self, position):
