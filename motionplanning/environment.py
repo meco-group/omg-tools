@@ -145,7 +145,6 @@ class Environment(OptiChild):
         parameters = {}
         for obstacle in self.obstacles:
             x_obs, v_obs, a_obs = obstacle.get_kinematics()
-
             parameters['x_'+str(obstacle)] = x_obs
             parameters['v_'+str(obstacle)] = v_obs
             parameters['a_'+str(obstacle)] = a_obs

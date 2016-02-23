@@ -42,6 +42,9 @@ class OptiFather:
         parameters = self.construct_parameters()
         constraints, lb, ub = self.construct_constraints(variables, parameters)
         objective = self.construct_objective(variables, parameters)
+        self.problem_description = {'var': variables, 'par': parameters,
+                                    'obj': objective, 'con': constraints,
+                                    'opt': options}
         if build is None:
             problem, buildtime = self.create_nlp(variables, parameters,
                                             objective, constraints, options)

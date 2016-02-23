@@ -1,9 +1,8 @@
 from optilayer import OptiFather, OptiChild
 from fleet import get_fleet_vehicles
 from plots import Plots
-from spline_extra import shiftoverknot_T, integral_sqbasis
-import numpy as np
 import time
+import export
 
 
 class Simulator:
@@ -95,7 +94,6 @@ class Problem(OptiChild):
         var = self.father.get_variables()
         par = self.father.set_parameters(current_time)
         lb, ub = self.father.update_bounds(current_time)
-
         # solve!
         t0 = time.time()
         self.problem({'x0': var, 'p': par, 'lbg': lb, 'ubg': ub})
@@ -149,3 +147,12 @@ class Problem(OptiChild):
 
     def stop_criterium(self):
         raise NotImplementedError('Please implement this method!')
+
+    # ========================================================================
+    # Methods for exporting problem to C++ library
+    # ========================================================================
+
+    def export(self, options={}):
+        if not hasattr(self, 'father'):
+            self.init()
+        exp = export.Export(self, 'point2point', options)
