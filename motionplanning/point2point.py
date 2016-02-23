@@ -3,6 +3,7 @@ from spline import BSplineBasis
 from spline_extra import definite_integral, evalspline
 from spline_extra import shiftoverknot_T, shift_spline
 from casadi import vertcat
+from casadi import vertcat, fmod, MX, MXFunction
 import numpy as np
 
 
@@ -180,10 +181,14 @@ class FixedTPoint2point(Point2pointProblem):
                                        self.yT[l][k] - g[l][k], -np.inf, 0.)
         self.define_objective(objective)
 
+    def set_default_options(self):
+        Point2pointProblem.set_default_options(self)
+        self.options['horizon_time'] = 10.
+
     def set_parameters(self, current_time):
         parameters = Point2pointProblem.set_parameters(self, current_time)
         parameters['t'] = np.round(current_time, 6) % self.knot_time
-        parameters['T'] = self.vehicles[0].options['horizon_time']
+        parameters['T'] = self.options['horizon_time']
         return parameters
 
     def init_step(self, current_time):
@@ -205,26 +210,18 @@ class FixedTPoint2point(Point2pointProblem):
 
     def update_vehicles(self, current_time, update_time):
         for vehicle in self.vehicles:
+            # y_coeffs represents coefficients of a spline, for which a part of
+            # its time horizon lies in the past. Therefore, we need to pass the
+            # current time relatively to the begin of this time horizon. In this
+            # way, only the future, relevant, part will be saved/plotted. Also an
+            # adapted time axis of the knots is passed: the first knot is shifted
+            # towards the current itme point.
             y_coeffs = vehicle.get_variable('y', solution=True, spline=False)
-            """
-            This represents coefficients of spline in a basis, for which a part
-            of the corresponding time horizon lies in the past. Therefore,
-            we need to pass the current time relatively to the begin of this
-            time horizon. In this way, only the future, relevant, part will be
-            saved and plotted. Also an adapted time axis of the knots is
-            passed: Here the first knot is shifted towards the current time
-            point. In the future this approach should dissapear: when symbolic
-            knots are possible in the spline toolbox, we can transform the
-            spline every iteration (in the init_step method). In this way,
-            the current time coincides with the begin of the considered time
-            horizon (rel_current_time = 0.).
-            """
             rel_current_time = np.round(current_time, 6) % self.knot_time
-            time_axis_knots = np.copy(
-                vehicle.knots)*vehicle.options['horizon_time']
+            horizon_time = self.options['horizon_time']
+            time_axis_knots = np.copy(vehicle.knots)*horizon_time
             time_axis_knots[:vehicle.degree+1] = rel_current_time
             time_axis_knots += current_time - rel_current_time
-            horizon_time = self.vehicles[0].options['horizon_time']
             vehicle.update(y_coeffs, current_time, update_time, horizon_time,
                            rel_current_time=rel_current_time,
                            time_axis_knots=time_axis_knots)
@@ -274,7 +271,7 @@ class FreeTPoint2point(Point2pointProblem):
         return parameters
 
     def init_variables(self):
-        self._variables['T'] = self.vehicles[0].options['horizon_time']
+        self._variables['T'] = self.options['horizon_time']
         return self._variables
 
     def init_step(self, current_time):

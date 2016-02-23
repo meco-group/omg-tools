@@ -59,7 +59,7 @@ class Vehicle(OptiChild):
 
     def set_default_options(self):
         self.options = {'safety_distance': 0., 'safety_weight': 10.,
-                        'horizon_time': 10., 'sample_time': 0.01,
+                        'sample_time': 0.01,
                         'ideal_update': False, '1storder_delay': False,
                         'time_constant': 0.1}
         self.options['boundary_smoothness'] = {'initial': self.order,
