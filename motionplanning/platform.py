@@ -21,9 +21,11 @@ class Platform(Vehicle):
         y, dy, ddy = y[0, 0], y[0, 1], y[0, 2]
 
         self.define_position([y, 0.])
-        self.define_input(dy)
-        self.define_state(y)
+        u = self.define_input(dy)
+        x = self.define_state(y)
         self.define_signal('a', ddy)
+        self.define_y([[x], [u]])
+        self.define_dstate([u])
 
         # define system constraints
         y = self.splines[0]
@@ -52,16 +54,6 @@ class Platform(Vehicle):
             return self.shape.get_checkpoints([self.splines[0], 0.])
         else:
             return self.shape.get_checkpoints([y[0], 0.])
-
-    def model_update(self, state, input):
-        dstate = input
-        return dstate
-
-    def get_y(self, state, input):
-        y = np.zeros((self.n_y, self.order+1))
-        y[:, 0] = state[:, 0]
-        y[:, 1] = input[:, 0]
-        return y, 1
 
     def draw(self, t=-1):
         return np.vstack((self.path['position'][:, :, t])) + self.shape.draw()

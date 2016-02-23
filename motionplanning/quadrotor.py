@@ -1,7 +1,7 @@
 from vehicle import Vehicle
 from shape import Quad
 import numpy as np
-from casadi import inf, sqrt, arctan2
+from casadi import inf, sqrt, arctan2, sin, cos
 
 
 class Quadrotor(Vehicle):
@@ -27,8 +27,10 @@ class Quadrotor(Vehicle):
         theta = arctan2(ddy0, (ddy1 + self.g))
 
         self.define_position([y0, y1])
-        self.define_input([u1, u2])
-        self.define_state([y0, y1, theta, dy0, dy1])
+        u1, u2 = self.define_input([u1, u2])
+        x, z, th, dx, dz = self.define_state([y0, y1, theta, dy0, dy1])
+        self.define_y([[x, z], [dx, dz], [u1*sin(th), u1*cos(th) - self.g]])
+        self.define_dstate([dx, dz, u2, u1*sin(th), u1*cos(th) - self.g])
 
         # define system constraints
         y0, y1 = self.splines[0], self.splines[1]
@@ -60,26 +62,6 @@ class Quadrotor(Vehicle):
         y = np.zeros((self.n_y, self.order+1))
         y[:, 0] = position
         self.set_terminal_condition(y)
-
-    def model_update(self, state, input):
-        x, z, theta, dx, dz = state
-        u1, u2 = input
-        dstate = np.zeros(5)
-        dstate[0] = dx
-        dstate[1] = dz
-        dstate[2] = u2
-        dstate[3] = u1*np.sin(theta)
-        dstate[4] = u1*np.cos(theta) - self.g
-        return dstate
-
-    def get_y(self, state, input):
-        y = np.zeros((self.n_y, self.order+1))
-        y[:, 0] = state[:2, 0]
-        y[:, 1] = state[3:, 0]
-        theta = state[2, :]
-        y[0, 2] = input[0, 0]*np.sin(theta)
-        y[1, 2] = input[0, 0]*np.cos(theta) - self.g
-        return y, 2
 
     def draw(self, t=-1):
         return (self.path['position'][:, :, t] +

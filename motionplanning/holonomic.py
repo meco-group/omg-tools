@@ -23,9 +23,11 @@ class Holonomic(Vehicle):
         y1, dy1, ddy1 = y[1, 0], y[1, 1], y[1, 2]
 
         self.define_position([y0, y1])
-        self.define_input([dy0, dy1])
-        self.define_state([y0, y1])
+        u0, u1 = self.define_input([dy0, dy1])
+        x0, x1 = self.define_state([y0, y1])
         self.define_signal('a', [ddy0, ddy1])
+        self.define_y([[x0, x1], [u0, u1]])
+        self.define_dstate([u0, u1])
 
         # define system constraints
         y0, y1 = self.splines[0], self.splines[1]
@@ -53,18 +55,6 @@ class Holonomic(Vehicle):
         # select n_y of order 0, i.e. x and y position
         y[:, 0] = position
         self.set_terminal_condition(y)
-
-    def model_update(self, state, input):
-        dstate = input
-        return dstate
-
-    def get_y(self, state, input):
-        y = np.zeros((self.n_y, self.order+1))
-        # state = position
-        y[:, 0] = state[:, 0]
-        # velocity = input
-        y[:, 1] = input[:, 0]
-        return y, 1
 
     def draw(self, t=-1):
         return self.path['position'][:, :, t] + self.shape.draw()
