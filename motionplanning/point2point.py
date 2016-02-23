@@ -2,8 +2,8 @@ from problem import Problem
 from spline import BSplineBasis
 from spline_extra import definite_integral, evalspline
 from spline_extra import shiftoverknot_T, shift_spline
-from casadi import vertcat
 from casadi import vertcat, fmod, MX, MXFunction
+import export
 import numpy as np
 
 
@@ -11,44 +11,37 @@ class Point2point(object):
     # This class looks at the problem type of the created problem and
     # creates the corresponding instance (freeTProblem or fixedTProblem)
     def __new__(cls, fleet, environment, options={}):
+        # by default fixed T problem
         if 'freeTProblem' not in options:
-            # by default fixed T problem
             options['freeTProblem'] = False
         if (options['freeTProblem'] is True):
-            # construct FreeTPoint2point instance
             return FreeTPoint2point(fleet, environment, options)
         else:
-            # construct FixedTPoint2point instance
             return FixedTPoint2point(fleet, environment, options)
 
 
 class Point2pointProblem(Problem):
 
-    def __init__(self, fleet, environment, options={}, label='problem'):
-        Problem.__init__(self, fleet, environment, options, label='p2p')
+    def __init__(self, fleet, environment, options={}, label='p2p'):
+        Problem.__init__(self, fleet, environment, options, label=label)
 
         T = self.define_symbol('T')
         t = self.define_symbol('t')
         self.t0 = t/T
 
-        # start position
+        # initial state
         y0 = [self.define_parameter('y0_'+str(l), vehicle.n_y)
               for l, vehicle in enumerate(self.vehicles)]
-        # start vel, acc,... depending on vehicle.order
         dy0 = [self.define_parameter(
             'dy0_'+str(l), vehicle.order, vehicle.n_y)
                for l, vehicle in enumerate(self.vehicles)]
 
-        # list of goal positions
+        # terminal state
         fxd_yT = self.options['fixed_yT']
         # part of goal positions which are parameters
         yT_par = [self.define_parameter(
             'yTp_'+str(l), len(fxd_yT[l]))
                   for l, vehicle in enumerate(self.vehicles)]
-
-        # for (l, vehicle in enumerate(self.vehicles)):
-        #     if (vehicle.n_y - len(fxd_yT[l] > 0):
-        #         yT_var = [self.define_variable('yTv_'+str(l), vehicle.n_y-len(fxd_yT[l]))]
         # part of goal positions which are variables
         yT_var = [self.define_variable(
             'yTv_'+str(l), vehicle.n_y-len(fxd_yT[l]))
@@ -72,7 +65,7 @@ class Point2pointProblem(Problem):
             # collect parametric and variable parts of goal positions in yT
             self.yT.append(vertcat(yT_))
 
-        # construct list of splines of the signals
+        # vehicle splines
         self.y = [vehicle.splines for vehicle in self.vehicles]
 
         # initial & terminal constraints
@@ -83,9 +76,9 @@ class Point2pointProblem(Problem):
                 # knots and internal knots
                 for d in range(max(bs['initial'], bs['internal'])+1):
                     if (d > bs['initial']) and (d <= bs['internal']):
-                        shutdown=lambda t: (t == 0.)
+                        shutdown={'equal': 0.}
                     elif (d > bs['internal']) and (d <= bs['initial']):
-                        shutdown=lambda t: (t > 0.)
+                        shutdown={'greater': 0.}
                     else:
                         shutdown = False
                     if d == 0:
@@ -110,9 +103,6 @@ class Point2pointProblem(Problem):
                         else:
                             self.define_constraint(
                                 (self.y[l][k].derivative(d))(1.), 0., 0.)
-
-        self.knot_time = (int(self.vehicles[0].options['horizon_time']*1000.) /
-                          self.vehicles[0].knot_intervals) / 1000.
 
     def set_default_options(self):
         Problem.set_default_options(self)
@@ -161,9 +151,11 @@ class FixedTPoint2point(Point2pointProblem):
 
     def __init__(self, fleet, environment, options={}, label='fixedT'):
         Point2pointProblem.__init__(self, fleet, environment, options, label)
-
-        T = self.define_parameter('T')
-        t = self.define_parameter('t')
+        self.knot_time = (int(self.options['horizon_time']*1000.) /
+                          self.vehicles[0].knot_intervals) / 1000.
+        self.T = self.define_parameter('T')
+        self.t = self.define_parameter('t')
+        self.t0 = self.t/self.T
 
         # define slack 'g' to impose 1-norm objective function
         g = [self.define_spline_variable(
