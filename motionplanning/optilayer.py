@@ -199,7 +199,13 @@ class OptiFather:
     def update_bounds(self, current_time):
         lb, ub = copy.deepcopy(self._lb), copy.deepcopy(self._ub)
         for name, shutdown in self._constraint_shutdown.items():
-            if shutdown(current_time):
+            if 'greater' in shutdown:
+                shutdown_fun = lambda t: t > shutdown['greater']
+            elif 'equal' in shutdown:
+                shutdown_fun = lambda t: t == shutdown['equal']
+            elif 'lesser' in shutdown:
+                shutdown_fun = lambda t: t < shutdown['lesser']
+            if shutdown_fun(current_time):
                 lb[name], ub[name] = -inf, +inf
         return lb, ub
 
