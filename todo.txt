@@ -6,7 +6,29 @@ TODO
 + check if keeping duals keeps complementary slackness: of course not. After shift l_i*c_i =/= 0 anymore. So this is not a 'perfect' initial guess. This is what you want: transformation such that transformed c coeffs (coeffs in b-spline basis) and transformed l coeffs (unknown) have zero complementary slackness: this is a feasible dual solution.
 + shift_over_knot with repeated knots
 - embedded export for single vehicle system
+    - export casadi problem in python/import in c++
+        + setParameters
+        + updateBounds
+        + initVariables
+        + check variables/parameters/bounds
+        + initialize _everything_ (structs...), otherwise nasty errors
+    - try to automize get_y, based on state and input. only if casadi supports
+      symbolic solving of (non linear) systems. you can also solve it by creating
+      define_y() where u and x are given (and perform check if correct + degree shzl)
+        * test also with model/plant mismatch
+    - get all spline cfs indices and their corresponding transformations
+    - export differential equation, modelled in python toolbox
+        * this can maybe via c code generation from casadi and play with the .c
+    - find ways in c++ to:
+        * evaluate b-splines
+            also maybe via c code generation from casadi
+        * integrate ode's
+
 - admm: reorganize such that initial transformation information can be stored
+
+QUESTIONS JORIS
+- c++ problem options: limited number of options?
+- c++ how to cast solution to vector?
 
 Notes:
 * All SX symbol names are unique!
