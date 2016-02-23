@@ -319,9 +319,22 @@ class Vehicle(OptiChild):
             self.path[name] = np.zeros(signal.shape + (1,))
             self.path[name][:, :, 0] = self.get_signal(name, y0)
         self.path['time'] = np.array([0.])
+        self.init()
 
     def set_terminal_condition(self, yT):
         self.yT = yT
+        self.init()
+
+    def init(self):
+        init_y = np.zeros((len(self.basis), self.n_y))
+        for k in range(self.n_y):
+            # init_y[:, k] = np.r_[self.y0[k, 0]*np.ones(self.degree),
+            #                      np.linspace(self.y0[k, 0], self.yT[k, 0],
+            #                                  len(self.basis) - 2*self.degree),
+            #                      self.yT[k, 0]*np.ones(self.degree)]
+            init_y[:, k] = np.linspace(self.y0[k, 0], self.yT[k, 0],
+                                       len(self.basis))
+        self.set_value('y', init_y)
 
     # ========================================================================
     # Update and simulation related functions
@@ -495,20 +508,6 @@ class Vehicle(OptiChild):
     # ========================================================================
     # Methods encouraged to override (very basic implementation)
     # ========================================================================
-
-    def init_variables(self):
-        variables = {'y': np.zeros((len(self.basis), self.n_y))}
-        for k in range(self.n_y):
-            variables['y'][:, k] = np.r_[self.y0[k, 0]*np.ones(self.degree),
-                                         np.linspace(self.y0[k, 0],
-                                                     self.yT[k, 0],
-                                                     (len(self.basis) -
-                                                      2*self.degree)),
-                                         self.yT[k, 0]*np.ones(self.degree)]
-        # for k in range(self.n_y):
-        #     variables['y'][:, k] = np.linspace(self.y0[k, 0], self.yT[k, 0], len(self.basis))
-
-        return variables
 
     def get_checkpoints(self, y=None):
         if y is None:

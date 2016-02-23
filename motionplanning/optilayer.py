@@ -206,9 +206,8 @@ class OptiFather:
     def init_variables(self):
         variables = self._var_struct(0.)
         for label, child in self.children.items():
-            var = child.init_variables()
-            for name, v in var.items():
-                variables[label, name] = v
+            for name in child._variables.keys():
+                variables[label, name] = child._values[name]
         self._var_result = variables
         self._dual_var_result = self._con_struct(0.)
 
@@ -219,8 +218,11 @@ class OptiFather:
         self._par = self._par_struct(0.)
         for label, child in self.children.items():
             par = child.set_parameters(time)
-            for name, p in par.items():
-                self._par[label, name] = p
+            for name in child._parameters.keys():
+                if name in par:
+                    self._par[label, name] = par[name]
+                else:
+                    self._par[label, name] = child._values[name]
         return self._par
 
     def get_variables(self, label=None, name=None):
@@ -305,6 +307,7 @@ class OptiChild:
         self._variables = {}
         self._parameters = {}
         self._symbols = {}
+        self._values = {}
         self._splines_prim = {}
         self._splines_dual = {}
         self._constraints = {}
@@ -345,43 +348,56 @@ class OptiChild:
     # ========================================================================
 
     def define_symbol(self, name, size0=1, size1=1):
-        return self._define_mx(name, size0, size1, self._symbols)
+        return self._define_mx(name, size0, size1, self._symbols, None)
 
-    def define_variable(self, name, size0=1, size1=1):
-        return self._define_mx(name, size0, size1, self._variables)
+    def define_variable(self, name, size0=1, size1=1, **kwargs):
+        value = kwargs['value'] if 'value' in kwargs else None
+        return self._define_mx(name, size0, size1, self._variables, value)
 
-    def define_parameter(self, name, size0=1, size1=1):
-        return self._define_mx(name, size0, size1, self._parameters)
+    def define_parameter(self, name, size0=1, size1=1, **kwargs):
+        value = kwargs['value'] if 'value' in kwargs else None
+        return self._define_mx(name, size0, size1, self._parameters, value)
 
     def define_spline_symbol(self, name, size0=1, size1=1, **kwargs):
         basis = kwargs['basis'] if 'basis' in kwargs else self.basis
-        return self._define_mx_spline(name, size0, size1, self._symbols, basis)
+        value = kwargs['value'] if 'value' in kwargs else None
+        return self._define_mx_spline(name, size0, size1,
+                                      self._symbols, basis, value)
 
     def define_spline_variable(self, name, size0=1, size1=1, **kwargs):
         basis = kwargs['basis'] if 'basis' in kwargs else self.basis
+        value = kwargs['value'] if 'value' in kwargs else None
         return self._define_mx_spline(name, size0, size1,
-                                      self._variables, basis)
+                                      self._variables, basis, value)
 
     def define_spline_parameter(self, name, size0=1, size1=1, **kwargs):
         basis = kwargs['basis'] if 'basis' in kwargs else self.basis
+        value = kwargs['value'] if 'value' in kwargs else None
         return self._define_mx_spline(name, size0, size1,
-                                      self._parameters, basis)
+                                      self._parameters, basis, value)
 
-    def _define_mx(self, name, size0, size1, dictionary):
+    def _define_mx(self, name, size0, size1, dictionary, value=None):
+        if value is None:
+            value = np.zeros((size0, size1))
         symbol_name = self._add_label(name)
         dictionary[name] = MX.sym(symbol_name, size0, size1)
+        self._values[name] = value
         self.add_to_dict(dictionary[name], name)
         return dictionary[name]
 
-    def _define_mx_spline(self, name, size0, size1, dictionary, basis):
+    def _define_mx_spline(self, name, size0, size1, dictionary, basis, value=None):
         if size1 > 1:
             return [self._define_mx_spline(name+str(l), size0,
-                                           1, dictionary, basis)
+                                           1, dictionary, basis, value)
                     for l in range(size1)]
         else:
-            coeffs = self._define_mx(name, len(basis), size0, dictionary)
+
+            coeffs = self._define_mx(name, len(basis), size0, dictionary, value)
             self._splines_prim[name] = {'basis': basis}
             return [BSpline(basis, coeffs[:, k]) for k in range(size0)]
+
+    def set_value(self, name, value):
+        self._values[name] = value
 
     def define_constraint(self, expr, lb, ub, shutdown=False, name=None):
         if isinstance(expr, (float, int)):
@@ -437,9 +453,6 @@ class OptiChild:
     # ========================================================================
     # Methods required to override
     # ========================================================================
-
-    def init_variables(self):
-        return {}
 
     def set_parameters(self, time):
         return {}
