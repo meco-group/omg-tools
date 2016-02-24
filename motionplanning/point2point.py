@@ -33,7 +33,7 @@ class Point2pointProblem(Problem):
         y0 = [self.define_parameter('y0_'+str(l), vehicle.n_y)
               for l, vehicle in enumerate(self.vehicles)]
         dy0 = [self.define_parameter(
-            'dy0_'+str(l), vehicle.order, vehicle.n_y)
+            'dy0_'+str(l), vehicle.n_der, vehicle.n_y)
                for l, vehicle in enumerate(self.vehicles)]
 
         # terminal state
@@ -47,9 +47,9 @@ class Point2pointProblem(Problem):
             'yTv_'+str(l), vehicle.n_y-len(fxd_yT[l]))
                   for l, vehicle in enumerate(self.vehicles) if (vehicle.n_y-len(fxd_yT[l]) > 0)]
 
-        # final vel, acc,... depending on vehicle.order
+        # final vel, acc,... depending on vehicle.n_der
         dyT = [self.define_parameter(
-            'dyT_'+str(l), vehicle.order, vehicle.n_y)
+            'dyT_'+str(l), vehicle.n_der, vehicle.n_y)
                for l, vehicle in enumerate(self.vehicles)]
 
         self.yT = []
@@ -86,16 +86,21 @@ class Point2pointProblem(Problem):
                             evalspline(self.y[l][k], self.t0) - y0[l][k],
                             0., 0., shutdown)
                     else:
-                        # dy0 = [dx0 dy0 ; ddx0 ddy0] for n_y=2 and order=2
-                        self.define_constraint(
-                            (evalspline(self.y[l][k].derivative(d), self.t0) -
-                             (T**d)*dy0[l][d-1, k]), 0., 0.,
-                            shutdown, str(d)+str(k))
+                        # dy0 = [dx0 dy0 ; ddx0 ddy0] for n_y=2 and n_der=2
+                        if d <= vehicle.n_der:
+                            self.define_constraint(
+                                (evalspline(self.y[l][k].derivative(d), self.t0) -
+                                 (T**d)*dy0[l][d-1, k]), 0., 0.,
+                                shutdown, str(d)+str(k))
+                        else:
+                            self.define_constraint(
+                                evalspline(self.y[l][k].derivative(d), self.t0),
+                                0., 0., shutdown, str(d)+str(k))
                 # d = deg of derivative you used on the last knots to impose
                 # continuity/smoothness
                 for d in range(bs['terminal']+1):
                     if not (d == 0):
-                        if d <= vehicle.order:
+                        if d <= vehicle.n_der:
                             self.define_constraint(
                                 self.y[l][k].derivative(d)(
                                     1.) - (T**d)*dyT[l][d-1, k],

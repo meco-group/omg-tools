@@ -11,7 +11,12 @@ import re
 
 class Vehicle(OptiChild):
 
-    def __init__(self, n_y, degree, shape, options, **kwargs):
+    def __init__(self, n_y, n_der, degree, order, shape, options, **kwargs):
+        #n_y: number of spline variables
+        #n_der: required number of derivatives of y to save/plot/express signals
+        #degree: degree of spline
+        #order: order of ode describing the system
+
         OptiChild.__init__(self, 'vehicle')
         self.shape = shape
         self._signals = {}
@@ -39,12 +44,13 @@ class Vehicle(OptiChild):
         # create spline variable
         self.n_y = n_y
         self.splines = self.define_spline_variable('y', self.n_y)
-
+        self.order = order
         # create corresponding signal
-        self.order = self.degree if not (
-            'order' in kwargs) else kwargs['order']
-        self.n_dy = 2*self.order
-        self._y = SX.sym('y', n_y, self.order+1)
+        if n_der > degree:
+            raise ValueError('n_der should be smaller or ' +
+                             'equal to degree of spline.')
+        self.n_der = n_der
+        self._y = SX.sym('y', n_y, self.n_der+1)
         self.define_signal('y', self._y)
 
         # set options
@@ -52,8 +58,8 @@ class Vehicle(OptiChild):
         self.set_options(options)
 
         # default y0 & yT
-        self.y0 = np.zeros((self.n_y, self.order+1))
-        self.yT = np.zeros((self.n_y, self.order+1))
+        self.y0 = np.zeros((self.n_y, self.n_der+1))
+        self.yT = np.zeros((self.n_y, self.n_der+1))
 
     # ========================================================================
     # Vehicle options
@@ -64,8 +70,8 @@ class Vehicle(OptiChild):
                         'sample_time': 0.01,
                         'ideal_update': False, '1storder_delay': False,
                         'time_constant': 0.1}
-        self.options['boundary_smoothness'] = {'initial': self.order,
-                                               'internal': self.degree-2,
+        self.options['boundary_smoothness'] = {'initial': self.degree,
+                                               'internal': self.order,
                                                'terminal': self.degree}
 
     def set_options(self, options):
@@ -152,7 +158,9 @@ class Vehicle(OptiChild):
                 raise ValueError('Size of y does not agree with n_y!')
             y.append(vertcat(e))
         y = horzcat(y)
-        self.n_der_dep = y.shape[1]-1
+        if y.shape[1] != self.order+1:
+            raise ValueError('You should provide the same number ' +
+                             'of derivatives as order')
         self._signals_expr['y'] = y
         self._get_y = self._generate_function(y, [self._state, self._input])
 
@@ -200,9 +208,9 @@ class Vehicle(OptiChild):
 
     # compute spline trajectories from coefficients
     def get_splines(self, y_coeffs, T, time):
-        y = np.zeros((self.n_y, self.order+1, time.size))
+        y = np.zeros((self.n_y, self.n_der+1, time.size))
         for k in range(self.n_y):
-            for d in range(self.order+1):
+            for d in range(self.n_der+1):
                 y[k, d, :] = (1./T**d)*splev(time/T, (self.knots,
                                                       y_coeffs[:, k].ravel(),
                                                       self.degree), d)
@@ -212,20 +220,20 @@ class Vehicle(OptiChild):
     def get_y(self, state, input):
         if len(state.shape) == 3:
             n_samp = state.shape[2]
-            y = np.zeros((self.n_y, self.order+1, n_samp))
+            y = np.zeros((self.n_y, self.n_der+1, n_samp))
             for k in range(n_samp):
                 # fill in first part of y e.g. pos and vel
                 _y = np.array(self._get_y(state[:, :, k].ravel(),
                                           input[:, :, k].ravel()))
                 y[:, :_y.shape[1], k] = _y
             sample_time = self.options['sample_time']
-            for d in range(_y.shape[1], self.order+1):
+            for d in range(_y.shape[1], self.n_der+1):
                 # fill in second part e.g. acceleration
                 for k in range(self.n_y):
                     y[k, d, :] = np.gradient(y[k, d-1, :], sample_time)
             return y
         else:
-            y = np.zeros((self.n_y, self.order+1))
+            y = np.zeros((self.n_y, self.n_der+1))
             _y = np.array(self._get_y(state.ravel(), input.ravel()))
             y[:, :_y.shape[1]] = _y
             return y
@@ -429,7 +437,7 @@ class Vehicle(OptiChild):
         u_interp = self._get_input_interpolator(input, sample_time)
         n_samp = int(integration_time/sample_time)+1
         time_axis = np.linspace(0., (n_samp-1)*sample_time, n_samp)
-        y = np.zeros((self.n_y, self.order+1, n_samp))
+        y = np.zeros((self.n_y, self.n_der+1, n_samp))
         state0 = self.get_state(y0).ravel()
         state = np.zeros((self.n_st, 1, n_samp))
         # solves d_input/dt = f(input, time)
@@ -449,7 +457,7 @@ class Vehicle(OptiChild):
         n_samp = int(integration_time/sample_time)+1
         # time_axis is [0, integration time]
         time_axis = np.linspace(0., (n_samp-1)*sample_time, n_samp)
-        y = np.zeros((self.n_y, self.order+1, n_samp))
+        y = np.zeros((self.n_y, self.n_der+1, n_samp))
         state0_a = self.get_state(y0).ravel()
         state0_b = self.get_input(y0).ravel()
         # current state

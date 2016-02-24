@@ -8,8 +8,8 @@ import numpy as np
 class Holonomic(Vehicle):
 
     def __init__(self, shape=Circle(0.1), options={}, bounds={}, **kwargs):
-        Vehicle.__init__(self, n_y=2, degree=3, shape=shape,
-                         options=options, order=2, **kwargs)
+        Vehicle.__init__(self, n_y=2, n_der=2, degree=3, order=1, shape=shape,
+                         options=options, **kwargs)
         self.vmin = bounds['vmin'] if 'vmin' in bounds else -0.5
         self.vmax = bounds['vmax'] if 'vmax' in bounds else 0.5
         self.amin = bounds['amin'] if 'amin' in bounds else -1.
@@ -46,13 +46,12 @@ class Holonomic(Vehicle):
         self.define_constraint(ddy1 - (T**2)*self.amax, -inf, 0.)
 
     def set_initial_pose(self, position):
-        y = np.zeros((self.n_y, self.order+1))
+        y = np.zeros((self.n_y, self.n_der+1))
         y[:, 0] = position
         self.set_initial_condition(y)
 
     def set_terminal_pose(self, position):
-        y = np.zeros((self.n_y, self.order+1))
-        # select n_y of order 0, i.e. x and y position
+        y = np.zeros((self.n_y, self.n_der+1))
         y[:, 0] = position
         self.set_terminal_condition(y)
 

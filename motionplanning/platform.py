@@ -8,8 +8,9 @@ import numpy as np
 class Platform(Vehicle):
 
     def __init__(self, width=0.7, height=0.1, options={}, bounds={}, **kwargs):
-        Vehicle.__init__(self, n_y=1, degree=3, shape=Rectangle(width, height),
-                         options=options, order=2, **kwargs)
+        Vehicle.__init__(self, n_y=1, n_der=2, degree=3, order=1,
+                         shape=Rectangle(width, height),
+                         options=options, **kwargs)
         self.vmin = bounds['vmin'] if 'vmin' in bounds else -0.8
         self.vmax = bounds['vmax'] if 'vmax' in bounds else 0.8
         self.amin = bounds['amin'] if 'amin' in bounds else -2.
@@ -40,12 +41,12 @@ class Platform(Vehicle):
         self.define_constraint(ddy - (T**2)*self.amax, -inf, 0.)
 
     def set_initial_pose(self, position):
-        y = np.zeros((self.n_y, self.order+1))
+        y = np.zeros((self.n_y, self.n_der+1))
         y[:, 0] = position
         self.set_initial_condition(y)
 
     def set_terminal_pose(self, position):
-        y = np.zeros((self.n_y, self.order+1))
+        y = np.zeros((self.n_y, self.n_der+1))
         y[:, 0] = position
         self.set_terminal_condition(y)
 

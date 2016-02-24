@@ -7,8 +7,8 @@ from casadi import inf, sqrt, arctan2, sin, cos
 class Quadrotor(Vehicle):
 
     def __init__(self, radius=0.2, options={}, bounds={},  **kwargs):
-        Vehicle.__init__(self, n_y=2, degree=4, shape=Quad(
-            radius), options=options, order=3, **kwargs)
+        Vehicle.__init__(self, n_y=2, n_der=3, degree=4, order=2, shape=Quad(
+            radius), options=options, **kwargs)
         self.u1min = bounds['u1min'] if 'u1min' in bounds else 1.
         self.u1max = bounds['u1max'] if 'u1max' in bounds else 15.
         self.u2min = bounds['u2min'] if 'u2min' in bounds else -8.
@@ -54,12 +54,12 @@ class Quadrotor(Vehicle):
                                -inf, 0.)
 
     def set_initial_pose(self, position):
-        y = np.zeros((self.n_y, self.order+1))
+        y = np.zeros((self.n_y, self.n_der+1))
         y[:, 0] = position
         self.set_initial_condition(y)
 
     def set_terminal_pose(self, position):
-        y = np.zeros((self.n_y, self.order+1))
+        y = np.zeros((self.n_y, self.n_der+1))
         y[:, 0] = position
         self.set_terminal_condition(y)
 
