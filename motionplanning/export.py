@@ -324,13 +324,17 @@ class Export:
         return body, lb, ub
 
     def gen_updateModel(self, fun):
-        body = '\treturn ' + fun + ';\n'
+        body = '\tvector<double> _dstate ' + fun + ';\n'
+        body += '\tdstate = _dstate;\n'
         return body
 
     def gen_getInput(self, fun):
-        body = '\treturn ' + fun + ';\n'
+        body = '\tvector<double> _input ' + fun + ';\n'
+        body += '\tinput = _input;\n'
         return body
 
     def gen_getY(self, fun):
-        body = '\treturn ' + fun + ';\n'
+        body = '\tvector<vector<double>> _y ' + fun + ';\n'
+        body += '\ty = _y;\n'
+        return body
         return body

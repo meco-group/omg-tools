@@ -112,16 +112,46 @@ void MotionPlanning::setPrediction(y_t prediction){
 void MotionPlanning::setTarget(y_t target){
     this->target = target;
     initVariables(variables, prediction, target);
+void MotionPlanning::predict(vector<double>& state, vector<vector<double>>& input, vector<vector<double>>& y, double predictTime)
+{
+    int steps = int(predictTime/sampleTime);
+    integrate(state, input, steps);
+    getY(state, input[steps], y); //ok: input[steps] is the one which starts at updateTime
 }
 
-vector<double> MotionPlanning::updateModel(vector<double>& state, vector<double>& input){
+void MotionPlanning::integrate(vector<double>& state, vector<vector<double>>& input, int steps){
+    //integration via 4th order Runge-Kutta
+    vector<double> k1(n_st);
+    vector<double> k2(n_st);
+    vector<double> k3(n_st);
+    vector<double> k4(n_st);
+    vector<double> st(n_st);
+    for (int i=0; i<steps; i++){
+        updateModel(state, input[i], k1);
+        for (int j=0; j<n_st; j++){
+            st[j] = state[j] + 0.5*sampleTime*k1[j];
+        }
+        updateModel(st, input[i], k2);
+        for (int j=0; j<n_st; j++){
+            st[j] = state[j] + 0.5*sampleTime*k2[j];
+        }
+        updateModel(st, input[i], k3);
+        for (int j=0; j<n_st; j++){
+            st[j] = state[j] + sampleTime*k3[j];
+        }
+        updateModel(st, input[i+1], k4);
+        for (int j=0; j<n_st; j++){
+            state[j] += (sampleTime/6.0)*(k1[j]+2*k2[j]+2*k3[j]+k4[j]);
+        }
+    }
+}
 @updateModel@
 }
 
-vector<vector<double>> MotionPlanning::getY(vector<double>& state, vector<double>& input){
+void MotionPlanning::getY(vector<double>& state, vector<double>& input, vector<vector<double>>& y){
 @getY@
 }
 
-vector<double> MotionPlanning::getInput(vector<vector<double>>& y){
+void MotionPlanning::getInput(vector<vector<double>>& y, vector<double>& input){
 @getInput@
 }

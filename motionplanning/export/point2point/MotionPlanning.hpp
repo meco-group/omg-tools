@@ -37,6 +37,10 @@ class MotionPlanning{
         std::vector<double> updateModel(std::vector<double>&, std::vector<double>&);
         std::vector<std::vector<double>> getY(std::vector<double>&, std::vector<double>&);
         std::vector<double> getInput(std::vector<std::vector<double>>&);
+        void predict(std::vector<double>&, std::vector<std::vector<double>>&, std::vector<std::vector<double>>&, double);
+        void updateModel(std::vector<double>&, std::vector<double>&, std::vector<double>&);
+        void getY(std::vector<double>&, std::vector<double>&, std::vector<std::vector<double>>&);
+        void getInput(std::vector<std::vector<double>>&, std::vector<double>&);
 };
 
 #endif
