@@ -1,117 +1,117 @@
 #include "MotionPlanning.hpp"
-#include <math.h>
 
 using namespace std;
 using namespace casadi;
 
 MotionPlanning::MotionPlanning(double updateTime, double sampleTime, double horizonTime):
-lbg(lbg_def), ubg(ubg_def), parameters(n_par), variables(n_var){
+lbg(lbg_def), ubg(ubg_def), parameters(n_par), variables(n_var),
+y_coeffs(n_y, vector<double>(len_y)), y0(n_y, vector<double>(n_der+1)), yT(n_y, vector<double>(n_der+1)),
+ypred(n_y, vector<double>(n_der+1)), derivative_T(derT_def){
     this->updateTime = updateTime;
     this->sampleTime = sampleTime;
     this->horizonTime = horizonTime;
-}
-
-bool MotionPlanning::initialize(){
-    if(!generateProblem()){
-        return false;
+    time.resize(int(updateTime/sampleTime)+1);
+    for (int k=0; k<time.size(); k++){
+        time[k] = k*sampleTime;
     }
+    generateProblem();
     args["p"] = parameters;
     args["x0"] = variables;
     args["lbg"] = lbg;
     args["ubg"] = ubg;
+    initSplines();
 }
 
-bool MotionPlanning::generateProblem(){
-    try{
-        // load object files
-        ExternalFunction grad_f("grad_f");
-        ExternalFunction jac_g("jac_g");
-        ExternalFunction hess_lag("hess_lag");
-        ExternalFunction nlp("nlp");
-        // set options
-        Dict options = make_dict("grad_f", grad_f, "jac_g", jac_g,
-                                 "hess_lag", hess_lag,
-                                 // "print_level", 0, "print_time", 0,
-                                 "warm_start_init_point", "yes", "tol", tol,
-                                 "linear_solver", linear_solver);
-        // create nlp solver
-        NlpSolver problem("problem", "ipopt", nlp, options);
-        this->problem = problem;
-        return true;
-    }
-    catch (...)
-    {
-        cerr << "Error while generating problem" << endl;
-        return false;
-    }
+void MotionPlanning::generateProblem(){
+    // load object files
+    ExternalFunction grad_f("grad_f");
+    ExternalFunction jac_g("jac_g");
+    ExternalFunction hess_lag("hess_lag");
+    ExternalFunction nlp("nlp");
+    // set options
+    Dict options = make_dict("grad_f", grad_f, "jac_g", jac_g,
+                             "hess_lag", hess_lag,
+                             // "print_level", 0, "print_time", 0,
+                             "warm_start_init_point", "yes", "tol", tol,
+                             "linear_solver", linear_solver);
+    // create nlp solver
+    NlpSolver problem("problem", "ipopt", nlp, options);
+    this->problem = problem;
 }
 
-bool MotionPlanning::update(){
-    // what input is needed from user?
-    // * current state ~> use a vector of states
-    // * pos/vel/acc of obstacles ~> use predifined obstacle type
-    // * target state ~> use vector of states
+void MotionPlanning::initSplines(){
+@initSplines@
+}
 
-
-    // predict initial state
-    // * based on current state + saved input trajectory
-    // * ode model necessary
-    // * possibility to predict 'ideal' (no disturbances) for debugging
-
-
+bool MotionPlanning::update(vector<double>& state0, vector<double>& stateT, vector<double>& inputT, vector<vector<double>>& input){
+    // predict initial y for problem
+    predict(state0, this->input, this->y0, updateTime);
+    // translate terminal state/input
+    getY(stateT, inputT, this->yT);
+    // init variables if first time
+    if(currentTime == 0.0){
+        initVariables();
+    }
     // solve problem
-    solve();
+    bool check = solve();
+    // interprete variables (extract y_coeffs, T)
+    interpreteVariables();
+    // sample y splines and compute input and ideal ypred (y0 of next update = ypred in ideal cases)
+    sampleSplines(ypred, this->input);
+    // input for system is one sample shorter!!
+    for (int k=0; k<time.size()-1; k++){
+        input[k] = this->input[k];
+    }
+    // transform splines: good init guess for next update
 
-    // generate input trajectories
-    // * spline evaluation necessary
-    // * only limited necessary sample points
-
-
-    // transform all splines
-    // * find a way to get all spline indices and their transformation
     // update current time
     currentTime += sampleTime;
+
+    return check;
 }
 
 bool MotionPlanning::solve(){
-    setParameters(parameters, currentTime, horizonTime, prediction, target, obstacles);
+    setParameters();
     args["p"] = parameters;
     args["x0"] = variables;
     args["lbg"] = lbg;
     args["ubg"] = ubg;
     sol = this->problem(args);
     vector<double> var(sol.at("x"));
-    variables = var;
+    for (int k=0; k<n_var; k++){
+        variables[k] = var[k];
+    }
     return true;
 }
 
-bool MotionPlanning::updateBounds(vector<double>& lbg, vector<double>& ubg, double currentTime){
-@updateBounds@
-    return true;
-}
-
-bool MotionPlanning::setParameters(vector<double>& parameters, double currentTime, double horizonTime, y_t prediction, y_t target, obstacle_t* obstacles){
+void MotionPlanning::setParameters(){
+    vector<double> y0(n_y);
+    vector<double> dy0(n_y*n_der);
+    vector<double> yT(n_y);
+    vector<double> dyT(n_y*n_der);
+    for (int i=0; i<n_y; i++){
+        y0[i] = this->y0[i][0];
+        yT[i] = this->yT[i][0];
+        for (int j=1; j<n_der+1; j++){
+            dy0[j*n_y+i] = this->y0[i][j];
+            dyT[j*n_y+i] = this->yT[i][j];
+        }
+    }
 @setParameters@
-    return true;
 }
 
-bool MotionPlanning::initVariables(vector<double>& variables, y_t state, y_t target){
+void MotionPlanning::initVariables(){
 @initVariables@
-    return true;
 }
 
-vector<double> MotionPlanning::getVariables(){
-    return variables;
+void MotionPlanning::updateBounds(double currentTime){
+@updateBounds@
 }
 
-void MotionPlanning::setPrediction(y_t prediction){
-    this->prediction = prediction;
-    initVariables(variables, prediction, target);
+void MotionPlanning::interpreteVariables(){
+@interpreteVariables@
 }
 
-void MotionPlanning::setTarget(y_t target){
-    this->target = target;
-    initVariables(variables, prediction, target);
 void MotionPlanning::predict(vector<double>& state, vector<vector<double>>& input, vector<vector<double>>& y, double predictTime)
 {
     int steps = int(predictTime/sampleTime);

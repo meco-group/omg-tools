@@ -19,14 +19,13 @@ def export_point2point(self):
     # create parameter dict
     par = {}
     for l in range(len(self.vehicles)):
-        par['y0_'+str(l)] = 'prediction.y'
-        par['yTp_'+str(l)] = 'target.y'
-        par['dy0_'+str(l)] = 'prediction.dy'
-        par['dyT_'+str(l)] = 'target.dy'
-    if 'T' in self._parameters:
+        par['y0_'+str(l)] = 'y0'
+        par['yTp_'+str(l)] = 'yT'
+        par['dy0_'+str(l)] = 'dy0'
+        par['dyT_'+str(l)] = 'dyT'
+    if(self.__class__.__name__ == 'FixedTPoint2point'):
         par['T'] = 'horizonTime'
         par['t'] = 'fmod(currentTime,'+str(self.knot_time)+')'
-    else:
 
         fun['samplesplines'] = ''
         fun['samplesplines'] += '\tvector<double> time(this->time);\n'
@@ -36,10 +35,16 @@ def export_point2point(self):
         fun['samplesplines'] += '\t}\n'
         data['spline_type'] += '\tstd::vector<std::vector<double>> transform;\n'
         data['spline_type'] += '}   spline_t;'
+
     elif(self.__class__.__name__ == 'FreeTPoint2point'):
         par['t'] = '0.0'
         fun['samplesplines'] = ''
         data['spline_type'] += '}   spline_t;'
+
+    else:
+        raise ValueError('Problems of type '+self.__class__.__name__ +
+                         ' are not supported.')
+
     return data, fun, par
 
 
@@ -65,8 +70,10 @@ def export_vehicle(self):
     # create data
     data = {}
     data['n_y'] = self.n_y
-    data['n_dy'] = self.n_dy
-    data['n_der_dep'] = self.n_der_dep
+    data['n_der'] = self.n_der
+    data['order'] = self.order
+    data['n_st'] = self.n_st
+    data['n_in'] = self.n_in
     # create function bodies
     fun = {}
     a, bdy = self._get_function_expression(self._signals_expr['dstate'],
@@ -85,7 +92,7 @@ def export_vehicle(self):
 
     bdy = '{{'+bdy[2:-2]+'}}'
     bdy = bdy.replace(' ', '')
-    n_zeros = self.order-self.n_der_dep
+    n_zeros = self.n_der-self.order
     bdy = bdy.replace('],[', ','+','.join(['0' for k in range(n_zeros)])+'},{')
     bdy = bdy.replace('}}', ','+','.join(['0' for k in range(n_zeros)])+'}}')
     fun['y'] = bdy
@@ -103,8 +110,8 @@ def _translate_expression_cpp(expression):
         a = splt[1]
         br_in_between = len(a.split(')')[0].split('(')) - 1
         splt2 = a.split(')', br_in_between+1)
-        expression = (splt[0]+'pow('+')'.join(splt2[:br_in_between+1])
-                      + ','+str(2)+')' + splt2[-1])
+        expression = (splt[0]+'pow('+')'.join(splt2[:br_in_between+1]) +
+                      ','+str(2)+')' + splt2[-1])
     # find @i
     cnt = 1
     while expression.find('@'+str(cnt)) >= 0:
@@ -166,6 +173,10 @@ class Export:
             raise ValueError('Set the path of the casadi install directory '
                              'on the remote system via the option '
                              '"remote_casadi_dir".')
+        if (self.vehicle.options['boundary_smoothness']['internal'] !=
+            self.vehicle.order):
+            raise ValueError('Only internal boundary smoothness equal to ' +
+                             'is supported.')
 
     def export(self):
         self.perform_checks()
@@ -189,12 +200,13 @@ class Export:
         bodies['updateModel'] = self.gen_updateModel(fun['dstate'])
         bodies['getInput'] = self.gen_getInput(fun['input'])
         bodies['getY'] = self.gen_getY(fun['y'])
+        bodies['interpreteVariables'] = self.gen_interpreteVariables()
         bodies['sampleSplines'] = self.gen_sampleSplines(fun['samplesplines'])
         bodies['initSplines'], data['spline_info'] = self.gen_initSplines()
         bodies['transformSplines'] = self.gen_transformSplines()
         # fill templates
         self.fill_template(bodies, os.path.join(destination+'src/',
-                                             'MotionPlanning.cpp'))
+                                                'MotionPlanning.cpp'))
         self.fill_template(data, os.path.join(destination+'src/',
                                               'MotionPlanning_def.hpp'))
         self.fill_template(make_opt, os.path.join(destination, 'Makefile'))
@@ -283,14 +295,14 @@ class Export:
                     body += '\tfor (int i=0; i<'+str(var.shape[1])+'; i++){\n'
                     body += '\t\tfor (int j=0; j<'+str(deg)+'; j++){\n'
                     body += ('\t\t\tvariables['+str(cnt)+'+i*' +
-                             str(var.shape[0])+'+j] = state.y[i];\n')
+                             str(var.shape[0])+'+j] = y0[i][0];\n')
                     body += ('\t\t\tvariables['+str(cnt+internal+deg) +
-                             '+i*'+str(var.shape[0])+'+j] = target.y[i];\n')
+                             '+i*'+str(var.shape[0])+'+j] = yT[i][0];\n')
                     body += '\t\t}\n'
                     body += '\t\tfor (int j=0; j<'+str(internal)+'; j++){\n'
                     body += ('\t\t\tvariables['+str(cnt+deg)+'+i*' +
-                             str(var.shape[0])+'+j] = state.y[i]+j*' +
-                             '(target.y[i] - state.y[i])/(' +
+                             str(var.shape[0])+'+j] = y0[i][0]+j*' +
+                             '(yT[i][0] - y0[i][0])/(' +
                              str(internal-1)+');\n')
                     body += '\t\t}\n'
                     body += '\t}\n'
@@ -392,6 +404,23 @@ class Export:
                          '_knots,'+name+'_degree,'+name+'_tf};\n')
                 body += '\tsplines["'+name+'"] = spline_' + name + ';\n'
         return body, spline_info
+
+    def gen_interpreteVariables(self):
+        body, cnt = '', 0
+        for label, child in self.father.children.items():
+            for name, var in child._variables.items():
+                if name == 'y':
+                    body += '\tfor (int i=0; i<'+str(var.shape[1])+'; i++){\n'
+                    body += '\t\tfor (int j=0; j<'+str(var.shape[0])+'; j++){\n'
+                    body += ('\t\t\ty_coeffs[i][j] = variables['+str(cnt) +
+                             '+i*'+str(var.shape[0])+'+j];\n')
+                    body += '\t\t}\n'
+                    body += '\t}\n'
+                if name == 'T':
+                    body += '\thorizonTime = variables['+str(cnt)+'];\n';
+                cnt += var.size()
+        return body
+
     def gen_sampleSplines(self, fun):
         return fun
 

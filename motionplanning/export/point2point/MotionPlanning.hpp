@@ -1,10 +1,12 @@
 #ifndef MOTIONPLANNING
 #define MOTIONPLANNING
 
-#include <vector>
-#include <iostream>
 #include <casadi/casadi.hpp>
 #include "MotionPlanning_def.hpp"
+#include <math.h>
+#include <memory.h>
+#include <vector>
+#include <iostream>
 
 class MotionPlanning{
     private:
@@ -13,31 +15,36 @@ class MotionPlanning{
         double updateTime;
         double sampleTime;
         casadi::NlpSolver problem;
-        y_t prediction;
-        y_t target;
-        obstacle_t obstacles[n_obs];
+        std::map<std::string, casadi::DMatrix> args, sol;
         std::vector<double> parameters;
         std::vector<double> variables;
         std::vector<double> lbg;
         std::vector<double> ubg;
-        std::map<std::string, casadi::DMatrix> args, sol;
+        obstacle_t obstacles[n_obs];
+        std::vector<std::vector<double>> y_coeffs;
+        std::vector<double> time;
+        std::vector<std::vector<double>> input;
+        std::vector<std::vector<double>> y0;
+        std::vector<std::vector<double>> yT;
+        std::vector<std::vector<double>> ypred;
+        std::vector<std::vector<std::vector<double>>> derivative_T;
+        std::map<std::string, spline_t> splines;
 
     public:
         MotionPlanning(double updateTime, double sampleTime, double horizonTime);
-        bool setParameters(std::vector<double>&, double, double, y_t, y_t, obstacle_t*);
-        bool updateBounds(std::vector<double>&, std::vector<double>&, double);
-        bool initVariables(std::vector<double>&, y_t, y_t);
-        bool generateProblem();
+        void generateProblem();
+        void initSplines();
+        bool update(std::vector<double>&, std::vector<double>&, std::vector<double>&, std::vector<std::vector<double>>&);
         bool solve();
-        bool update();
-        std::vector<double> getVariables();
-        void setPrediction(y_t);
-        void setTarget(y_t);
-        bool initialize();
-        std::vector<double> updateModel(std::vector<double>&, std::vector<double>&);
-        std::vector<std::vector<double>> getY(std::vector<double>&, std::vector<double>&);
-        std::vector<double> getInput(std::vector<std::vector<double>>&);
+        void setParameters();
+        void initVariables();
+        void updateBounds(double);
+        void interpreteVariables();
         void predict(std::vector<double>&, std::vector<std::vector<double>>&, std::vector<std::vector<double>>&, double);
+        void integrate(std::vector<double>&, std::vector<std::vector<double>>&, int);
+        void sampleSplines(std::vector<std::vector<double>>&, std::vector<std::vector<double>>&);
+        double evalSpline(double, std::vector<double>&, std::vector<double>&, int);
+        void transformSplines(double);
         void updateModel(std::vector<double>&, std::vector<double>&, std::vector<double>&);
         void getY(std::vector<double>&, std::vector<double>&, std::vector<std::vector<double>>&);
         void getInput(std::vector<std::vector<double>>&, std::vector<double>&);
