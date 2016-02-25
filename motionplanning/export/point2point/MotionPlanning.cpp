@@ -145,6 +145,38 @@ void MotionPlanning::integrate(vector<double>& state, vector<vector<double>>& in
         }
     }
 }
+double MotionPlanning::evalSpline(double x, vector<double>& knots, vector<double>& coeffs, int degree){
+    int len_k = knots.size();
+    double b;
+    double bottom;
+    double basis[degree+1][len_k-1];
+    for (int i=0; i<(len_k-1); i++){
+        if((i < degree+1) and (knots[0] == knots[i])){
+            basis[0][i] = ((x >= knots[i]) and (x <= knots[i+1]));
+        }else{
+            basis[0][i] = ((x > knots[i]) and (x <= knots[i + 1]));
+        }
+    }
+    for (int d=1; d<(degree+1); d++){
+        for (int i=0; i<(len_k - d - 1); i++){
+            b = 0;
+            bottom = knots[i+d] - knots[i];
+            if (bottom != 0){
+                b = (x - knots[i])*basis[d-1][i]/bottom;
+            }
+            bottom = knots[i+d+1] - knots[i+1];
+            if (bottom != 0){
+                b += (knots[i+d+1] - x)*basis[d-1][i+1]/bottom;
+            }
+            basis[d][i] = b;
+        }
+    }
+    double y = 0.0;
+    for (int l=0; l<(len_k-degree-1); l++){
+        y += coeffs[l]*basis[degree][l];
+    }
+    return y;
+}
 @updateModel@
 }
 
