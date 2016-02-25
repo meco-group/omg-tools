@@ -145,6 +145,30 @@ void MotionPlanning::integrate(vector<double>& state, vector<vector<double>>& in
         }
     }
 }
+
+void MotionPlanning::sampleSplines(vector<vector<double>>& y, vector<vector<double>>& input){
+@sampleSplines@
+    int len_coeffs = splines["y"].knots.size() - y_degree - 1;
+    for (int k=0; k<time.size(); k++){
+        for (int i=0; i<n_y; i++){
+            y[i][0] = evalSpline(time[k]/horizonTime, splines["y"].knots, y_coeffs[i], y_degree);
+        }
+        for (int d=1; d<n_der+1; d++){
+            vector<double> dknots(splines["y"].knots.begin()+d, splines["y"].knots.end()-d);
+            for (int i=0; i<n_y; i++){
+                vector<double> dcoeffs(len_coeffs-d);
+                for (int l=0; l<len_coeffs-d; l++){
+                    for (int m=0; m<len_coeffs; m++){
+                        dcoeffs[l] += (1.0/pow(horizonTime, d))*derivative_T[d-1][l][m]*y_coeffs[i][m];
+                    }
+                }
+                y[i][d] = evalSpline(time[k]/horizonTime, dknots, dcoeffs, y_degree-d);
+            }
+        }
+        getInput(y, input[k]);
+    }
+}
+
 double MotionPlanning::evalSpline(double x, vector<double>& knots, vector<double>& coeffs, int degree){
     int len_k = knots.size();
     double b;
@@ -177,6 +201,12 @@ double MotionPlanning::evalSpline(double x, vector<double>& knots, vector<double
     }
     return y;
 }
+
+void MotionPlanning::transformSplines(double currentTime){
+@transformSplines@
+}
+
+void MotionPlanning::updateModel(vector<double>& state, vector<double>& input, vector<double>& dstate){
 @updateModel@
 }
 

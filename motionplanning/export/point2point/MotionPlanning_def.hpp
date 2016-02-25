@@ -16,6 +16,7 @@
 #define linear_solver "@linear_solver@"
 
 #define inf  std::numeric_limits<double>::infinity()
+@spline_info@
 
 typedef struct obstacle {
     double position[n_dim];
@@ -27,5 +28,6 @@ typedef struct y {
     double y[n_y];
     double dy[n_dy];
 } __attribute__((packed)) y_t;
+@spline_type@
 
 #endif

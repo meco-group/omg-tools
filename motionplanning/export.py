@@ -10,6 +10,10 @@ def export_point2point(self):
     data = {}
     data['tol'] = self.options['solver']['tol']
     data['linear_solver'] = self.options['solver']['linear_solver']
+
+    data['spline_type'] = 'typedef struct spline {\n'
+    data['spline_type'] += '\tstd::vector<double> knots;\n'
+    data['spline_type'] += '\tint degree;\n'
     # create function bodies
     fun = {}
     # create parameter dict
@@ -23,7 +27,19 @@ def export_point2point(self):
         par['T'] = 'horizonTime'
         par['t'] = 'fmod(currentTime,'+str(self.knot_time)+')'
     else:
+
+        fun['samplesplines'] = ''
+        fun['samplesplines'] += '\tvector<double> time(this->time);\n'
+        fun['samplesplines'] += '\tfor(int k=0;k<time.size();k++){\n'
+        fun['samplesplines'] += ('\t\ttime[k] += fmod(currentTime,' +
+                                 str(self.knot_time)+');\n')
+        fun['samplesplines'] += '\t}\n'
+        data['spline_type'] += '\tstd::vector<std::vector<double>> transform;\n'
+        data['spline_type'] += '}   spline_t;'
+    elif(self.__class__.__name__ == 'FreeTPoint2point'):
         par['t'] = '0.0'
+        fun['samplesplines'] = ''
+        data['spline_type'] += '}   spline_t;'
     return data, fun, par
 
 
@@ -173,6 +189,9 @@ class Export:
         bodies['updateModel'] = self.gen_updateModel(fun['dstate'])
         bodies['getInput'] = self.gen_getInput(fun['input'])
         bodies['getY'] = self.gen_getY(fun['y'])
+        bodies['sampleSplines'] = self.gen_sampleSplines(fun['samplesplines'])
+        bodies['initSplines'], data['spline_info'] = self.gen_initSplines()
+        bodies['transformSplines'] = self.gen_transformSplines()
         # fill templates
         self.fill_template(bodies, os.path.join(destination+'src/',
                                              'MotionPlanning.cpp'))
@@ -337,4 +356,76 @@ class Export:
         body = '\tvector<vector<double>> _y ' + fun + ';\n'
         body += '\ty = _y;\n'
         return body
+
+    def gen_initSplines(self):
+        body, spline_info = '', ''
+
+        # specific info for y splines
+        derT = '{'
+        for d in range(1, self.vehicle.n_der+1):
+            B, P = self.vehicle.basis.derivative(d)
+            P = P.toarray()
+            derT += '{'
+            for i in range(P.shape[0]):
+                derT += '{'+','.join([str(p) for p in P[i, :].tolist()])+'},'
+            derT = derT[:-1]+'},'
+        derT = derT[:-1]+'}'
+        spline_info += '#define derT_def ' + derT +'\n'
+
+        # this is also for other splines
+        for label, child in self.father.children.items():
+            for name in child._splines_prim:
+                spl = child._splines_prim[name]
+                basis = spl['basis']
+                spline_info += '#define len_'+name+' '+str(len(basis))+'\n'
+                spline_info += '#define '+name+'_degree '+str(basis.degree)+'\n'
+                spline_info += ('#define '+name+'_knots '+'{' +
+                                ','.join([str(k) for k in basis.knots.tolist()])+'}\n')
+                if spl['init'] is not None:
+                    tf = '{'
+                    for k in range(spl['init'].shape[0]):
+                        tf += '{'+','.join([str(t) for t in spl['init'][k].tolist()])+'},'
+                    tf = tf[:-1]+'}'
+                    spline_info += '#define '+name+'_tf '+tf+'\n'
+
+                body += ('\tspline_t spline_'+name+' = {'+name +
+                         '_knots,'+name+'_degree,'+name+'_tf};\n')
+                body += '\tsplines["'+name+'"] = spline_' + name + ';\n'
+        return body, spline_info
+    def gen_sampleSplines(self, fun):
+        return fun
+
+    def gen_transformSplines(self):
+        body, cnt = '', 0
+        if self.problem.__class__.__name__ == 'FixedTPoint2point':
+            body += ('\tif(((currentTime > 0) and (fmod(currentTime, ' +
+                     str(self.problem.knot_time)+') == 0.0))){\n')
+            body += ('\t\tvector<double> spline_tf(' +
+                     str(len(self.vehicle.basis))+');\n')
+            for label, child in self.father.children.items():
+                for name, var in child._variables.items():
+                    if name in child._splines_prim:
+                        tf = 'splines["'+name+'"].transform'
+                        body += ('\t\tfor(int k=0; k<' +
+                                 str(var.shape[1])+'; k++){\n')
+                        body += ('\t\t\tfor(int i=0; i<' +
+                                 str(var.shape[0])+'; i++){\n')
+                        body += ('\t\t\t\tfor(int j=0; j<' +
+                                 str(var.shape[0])+'; j++){\n')
+                        body += ('\t\t\t\t\tspline_tf[i] = '+tf +
+                                 '[i][j]*variables['+str(cnt)+'+k*' +
+                                 str(var.shape[0])+'+j];\n')
+                        body += '\t\t\t\t}\n'
+                        body += '\t\t\t}\n'
+                        body += ('\t\t\tfor(int i=0; i<'+str(var.shape[0]) +
+                                 '; i++){\n')
+                        body += ('\t\t\t\tvariables['+str(cnt)+'+k*' +
+                                 str(var.shape[0])+'+i] = spline_tf[i];\n')
+                        body += '\t\t\t}\n'
+                        body += '\t\t}\n'
+                    cnt += var.size()
+            body += '\t}'
+        elif self.problem.__class__.__name__ == 'FreeTPoint2point':
+            raise Warning('Initialization for free time problem ' +
+                          'not implemented (yet?).')
         return body
