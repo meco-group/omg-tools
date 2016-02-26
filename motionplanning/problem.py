@@ -111,6 +111,7 @@ class Problem(OptiChild):
                 print "%3s | %10s | %10s " % ("It", "t upd", "time")
                 print "----|------------|------------"
             print "%3d | %.4e | %.4e " % (self.iteration, t_upd, current_time)
+        import pdb; pdb.set_trace()  # breakpoint b790b49c //
         self.update_times.append(t_upd)
 
     # ========================================================================

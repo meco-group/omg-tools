@@ -4,13 +4,14 @@ using namespace std;
 using namespace casadi;
 
 MotionPlanning::MotionPlanning(double updateTime, double sampleTime, double horizonTime):
-lbg(lbg_def), ubg(ubg_def), parameters(n_par), variables(n_var),
-y_coeffs(n_y, vector<double>(len_y)), y0(n_y, vector<double>(n_der+1)), yT(n_y, vector<double>(n_der+1)),
+parameters(n_par), variables(n_var), lbg(lbg_def), ubg(ubg_def),
+y_coeffs(n_y, vector<double>(len_y)), time(int(updateTime/sampleTime)+1),
+input(int(updateTime/sampleTime)+1, vector<double>(n_in)),
+y0(n_y, vector<double>(n_der+1)), yT(n_y, vector<double>(n_der+1)),
 ypred(n_y, vector<double>(n_der+1)), derivative_T(derT_def){
     this->updateTime = updateTime;
     this->sampleTime = sampleTime;
     this->horizonTime = horizonTime;
-    time.resize(int(updateTime/sampleTime)+1);
     for (int k=0; k<time.size(); k++){
         time[k] = k*sampleTime;
     }
@@ -31,9 +32,9 @@ void MotionPlanning::generateProblem(){
     // set options
     Dict options = make_dict("grad_f", grad_f, "jac_g", jac_g,
                              "hess_lag", hess_lag,
-                             // "print_level", 0, "print_time", 0,
-                             "warm_start_init_point", "yes", "tol", tol,
-                             "linear_solver", linear_solver);
+                             "print_level", 0, "print_time", 0,
+                             // "tol", tol, "linear_solver", linear_solver,
+                             "warm_start_init_point", "yes");
     // create nlp solver
     NlpSolver problem("problem", "ipopt", nlp, options);
     this->problem = problem;
@@ -48,10 +49,6 @@ bool MotionPlanning::update(vector<double>& state0, vector<double>& stateT, vect
     predict(state0, this->input, this->y0, updateTime);
     // translate terminal state/input
     getY(stateT, inputT, this->yT);
-    // init variables if first time
-    if(currentTime == 0.0){
-        initVariables();
-    }
     // solve problem
     bool check = solve();
     // interprete variables (extract y_coeffs, T)
@@ -63,14 +60,18 @@ bool MotionPlanning::update(vector<double>& state0, vector<double>& stateT, vect
         input[k] = this->input[k];
     }
     // transform splines: good init guess for next update
-
+    transformSplines(currentTime);
     // update current time
-    currentTime += sampleTime;
+    currentTime += updateTime;
 
     return check;
 }
 
 bool MotionPlanning::solve(){
+    // init variables if first time
+    if(currentTime == 0.0){
+        initVariables();
+    }
     setParameters();
     args["p"] = parameters;
     args["x0"] = variables;
@@ -92,9 +93,9 @@ void MotionPlanning::setParameters(){
     for (int i=0; i<n_y; i++){
         y0[i] = this->y0[i][0];
         yT[i] = this->yT[i][0];
-        for (int j=1; j<n_der+1; j++){
-            dy0[j*n_y+i] = this->y0[i][j];
-            dyT[j*n_y+i] = this->yT[i][j];
+        for (int j=0; j<n_der; j++){
+            dy0[j*n_y+i] = this->y0[i][j+1];
+            dyT[j*n_y+i] = this->yT[i][j+1];
         }
     }
 @setParameters@
@@ -203,6 +204,7 @@ double MotionPlanning::evalSpline(double x, vector<double>& knots, vector<double
 }
 
 void MotionPlanning::transformSplines(double currentTime){
+    cout << "in transformation" << endl;
 @transformSplines@
 }
 

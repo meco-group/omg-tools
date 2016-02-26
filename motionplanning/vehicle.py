@@ -336,12 +336,12 @@ class Vehicle(OptiChild):
     def init(self):
         init_y = np.zeros((len(self.basis), self.n_y))
         for k in range(self.n_y):
-            # init_y[:, k] = np.r_[self.y0[k, 0]*np.ones(self.degree),
-            #                      np.linspace(self.y0[k, 0], self.yT[k, 0],
-            #                                  len(self.basis) - 2*self.degree),
-            #                      self.yT[k, 0]*np.ones(self.degree)]
-            init_y[:, k] = np.linspace(self.y0[k, 0], self.yT[k, 0],
-                                       len(self.basis))
+            init_y[:, k] = np.r_[self.y0[k, 0]*np.ones(self.degree),
+                                 np.linspace(self.y0[k, 0], self.yT[k, 0],
+                                             len(self.basis) - 2*self.degree),
+                                 self.yT[k, 0]*np.ones(self.degree)]
+            # init_y[:, k] = np.linspace(self.y0[k, 0], self.yT[k, 0],
+            #                            len(self.basis))
         self.set_value('y', init_y)
 
     # ========================================================================
