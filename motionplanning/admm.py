@@ -465,7 +465,7 @@ class ADMM(Problem):
         self.var_admm['z_i_p'] = self.var_admm['z_i']
         self.var_admm['z_ij_p'] = self.var_admm['z_ij']
         current_time = np.round(current_time, 6) % self.problem.knot_time
-        horizon_time = self.problem.vehicles[0].options['horizon_time']
+        horizon_time = self.problem.options['horizon_time']
         rho = self.options['admm']['rho']
         if self._lineq_updz:
             # set inputs
@@ -510,7 +510,7 @@ class ADMM(Problem):
         l_ij = self.var_admm['l_ij']
         x_j = self.var_admm['x_j']
         t = np.round(current_time, 6) % self.problem.knot_time
-        T = self.problem.vehicles[0].options['horizon_time']
+        T = self.problem.options['horizon_time']
         rho = self.options['admm']['rho']
         inp = [x_i, z_i, z_ij, l_i, l_ij, x_j, t, T, rho]
         out = self.problem_upd_l(inp)
