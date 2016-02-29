@@ -20,6 +20,8 @@ TODO
     + update c++ code such that user only needs to think of state/input
     + spline transformation..
     - test all implemented functions
+        - something wrong: 2nd iteration: derivatives of y[1] are wrong!
+    - make knot_time depending on horizonTime via n_knots: make it possible to change horizonTime at run-time
     - environment parameters: pos/vel/acc of checkpoints (shape can be determined by uper obstacle tracker)
     - integrate obstacles
 
@@ -33,6 +35,7 @@ TODO
 QUESTIONS JORIS
 - c++ problem options: limited number of options?
 - c++ how to cast solution to vector?
+- c++ how to get solver output?
 
 Notes:
 * All SX symbol names are unique!

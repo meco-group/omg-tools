@@ -94,8 +94,8 @@ void MotionPlanning::setParameters(){
         y0[i] = this->y0[i][0];
         yT[i] = this->yT[i][0];
         for (int j=0; j<n_der; j++){
-            dy0[j*n_y+i] = this->y0[i][j+1];
-            dyT[j*n_y+i] = this->yT[i][j+1];
+            dy0[i*n_der+j] = this->y0[i][j+1];
+            dyT[i*n_der+j] = this->yT[i][j+1];
         }
     }
 @setParameters@
