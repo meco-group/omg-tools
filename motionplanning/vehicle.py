@@ -1,6 +1,6 @@
 from optilayer import OptiChild, evalf
 from spline import BSplineBasis
-from casadi import SX, MX, SXFunction
+from casadi import SX, MX, SXFunction, vertcat, horzcat
 from scipy.signal import filtfilt, butter
 from scipy.interpolate import splev, interp1d
 from scipy.integrate import odeint
@@ -11,10 +11,16 @@ import re
 
 class Vehicle(OptiChild):
 
-    def __init__(self, n_y, degree, shape, options, **kwargs):
+    def __init__(self, n_y, n_der, degree, order, shape, options, **kwargs):
+        #n_y: number of spline variables
+        #n_der: required number of derivatives of y to save/plot/express signals
+        #degree: degree of spline
+        #order: order of ode describing the system
+
         OptiChild.__init__(self, 'vehicle')
         self.shape = shape
         self._signals = {}
+        self._signals_expr = {}
         self._signals_num = {}
         self.signal_length = {}
         self._init_memory()
@@ -38,11 +44,13 @@ class Vehicle(OptiChild):
         # create spline variable
         self.n_y = n_y
         self.splines = self.define_spline_variable('y', self.n_y)
-
+        self.order = order
         # create corresponding signal
-        self.order = self.degree if not (
-            'order' in kwargs) else kwargs['order']
-        self._y = SX.sym('y', n_y, self.order+1)
+        if n_der > degree:
+            raise ValueError('n_der should be smaller or ' +
+                             'equal to degree of spline.')
+        self.n_der = n_der
+        self._y = SX.sym('y', n_y, self.n_der+1)
         self.define_signal('y', self._y)
 
         # set options
@@ -50,8 +58,8 @@ class Vehicle(OptiChild):
         self.set_options(options)
 
         # default y0 & yT
-        self.y0 = np.zeros((self.n_y, self.order+1))
-        self.yT = np.zeros((self.n_y, self.order+1))
+        self.y0 = np.zeros((self.n_y, self.n_der+1))
+        self.yT = np.zeros((self.n_y, self.n_der+1))
 
     # ========================================================================
     # Vehicle options
@@ -59,11 +67,11 @@ class Vehicle(OptiChild):
 
     def set_default_options(self):
         self.options = {'safety_distance': 0., 'safety_weight': 10.,
-                        'horizon_time': 10., 'sample_time': 0.01,
+                        'sample_time': 0.01,
                         'ideal_update': False, '1storder_delay': False,
                         'time_constant': 0.1}
-        self.options['boundary_smoothness'] = {'initial': self.order,
-                                               'internal': self.degree-2,
+        self.options['boundary_smoothness'] = {'initial': self.degree,
+                                               'internal': self.order,
                                                'terminal': self.degree}
 
     def set_options(self, options):
@@ -114,19 +122,47 @@ class Vehicle(OptiChild):
             self.signal_length[name] = expr.shape[0]
         expr = [expr] if not isinstance(expr, list) else expr
         self._signals[name] = SXFunction(name, [self._y], expr)
-        self._signals_num[name] = self._generate_function(expr)
+        self._signals_num[name] = self._generate_function(expr, self._y)
+        self._signals_expr[name] = expr
 
     def define_position(self, expr):
         self.define_signal('position', expr)
         self.n_pos = self.signal_length['position']
+        self._position = SX.sym('position', self.n_pos)
+        return self._position
 
     def define_input(self, expr):
         self.define_signal('input', expr)
         self.n_in = self.signal_length['input']
+        self._input = SX.sym('input', self.n_in)
+        return self._input
 
     def define_state(self, expr):
         self.define_signal('state', expr)
         self.n_st = self.signal_length['state']
+        self._state = SX.sym('state', self.n_st)
+        return self._state
+
+    def define_dstate(self, expr):
+        if len(expr) != self.n_st:
+            raise ValueError('Size of dstate does not agree with size of state!')
+        dstate = vertcat(expr)
+        self._signals_expr['dstate'] = dstate
+        self.model_update = self._generate_function(dstate,
+                                                    [self._state, self._input])
+
+    def define_y(self, expr):
+        y = []
+        for e in expr:
+            if len(e) != self.n_y:
+                raise ValueError('Size of y does not agree with n_y!')
+            y.append(vertcat(e))
+        y = horzcat(y)
+        if y.shape[1] != self.order+1:
+            raise ValueError('You should provide the same number ' +
+                             'of derivatives as order')
+        self._signals_expr['y'] = y
+        self._get_y = self._generate_function(y, [self._state, self._input])
 
     # evaluate symbols from symbolic or numeric y trajectories
     def get_signal(self, name, y=None):
@@ -172,30 +208,35 @@ class Vehicle(OptiChild):
 
     # compute spline trajectories from coefficients
     def get_splines(self, y_coeffs, T, time):
-        y = np.zeros((self.n_y, self.order+1, time.size))
+        y = np.zeros((self.n_y, self.n_der+1, time.size))
         for k in range(self.n_y):
-            for d in range(self.order+1):
+            for d in range(self.n_der+1):
                 y[k, d, :] = (1./T**d)*splev(time/T, (self.knots,
                                                       y_coeffs[:, k].ravel(),
                                                       self.degree), d)
         return y
 
     # inverse getter: get y from state and input
-    def _get_y(self, state, input):
+    def get_y(self, state, input):
         if len(state.shape) == 3:
             n_samp = state.shape[2]
-            y = np.zeros((self.n_y, self.order+1, n_samp))
+            y = np.zeros((self.n_y, self.n_der+1, n_samp))
             for k in range(n_samp):
                 # fill in first part of y e.g. pos and vel
-                y[:, :, k], deg = self._get_y(state[:, :, k], input[:, :, k])
+                _y = np.array(self._get_y(state[:, :, k].ravel(),
+                                          input[:, :, k].ravel()))
+                y[:, :_y.shape[1], k] = _y
             sample_time = self.options['sample_time']
-            for d in range(deg+1, self.order+1):
+            for d in range(_y.shape[1], self.n_der+1):
                 # fill in second part e.g. acceleration
                 for k in range(self.n_y):
                     y[k, d, :] = np.gradient(y[k, d-1, :], sample_time)
             return y
         else:
-            return self.get_y(state, input)
+            y = np.zeros((self.n_y, self.n_der+1))
+            _y = np.array(self._get_y(state.ravel(), input.ravel()))
+            y[:, :_y.shape[1]] = _y
+            return y
 
     # convert symbolic casadi expression to numerical function evaluation
     # this is probably the most stupid way to do it, but it is the most
@@ -204,22 +245,49 @@ class Vehicle(OptiChild):
     # uses in its __str__ function some non-python operation names,
     # _check_expression should translate them. This is however manually
     # implemented and probably not all cases are covered...
-    def _generate_function(self, expression):
-        if not isinstance(expression, list):
-            expression = [expression]
-        expr_str = []
-        for expr in expression:
-            string = expr.__str__()
-            for k in range(self.n_y):
-                for l in range(self.order+1):
-                    j = self.n_y*l + k
-                    string = string.replace('y_%d' % (j), 'y[%d,%d]' % (k, l))
-            string = self._check_expression(string)
-            expr_str.append(string)
-        exec('fun = lambda y: [%s]' % ','.join(expr_str))
+    def _generate_function(self, expression, arguments):
+        arg, body = self._get_function_expression(expression, arguments)
+        exec('fun = lambda %s: %s' % (arg, body))
         return fun
 
-    def _check_expression(self, expression):
+    def _get_function_expression(self, expression, arguments, translator=None):
+        if not isinstance(expression, list):
+            expression = [expression]
+        if not isinstance(arguments, list):
+            arguments = [arguments]
+        if translator is None:
+            translator = self._translate_expression
+        expr_str, names = [], []
+        for arg in arguments:
+            if arg.size() > 1:
+                names.append(arg[0].getName()[:-2])
+            else:
+                names.append(arg.getName())
+        for expr in expression:
+            string = expr.__str__()
+            for i, arg in enumerate(arguments):
+                for k in range(arg.size1()):
+                    if arg.size2() > 1:
+                        for l in range(arg.size2()):
+                            j = arg.size1()*l + k
+                            string = string.replace('%s_%d' % (names[i], j),
+                                                    '%s[%d,%d]' % (names[i], k, l))
+                    elif arg.size() > 1:
+                        string = string.replace('%s_%d' % (names[i], k),
+                                                '%s[%d]' % (names[i], k))
+                    else:
+                        string = string.replace('%s' % (names[i]),
+                                                '%s[%d]' % (names[i], 0))
+            string = translator(string)
+            expr_str.append(string)
+        body = ','.join(expr_str)
+        arg = ','.join(names)
+        if body[0] != '[':
+            return arg, '['+body+']'
+        else:
+            return arg, body
+
+    def _translate_expression(self, expression):
         dictionary = {'sqrt(': 'np.sqrt(', 'cos(': 'np.cos(',
                       'sin(': 'np.sin(', 'atan2(': 'np.arctan2(',
                       'atan(': 'np.arctan(', 'tan(': 'np.tan(',
@@ -228,6 +296,8 @@ class Vehicle(OptiChild):
         for str1, str2 in dictionary.items():
             if expression.find(str1) >= 0:
                 expression = expression.replace(str1, str2)
+        # remove '\n'
+        expression = expression.translate(None, '\n')
         # sq() means power of 2
         while expression.find('sq(') >= 0:
             splt = expression.split('sq(', 1)
@@ -257,9 +327,22 @@ class Vehicle(OptiChild):
             self.path[name] = np.zeros(signal.shape + (1,))
             self.path[name][:, :, 0] = self.get_signal(name, y0)
         self.path['time'] = np.array([0.])
+        self.init()
 
     def set_terminal_condition(self, yT):
         self.yT = yT
+        self.init()
+
+    def init(self):
+        init_y = np.zeros((len(self.basis), self.n_y))
+        for k in range(self.n_y):
+            init_y[:, k] = np.r_[self.y0[k, 0]*np.ones(self.degree),
+                                 np.linspace(self.y0[k, 0], self.yT[k, 0],
+                                             len(self.basis) - 2*self.degree),
+                                 self.yT[k, 0]*np.ones(self.degree)]
+            # init_y[:, k] = np.linspace(self.y0[k, 0], self.yT[k, 0],
+            #                            len(self.basis))
+        self.set_value('y', init_y)
 
     # ========================================================================
     # Update and simulation related functions
@@ -354,19 +437,18 @@ class Vehicle(OptiChild):
         u_interp = self._get_input_interpolator(input, sample_time)
         n_samp = int(integration_time/sample_time)+1
         time_axis = np.linspace(0., (n_samp-1)*sample_time, n_samp)
-        y = np.zeros((self.n_y, self.order+1, n_samp))
+        y = np.zeros((self.n_y, self.n_der+1, n_samp))
         state0 = self.get_state(y0).ravel()
         state = np.zeros((self.n_st, 1, n_samp))
         # solves d_input/dt = f(input, time)
         # gives state for next points in time, specified by time_axis
         state[:, 0, :] = odeint(self._update_ode_model, state0, time_axis,
                                 args=(u_interp,)).T
-        y = self._get_y(state, input[:, :, :n_samp])
+        y = self.get_y(state, input[:, :, :n_samp])
         return y
 
     def _update_ode_model(self, state, time, u_interp):
         u = u_interp(time)
-        # is located in the vehicle subclass, represents ODE of the vehicle
         return self.model_update(state, u)
 
     def _integrate_plant(self, y0, input, sample_time, integration_time):
@@ -375,7 +457,7 @@ class Vehicle(OptiChild):
         n_samp = int(integration_time/sample_time)+1
         # time_axis is [0, integration time]
         time_axis = np.linspace(0., (n_samp-1)*sample_time, n_samp)
-        y = np.zeros((self.n_y, self.order+1, n_samp))
+        y = np.zeros((self.n_y, self.n_der+1, n_samp))
         state0_a = self.get_state(y0).ravel()
         state0_b = self.get_input(y0).ravel()
         # current state
@@ -389,7 +471,7 @@ class Vehicle(OptiChild):
         state[:, 0, :] = odeint(self._update_ode_plant, state0, time_axis,
                                 args=(u_interp,)).T
         # get the pos, vel,... given the current state and the inputs
-        y = self._get_y(state[:self.n_st, :, :], state[-self.n_in:, :, :])
+        y = self.get_y(state[:self.n_st, :, :], state[-self.n_in:, :, :])
         return y
 
     def _update_ode_plant(self, state, time, u_interp):
@@ -435,20 +517,6 @@ class Vehicle(OptiChild):
     # Methods encouraged to override (very basic implementation)
     # ========================================================================
 
-    def init_variables(self):
-        variables = {'y': np.zeros((len(self.basis), self.n_y))}
-        for k in range(self.n_y):
-            variables['y'][:, k] = np.r_[self.y0[k, 0]*np.ones(self.degree),
-                                         np.linspace(self.y0[k, 0],
-                                                     self.yT[k, 0],
-                                                     (len(self.basis) -
-                                                      2*self.degree)),
-                                         self.yT[k, 0]*np.ones(self.degree)]
-        # for k in range(self.n_y):
-        #     variables['y'][:, k] = np.linspace(self.y0[k, 0], self.yT[k, 0], len(self.basis))
-
-        return variables
-
     def get_checkpoints(self, y=None):
         if y is None:
             return self.shape.get_checkpoints(self.splines)
@@ -466,10 +534,4 @@ class Vehicle(OptiChild):
         raise NotImplementedError('Please implement this method!')
 
     def set_terminal_pose(self, pose):
-        raise NotImplementedError('Please implement this method!')
-
-    def model_update(self, state, input):
-        raise NotImplementedError('Please implement this method!')
-
-    def get_y(self, state, input):
         raise NotImplementedError('Please implement this method!')
