@@ -2,7 +2,6 @@ from optilayer import OptiFather, OptiChild
 from fleet import get_fleet_vehicles
 from plots import Plots
 import time
-import export
 
 
 class Simulator:
@@ -147,12 +146,3 @@ class Problem(OptiChild):
 
     def stop_criterium(self):
         raise NotImplementedError('Please implement this method!')
-
-    # ========================================================================
-    # Methods for exporting problem to C++ library
-    # ========================================================================
-
-    def export(self, options={}):
-        if not hasattr(self, 'father'):
-            self.init()
-        exp = export.Export(self, 'point2point', options)
