@@ -20,7 +20,6 @@ class MotionPlanning{
         std::vector<double> variables;
         std::vector<double> lbg;
         std::vector<double> ubg;
-        obstacle_t obstacles[n_obs];
         std::vector<std::vector<double>> y_coeffs;
         std::vector<double> time;
         std::vector<std::vector<double>> input;
@@ -35,9 +34,9 @@ class MotionPlanning{
         MotionPlanning(double updateTime, double sampleTime, double horizonTime);
         void generateProblem();
         void initSplines();
-        bool update(std::vector<double>&, std::vector<double>&, std::vector<double>&, std::vector<std::vector<double>>&);
-        bool solve();
-        void setParameters();
+        bool update(std::vector<double>&, std::vector<double>&, std::vector<double>&, std::vector<std::vector<double>>&, std::vector<obstacle_t>&);
+        bool solve(std::vector<obstacle_t>&);
+        void setParameters(std::vector<obstacle_t>&);
         void initVariables();
         void updateBounds(double);
         void interpreteVariables();

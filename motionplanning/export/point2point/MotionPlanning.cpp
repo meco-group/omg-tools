@@ -48,7 +48,7 @@ void MotionPlanning::initSplines(){
 @initSplines@
 }
 
-bool MotionPlanning::update(vector<double>& state0, vector<double>& stateT, vector<double>& inputT, vector<vector<double>>& input){
+bool MotionPlanning::update(vector<double>& state0, vector<double>& stateT, vector<double>& inputT, vector<vector<double>>& input, vector<obstacle_t>& obstacles){
     #ifdef DEBUG
     double tmeas;
     clock_t begin;
@@ -96,7 +96,7 @@ bool MotionPlanning::update(vector<double>& state0, vector<double>& stateT, vect
     #ifdef DEBUG
     begin = clock();
     #endif
-    bool check = solve();
+    bool check = solve(obstacles);
     #ifdef DEBUG
     end = clock();
     tmeas = double(end-begin)/CLOCKS_PER_SEC;
@@ -132,12 +132,12 @@ bool MotionPlanning::update(vector<double>& state0, vector<double>& stateT, vect
     return check;
 }
 
-bool MotionPlanning::solve(){
+bool MotionPlanning::solve(vector<obstacle_t>& obstacles){
     // init variables if first time
     if(fabs(currentTime)<=1.e-6){
         initVariables();
     }
-    setParameters();
+    setParameters(obstacles);
     args["p"] = parameters;
     args["x0"] = variables;
     args["lbg"] = lbg;
@@ -150,7 +150,7 @@ bool MotionPlanning::solve(){
     return true;
 }
 
-void MotionPlanning::setParameters(){
+void MotionPlanning::setParameters(vector<obstacle_t>& obstacles){
     vector<double> y0(n_y);
     vector<double> dy0(n_y*n_der);
     vector<double> yT(n_y);
