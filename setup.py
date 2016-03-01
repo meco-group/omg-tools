@@ -17,7 +17,7 @@ setup(
     keywords="optimization motion planning",
     # url="",
     packages=['motionplanning'],
-    long_description=read('readme'),
+    long_description=read('readme.md'),
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Science/Research",

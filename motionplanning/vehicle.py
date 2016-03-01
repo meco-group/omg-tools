@@ -12,10 +12,17 @@ import re
 class Vehicle(OptiChild):
 
     def __init__(self, n_y, n_der, degree, order, shape, options, **kwargs):
+<<<<<<< HEAD
         # n_y: number of spline variables
         # n_der: required number of derivatives of y to express signals
         # degree: degree of spline
         # order: order of ode describing the system
+=======
+        #n_y: number of spline variables
+        #n_der: required number of derivatives of y to save/plot/express signals
+        #degree: degree of spline
+        #order: order of ode describing the system
+>>>>>>> develop
 
         OptiChild.__init__(self, 'vehicle')
         self.shape = shape
@@ -70,7 +77,11 @@ class Vehicle(OptiChild):
                         'sample_time': 0.01,
                         'ideal_update': False, '1storder_delay': False,
                         'time_constant': 0.1}
+<<<<<<< HEAD
         self.options['boundary_smoothness'] = {'initial': self.order,
+=======
+        self.options['boundary_smoothness'] = {'initial': self.degree,
+>>>>>>> develop
                                                'internal': self.order,
                                                'terminal': self.degree}
         # *internal smooth up to order: states are continuous
@@ -340,12 +351,21 @@ class Vehicle(OptiChild):
     def init(self):
         init_y = np.zeros((len(self.basis), self.n_y))
         for k in range(self.n_y):
+<<<<<<< HEAD
             init_y[:, k] = np.r_[self.y0[k, 0]*np.ones(self.degree),
                                  np.linspace(self.y0[k, 0], self.yT[k, 0],
                                              len(self.basis) - 2*self.degree),
                                  self.yT[k, 0]*np.ones(self.degree)]
             # init_y[:, k] = np.linspace(self.y0[k, 0], self.yT[k, 0],
             #                            len(self.basis))
+=======
+            # init_y[:, k] = np.r_[self.y0[k, 0]*np.ones(self.degree),
+            #                      np.linspace(self.y0[k, 0], self.yT[k, 0],
+            #                                  len(self.basis) - 2*self.degree),
+            #                      self.yT[k, 0]*np.ones(self.degree)]
+            init_y[:, k] = np.linspace(self.y0[k, 0], self.yT[k, 0],
+                                       len(self.basis))
+>>>>>>> develop
         self.set_value('y', init_y)
 
     # ========================================================================
