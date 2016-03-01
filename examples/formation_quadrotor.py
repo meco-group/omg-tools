@@ -1,5 +1,3 @@
-import sys
-sys.path.append("/home/ruben/Dropbox/Work/Programs/motionplanningtoolbox/")
 from motionplanning import *
 
 # create fleet
@@ -26,7 +24,7 @@ environment.add_obstacle(Obstacle({'position': [-0.6, -5.4]},
                                   shape=Rectangle(width=0.2, height=10.)))
 
 # create a formation point-to-point problem
-options = {'codegen': {'jit': False}, 'admm': {'rho': 0.05}}
+options = {'codegen': {'jit': False}, 'admm': {'rho': 0.1}}
 problem = FormationPoint2point(fleet, environment, options=options)
 problem.init()
 
@@ -41,7 +39,5 @@ simulator.run()
 
 # show/save some results
 simulator.plot.show_movie('2d', repeat=False)
-# problem.plot.save_movie('input', 5, 'holonomic')
-# problem.plot.show('input')
 
 matplotlib.pyplot.show(block=True)
