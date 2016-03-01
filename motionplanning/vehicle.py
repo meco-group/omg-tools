@@ -12,10 +12,10 @@ import re
 class Vehicle(OptiChild):
 
     def __init__(self, n_y, n_der, degree, order, shape, options, **kwargs):
-        #n_y: number of spline variables
-        #n_der: required number of derivatives of y to save/plot/express signals
-        #degree: degree of spline
-        #order: order of ode describing the system
+        # n_y: number of spline variables
+        # n_der: required number of derivatives of y to express signals
+        # degree: degree of spline
+        # order: order of ode describing the system
 
         OptiChild.__init__(self, 'vehicle')
         self.shape = shape
@@ -70,9 +70,13 @@ class Vehicle(OptiChild):
                         'sample_time': 0.01,
                         'ideal_update': False, '1storder_delay': False,
                         'time_constant': 0.1}
-        self.options['boundary_smoothness'] = {'initial': self.degree,
+        self.options['boundary_smoothness'] = {'initial': self.order,
                                                'internal': self.order,
                                                'terminal': self.degree}
+        # *internal smooth up to order: states are continuous
+        # *initial smoothness <= order: otherwise resolved after 1 update
+        #       because internal smoothness is smaller
+        # *terminal as much as possible for stability reasons.
 
     def set_options(self, options):
         if 'boundary_smoothness' in options:
@@ -408,7 +412,6 @@ class Vehicle(OptiChild):
             # which elements are selected here?
             y_pred = y[:, :, -1]
             n_samp = int(predict_time/sample_time)
-
         for key in self._signals.keys():
             self.prediction[key] = self.get_signal(key, y_pred)
         self._add_to_memory(self.predictions, self.prediction,
