@@ -3,7 +3,6 @@ from spline import BSplineBasis
 from spline_extra import definite_integral, evalspline
 from spline_extra import shiftoverknot_T, shift_spline
 from casadi import vertcat, fmod, MX, MXFunction
-import export
 import numpy as np
 
 
