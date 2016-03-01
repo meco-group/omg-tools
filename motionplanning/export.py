@@ -27,13 +27,15 @@ def export_point2point(self):
     if(self.__class__.__name__ == 'FixedTPoint2point'):
         fun['setParameters']['T'] = 'horizonTime'
         fun['setParameters']['t'] = ('fmod(round(currentTime*1000.)/1000.,' +
-                                     str(self.knot_time)+')')
+                                     'horizonTime/' +
+                                     str(self.vehicles[0].knot_intervals)+')')
         fun['sampleSplines'] = ''
         fun['sampleSplines'] += '\tvector<double> time(this->time);\n'
         fun['sampleSplines'] += '\tfor(int k=0;k<time.size();k++){\n'
         fun['sampleSplines'] += ('\t\ttime[k] += ' +
                                  'fmod(round(currentTime*1000.)/1000.,' +
-                                 str(self.knot_time)+');\n')
+                                 'horizonTime/' +
+                                 str(self.vehicles[0].knot_intervals)+');\n')
         fun['sampleSplines'] += '\t}\n'
         types['spline_t'] += '\tstd::vector<std::vector<double>> transform;\n'
         types['spline_t'] += '}'
@@ -465,8 +467,8 @@ class ExportCpp(Export):
         code, cnt = '', 0
         if self.problem.__class__.__name__ == 'FixedTPoint2point':
             code += ('\tif(((currentTime > 0) and ' +
-                     '(fmod(round(currentTime*1000.)/1000., ' +
-                     str(self.problem.knot_time)+') == 0.0))){\n')
+                     'fabs(fmod(round(currentTime*1000.)/1000., ' +
+                     'horizonTime/' + str(self.vehicle.knot_intervals)+')) <1.e-6)){\n')
             code += ('\t\tvector<double> spline_tf(' +
                      str(len(self.vehicle.basis))+');\n')
             for label, child in self.father.children.items():
