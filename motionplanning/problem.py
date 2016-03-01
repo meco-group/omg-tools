@@ -60,10 +60,9 @@ class Problem(OptiChild):
 
     def set_default_options(self):
         self.options = {'verbose': 2, 'update_time': 0.1}
-        # self.options['solver'] = {'tol': 1e-3, 'linear_solver': 'ma57',
-        #                           'warm_start_init_point': 'yes',
-        #                           'print_level': 0, 'print_time': 0}
-        self.options['solver'] = {'warm_start_init_point': 'yes'}
+        self.options['solver'] = {'tol': 1e-3, 'linear_solver': 'mumps',
+                                  'warm_start_init_point': 'yes',
+                                  'print_level': 0, 'print_time': 0}
         self.options['codegen'] = {
             'jit': False, 'jit_options': {'flags': ['-O0']}}
 
@@ -95,7 +94,6 @@ class Problem(OptiChild):
         var = self.father.get_variables()
         par = self.father.set_parameters(current_time)
         lb, ub = self.father.update_bounds(current_time)
-        import pdb; pdb.set_trace()  # breakpoint b6cac19f //
         # solve!
         t0 = time.time()
         self.problem({'x0': var, 'p': par, 'lbg': lb, 'ubg': ub})
@@ -154,7 +152,10 @@ class Problem(OptiChild):
     # Methods for exporting problem to C++ library
     # ========================================================================
 
-    def export(self, options={}):
+    def export(self, language='c++', options={}):
         if not hasattr(self, 'father'):
             self.init()
-        exp = export.Export(self, 'point2point', options)
+        if language == 'c++':
+            exp = export.ExportCpp(self, 'point2point', options)
+        if language == 'python':
+            raise ValueError('Python export not yet implemented. Ask Tim Mercy.')
