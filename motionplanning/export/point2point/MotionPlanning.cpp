@@ -5,10 +5,10 @@ using namespace casadi;
 
 MotionPlanning::MotionPlanning(double updateTime, double sampleTime, double horizonTime):
 parameters(n_par), variables(n_var), lbg(lbg_def), ubg(ubg_def),
-y_coeffs(n_y, vector<double>(len_y)), time(int(updateTime/sampleTime)+1),
+y_coeffs(n_y, vector<double>(y_length)), time(int(updateTime/sampleTime)+1),
 input(int(updateTime/sampleTime)+1, vector<double>(n_in)),
 y0(n_y, vector<double>(n_der+1)), yT(n_y, vector<double>(n_der+1)),
-ypred(n_y, vector<double>(n_der+1)), derivative_T(derT_def){
+ypred(n_y, vector<double>(n_der+1)), derivative_T(derT_def), idealUpdate(false){
     this->updateTime = updateTime;
     this->sampleTime = sampleTime;
     this->horizonTime = horizonTime;
@@ -45,8 +45,18 @@ void MotionPlanning::initSplines(){
 }
 
 bool MotionPlanning::update(vector<double>& state0, vector<double>& stateT, vector<double>& inputT, vector<vector<double>>& input){
+    // transform splines: good init guess for this update
+    transformSplines(currentTime);
     // predict initial y for problem
-    predict(state0, this->input, this->y0, updateTime);
+    if (idealUpdate){
+        if (fabs(currentTime)<=1.e-6){
+            vector<double> zeros(n_in);
+            getY(state0, zeros, ypred);
+        }
+        this->y0 = ypred;
+    }else{
+        predict(state0, this->input, this->y0, updateTime);
+    }
     // translate terminal state/input
     getY(stateT, inputT, this->yT);
     // solve problem
@@ -59,8 +69,6 @@ bool MotionPlanning::update(vector<double>& state0, vector<double>& stateT, vect
     for (int k=0; k<time.size()-1; k++){
         input[k] = this->input[k];
     }
-    // transform splines: good init guess for next update
-    transformSplines(currentTime);
     // update current time
     currentTime += updateTime;
 
@@ -69,7 +77,7 @@ bool MotionPlanning::update(vector<double>& state0, vector<double>& stateT, vect
 
 bool MotionPlanning::solve(){
     // init variables if first time
-    if(currentTime == 0.0){
+    if(fabs(currentTime)<=1.e-6){
         initVariables();
     }
     setParameters();
@@ -113,36 +121,40 @@ void MotionPlanning::interpreteVariables(){
 @interpreteVariables@
 }
 
-void MotionPlanning::predict(vector<double>& state, vector<vector<double>>& input, vector<vector<double>>& y, double predictTime)
+void MotionPlanning::predict(vector<double>& state0, vector<vector<double>>& input, vector<vector<double>>& y, double predictTime)
 {
+    vector<double> stateT(n_st);
     int steps = int(predictTime/sampleTime);
-    integrate(state, input, steps);
-    getY(state, input[steps], y); //ok: input[steps] is the one which starts at updateTime
+    integrate(state0, input, stateT, steps);
+    getY(stateT, input[steps], y); //ok: input[steps] is the one which starts at updateTime
 }
 
-void MotionPlanning::integrate(vector<double>& state, vector<vector<double>>& input, int steps){
+void MotionPlanning::integrate(vector<double>& state0, vector<vector<double>>& input, vector<double>& stateT, int steps){
     //integration via 4th order Runge-Kutta
     vector<double> k1(n_st);
     vector<double> k2(n_st);
     vector<double> k3(n_st);
     vector<double> k4(n_st);
     vector<double> st(n_st);
+    for (int j=0; j<n_st; j++){
+        stateT[j] = state0[j];
+    }
     for (int i=0; i<steps; i++){
-        updateModel(state, input[i], k1);
+        updateModel(state0, input[i], k1);
         for (int j=0; j<n_st; j++){
-            st[j] = state[j] + 0.5*sampleTime*k1[j];
+            st[j] = state0[j] + 0.5*sampleTime*k1[j];
         }
         updateModel(st, input[i], k2);
         for (int j=0; j<n_st; j++){
-            st[j] = state[j] + 0.5*sampleTime*k2[j];
+            st[j] = state0[j] + 0.5*sampleTime*k2[j];
         }
         updateModel(st, input[i], k3);
         for (int j=0; j<n_st; j++){
-            st[j] = state[j] + sampleTime*k3[j];
+            st[j] = state0[j] + sampleTime*k3[j];
         }
         updateModel(st, input[i+1], k4);
         for (int j=0; j<n_st; j++){
-            state[j] += (sampleTime/6.0)*(k1[j]+2*k2[j]+2*k3[j]+k4[j]);
+            stateT[j] += (sampleTime/6.0)*(k1[j]+2*k2[j]+2*k3[j]+k4[j]);
         }
     }
 }
@@ -204,7 +216,6 @@ double MotionPlanning::evalSpline(double x, vector<double>& knots, vector<double
 }
 
 void MotionPlanning::transformSplines(double currentTime){
-    cout << "in transformation" << endl;
 @transformSplines@
 }
 
@@ -218,4 +229,8 @@ void MotionPlanning::getY(vector<double>& state, vector<double>& input, vector<v
 
 void MotionPlanning::getInput(vector<vector<double>>& y, vector<double>& input){
 @getInput@
+}
+
+void MotionPlanning::setIdealUpdate(bool idealUpdate){
+    this->idealUpdate = idealUpdate;
 }

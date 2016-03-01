@@ -6,99 +6,110 @@ from casadi import SXFunction, MXFunction, NlpSolver, nlpIn, nlpOut
 
 # Problem
 def export_point2point(self):
-    # create data
-    data = {}
-    data['tol'] = self.options['solver']['tol']
-    data['linear_solver'] = self.options['solver']['linear_solver']
-
-    data['spline_type'] = 'typedef struct spline {\n'
-    data['spline_type'] += '\tstd::vector<double> knots;\n'
-    data['spline_type'] += '\tint degree;\n'
+    info = {}
+    # create defines
+    defines = {}
+    defines['tol'] = self.options['solver']['tol']
+    defines['linear_solver'] = self.options['solver']['linear_solver']
+    # create types
+    types = {}
+    types['spline_t'] = 'struct spline {\n'
+    types['spline_t'] += '\tstd::vector<double> knots;\n'
+    types['spline_t'] += '\tint degree;\n'
     # create function bodies
     fun = {}
-    # create parameter dict
-    par = {}
+    fun['setParameters'] = {}
     for l in range(len(self.vehicles)):
-        par['y0_'+str(l)] = 'y0'
-        par['yTp_'+str(l)] = 'yT'
-        par['dy0_'+str(l)] = 'dy0'
-        par['dyT_'+str(l)] = 'dyT'
+        fun['setParameters']['y0_'+str(l)] = 'y0'
+        fun['setParameters']['yTp_'+str(l)] = 'yT'
+        fun['setParameters']['dy0_'+str(l)] = 'dy0'
+        fun['setParameters']['dyT_'+str(l)] = 'dyT'
     if(self.__class__.__name__ == 'FixedTPoint2point'):
-        par['T'] = 'horizonTime'
-        par['t'] = 'fmod(currentTime,'+str(self.knot_time)+')'
-
-        fun['samplesplines'] = ''
-        fun['samplesplines'] += '\tvector<double> time(this->time);\n'
-        fun['samplesplines'] += '\tfor(int k=0;k<time.size();k++){\n'
-        fun['samplesplines'] += ('\t\ttime[k] += fmod(currentTime,' +
+        fun['setParameters']['T'] = 'horizonTime'
+        fun['setParameters']['t'] = ('fmod(round(currentTime*1000.)/1000.,' +
+                                     str(self.knot_time)+')')
+        fun['sampleSplines'] = ''
+        fun['sampleSplines'] += '\tvector<double> time(this->time);\n'
+        fun['sampleSplines'] += '\tfor(int k=0;k<time.size();k++){\n'
+        fun['sampleSplines'] += ('\t\ttime[k] += ' +
+                                 'fmod(round(currentTime*1000.)/1000.,' +
                                  str(self.knot_time)+');\n')
-        fun['samplesplines'] += '\t}\n'
-        data['spline_type'] += '\tstd::vector<std::vector<double>> transform;\n'
-        data['spline_type'] += '}   spline_t;'
+        fun['sampleSplines'] += '\t}\n'
+        types['spline_t'] += '\tstd::vector<std::vector<double>> transform;\n'
+        types['spline_t'] += '}'
 
     elif(self.__class__.__name__ == 'FreeTPoint2point'):
-        par['t'] = '0.0'
-        fun['samplesplines'] = ''
-        data['spline_type'] += '}   spline_t;'
-
+        fun['setParameters']['t'] = '0.0'
+        fun['sampleSplines'] = ''
+        types['spline_t'] += '}'
     else:
-        raise ValueError('Problems of type '+self.__class__.__name__ +
+        raise ValueError('Problems of type ' + self.__class__.__name__ +
                          ' are not supported.')
-
-    return data, fun, par
+    info.update({'defines': defines, 'types': types, 'functions': fun})
+    return info
 
 
 # Environment
 def export_environment(self):
-    # create data
-    data = {}
-    data['n_dim'] = self.n_dim
-    data['n_obs'] = self.No
+    info = {}
+    # create defines
+    defines = {}
+    defines['n_dim'] = self.n_dim
+    defines['n_obs'] = self.No
     # create function bodies
     fun = {}
-    # create parameter dict
-    par = {}
+    fun['setParameters'] = {}
     for obs in self.obstacles:
-        par['x_'+str(obs)] = 'obstacles['+str(obs.index)+'].position'
-        par['v_'+str(obs)] = 'obstacles['+str(obs.index)+'].velocity'
-        par['a_'+str(obs)] = 'obstacles['+str(obs.index)+'].acceleration'
-    return data, fun, par
+        fun['setParameters']['x_'+str(obs)] = 'obstacles['+str(obs.index)+'].position'
+        fun['setParameters']['v_'+str(obs)] = 'obstacles['+str(obs.index)+'].velocity'
+        fun['setParameters']['a_'+str(obs)] = 'obstacles['+str(obs.index)+'].acceleration'
+    info.update({'defines': defines, 'functions': fun})
+    return info
 
 
 # Vehicle
 def export_vehicle(self):
-    # create data
-    data = {}
-    data['n_y'] = self.n_y
-    data['n_der'] = self.n_der
-    data['order'] = self.order
-    data['n_st'] = self.n_st
-    data['n_in'] = self.n_in
+    info = {}
+    # create defines
+    defines = {}
+    defines['n_y'] = self.n_y
+    defines['n_der'] = self.n_der
+    defines['order'] = self.order
+    defines['n_st'] = self.n_st
+    defines['n_in'] = self.n_in
+    derT = '{'  # spline derivative matrices
+    for d in range(1, self.n_der+1):
+        B, P = self.basis.derivative(d)
+        P = P.toarray()
+        derT += '{'
+        for i in range(P.shape[0]):
+            derT += '{'+','.join([str(p) for p in P[i, :].tolist()])+'},'
+        derT = derT[:-1]+'},'
+    derT = derT[:-1]+'}'
+    defines['derT_def'] = derT
     # create function bodies
     fun = {}
     a, bdy = self._get_function_expression(self._signals_expr['dstate'],
                                            [self._state, self._input],
                                            _translate_expression_cpp)
-    fun['dstate'] = '{'+bdy[1:-1]+'}'
+    fun['updateModel'] = '{'+bdy[1:-1]+'}'
     a, bdy = self._get_function_expression(self._signals_expr['input'],
                                            self._y, _translate_expression_cpp)
     for i in range(self.n_y):
         for j in range(self.order+1):
             bdy = bdy.replace('[%d,%d]' % (i, j), '[%d][%d]' % (i, j))
-    fun['input'] = '{'+bdy[1:-1]+'}'
+    fun['getInput'] = '{'+bdy[1:-1]+'}'
     a, bdy = self._get_function_expression(self._signals_expr['y'],
                                            [self._state, self._input],
                                            _translate_expression_cpp)
-
     bdy = '{{'+bdy[2:-2]+'}}'
     bdy = bdy.replace(' ', '')
     n_zeros = self.n_der-self.order
     bdy = bdy.replace('],[', ','+','.join(['0' for k in range(n_zeros)])+'},{')
     bdy = bdy.replace('}}', ','+','.join(['0' for k in range(n_zeros)])+'}}')
-    fun['y'] = bdy
-    # create parameter dict
-    par = {}
-    return data, fun, par
+    fun['getY'] = bdy
+    info.update({'defines': defines, 'functions': fun})
+    return info
 
 
 def _translate_expression_cpp(expression):
@@ -124,20 +135,53 @@ def _translate_expression_cpp(expression):
 
 # Father
 def export_father(self):
-    data, par, fun = {}, {}, {}
+    info = {}
     for label, child in self.children.items():
-        d, f, p = child._export(child)
-        data.update(d)
-        par.update(p)
-        fun.update(f)
-    data['n_var'] = self._var_struct.size
-    data['n_par'] = self._par_struct.size
-    data['n_con'] = self._con_struct.size
-    return data, fun, par
+        for k, inf in child._export(child).items():
+            if isinstance(inf, dict):
+                if k not in info:
+                    info[k] = {}
+                info[k].update(inf)
+            else:
+                info[k] = inf
+    info['defines'].update({'n_var': self._var_struct.size})
+    info['defines'].update({'n_par': self._par_struct.size})
+    info['defines'].update({'n_con': self._con_struct.size})
+
+    # spline info
+    for label, child in self.children.items():
+        for name in child._splines_prim:
+            spl = child._splines_prim[name]
+            basis = spl['basis']
+            knots = '{'+','.join([str(k) for k in basis.knots.tolist()])+'}'
+            info['defines'].update({('%s_length') % name: str(len(basis))})
+            info['defines'].update({('%s_degree') % name: str(basis.degree)})
+            info['defines'].update({('%s_knots')  % name: knots})
+            if spl['init'] is not None:
+                tf = '{'
+                for k in range(spl['init'].shape[0]):
+                    tf += '{'+','.join([str(t) for t in spl['init'][k].tolist()])+'},'
+                tf = tf[:-1]+'}'
+                info['defines'].update({('%s_tf') % name: tf})
+    # lbg & ubg
+    lb, ub, cnt = '{', '{', 0
+    for label, child in self.children.items():
+        for name, con in child._constraints.items():
+            if con[0].size() > 1:
+                for l in range(con[0].size()):
+                    lb += str(con[1][l])+','
+                    ub += str(con[2][l])+','
+            else:
+                lb += str(con[1])+','
+                ub += str(con[2])+','
+            cnt += con[0].size()
+    lb = lb[:-1]+'}'
+    ub = ub[:-1]+'}'
+    info['defines'].update({'lbg_def': lb, 'ubg_def': ub})
+    return info
 
 
 class Export:
-
     def __init__(self, problem, filefamily, options):
         self.set_default_options()
         self.set_options(options)
@@ -148,72 +192,66 @@ class Export:
             raise ValueError(('Only export for single vehicle ' +
                               'problems is supported.'))
         self.vehicle = problem.vehicles[0]
-        self.gen_export_functions()
+        self.create_export_functions()
         self.export()
-
-    def gen_export_functions(self):
-        self.vehicle._export = export_vehicle
-        self.problem.environment._export = export_environment
-        self.problem._export = export_point2point
-        self.father._export = export_father
 
     def set_default_options(self):
         self.options = {}
         self.options['directory'] = os.path.join(os.getcwd(), 'export/')
         self.options['casadi_optiflags'] = ''  # '', '-O3', '-Os'
-        self.options['remote_casadi_dir'] = None
+        self.options['casadi_dir'] = None
 
     def set_options(self, options):
         self.options.update(options)
         if not os.path.isdir(self.options['directory']):
             os.makedirs(self.options['directory'])
 
+    def export():
+        raise NotImplementedError('Please implement this method!')
+
+
+class ExportCpp(Export):
+
+    def create_export_functions(self):
+        self.vehicle._export = export_vehicle
+        self.problem.environment._export = export_environment
+        self.problem._export = export_point2point
+        self.father._export = export_father
+
     def perform_checks(self):
-        if not self.options['remote_casadi_dir']:
+        if not self.options['casadi_dir']:
             raise ValueError('Set the path of the casadi install directory '
                              'on the remote system via the option '
-                             '"remote_casadi_dir".')
+                             '"casadi_dir".')
         if (self.vehicle.options['boundary_smoothness']['internal'] !=
             self.vehicle.order):
             raise ValueError('Only internal boundary smoothness equal to ' +
-                             'is supported.')
+                             'vehicle\'s order is supported.')
 
     def export(self):
         self.perform_checks()
         print 'Exporting ...',
         # copy files
-        destination = self.options['directory']
         source = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                               'export/'+self.filefamily)
-        self.copy_files(source, destination)
-        # get_make_options
-        make_opt = self.get_make_options()
-        # create nlp src files
-        make_opt['casadi_src'] = self.create_nlp_src(destination)
+        self.copy_files(source, self.options['directory'])
         # retrieve info from children
-        data, fun, par = self.father._export(self.father)
+        info = self.father._export(self.father)
+        data = {}
+        # create nlp src files and get make options
+        data.update(self.create_nlp_src(self.options['directory']))
+        data.update(self.get_make_options())
+        # generate defines
+        data.update(self.create_defines(info))
+        # generate types
+        data.update(self.create_types(info))
         # generate function bodies
-        bodies = {}
-        bodies['initVariables'] = self.gen_initVariables()
-        bodies['setParameters'] = self.gen_setParameters(par)
-        bodies['updateBounds'], data['lbg'], data['ubg'] = self.gen_updateBounds()
-        bodies['updateModel'] = self.gen_updateModel(fun['dstate'])
-        bodies['getInput'] = self.gen_getInput(fun['input'])
-        bodies['getY'] = self.gen_getY(fun['y'])
-        bodies['interpreteVariables'] = self.gen_interpreteVariables()
-        bodies['sampleSplines'] = self.gen_sampleSplines(fun['samplesplines'])
-        bodies['initSplines'], data['spline_info'] = self.gen_initSplines()
-        bodies['transformSplines'] = self.gen_transformSplines()
-        # fill templates
-        self.fill_template(bodies, os.path.join(destination+'src/',
-                                                'MotionPlanning.cpp'))
-        self.fill_template(data, os.path.join(destination+'src/',
-                                              'MotionPlanning_def.hpp'))
-        self.fill_template(make_opt, os.path.join(destination, 'Makefile'))
+        data.update(self.create_functions(info))
+        # write info to source files
+        self.write_files(data)
         print 'done.'
 
     def copy_files(self, source, destination):
-        # copy src files
         src_files = ['MotionPlanning.cpp', 'MotionPlanning.hpp',
                      'MotionPlanning_def.hpp']
         src_dir = os.path.join(destination, 'src/')
@@ -222,13 +260,34 @@ class Export:
         for f in src_files:
             shutil.copy(os.path.join(source, f),
                         os.path.join(src_dir, f))
-        # copy Makefile
         shutil.copy(os.path.join(source, 'Makefile'),
                     os.path.join(destination, 'Makefile'))
 
+    def write_files(self, info):
+        files = ['src/MotionPlanning.cpp', 'src/MotionPlanning_def.hpp',
+                 'Makefile']
+        files = [os.path.join(self.options['directory'], f) for f in files]
+        self.fill_template(info, files)
+
+    def fill_template(self, data, files):
+        if not isinstance(files, list):
+            files = [files]
+        for file in files:
+            with open(file, 'r+') as f:
+                if f is not None:
+                    body = f.read()
+                    for key, item in data.items():
+                        body = body.replace('@'+key+'@', str(item))
+                    f.seek(0)
+                    f.truncate()
+                    f.write(body)
+                else:
+                    raise ValueError('File '+os.path.join(self.src_dir, file) +
+                                     ' does not exist!')
+
     def get_make_options(self):
         make_opt = {}
-        make_opt['casadidir'] = self.options['remote_casadi_dir']
+        make_opt['casadidir'] = self.options['casadi_dir']
         make_opt['casadi_optiflags'] = self.options['casadi_optiflags']
         return make_opt
 
@@ -253,65 +312,81 @@ class Export:
             shutil.move(cwd+'/'+name+'.c',
                         os.path.join(destination+'src/', name+'.c'))
             src_files += name+'.c' + ' '
-        return src_files
+        return {'casadi_src': src_files}
 
-    def fill_template(self, data, files):
-        if not isinstance(files, list):
-            files = [files]
-        for file in files:
-            with open(file, 'r+') as f:
-                if f is not None:
-                    body = f.read()
-                    for key, item in data.items():
-                        body = body.replace('@'+key+'@', str(item))
-                    f.seek(0)
-                    f.truncate()
-                    f.write(body)
-                else:
-                    raise ValueError('File '+os.path.join(self.src_dir, file) +
-                                     ' does not exist!')
+    def create_defines(self, info):
+        if 'defines' in info:
+            code = ''
+            for name, define in info['defines'].items():
+                code += '#define ' + str(name) + ' ' + str(define) + '\n'
+            return {'defines': code}
+        else:
+            return {}
 
-    def gen_setParameters(self, par_cpp):
-        body, cnt = '', 0
+    def create_types(self, info):
+        if 'types' in info:
+            code = ''
+            for name, type in info['types'].items():
+                code += 'typedef ' + type + name + ';\n'
+            return {'types': code}
+        else:
+            return {}
+
+    def create_functions(self, info):
+        code = {}
+        fun = info['functions']
+        code.update(self._create_initVariables())
+        code.update(self._create_setParameters(fun['setParameters']))
+        code.update(self._create_updateBounds())
+        code.update(self._create_updateModel(fun['updateModel']))
+        code.update(self._create_getInput(fun['getInput']))
+        code.update(self._create_getY(fun['getY']))
+        code.update(self._create_interpreteVariables())
+        code.update(self._create_sampleSplines(fun['sampleSplines']))
+        code.update(self._create_initSplines())
+        code.update(self._create_transformSplines())
+        return code
+
+    def _create_setParameters(self, parameters):
+        code, cnt = '', 0
         for label, child in self.father.children.items():
             for name, par in child._parameters.items():
                 if par.size() > 1:
-                    body += '\tfor (int i=0; i<'+str(par.size())+'; i++){\n'
-                    body += ('\t\tparameters['+str(cnt)+'+i] = ' +
-                             par_cpp[name]+'[i];\n')
-                    body += '\t}\n'
+                    code += '\tfor (int i=0; i<'+str(par.size())+'; i++){\n'
+                    code += ('\t\tparameters['+str(cnt)+'+i] = ' +
+                             parameters[name]+'[i];\n')
+                    code += '\t}\n'
                 else:
-                    body += '\tparameters['+str(cnt)+'] = '+par_cpp[name]+';\n'
+                    code += '\tparameters['+str(cnt)+'] = '+parameters[name]+';\n'
                 cnt += par.size()
-        return body
+        return {'setParameters': code}
 
-    def gen_initVariables(self):
-        body, cnt = '', 0
+    def _create_initVariables(self):
+        code, cnt = '', 0
         for label, child in self.father.children.items():
             for name, var in child._variables.items():
                 if name == 'y':
                     deg = child.degree
                     internal = var.shape[0]-2*deg
-                    body += '\tfor (int i=0; i<'+str(var.shape[1])+'; i++){\n'
-                    body += '\t\tfor (int j=0; j<'+str(deg)+'; j++){\n'
-                    body += ('\t\t\tvariables['+str(cnt)+'+i*' +
+                    code += '\tfor (int i=0; i<'+str(var.shape[1])+'; i++){\n'
+                    code += '\t\tfor (int j=0; j<'+str(deg)+'; j++){\n'
+                    code += ('\t\t\tvariables['+str(cnt)+'+i*' +
                              str(var.shape[0])+'+j] = y0[i][0];\n')
-                    body += ('\t\t\tvariables['+str(cnt+internal+deg) +
+                    code += ('\t\t\tvariables['+str(cnt+internal+deg) +
                              '+i*'+str(var.shape[0])+'+j] = yT[i][0];\n')
-                    body += '\t\t}\n'
-                    body += '\t\tfor (int j=0; j<'+str(internal)+'; j++){\n'
-                    body += ('\t\t\tvariables['+str(cnt+deg)+'+i*' +
+                    code += '\t\t}\n'
+                    code += '\t\tfor (int j=0; j<'+str(internal)+'; j++){\n'
+                    code += ('\t\t\tvariables['+str(cnt+deg)+'+i*' +
                              str(var.shape[0])+'+j] = y0[i][0]+j*' +
                              '(yT[i][0] - y0[i][0])/(' +
                              str(internal-1)+');\n')
-                    body += '\t\t}\n'
-                    body += '\t}\n'
+                    code += '\t\t}\n'
+                    code += '\t}\n'
                 cnt += var.size()
-        return body
+        return {'initVariables': code}
 
-    def gen_updateBounds(self):
-        body, cnt = '', 0
-        lb, ub = '{', '{'
+    def _create_updateBounds(self):
+        code, cnt = '', 0
         shutdowns = {'greater': {}, 'lesser': {}, 'equal': {}}
         for label, child in self.father.children.items():
             for name, con in child._constraints.items():
@@ -322,17 +397,7 @@ class Export:
                             shutdowns[rel][bnd] = []
                         shutdowns[rel][bnd].extend(
                             [cnt+i for i in range(con[0].size())])
-                if con[0].size() > 1:
-                    for l in range(con[0].size()):
-                        lb += str(con[1][l])+','
-                        ub += str(con[2][l])+','
-                else:
-                    lb += str(con[1])+','
-                    ub += str(con[2])+','
                 cnt += con[0].size()
-        lb = lb[:-1]+'}'
-        ub = ub[:-1]+'}'
-
         _lbg, _ubg = self.father._lb.cat, self.father._ub.cat
         for rel, item in shutdowns.items():
             if rel == 'greater':
@@ -342,119 +407,93 @@ class Export:
             elif rel == 'equal':
                 op = '=='
             for bnd, indices in item.items():
-                body += '\tif(currentTime '+op+' '+str(bnd)+'){\n'
+                code += '\tif(currentTime '+op+' '+str(bnd)+'){\n'
                 for ind in indices:
-                    body += '\t\tlbg['+str(ind)+'] = -inf;\n'
-                    body += '\t\tubg['+str(ind)+'] = +inf;\n'
-                body += '\t}else{\n'
+                    code += '\t\tlbg['+str(ind)+'] = -inf;\n'
+                    code += '\t\tubg['+str(ind)+'] = +inf;\n'
+                code += '\t}else{\n'
                 for ind in indices:
-                    body += '\t\tlbg['+str(ind)+'] = '+str(_lbg[ind])+';\n'
-                    body += '\t\tubg['+str(ind)+'] = '+str(_ubg[ind])+';\n'
-                body += '\t}\n'
+                    code += '\t\tlbg['+str(ind)+'] = '+str(_lbg[ind])+';\n'
+                    code += '\t\tubg['+str(ind)+'] = '+str(_ubg[ind])+';\n'
+                code += '\t}\n'
+        return {'updateBounds': code}
 
-        return body, lb, ub
+    def _create_updateModel(self, fun):
+        code = '\tvector<double> _dstate ' + fun + ';\n'
+        code += '\tdstate = _dstate;\n'
+        return {'updateModel': code}
 
-    def gen_updateModel(self, fun):
-        body = '\tvector<double> _dstate ' + fun + ';\n'
-        body += '\tdstate = _dstate;\n'
-        return body
+    def _create_getInput(self, fun):
+        code = '\tvector<double> _input ' + fun + ';\n'
+        code += '\tinput = _input;\n'
+        return {'getInput': code}
 
-    def gen_getInput(self, fun):
-        body = '\tvector<double> _input ' + fun + ';\n'
-        body += '\tinput = _input;\n'
-        return body
+    def _create_getY(self, fun):
+        code = '\tvector<vector<double>> _y ' + fun + ';\n'
+        code += '\ty = _y;\n'
+        return {'getY': code}
 
-    def gen_getY(self, fun):
-        body = '\tvector<vector<double>> _y ' + fun + ';\n'
-        body += '\ty = _y;\n'
-        return body
-
-    def gen_initSplines(self):
-        body, spline_info = '', ''
-
-        # specific info for y splines
-        derT = '{'
-        for d in range(1, self.vehicle.n_der+1):
-            B, P = self.vehicle.basis.derivative(d)
-            P = P.toarray()
-            derT += '{'
-            for i in range(P.shape[0]):
-                derT += '{'+','.join([str(p) for p in P[i, :].tolist()])+'},'
-            derT = derT[:-1]+'},'
-        derT = derT[:-1]+'}'
-        spline_info += '#define derT_def ' + derT +'\n'
-
-        # this is also for other splines
+    def _create_initSplines(self):
+        code = ''
         for label, child in self.father.children.items():
             for name in child._splines_prim:
-                spl = child._splines_prim[name]
-                basis = spl['basis']
-                spline_info += '#define len_'+name+' '+str(len(basis))+'\n'
-                spline_info += '#define '+name+'_degree '+str(basis.degree)+'\n'
-                spline_info += ('#define '+name+'_knots '+'{' +
-                                ','.join([str(k) for k in basis.knots.tolist()])+'}\n')
-                if spl['init'] is not None:
-                    tf = '{'
-                    for k in range(spl['init'].shape[0]):
-                        tf += '{'+','.join([str(t) for t in spl['init'][k].tolist()])+'},'
-                    tf = tf[:-1]+'}'
-                    spline_info += '#define '+name+'_tf '+tf+'\n'
-
-                body += ('\tspline_t spline_'+name+' = {'+name +
+                code += ('\tspline_t spline_'+name+' = {'+name +
                          '_knots,'+name+'_degree,'+name+'_tf};\n')
-                body += '\tsplines["'+name+'"] = spline_' + name + ';\n'
-        return body, spline_info
+                code += '\tsplines["'+name+'"] = spline_' + name + ';\n'
+        return {'initSplines': code}
 
-    def gen_interpreteVariables(self):
-        body, cnt = '', 0
+    def _create_interpreteVariables(self):
+        code, cnt = '', 0
         for label, child in self.father.children.items():
             for name, var in child._variables.items():
                 if name == 'y':
-                    body += '\tfor (int i=0; i<'+str(var.shape[1])+'; i++){\n'
-                    body += '\t\tfor (int j=0; j<'+str(var.shape[0])+'; j++){\n'
-                    body += ('\t\t\ty_coeffs[i][j] = variables['+str(cnt) +
+                    code += '\tfor (int i=0; i<'+str(var.shape[1])+'; i++){\n'
+                    code += '\t\tfor (int j=0; j<'+str(var.shape[0])+'; j++){\n'
+                    code += ('\t\t\ty_coeffs[i][j] = variables['+str(cnt) +
                              '+i*'+str(var.shape[0])+'+j];\n')
-                    body += '\t\t}\n'
-                    body += '\t}\n'
+                    code += '\t\t}\n'
+                    code += '\t}\n'
                 if name == 'T':
-                    body += '\thorizonTime = variables['+str(cnt)+'];\n';
+                    code += '\thorizonTime = variables['+str(cnt)+'];\n';
                 cnt += var.size()
-        return body
+        return {'interpreteVariables': code}
 
-    def gen_sampleSplines(self, fun):
-        return fun
+    def _create_sampleSplines(self, fun):
+        return {'sampleSplines': fun}
 
-    def gen_transformSplines(self):
-        body, cnt = '', 0
+    def _create_transformSplines(self):
+        code, cnt = '', 0
         if self.problem.__class__.__name__ == 'FixedTPoint2point':
-            body += ('\tif(((currentTime > 0) and (fmod(currentTime, ' +
+            code += ('\tif(((currentTime > 0) and ' +
+                     '(fmod(round(currentTime*1000.)/1000., ' +
                      str(self.problem.knot_time)+') == 0.0))){\n')
-            body += ('\t\tvector<double> spline_tf(' +
+            code += ('\t\tvector<double> spline_tf(' +
                      str(len(self.vehicle.basis))+');\n')
             for label, child in self.father.children.items():
                 for name, var in child._variables.items():
                     if name in child._splines_prim:
                         tf = 'splines["'+name+'"].transform'
-                        body += ('\t\tfor(int k=0; k<' +
+                        code += ('\t\tfor(int k=0; k<' +
                                  str(var.shape[1])+'; k++){\n')
-                        body += ('\t\t\tfor(int i=0; i<' +
+                        code += ('\t\t\tfor(int i=0; i<' +
                                  str(var.shape[0])+'; i++){\n')
-                        body += ('\t\t\t\tfor(int j=0; j<' +
+                        code += '\t\t\tspline_tf[i] = 0.0;\n'
+                        code += ('\t\t\t\tfor(int j=0; j<' +
                                  str(var.shape[0])+'; j++){\n')
-                        body += ('\t\t\t\t\tspline_tf[i] = '+tf +
+                        code += ('\t\t\t\t\tspline_tf[i] += '+tf +
                                  '[i][j]*variables['+str(cnt)+'+k*' +
                                  str(var.shape[0])+'+j];\n')
-                        body += '\t\t\t\t}\n'
-                        body += '\t\t\t}\n'
-                        body += ('\t\t\tfor(int i=0; i<'+str(var.shape[0]) +
+                        code += '\t\t\t\t}\n'
+                        code += '\t\t\t}\n'
+                        code += ('\t\t\tfor(int i=0; i<'+str(var.shape[0]) +
                                  '; i++){\n')
-                        body += ('\t\t\t\tvariables['+str(cnt)+'+k*' +
+                        code += ('\t\t\t\tvariables['+str(cnt)+'+k*' +
                                  str(var.shape[0])+'+i] = spline_tf[i];\n')
-                        body += '\t\t\t}\n'
-                        body += '\t\t}\n'
+                        code += '\t\t\t}\n'
+                        code += '\t\t}\n'
                     cnt += var.size()
-            body += '\t}'
+            code += '\t}'
         elif self.problem.__class__.__name__ == 'FreeTPoint2point':
             raise Warning('Initialization for free time problem ' +
                           'not implemented (yet?).')
-        return body
+        return {'transformSplines': code}

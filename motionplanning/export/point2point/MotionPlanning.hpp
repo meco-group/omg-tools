@@ -29,6 +29,7 @@ class MotionPlanning{
         std::vector<std::vector<double>> ypred;
         std::vector<std::vector<std::vector<double>>> derivative_T;
         std::map<std::string, spline_t> splines;
+        bool idealUpdate;
 
     public:
         MotionPlanning(double updateTime, double sampleTime, double horizonTime);
@@ -41,13 +42,14 @@ class MotionPlanning{
         void updateBounds(double);
         void interpreteVariables();
         void predict(std::vector<double>&, std::vector<std::vector<double>>&, std::vector<std::vector<double>>&, double);
-        void integrate(std::vector<double>&, std::vector<std::vector<double>>&, int);
+        void integrate(std::vector<double>&, std::vector<std::vector<double>>&, std::vector<double>&, int);
         void sampleSplines(std::vector<std::vector<double>>&, std::vector<std::vector<double>>&);
         double evalSpline(double, std::vector<double>&, std::vector<double>&, int);
         void transformSplines(double);
         void updateModel(std::vector<double>&, std::vector<double>&, std::vector<double>&);
         void getY(std::vector<double>&, std::vector<double>&, std::vector<std::vector<double>>&);
         void getInput(std::vector<std::vector<double>>&, std::vector<double>&);
+        void setIdealUpdate(bool);
 };
 
 #endif
