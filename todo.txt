@@ -4,31 +4,9 @@ TODO
   relaxed primal problem?? This is probably one of the millenium questions...
 
 - embedded export for single vehicle system
-    + export casadi problem in python/import in c++
-        + setParameters
-        + updateBounds
-        + initVariables
-        + check variables/parameters/bounds
-        + initialize _everything_ (structs...), otherwise nasty errors
-    + try to automize get_y, based on state and input. only if casadi supports
-      symbolic solving of (non linear) systems. you can also solve it by creating
-      define_y() where u and x are given (and perform check if correct + degree shzl)
-        + test also with model/plant mismatch
-    + write odeint function (runge kutta...)
-    + write function which evaluate spline and derivatives up to n_der
-    + write ideal predict and compare with runge kutta
-    + update c++ code such that user only needs to think of state/input
-    + spline transformation..
-    - test all implemented functions
-        - something wrong: 2nd iteration: derivatives of y[1] are wrong!
-    - make knot_time depending on horizonTime via n_knots: make it possible to change horizonTime at run-time
-    - environment parameters: pos/vel/acc of checkpoints (shape can be determined by uper obstacle tracker)
-    - integrate obstacles
-
-    + export differential equation, modelled in python toolbox
-    + find ways in c++ to:
-        + evaluate b-splines
-        + integrate ode's
+    - link with orocos component
+    - install file for toolbox
+    - name + github page for toolbox
 
 - admm: reorganize such that initial transformation information can be stored
 
