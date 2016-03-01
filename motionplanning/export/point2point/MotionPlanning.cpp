@@ -1,4 +1,8 @@
 #include "MotionPlanning.hpp"
+// #define DEBUG
+#ifdef DEBUG
+#include <ctime>
+#endif
 
 using namespace std;
 using namespace casadi;
@@ -45,9 +49,25 @@ void MotionPlanning::initSplines(){
 }
 
 bool MotionPlanning::update(vector<double>& state0, vector<double>& stateT, vector<double>& inputT, vector<vector<double>>& input){
+    #ifdef DEBUG
+    double tmeas;
+    clock_t begin;
+    clock_t end;
+    #endif
     // transform splines: good init guess for this update
+    #ifdef DEBUG
+    begin = clock();
+    #endif
     transformSplines(currentTime);
+    #ifdef DEBUG
+    end = clock();
+    tmeas = double(end-begin)/CLOCKS_PER_SEC;
+    cout << "time in transformSplines: " << tmeas << "s" << endl;
+    #endif
     // predict initial y for problem
+    #ifdef DEBUG
+    begin = clock();
+    #endif
     if (idealUpdate){
         if (fabs(currentTime)<=1.e-6){
             vector<double> zeros(n_in);
@@ -57,14 +77,51 @@ bool MotionPlanning::update(vector<double>& state0, vector<double>& stateT, vect
     }else{
         predict(state0, this->input, this->y0, updateTime);
     }
+    #ifdef DEBUG
+    end = clock();
+    tmeas = double(end-begin)/CLOCKS_PER_SEC;
+    cout << "time in predict: " << tmeas << "s" << endl;
+    #endif
     // translate terminal state/input
+    #ifdef DEBUG
+    begin = clock();
+    #endif
     getY(stateT, inputT, this->yT);
+    #ifdef DEBUG
+    end = clock();
+    tmeas = double(end-begin)/CLOCKS_PER_SEC;
+    cout << "time in getY: " << tmeas << "s" << endl;
+    #endif
     // solve problem
+    #ifdef DEBUG
+    begin = clock();
+    #endif
     bool check = solve();
+    #ifdef DEBUG
+    end = clock();
+    tmeas = double(end-begin)/CLOCKS_PER_SEC;
+    cout << "time in solve: " << tmeas << "s" << endl;
+    #endif
     // interprete variables (extract y_coeffs, T)
+    #ifdef DEBUG
+    begin = clock();
+    #endif
     interpreteVariables();
+    #ifdef DEBUG
+    end = clock();
+    tmeas = double(end-begin)/CLOCKS_PER_SEC;
+    cout << "time in interpreteVariables: " << tmeas << "s" << endl;
+    #endif
     // sample y splines and compute input and ideal ypred (y0 of next update = ypred in ideal cases)
+    #ifdef DEBUG
+    begin = clock();
+    #endif
     sampleSplines(ypred, this->input);
+    #ifdef DEBUG
+    end = clock();
+    tmeas = double(end-begin)/CLOCKS_PER_SEC;
+    cout << "time in sampleSplines: " << tmeas << "s" << endl;
+    #endif
     // input for system is one sample shorter!!
     for (int k=0; k<time.size()-1; k++){
         input[k] = this->input[k];

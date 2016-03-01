@@ -10,7 +10,7 @@ def export_point2point(self):
     # create defines
     defines = {}
     defines['tol'] = self.options['solver']['tol']
-    defines['linear_solver'] = self.options['solver']['linear_solver']
+    defines['linear_solver'] = '"'+self.options['solver']['linear_solver']+'"'
     # create types
     types = {}
     types['spline_t'] = 'struct spline {\n'

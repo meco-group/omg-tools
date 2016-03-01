@@ -23,16 +23,19 @@ $(OUTDIR)/%.so: $(SRCDIR)/%.c
 	$(CC) $(CFLAGS) $< -o $@
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
-	$(CXX) -c -o $@ $< $(CXXFLAGS)
+	$(CXX) -c -o $@ $< $(CXXFLAGS) $(DEBUG)
 
 $(OUTDIR)/$(EXECUTABLE): $(OBJ) $(PROBOBJ)
-	$(CXX) -o $@ $^ $(CXXFLAGS) $(LDFLAGS)
+	$(CXX) -o $@ $^ $(CXXFLAGS) $(DEBUG) $(LDFLAGS)
 
 dir:
 	mkdir -p $(OUTDIR)
 	mkdir -p $(OBJDIR)
 
 .PHONY: clean
+
+debug: DEBUG = -DDEBUG
+debug: all
 
 clean:
 	rm -rf $(OBJDIR) $(OUTDIR)
