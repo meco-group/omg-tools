@@ -76,9 +76,9 @@ class Point2pointProblem(Problem):
                 # knots and internal knots
                 for d in range(max(bs['initial'], bs['internal'])+1):
                     if (d > bs['initial']) and (d <= bs['internal']):
-                        shutdown={'equal': 0.}
+                        shutdown = 't == 0.'
                     elif (d > bs['internal']) and (d <= bs['initial']):
-                        shutdown={'greater': 0.}
+                        shutdown = 't > 0.'
                     else:
                         shutdown = False
                     if d == 0:
@@ -156,6 +156,9 @@ class FixedTPoint2point(Point2pointProblem):
 
     def __init__(self, fleet, environment, options={}, label='fixedT'):
         Point2pointProblem.__init__(self, fleet, environment, options, label)
+        if not hasattr(self.vehicles[0], 'knot_intervals'):
+            raise ValueError('There should be a well-defined fixed ' +
+                             'knot_interval when using fixed time point2point.')
         self.knot_time = (int(self.options['horizon_time']*1000.) /
                           self.vehicles[0].knot_intervals) / 1000.
         self.T = self.define_parameter('T')

@@ -389,35 +389,24 @@ class ExportCpp(Export):
 
     def _create_updateBounds(self):
         code, cnt = '', 0
-        shutdowns = {'greater': {}, 'lesser': {}, 'equal': {}}
+        _lbg, _ubg = self.father._lb.cat, self.father._ub.cat
         for label, child in self.father.children.items():
             for name, con in child._constraints.items():
                 if child._add_label(name) in self.father._constraint_shutdown:
                     shutdown = self.father._constraint_shutdown[child._add_label(name)]
-                    for rel, bnd in shutdown.items():
-                        if bnd not in shutdowns[rel].items():
-                            shutdowns[rel][bnd] = []
-                        shutdowns[rel][bnd].extend(
-                            [cnt+i for i in range(con[0].size())])
+                    cond = shutdown.replace('t', 'currentTime')
+                    code += '\tif(' + cond + '){\n'
+                    for i in range(con[0].size()):
+                        code += '\t\tlbg['+str(cnt+i)+'] = -inf;\n'
+                        code += '\t\tubg['+str(cnt+i)+'] = +inf;\n'
+                    code += '\t}else{\n'
+                    for i in range(con[0].size()):
+                        code += ('\t\tlbg['+str(cnt+i)+'] = ' +
+                                 str(_lbg[cnt+i]) + ';\n')
+                        code += ('\t\tubg['+str(cnt+i)+'] = ' +
+                                 str(_ubg[cnt+i]) + ';\n')
+                    code += '\t}\n'
                 cnt += con[0].size()
-        _lbg, _ubg = self.father._lb.cat, self.father._ub.cat
-        for rel, item in shutdowns.items():
-            if rel == 'greater':
-                op = '>'
-            elif rel == 'lesser':
-                op = '<'
-            elif rel == 'equal':
-                op = '=='
-            for bnd, indices in item.items():
-                code += '\tif(currentTime '+op+' '+str(bnd)+'){\n'
-                for ind in indices:
-                    code += '\t\tlbg['+str(ind)+'] = -inf;\n'
-                    code += '\t\tubg['+str(ind)+'] = +inf;\n'
-                code += '\t}else{\n'
-                for ind in indices:
-                    code += '\t\tlbg['+str(ind)+'] = '+str(_lbg[ind])+';\n'
-                    code += '\t\tubg['+str(ind)+'] = '+str(_ubg[ind])+';\n'
-                code += '\t}\n'
         return {'updateBounds': code}
 
     def _create_updateModel(self, fun):
