@@ -1,7 +1,5 @@
-import sys
-sys.path.append("/home/ruben/Dropbox/Work/Programs/motionplanningtoolbox/")
 from motionplanning import *
-
+import numpy as np
 
 # create vehicle
 vehicle = Holonomic()
@@ -26,7 +24,10 @@ environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
 
 # create a point-to-point problem
 problem = Point2point(vehicle, environment)
+problem.set_options({'solver': {'linear_solver': 'ma57'}})
 problem.init()
+
+# problem.export('c++', {'casadi_dir': '/home/ruben/Documents/Work/Repositories/casadi_binary'})
 
 # create simulator
 simulator = Simulator(problem)
@@ -39,7 +40,5 @@ simulator.run()
 
 # show/save some results
 simulator.plot.show_movie('2d', repeat=False)
-# problem.plot.save_movie('input', 5, 'holonomic')
-# problem.plot.show('input')
 
 matplotlib.pyplot.show(block=True)

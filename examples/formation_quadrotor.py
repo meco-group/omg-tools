@@ -1,5 +1,3 @@
-import sys
-sys.path.append("/home/ruben/Dropbox/Work/Programs/motionplanningtoolbox/")
 from motionplanning import *
 
 # create fleet
@@ -41,7 +39,5 @@ simulator.run()
 
 # show/save some results
 simulator.plot.show_movie('2d', repeat=False)
-# problem.plot.save_movie('input', 5, 'holonomic')
-# problem.plot.show('input')
 
 matplotlib.pyplot.show(block=True)
