@@ -137,34 +137,26 @@ def _translate_expression_cpp(expression):
 
 # Father
 def export_father(self):
-    info = {}
-    for label, child in self.children.items():
-        for k, inf in child._export(child).items():
-            if isinstance(inf, dict):
-                if k not in info:
-                    info[k] = {}
-                info[k].update(inf)
-            else:
-                info[k] = inf
-    info['defines'].update({'n_var': self._var_struct.size})
-    info['defines'].update({'n_par': self._par_struct.size})
-    info['defines'].update({'n_con': self._con_struct.size})
-
+    # create defines
+    defines = {}
+    defines.update({'n_var': self._var_struct.size})
+    defines.update({'n_par': self._par_struct.size})
+    defines.update({'n_con': self._con_struct.size})
     # spline info
     for label, child in self.children.items():
         for name in child._splines_prim:
             spl = child._splines_prim[name]
             basis = spl['basis']
             knots = '{'+','.join([str(k) for k in basis.knots.tolist()])+'}'
-            info['defines'].update({('%s_length') % name: str(len(basis))})
-            info['defines'].update({('%s_degree') % name: str(basis.degree)})
-            info['defines'].update({('%s_knots')  % name: knots})
+            defines.update({('%s_length') % name: str(len(basis))})
+            defines.update({('%s_degree') % name: str(basis.degree)})
+            defines.update({('%s_knots')  % name: knots})
             if spl['init'] is not None:
                 tf = '{'
                 for k in range(spl['init'].shape[0]):
                     tf += '{'+','.join([str(t) for t in spl['init'][k].tolist()])+'},'
                 tf = tf[:-1]+'}'
-                info['defines'].update({('%s_tf') % name: tf})
+                defines.update({('%s_tf') % name: tf})
     # lbg & ubg
     lb, ub, cnt = '{', '{', 0
     for label, child in self.children.items():
@@ -179,8 +171,22 @@ def export_father(self):
             cnt += con[0].size()
     lb = lb[:-1]+'}'
     ub = ub[:-1]+'}'
-    info['defines'].update({'lbg_def': lb, 'ubg_def': ub})
+    defines.update({'lbg_def': lb, 'ubg_def': ub})
+    # create info
+    info = {'defines': defines}
+    for label, child in self.children.items():
+        _merge_dict(info, child._export(child))
     return info
+
+
+def _merge_dict(dict1, dict2):
+    for key, item in dict2.items():
+        if isinstance(item, dict):
+            if key not in dict1:
+                dict1[key] = {}
+            _merge_dict(dict1[key], item)
+        else:
+            dict1[key] = item
 
 
 class Export:
