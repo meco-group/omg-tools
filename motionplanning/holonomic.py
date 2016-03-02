@@ -1,6 +1,6 @@
 from vehicle import Vehicle
 from shape import Circle
-from casadi import inf
+from casadi import inf, sqrt
 
 import numpy as np
 
@@ -26,6 +26,7 @@ class Holonomic(Vehicle):
         u0, u1 = self.define_input([dy0, dy1])
         x0, x1 = self.define_state([y0, y1])
         self.define_signal('a', [ddy0, ddy1])
+        self.define_signal('vnorm_two', [sqrt(dy0**2+dy1**2)])
         self.define_y([[x0, x1], [u0, u1]])
         self.define_dstate([u0, u1])
 
@@ -35,15 +36,26 @@ class Holonomic(Vehicle):
         ddy0, ddy1 = y0.derivative(2), y1.derivative(2)
         T = self.define_symbol('T')
 
-        self.define_constraint(-dy0 + T*self.vmin, -inf, 0.)
-        self.define_constraint(-dy1 + T*self.vmin, -inf, 0.)
-        self.define_constraint(dy0 - T*self.vmax, -inf, 0.)
-        self.define_constraint(dy1 - T*self.vmax, -inf, 0.)
+        if self.options['syslimit'] is 'norm_two':
+            self.define_constraint((dy0**2+dy1**2) - T**2*self.vmax**2, -inf, 0.)
+            self.define_constraint((ddy0**2+ddy1**2) - (T**2)**2*self.amax**2, -inf, 0.)
 
-        self.define_constraint(-ddy0 + (T**2)*self.amin, -inf, 0.)
-        self.define_constraint(-ddy1 + (T**2)*self.amin, -inf, 0.)
-        self.define_constraint(ddy0 - (T**2)*self.amax, -inf, 0.)
-        self.define_constraint(ddy1 - (T**2)*self.amax, -inf, 0.)
+        elif self.options['syslimit'] is 'norm_inf':
+            self.define_constraint(-dy0 + T*self.vmin, -inf, 0.)
+            self.define_constraint(-dy1 + T*self.vmin, -inf, 0.)
+            self.define_constraint(dy0 - T*self.vmax, -inf, 0.)
+            self.define_constraint(dy1 - T*self.vmax, -inf, 0.)
+
+            self.define_constraint(-ddy0 + (T**2)*self.amin, -inf, 0.)
+            self.define_constraint(-ddy1 + (T**2)*self.amin, -inf, 0.)
+            self.define_constraint(ddy0 - (T**2)*self.amax, -inf, 0.)
+            self.define_constraint(ddy1 - (T**2)*self.amax, -inf, 0.)
+        else:
+            raise ValueError('System limit type not defined! Use set_options({syslimit: norm_inf}).')
+
+    def set_default_options(self):
+        Vehicle.set_default_options(self)
+        self.options['syslimit'] = 'norm_inf'
 
     def set_initial_pose(self, position):
         y = np.zeros((self.n_y, self.n_der+1))
