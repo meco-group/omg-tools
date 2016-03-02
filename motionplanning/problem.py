@@ -2,8 +2,6 @@ from optilayer import OptiFather, OptiChild
 from fleet import get_fleet_vehicles
 from plots import Plots
 import time
-import export
-
 
 class Simulator:
 
