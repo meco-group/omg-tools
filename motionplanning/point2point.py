@@ -257,7 +257,7 @@ class FreeTPoint2point(Point2pointProblem):
             # k = select x(=y0), y(=y1),...
             for k in range(vehicle.n_y):
                 self.define_constraint(
-                    evalspline(self.y[l][k], 1) - self.yT[l][k],
+                    self.y[l][k](1) - self.yT[l][k],
                     0., 0.)
 
         # add positivity constraint for motion time
