@@ -289,7 +289,7 @@ class FreeTPoint2point(Point2pointProblem):
     def compute_objective(self):
         # gives the current value of the objective
         # motion time is known at this point
-        objective = self.T
+        objective = self.current_time
         return objective
 
     def update_vehicles(self, current_time, update_time):
