@@ -2,8 +2,7 @@ from problem import Problem
 from spline import BSplineBasis
 from spline_extra import definite_integral, evalspline
 from spline_extra import shiftoverknot_T, shift_spline
-from casadi import vertcat, fmod, MX, MXFunction
-import export
+from casadi import vertcat, fmod, MX, MXFunction, inf
 import numpy as np
 
 
@@ -243,7 +242,7 @@ class FreeTPoint2point(Point2pointProblem):
         Point2pointProblem.__init__(self, fleet, environment, options, label)
 
         # unknown motion time
-        self.T = self.define_variable('T')
+        self.T = self.define_variable('T', value=10)
         # current time
         self.define_parameter('t')
 
@@ -261,20 +260,19 @@ class FreeTPoint2point(Point2pointProblem):
                     evalspline(self.y[l][k], 1) - self.yT[l][k],
                     0., 0.)
 
+        # add positivity constraint for motion time
+        self.define_constraint(-self.T, -inf, 0)
+
     def set_parameters(self, current_time):
         parameters = Point2pointProblem.set_parameters(self, current_time)
         # current time is always 0 for FreeT problem, time axis always resets
         parameters['t'] = 0
         return parameters
 
-    def init_variables(self):
-        self._variables['T'] = self.options['horizon_time']
-        return self._variables
-
     def init_step(self, current_time):
         # transform spline variables to get better initialization
         # use optimal motion time from previous iteration
-        Tprev = float(self.father._var_result['p2p0', 'T'])
+        Tprev = float(self.father._var_result['freeT0', 'T'])
         # check if almost arrived, if so lower the update time
         if Tprev - self.options['update_time'] < self.options['update_time']:
             update_time = Tprev - self.options['update_time']
@@ -297,7 +295,7 @@ class FreeTPoint2point(Point2pointProblem):
     def update_vehicles(self, current_time, update_time):
         for vehicle in self.vehicles:
             # assign numerical value of T
-            self.T = float(self.father._var_result['p2p0', 'T'])
+            self.T = float(self.father._var_result['freeT0', 'T'])
             horizon_time = self.T
             # current solution
             y_coeffs = vehicle.get_variable('y', solution=True, spline=False)
