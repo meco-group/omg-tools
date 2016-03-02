@@ -1,5 +1,3 @@
-import sys
-sys.path.append("/home/ruben/Documents/Work/Programs/motionplanningtoolbox/")
 from motionplanning import *
 
 # create vehicle
@@ -31,9 +29,5 @@ simulator.run()
 
 # show/save some results
 simulator.plot.show_movie('2d', repeat=False)
-# simulator.plot.show('2d', time=2.)
-# simulator.plot.show('input')
-# simulator.plot.save_movie('input', number_of_frames=4)
-# simulator.plot.save_movie('2d', number_of_frames=4, name='quadrotor_2d')
 
 matplotlib.pyplot.show(block=True)
