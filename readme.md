@@ -13,4 +13,4 @@ To install the toolbox itself, run:
     `>> sudo python setup.py install`
 
 ## How does it work?
-The best way to get started with the toolbox is by studying the examples map, and more in particular the file `tutorial_example.py`. This file provides a well-documented overview of the basic functionality of the toolbox.
+The best way to get started with the toolbox is by studying the examples directory, and more in particular the file `tutorial_example.py`. This file provides a well-documented overview of the basic functionality of the toolbox.
