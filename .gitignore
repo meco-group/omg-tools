@@ -5,3 +5,6 @@
 .*
 !.gitignore
 jit_tmp.c
+build/*
+dist/*
+motionplanning.egg-info/*
