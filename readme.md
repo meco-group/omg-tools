@@ -4,7 +4,7 @@ Something with move? plan?
 Should spline be in there?
 
 This software package provides tools that make it easy to model, simulate and embed motion planning problems. The main goal is to bring several research topics and several techniques concerning (spline-based) motion planning together into a user-friendly package.
-Any questions can be addressed to the developers: <a href=”mailto:ruben.vanparys&#64;kuleuven.be”>Ruben Van Parys</a>
+Any questions can be addressed to the developers
 
 
 ## Installation
