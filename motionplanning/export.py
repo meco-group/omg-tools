@@ -9,8 +9,8 @@ def export_point2point(self):
     info = {}
     # create defines
     defines = {}
-    defines['tol'] = self.options['solver']['tol']
-    defines['linear_solver'] = '"'+self.options['solver']['linear_solver']+'"'
+    defines['TOL'] = self.options['solver']['tol']
+    defines['LINEAR_SOLVER'] = '"'+self.options['solver']['linear_solver']+'"'
     # create types
     types = {}
     types['spline_t'] = 'struct spline {\n'
@@ -25,16 +25,16 @@ def export_point2point(self):
         fun['setParameters']['dy0_'+str(l)] = 'dy0'
         fun['setParameters']['dyT_'+str(l)] = 'dyT'
     if(self.__class__.__name__ == 'FixedTPoint2point'):
-        fun['setParameters']['T'] = 'horizonTime'
-        fun['setParameters']['t'] = ('fmod(round(currentTime*1000.)/1000.,' +
-                                     'horizonTime/' +
+        fun['setParameters']['T'] = 'horizon_time'
+        fun['setParameters']['t'] = ('fmod(round(current_time*1000.)/1000.,' +
+                                     'horizon_time/' +
                                      str(self.vehicles[0].knot_intervals)+')')
         fun['sampleSplines'] = ''
         fun['sampleSplines'] += '\tvector<double> time(this->time);\n'
         fun['sampleSplines'] += '\tfor(int k=0;k<time.size();k++){\n'
         fun['sampleSplines'] += ('\t\ttime[k] += ' +
-                                 'fmod(round(currentTime*1000.)/1000.,' +
-                                 'horizonTime/' +
+                                 'fmod(round(current_time*1000.)/1000.,' +
+                                 'horizon_time/' +
                                  str(self.vehicles[0].knot_intervals)+');\n')
         fun['sampleSplines'] += '\t}\n'
         types['spline_t'] += '\tstd::vector<std::vector<double>> transform;\n'
@@ -56,8 +56,8 @@ def export_environment(self):
     info = {}
     # create defines
     defines = {}
-    defines['n_dim'] = self.n_dim
-    defines['n_obs'] = self.No
+    defines['N_DIM'] = self.n_dim
+    defines['N_OBS'] = self.No
     # create function bodies
     fun = {}
     fun['setParameters'] = {}
@@ -74,11 +74,11 @@ def export_vehicle(self):
     info = {}
     # create defines
     defines = {}
-    defines['n_y'] = self.n_y
-    defines['n_der'] = self.n_der
-    defines['order'] = self.order
-    defines['n_st'] = self.n_st
-    defines['n_in'] = self.n_in
+    defines['N_Y'] = self.n_y
+    defines['N_DER'] = self.n_der
+    defines['ORDER'] = self.order
+    defines['N_ST'] = self.n_st
+    defines['N_IN'] = self.n_in
     derT = '{'  # spline derivative matrices
     for d in range(1, self.n_der+1):
         B, P = self.basis.derivative(d)
@@ -88,13 +88,19 @@ def export_vehicle(self):
             derT += '{'+','.join([str(p) for p in P[i, :].tolist()])+'},'
         derT = derT[:-1]+'},'
     derT = derT[:-1]+'}'
-    defines['derT_def'] = derT
+    defines['DERT_DEF'] = derT
     # create function bodies
     fun = {}
     a, bdy = self._get_function_expression(self._signals_expr['dstate'],
                                            [self._state, self._input],
                                            _translate_expression_cpp)
     fun['updateModel'] = '{'+bdy[1:-1]+'}'
+    a, bdy = self._get_function_expression(self._signals_expr['state'],
+                                           self._y, _translate_expression_cpp)
+    for i in range(self.n_y):
+        for j in range(self.order+1):
+            bdy = bdy.replace('[%d,%d]' % (i, j), '[%d][%d]' % (i, j))
+    fun['getState'] = '{'+bdy[1:-1]+'}'
     a, bdy = self._get_function_expression(self._signals_expr['input'],
                                            self._y, _translate_expression_cpp)
     for i in range(self.n_y):
@@ -139,24 +145,24 @@ def _translate_expression_cpp(expression):
 def export_father(self):
     # create defines
     defines = {}
-    defines.update({'n_var': self._var_struct.size})
-    defines.update({'n_par': self._par_struct.size})
-    defines.update({'n_con': self._con_struct.size})
+    defines.update({'N_VAR': self._var_struct.size})
+    defines.update({'N_PAR': self._par_struct.size})
+    defines.update({'N_CON': self._con_struct.size})
     # spline info
     for label, child in self.children.items():
         for name in child._splines_prim:
             spl = child._splines_prim[name]
             basis = spl['basis']
             knots = '{'+','.join([str(k) for k in basis.knots.tolist()])+'}'
-            defines.update({('%s_length') % name: str(len(basis))})
-            defines.update({('%s_degree') % name: str(basis.degree)})
-            defines.update({('%s_knots')  % name: knots})
+            defines.update({('%s_LENGTH') % name.upper(): str(len(basis))})
+            defines.update({('%s_DEGREE') % name.upper(): str(basis.degree)})
+            defines.update({('%s_KNOTS')  % name.upper(): knots})
             if spl['init'] is not None:
                 tf = '{'
                 for k in range(spl['init'].shape[0]):
                     tf += '{'+','.join([str(t) for t in spl['init'][k].tolist()])+'},'
                 tf = tf[:-1]+'}'
-                defines.update({('%s_tf') % name: tf})
+                defines.update({('%s_TF') % name.upper(): tf})
     # lbg & ubg
     lb, ub, cnt = '{', '{', 0
     for label, child in self.children.items():
@@ -171,7 +177,7 @@ def export_father(self):
             cnt += con[0].size()
     lb = lb[:-1]+'}'
     ub = ub[:-1]+'}'
-    defines.update({'lbg_def': lb, 'ubg_def': ub})
+    defines.update({'LBG_DEF': lb, 'UBG_DEF': ub})
     # create info
     info = {'defines': defines}
     for label, child in self.children.items():
@@ -207,7 +213,8 @@ class Export:
         self.options = {}
         self.options['directory'] = os.path.join(os.getcwd(), 'export/')
         self.options['casadi_optiflags'] = ''  # '', '-O3', '-Os'
-        self.options['casadi_dir'] = None
+        self.options['casadidir'] = ''
+        self.options['sourcefiles'] = ''
 
     def set_options(self, options):
         self.options.update(options)
@@ -227,10 +234,6 @@ class ExportCpp(Export):
         self.father._export = export_father
 
     def perform_checks(self):
-        if not self.options['casadi_dir']:
-            raise ValueError('Set the path of the casadi install directory '
-                             'on the remote system via the option '
-                             '"casadi_dir".')
         if (self.vehicle.options['boundary_smoothness']['internal'] !=
             self.vehicle.order):
             raise ValueError('Only internal boundary smoothness equal to ' +
@@ -258,21 +261,23 @@ class ExportCpp(Export):
         # write info to source files
         self.write_files(data)
         print 'done.'
+        print 'Check out instructions.txt for build and usage instructions.'
 
     def copy_files(self, source, destination):
-        src_files = ['MotionPlanning.cpp', 'MotionPlanning.hpp',
-                     'MotionPlanning_def.hpp']
+        src_files = ['MotionPlanning.cpp', 'MotionPlanning.hpp', 'example.cpp']
         src_dir = os.path.join(destination, 'src/')
         if not os.path.isdir(src_dir):
             os.makedirs(src_dir)
         for f in src_files:
             shutil.copy(os.path.join(source, f),
                         os.path.join(src_dir, f))
-        shutil.copy(os.path.join(source, 'Makefile'),
-                    os.path.join(destination, 'Makefile'))
+        root_files = ['Makefile', 'instructions.txt']
+        for f in root_files:
+            shutil.copy(os.path.join(source, f),
+                        os.path.join(destination, f))
 
     def write_files(self, info):
-        files = ['src/MotionPlanning.cpp', 'src/MotionPlanning_def.hpp',
+        files = ['src/MotionPlanning.cpp', 'src/MotionPlanning.hpp',
                  'Makefile']
         files = [os.path.join(self.options['directory'], f) for f in files]
         self.fill_template(info, files)
@@ -295,7 +300,8 @@ class ExportCpp(Export):
 
     def get_make_options(self):
         make_opt = {}
-        make_opt['casadidir'] = self.options['casadi_dir']
+        make_opt['casadidir'] = self.options['casadidir']
+        make_opt['sourcefiles'] = self.options['sourcefiles']
         make_opt['casadi_optiflags'] = self.options['casadi_optiflags']
         return make_opt
 
@@ -347,6 +353,7 @@ class ExportCpp(Export):
         code.update(self._create_setParameters(fun['setParameters']))
         code.update(self._create_updateBounds())
         code.update(self._create_updateModel(fun['updateModel']))
+        code.update(self._create_getState(fun['getState']))
         code.update(self._create_getInput(fun['getInput']))
         code.update(self._create_getY(fun['getY']))
         code.update(self._create_interpreteVariables())
@@ -400,11 +407,11 @@ class ExportCpp(Export):
             for name, con in child._constraints.items():
                 if child._add_label(name) in self.father._constraint_shutdown:
                     shutdown = self.father._constraint_shutdown[child._add_label(name)]
-                    cond = shutdown.replace('t', 'currentTime')
+                    cond = shutdown.replace('t', 'current_time')
                     code += '\tif(' + cond + '){\n'
                     for i in range(con[0].size()):
-                        code += '\t\tlbg['+str(cnt+i)+'] = -inf;\n'
-                        code += '\t\tubg['+str(cnt+i)+'] = +inf;\n'
+                        code += '\t\tlbg['+str(cnt+i)+'] = -INF;\n'
+                        code += '\t\tubg['+str(cnt+i)+'] = +INF;\n'
                     code += '\t}else{\n'
                     for i in range(con[0].size()):
                         code += ('\t\tlbg['+str(cnt+i)+'] = ' +
@@ -420,6 +427,11 @@ class ExportCpp(Export):
         code += '\tdstate = _dstate;\n'
         return {'updateModel': code}
 
+    def _create_getState(self, fun):
+        code = '\tvector<double> _state ' + fun + ';\n'
+        code += '\tstate = _state;\n'
+        return {'getState': code}
+
     def _create_getInput(self, fun):
         code = '\tvector<double> _input ' + fun + ';\n'
         code += '\tinput = _input;\n'
@@ -434,8 +446,8 @@ class ExportCpp(Export):
         code = ''
         for label, child in self.father.children.items():
             for name in child._splines_prim:
-                code += ('\tspline_t spline_'+name+' = {'+name +
-                         '_knots,'+name+'_degree,'+name+'_tf};\n')
+                code += ('\tspline_t spline_'+name+' = {'+name.upper() +
+                         '_KNOTS,'+name.upper()+'_DEGREE,'+name.upper()+'_TF};\n')
                 code += '\tsplines["'+name+'"] = spline_' + name + ';\n'
         return {'initSplines': code}
 
@@ -451,7 +463,7 @@ class ExportCpp(Export):
                     code += '\t\t}\n'
                     code += '\t}\n'
                 if name == 'T':
-                    code += '\thorizonTime = variables['+str(cnt)+'];\n';
+                    code += '\thorizon_time = variables['+str(cnt)+'];\n';
                 cnt += var.size()
         return {'interpreteVariables': code}
 
@@ -461,9 +473,9 @@ class ExportCpp(Export):
     def _create_transformSplines(self):
         code, cnt = '', 0
         if self.problem.__class__.__name__ == 'FixedTPoint2point':
-            code += ('\tif(((currentTime > 0) and ' +
-                     'fabs(fmod(round(currentTime*1000.)/1000., ' +
-                     'horizonTime/' + str(self.vehicle.knot_intervals)+')) <1.e-6)){\n')
+            code += ('\tif(((current_time > 0) and ' +
+                     'fabs(fmod(round(current_time*1000.)/1000., ' +
+                     'horizon_time/' + str(self.vehicle.knot_intervals)+')) <1.e-6)){\n')
             code += ('\t\tvector<double> spline_tf(' +
                      str(len(self.vehicle.basis))+');\n')
             for label, child in self.father.children.items():
