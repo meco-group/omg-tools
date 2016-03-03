@@ -3,8 +3,9 @@ We should think about a more attractive name...
 Something with move? plan? 
 Should spline be in there?
 
-## Its purpose?
 This software package provides tools that make it easy to model, simulate and embed motion planning problems. The main goal is to bring several research topics and several techniques concerning (spline-based) motion planning together into a user-friendly package.
+Any questions can be addressed to the developers: <a href=”mailto:ruben.vanparys&#64;kuleuven.be”>Ruben Van Parys</a>
+
 
 ## Installation
 The software is developed in Python and uses [CasADi](https://github.com/casadi/casadi/wiki) as a framework for symbolic computations. Furthermore CasADi provides an interface to IPOPT, a software package for large-scale nonlinear optimization. For installation instructions regarding these software packages, the user is referred to the [CasADi homepage](https://github.com/casadi/casadi/wiki), and more in particular the installation instructions page.
