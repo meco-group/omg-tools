@@ -9,8 +9,7 @@ This software package provides tools that make it easy to model, simulate and em
 ## Installation
 The software is developed in Python and uses [CasADi](https://github.com/casadi/casadi/wiki) as a framework for symbolic computations. Furthermore CasADi provides an interface to IPOPT, a software package for large-scale nonlinear optimization. For installation instructions regarding these software packages, the user is referred to the [CasADi homepage](https://github.com/casadi/casadi/wiki), and more in particular the installation instructions page.
 With the toolbox it is possible to save your simulation results in Tikz format. This functionality uses the following script: [matplotlib2tikz](https://github.com/nschloe/matplotlib2tikz).
-To install the toolbox itself, run:
-    `>> sudo python setup.py install`
+To install the toolbox itself, run the following command in the root directory of this repository: `sudo python setup.py install`
 
 ## How to start?
 The best way to get started with the toolbox is by studying a simple example. Below you find the code for the most elementary example. If you want to know more, check the examples directory. Here you find a simple tutorial example which provides a documented overview of the basic functionality of the toolbox, together with some more advanced examples.
