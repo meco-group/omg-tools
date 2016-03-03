@@ -1,0 +1,48 @@
+INSTRUCTIONS
+============
+Ruben Van Parys - March 2016
+
+Build instructions
+------------------
+
+* Assign the upper variables in the Makefile
+    * CASADIDIR: path of your casadi binary installation. If you built casadi
+                 from sources, you can leave this blank.
+    * SOURCEFILES: extra cpp files that you want to built with the toolbox. If
+                   you decide to build the toolbox as library (.so), you can
+                   leave this blank.
+    * EXECUTABLE: name of resulting executable.
+
+* Build the source files
+    * Build to executable: make
+    * Build to library (.so): make library
+    in the bin/ directory you can find your executable or library
+
+* Link the library with your project (only if built to .so)
+    * You built casadi from sources:
+        Suppose you have set the following variables
+            * MPINCL: path to directory containing MotionPlanning.hpp
+            * MPLIB: path to directory containing libmp.so
+        then you can build your application (suppose application.cpp) with our
+        toolbox as follows (eg. with g++):
+            g++ -I$(MPINCL) -std=c++11  -o application -L$(MPLIB) -Wl,-rpath=$(MPLIB) application.cpp
+    * You istalled the casadi binary:
+        You need to tell the compiler where he can find the header files
+        and the libcasadi.so library. These are located respectively in the
+        include/ and casadi/ subfolder of you casadi binary path.
+        Suppose you have set the following variables:
+            * CASADIINCL: path to casadi include/ subfolder
+            * CASADILIB: path to casadi casadi/ subfolder
+        then you can build your application (suppose application.cpp) with our
+        toolbox as follows (eg. with g++):
+            g++ -I$(CASADIINCL) -I$(MPINCL) -std=c++11  -o application -L$(CASADILIB) -L$(MPLIB) -Wl,-rpath=$(MPLIB) application.cpp
+
+* Execution
+    Note that grad_f.so, jac_g.so, hess_lag.so and nlp.so should be in the same
+    directory as your executable. This is because they are loaded at runtime via
+    casadi's ExternalFunction.
+
+Example code
+------------
+
+Check out example.cpp to find out how you can use the exported c++ toolbox.
