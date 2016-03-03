@@ -4,7 +4,6 @@ from plots import Plots
 import time
 import export
 
-
 class Simulator:
 
     def __init__(self, problem, options={}):

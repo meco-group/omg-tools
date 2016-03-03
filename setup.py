@@ -13,8 +13,8 @@ setup(
     author_email="ruben.vanparys@kuleuven.be",
     description=('spline-based motion planning toolbox for modeling, ' +
                  'simulating and embedding motion planning algorithms'),
-    # license="LGPLv3",
-    keywords="optimization motion planning",
+    license="LGPLv3",
+    keywords="optimization motion planning distributed multi-agent",
     # url="",
     packages=['motionplanning'],
     long_description=read('readme.md'),
@@ -22,6 +22,6 @@ setup(
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Science/Research",
         "Topic :: Scientific/Engineering",
-        # "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
+        "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
     ],
 )
