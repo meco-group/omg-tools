@@ -29,7 +29,10 @@ problem = Point2point(vehicle, environment)
 problem.set_options({'solver': {'linear_solver': 'ma57'}})
 problem.init()
 
-problem.export('c++', {'casadi_dir': '/home/ruben/Documents/Work/Repositories/casadi_binary'})
+options = {}
+options['casadidir'] = '/home/ruben/Documents/Work/Repositories/casadi_binary'
+# options['sourcefiles'] = 'example.cpp'
+problem.export('c++', options)
 
 # create simulator
 # simulator = Simulator(problem)
