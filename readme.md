@@ -4,7 +4,8 @@ Something with move? plan?
 Should spline be in there?
 
 This software package provides tools that make it easy to model, simulate and embed motion planning problems. The main goal is to bring several research topics and several techniques concerning (spline-based) motion planning together into a user-friendly package.
-Any questions can be addressed to the developers
+
+Any questions can be addressed to the developers: [Ruben Van Parys](mailto:ruben.vanparys&#64;kuleuven.be) and [Tim Mercy](mailto:tim.mercy&#64;kuleuven.be).
 
 
 ## Installation
@@ -12,10 +13,9 @@ The software is developed in Python and uses [CasADi](https://github.com/casadi/
 With the toolbox it is possible to save your simulation results in Tikz format. This functionality uses the following script: [matplotlib2tikz](https://github.com/nschloe/matplotlib2tikz).
 To install the toolbox itself, run the following command in the root directory of this repository: `sudo python setup.py install`
 
-## How to start?
-The best way to get started with the toolbox is by studying a simple example. Below you find the code for the most elementary example. If you want to know more, check the examples directory. Here you find a simple tutorial example which provides a documented overview of the basic functionality of the toolbox, together with some more advanced examples.
-
-## Elementary example
+## Examples
+### Elementary example
+The code example below illustrates the basic functionality of the toolbox in order to steer a holonomic vehicle from an initial to terminal pose.
 
 ```python
 from motionplanning import *
@@ -50,3 +50,5 @@ simulator.plot.create('2d')
 simulator.run()
 simulator.plot.save_movie('2d')
 ```
+### More examples
+Check out the examples directory for more advanced code examples. There you can find a simple tutorial example which provides a documented overview of the basic functionality of the toolbox. Also examples illustrating distributed motion planning approaches for multi-vehicle systems are available.
