@@ -2,12 +2,15 @@
 #define MOTIONPLANNING
 
 #include <casadi/casadi.hpp>
-#include "MotionPlanning_def.hpp"
 #include <math.h>
 #include <memory.h>
 #include <vector>
 #include <iostream>
 
+#define inf std::numeric_limits<double>::infinity()
+@defines@
+
+namespace mp{
 
 typedef struct obstacle {
     double position[N_DIM];
@@ -32,10 +35,12 @@ class MotionPlanning{
         std::vector<std::vector<double>> y_coeffs;
         std::vector<double> time;
         std::vector<std::vector<double>> input_trajectory;
+        std::vector<std::vector<double>> state_trajectory;
         std::vector<std::vector<double>> y0;
         std::vector<std::vector<double>> yT;
         std::vector<std::vector<double>> ypred;
         std::map<std::string, spline_t> splines;
+        std::string solver_output;
 
         bool ideal_update;
         const int n_y = N_Y;
@@ -49,7 +54,6 @@ class MotionPlanning{
 
         void generateProblem();
         void initSplines();
-        bool update(std::vector<double>&, std::vector<double>&, std::vector<double>&, std::vector<std::vector<double>>&, std::vector<obstacle_t>&);
         bool solve(std::vector<obstacle_t>&);
         void setParameters(std::vector<obstacle_t>&);
         void initVariables();
@@ -62,6 +66,7 @@ class MotionPlanning{
         void transformSplines(double);
         void updateModel(std::vector<double>&, std::vector<double>&, std::vector<double>&);
         void getY(std::vector<double>&, std::vector<double>&, std::vector<std::vector<double>>&);
+        void getState(std::vector<std::vector<double>>&, std::vector<double>&);
         void getInput(std::vector<std::vector<double>>&, std::vector<double>&);
 
     public:
@@ -71,7 +76,9 @@ class MotionPlanning{
         const int n_st = N_ST;
 
         MotionPlanning(double updateTime, double sampleTime, double horizonTime);
+        bool update(std::vector<double>&, std::vector<double>&, std::vector<double>&, std::vector<std::vector<double>>&, std::vector<std::vector<double>>&, std::vector<obstacle_t>&);
         void setIdealUpdate(bool);
-};
+    };
+}
 
 #endif
