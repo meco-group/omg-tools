@@ -1,16 +1,22 @@
+# Fill in this
+#------------------------------------------------------------------------------
+CASADIDIR=/home/ruben/Documents/Work/Repositories/casadi_binary
+SOURCEFILES=main.cpp
+EXECUTABLE=MotionPlanning
+#------------------------------------------------------------------------------
+
 CXX=g++
 CC=gcc
-CASADIDIR=@casadidir@
 INCDIR=$(CASADIDIR)/include
 LIBDIR=$(CASADIDIR)/casadi
 CXXFLAGS=-I$(INCDIR) -DUSE_CXX11 -std=c++11 -fPIC -std=c++11
-CFLAGS=-fPIC -shared -std=c99 @casadi_optiflags@
+CFLAGS=-fPIC -shared -std=c99
 LDFLAGS=-L$(LIBDIR) -lcasadi -lstdc++ -lcasadi -Wl,-rpath $(LIBDIR)
-PROBSOURCES=@casadi_src@
+PROBSOURCES=nlp.c hess_lag.c grad_f.c jac_g.c
 PROBOBJECTS=$(PROBSOURCES:.c=.so)
-SOURCES=MotionPlanning.cpp main.cpp
+SOURCES=$(SOURCEFILES) MotionPlanning.cpp
 OBJECTS=$(SOURCES:.cpp=.o)
-EXECUTABLE=MotionPlanning
+LIB=libmp.so
 SRCDIR = src
 OBJDIR = obj
 OUTDIR = bin
@@ -18,6 +24,11 @@ OBJ=$(patsubst %,$(OBJDIR)/%,$(OBJECTS))
 PROBOBJ=$(patsubst %,$(OUTDIR)/%,$(PROBOBJECTS))
 
 all: dir $(OUTDIR)/$(EXECUTABLE)
+
+library: dir $(OUTDIR)/$(LIB)
+
+debug: DEBUG = -DDEBUG
+debug: all
 
 $(OUTDIR)/%.so: $(SRCDIR)/%.c
 	$(CC) $(CFLAGS) $< -o $@
@@ -28,14 +39,14 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
 $(OUTDIR)/$(EXECUTABLE): $(OBJ) $(PROBOBJ)
 	$(CXX) -o $@ $^ $(CXXFLAGS) $(DEBUG) $(LDFLAGS)
 
+$(OUTDIR)/$(LIB): $(OBJ) $(PROBOBJ)
+	$(CXX) -o $@ $^ $(CXXFLAGS) -shared $(DEBUG) $(LDFLAGS)
+
 dir:
 	mkdir -p $(OUTDIR)
 	mkdir -p $(OBJDIR)
 
 .PHONY: clean
-
-debug: DEBUG = -DDEBUG
-debug: all
 
 clean:
 	rm -rf $(OBJDIR) $(OUTDIR)

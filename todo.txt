@@ -4,6 +4,7 @@ TODO
   relaxed primal problem?? This is probably one of the millenium questions...
 
 - embedded export for single vehicle system
+    - create shared object
     - link with orocos component
     - install file for toolbox
     - name + github page for toolbox

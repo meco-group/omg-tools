@@ -34,11 +34,16 @@ void MotionPlanning::generateProblem(){
     ExternalFunction hess_lag("hess_lag");
     ExternalFunction nlp("nlp");
     // set options
-    Dict options = make_dict("grad_f", grad_f, "jac_g", jac_g,
-                             "hess_lag", hess_lag,
-                             "print_level", 0, "print_time", 0,
-                             // "tol", tol, "linear_solver", linear_solver,
-                             "warm_start_init_point", "yes");
+    Dict options;
+    options["grad_f"] = grad_f;
+    options["jac_g"] = jac_g;
+    options["jac_g"] = jac_g;
+    options["hess_lag"] = hess_lag;
+    options["print_level"] = 0;
+    options["print_time"] = 0;
+    options["tol"] = tol;
+    options["linear_solver"] = linear_solver;
+    options["warm_start_init_point"] = "yes";
     // create nlp solver
     NlpSolver problem("problem", "ipopt", nlp, options);
     this->problem = problem;
