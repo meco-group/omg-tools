@@ -1,27 +1,27 @@
-# Fill in this
+# Change this
 #------------------------------------------------------------------------------
-CASADIDIR=/home/ruben/Documents/Work/Repositories/casadi_binary
-SOURCEFILES=main.cpp
-EXECUTABLE=MotionPlanning
+CASADIDIR = @casadidir@
+SOURCEFILES = @sourcefiles@
+EXECUTABLE = MotionPlanning
 #------------------------------------------------------------------------------
 
-CXX=g++
-CC=gcc
-INCDIR=$(CASADIDIR)/include
-LIBDIR=$(CASADIDIR)/casadi
-CXXFLAGS=-I$(INCDIR) -DUSE_CXX11 -std=c++11 -fPIC -std=c++11
-CFLAGS=-fPIC -shared -std=c99
-LDFLAGS=-L$(LIBDIR) -lcasadi -lstdc++ -lcasadi -Wl,-rpath $(LIBDIR)
-PROBSOURCES=nlp.c hess_lag.c grad_f.c jac_g.c
-PROBOBJECTS=$(PROBSOURCES:.c=.so)
-SOURCES=$(SOURCEFILES) MotionPlanning.cpp
-OBJECTS=$(SOURCES:.cpp=.o)
-LIB=libmp.so
+CXX = g++
+CC = gcc
+INCDIR = $(CASADIDIR)/include
+LIBDIR = $(CASADIDIR)/casadi
+CXXFLAGS = -I$(INCDIR) -DUSE_CXX11 -std=c++11 -fPIC -std=c++11
+CFLAGS = -fPIC -shared -std=c99
+LDFLAGS = -L$(LIBDIR) -lcasadi -lstdc++ -lcasadi -Wl,-rpath $(LIBDIR)
+PROBSOURCES = nlp.c hess_lag.c grad_f.c jac_g.c
+PROBOBJECTS = $(PROBSOURCES:.c=.so)
+SOURCES = $(SOURCEFILES) MotionPlanning.cpp
+OBJECTS = $(SOURCES:.cpp=.o)
+LIB = libmp.so
 SRCDIR = src
 OBJDIR = obj
 OUTDIR = bin
-OBJ=$(patsubst %,$(OBJDIR)/%,$(OBJECTS))
-PROBOBJ=$(patsubst %,$(OUTDIR)/%,$(PROBOBJECTS))
+OBJ = $(patsubst %,$(OBJDIR)/%,$(OBJECTS))
+PROBOBJ = $(patsubst %,$(OUTDIR)/%,$(PROBOBJECTS))
 
 all: dir $(OUTDIR)/$(EXECUTABLE)
 
