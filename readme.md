@@ -23,30 +23,29 @@ from motionplanning import *
 vehicle = Holonomic()
 vehicle.set_initial_pose([-1.5, -1.5])
 vehicle.set_terminal_pose([2., 2.])
-vehicle.set_options({`safety_distance': 0.1})
+vehicle.set_options({'safety_distance': 0.1})
 
 #Make and set-up environment
-environment = Environment(room={`shape': Square(5.)})
+environment = Environment(room={'shape': Square(5.)})
 
 #Add stationary obstacles to environment
 rectangle = Rectangle(width=3., height=0.2)
-environment.add_obstacle(Obstacle({`pos': [-2.1, -0.5]}, shape=rectangle))
-environment.add_obstacle(Obstacle({`pos': [ 1.7, -0.5]}, shape=rectangle))
+environment.add_obstacle(Obstacle({'pos': [-2.1, -0.5]}, shape=rectangle))
+environment.add_obstacle(Obstacle({'pos': [ 1.7, -0.5]}, shape=rectangle))
 
 #Generate trajectory for moving obstacle
-traj = {`velocity': ([[3., -0.15, 0.0], [4., 0., 0.15]])}
+traj = {'velocity': ([[3., -0.15, 0.0], [4., 0., 0.15]])}
 #Add moving obstacle to environment
-environment.add_obstacle(Obstacle({`pos': [1.5, 0.5]}, shape=Circle(0.4),trajectory=traj))
+environment.add_obstacle(Obstacle({'pos': [1.5, 0.5]}, shape=Circle(0.4),trajectory=traj))
 
 #Give problem settings and create problem
 problem = Point2point(vehicle, environment)
 problem.init()
 
-#Simulate, plot and save the problem
+#Simulate, plot some signals and save a movie
 simulator = Simulator(problem)
-simulator.plot.create(`input', label=[`x-velocity(m/s)', `y-velocity(m/s)'])
-simulator.plot.create(`2d')
+simulator.plot.create('input', label=['x-velocity(m/s)', 'y-velocity(m/s)'])
+simulator.plot.create('2d')
 simulator.run()
-simulator.plot.show(...)
-simulator.plot.save_movie(...)
+simulator.plot.save_movie('2d')
 ```
