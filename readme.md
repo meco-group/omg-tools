@@ -1,6 +1,6 @@
 # Spline Based Motion Planning Toolbox
 We should think about a more attractive name...
-Something with move? plan? 
+Something with move? plan?
 Should spline be in there?
 
 This software package provides tools that make it easy to model, simulate and embed motion planning problems. The main goal is to bring several research topics and several techniques concerning (spline-based) motion planning together into a user-friendly package.
@@ -15,35 +15,35 @@ To install the toolbox itself, run the following command in the root directory o
 
 ## Examples
 ### Elementary example
-The code example below illustrates the basic functionality of the toolbox in order to steer a holonomic vehicle from an initial to terminal pose.
+The code example below illustrates the basic functionality of the toolbox for steering a holonomic vehicle from an initial to terminal pose in an obstructed environment.
 
 ```python
 from motionplanning import *
 
-#Make and set-up vehicle
+# make and set-up vehicle
 vehicle = Holonomic()
 vehicle.set_initial_pose([-1.5, -1.5])
 vehicle.set_terminal_pose([2., 2.])
 vehicle.set_options({'safety_distance': 0.1})
 
-#Make and set-up environment
+# make and set-up environment
 environment = Environment(room={'shape': Square(5.)})
 
-#Add stationary obstacles to environment
+# add stationary obstacles to environment
 rectangle = Rectangle(width=3., height=0.2)
 environment.add_obstacle(Obstacle({'pos': [-2.1, -0.5]}, shape=rectangle))
 environment.add_obstacle(Obstacle({'pos': [ 1.7, -0.5]}, shape=rectangle))
 
-#Generate trajectory for moving obstacle
+# generate trajectory for moving obstacle
 traj = {'velocity': ([[3., -0.15, 0.0], [4., 0., 0.15]])}
-#Add moving obstacle to environment
+# add moving obstacle to environment
 environment.add_obstacle(Obstacle({'pos': [1.5, 0.5]}, shape=Circle(0.4),trajectory=traj))
 
-#Give problem settings and create problem
+# give problem settings and create problem
 problem = Point2point(vehicle, environment)
 problem.init()
 
-#Simulate, plot some signals and save a movie
+# simulate, plot some signals and save a movie
 simulator = Simulator(problem)
 simulator.plot.create('input', label=['x-velocity(m/s)', 'y-velocity(m/s)'])
 simulator.plot.create('2d')
