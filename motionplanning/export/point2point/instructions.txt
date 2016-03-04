@@ -8,6 +8,8 @@ Build instructions
 * Assign the upper variables in the Makefile
     * CASADIDIR: path of your casadi binary installation. If you built casadi
                  from sources, you can leave this blank.
+    * CASADIOBJ: path of your generated casadi functions object files (grad_f.so,
+                 jac_g.so, hess_lag.so and nlp.so)
     * SOURCEFILES: extra cpp files that you want to built with the toolbox. If
                    you decide to build the toolbox as library (.so), you can
                    leave this blank.
@@ -36,11 +38,6 @@ Build instructions
         then you can build your application (suppose application.cpp) with our
         toolbox as follows (eg. with g++):
             g++ -I$(CASADIINCL) -I$(MPINCL) -std=c++11  -o application -L$(CASADILIB) -L$(MPLIB) -Wl,-rpath=$(MPLIB) application.cpp
-
-* Execution
-    Note that grad_f.so, jac_g.so, hess_lag.so and nlp.so should be in the same
-    directory as your executable. This is because they are loaded at runtime via
-    casadi's ExternalFunction.
 
 Example code
 ------------

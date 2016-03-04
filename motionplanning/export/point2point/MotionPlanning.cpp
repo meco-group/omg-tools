@@ -2,6 +2,7 @@
 #ifdef DEBUG
 #include <ctime>
 #endif
+#include <unistd.h>
 
 using namespace std;
 using namespace casadi;
@@ -30,11 +31,17 @@ ypred(N_Y, vector<double>(N_DER+1)), ideal_update(false){
 }
 
 void MotionPlanning::generateProblem(){
+    // change pwd to CASADIOBJ
+    char cwd[1024];
+    getcwd(cwd, sizeof(cwd));
+    chdir(CASADIOBJ);
     // load object files
     ExternalFunction grad_f("grad_f");
     ExternalFunction jac_g("jac_g");
     ExternalFunction hess_lag("hess_lag");
     ExternalFunction nlp("nlp");
+    // change back to original pwd
+    chdir(cwd);
     // set options
     Dict options;
     options["grad_f"] = grad_f;

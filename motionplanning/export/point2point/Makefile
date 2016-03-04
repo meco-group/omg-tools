@@ -1,6 +1,7 @@
 # Change this
 #------------------------------------------------------------------------------
 CASADIDIR = @casadidir@
+CASADIOBJ = .
 SOURCEFILES = @sourcefiles@
 EXECUTABLE = MotionPlanning
 #------------------------------------------------------------------------------
@@ -9,7 +10,7 @@ CXX = g++
 CC = gcc
 INCDIR = $(CASADIDIR)/include
 LIBDIR = $(CASADIDIR)/casadi
-CXXFLAGS = -I$(INCDIR) -DUSE_CXX11 -std=c++11 -fPIC -std=c++11
+CXXFLAGS = -I$(INCDIR) -DUSE_CXX11 -std=c++11 -fPIC -std=c++11 -DCASADIOBJ="\"$(CASADIOBJ)\""
 CFLAGS = -fPIC -shared -std=c99
 LDFLAGS = -L$(LIBDIR) -lcasadi -lstdc++ -lcasadi -Wl,-rpath $(LIBDIR)
 PROBSOURCES = nlp.c hess_lag.c grad_f.c jac_g.c

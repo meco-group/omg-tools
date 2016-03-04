@@ -5,6 +5,9 @@ TODO
 
 - embedded export for single vehicle system
     - run in orocos component
+        - debug in motion planning toolbox why problem is infeasible? probably wrong stat0, stateT hmm or inputT (is this initialized??)
+        - does everything works ok if number of states > n_st ?
+        - try with estimated pose from teensy
     - name + github page for toolbox
     - license for toolbox
 
