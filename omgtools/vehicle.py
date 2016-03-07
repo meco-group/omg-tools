@@ -12,10 +12,10 @@ import re
 class Vehicle(OptiChild):
 
     def __init__(self, n_y, n_der, degree, order, shape, options, **kwargs):
-        #n_y: number of spline variables
-        #n_der: required number of derivatives of y to save/plot/express signals
-        #degree: degree of spline
-        #order: order of ode describing the system
+        # n_y: number of spline variables
+        # n_der: required number of derivatives of y to save/plot/express signals
+        # degree: degree of spline
+        # order: order of ode describing the system
 
         OptiChild.__init__(self, 'vehicle')
         self.shape = shape
@@ -70,7 +70,7 @@ class Vehicle(OptiChild):
                         'sample_time': 0.01,
                         'ideal_update': False, '1storder_delay': False,
                         'time_constant': 0.1}
-        self.options['boundary_smoothness'] = {'initial': self.degree,
+        self.options['boundary_smoothness'] = {'initial': self.order,
                                                'internal': self.order,
                                                'terminal': self.degree}
 
