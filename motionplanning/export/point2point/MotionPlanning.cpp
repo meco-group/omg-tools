@@ -138,8 +138,12 @@ bool MotionPlanning::update(vector<double>& state0, vector<double>& stateT, vect
     #endif
     // ref state and input for system are one sample shorter!!
     for (int k=0; k<time.size()-1; k++){
-        state_trajectory[k] = this->state_trajectory[k];
-        input_trajectory[k] = this->input_trajectory[k];
+        for (int j=0; j<n_st; j++){
+            state_trajectory[k][j] = this->state_trajectory[k][j];
+        }
+        for (int j=0; j<n_in; j++){
+            input_trajectory[k][j] = this->input_trajectory[k][j];
+        }
     }
     // update current time
     current_time += update_time;

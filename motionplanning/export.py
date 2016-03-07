@@ -214,7 +214,9 @@ class Export:
         self.options['directory'] = os.path.join(os.getcwd(), 'export/')
         self.options['casadi_optiflags'] = ''  # '', '-O3', '-Os'
         self.options['casadidir'] = ''
+        self.options['casadiobj'] = '.'
         self.options['sourcefiles'] = ''
+        self.options['executable'] = 'MotionPlanning'
 
     def set_options(self, options):
         self.options.update(options)
@@ -300,9 +302,8 @@ class ExportCpp(Export):
 
     def get_make_options(self):
         make_opt = {}
-        make_opt['casadidir'] = self.options['casadidir']
-        make_opt['sourcefiles'] = self.options['sourcefiles']
-        make_opt['casadi_optiflags'] = self.options['casadi_optiflags']
+        for key, option in self.options.items():
+            make_opt[key] = option
         return make_opt
 
     def create_nlp_src(self, destination):

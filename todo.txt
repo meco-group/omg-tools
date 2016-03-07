@@ -5,9 +5,20 @@ TODO
 
 - embedded export for single vehicle system
     - run in orocos component
+        - debug every possible line
+
+        SOMETHING WRONG WITH HORIZON TIME!!!! not proper set (in setParameters)
+        maybe integer division...
+        debug on all timing parameters
+        found it :)
+
         - debug in motion planning toolbox why problem is infeasible? probably wrong stat0, stateT hmm or inputT (is this initialized??)
         - does everything works ok if number of states > n_st ?
         - try with estimated pose from teensy
+        - check required build options in orocos
+        - what happens when restarting/resetting? Internal state/input not reset?
+    - vehicle trajectory: list of lists
+    - add all makefile options as options of export
     - name + github page for toolbox
     - license for toolbox
 

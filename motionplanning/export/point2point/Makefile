@@ -1,9 +1,9 @@
 # Change this
 #------------------------------------------------------------------------------
 CASADIDIR = @casadidir@
-CASADIOBJ = .
+CASADIOBJ = @casadiobj@
 SOURCEFILES = @sourcefiles@
-EXECUTABLE = MotionPlanning
+EXECUTABLE = @executable@
 #------------------------------------------------------------------------------
 
 CXX = g++
@@ -26,10 +26,13 @@ PROBOBJ = $(patsubst %,$(OUTDIR)/%,$(PROBOBJECTS))
 
 all: dir $(OUTDIR)/$(EXECUTABLE)
 
-library: dir $(OUTDIR)/$(LIB)
+lib: dir $(OUTDIR)/$(LIB)
 
 debug: DEBUG = -DDEBUG
 debug: all
+
+lib debug: DEBUG = -DDEBUG
+lib debug: lib
 
 $(OUTDIR)/%.so: $(SRCDIR)/%.c
 	$(CC) $(CFLAGS) $< -o $@

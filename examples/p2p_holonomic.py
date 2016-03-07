@@ -31,19 +31,20 @@ problem.init()
 
 options = {}
 options['casadidir'] = '/home/ruben/Documents/Work/Repositories/casadi_binary'
-# options['sourcefiles'] = 'example.cpp'
-# problem.export('c++', options)
+options['casadiobj'] = '/home/ruben/Documents/Work/Programs/motionplanning/examples/export/bin'
+options['sourcefiles'] = 'example.cpp'
+problem.export('c++', options)
 
 # create simulator
-simulator = Simulator(problem)
-simulator.plot.set_options({'knots': True})
-simulator.plot.create('2d')
-simulator.plot.create('input')
+# simulator = Simulator(problem)
+# simulator.plot.set_options({'knots': True})
+# simulator.plot.create('2d')
+# simulator.plot.create('input')
 
 # run it!
-simulator.run()
+# simulator.run()
 
 # show/save some results
-simulator.plot.show_movie('2d', repeat=True)
+# simulator.plot.show_movie('2d', repeat=True)
 
 # matplotlib.pyplot.show(block=True)

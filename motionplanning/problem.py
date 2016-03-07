@@ -156,6 +156,8 @@ class Problem(OptiChild):
         if not hasattr(self, 'father'):
             self.init()
         if language == 'c++':
-            exp = export.ExportCpp(self, 'point2point', options)
-        if language == 'python':
+            export.ExportCpp(self, 'point2point', options)
+        elif language == 'python':
             raise ValueError('Python export not yet implemented. Ask Tim Mercy.')
+        else:
+            raise ValueError(language+' export is not implemented.')
