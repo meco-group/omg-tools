@@ -7,16 +7,17 @@ def read(fname):
 
 
 setup(
-    name="motionplanning",
+    name="omg-tools",
     version="0.1",
     author="Ruben Van Parys & Tim Mercy",
     author_email="ruben.vanparys@kuleuven.be",
-    description=('spline-based motion planning toolbox for modeling, ' +
-                 'simulating and embedding motion planning algorithms'),
+    description=('optimal motion generation tools: a user-friendly tool for ' +
+                 'modeling, simulating and embedding of (spline-based) motion ' +
+                 'planning problems'),
     license="LGPLv3",
-    keywords="optimization motion planning distributed multi-agent",
+    keywords="optimization motion planning splines distributed multi-agent",
     # url="",
-    packages=['motionplanning'],
+    packages=['omgtools'],
     long_description=read('readme.md'),
     classifiers=[
         "Development Status :: 3 - Alpha",

@@ -7,4 +7,5 @@
 jit_tmp.c
 build/*
 dist/*
-motionplanning.egg-info/*
+omg_tools.egg-info/*
+todo.txt
