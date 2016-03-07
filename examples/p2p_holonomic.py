@@ -1,5 +1,4 @@
-from motionplanning import *
-import numpy as np
+from omgtools import *
 
 # create vehicle
 vehicle = Holonomic()
@@ -18,7 +17,7 @@ environment = Environment(room={'shape': Square(5.)})
 rectangle = Rectangle(width=3., height=0.2)
 environment.add_obstacle(Obstacle({'position': [-2.1, -0.5]}, shape=rectangle))
 environment.add_obstacle(Obstacle({'position': [1.7, -0.5]}, shape=rectangle))
-trajectory = {'velocity': np.vstack([[3., -0.15, 0.0], [4., 0., 0.15]])}
+trajectory = {'velocity': [[3., -0.15, 0.0], [4., 0., 0.15]]}
 environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
                                   trajectory=trajectory))
 
@@ -26,8 +25,6 @@ environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
 problem = Point2point(vehicle, environment)
 problem.set_options({'solver': {'linear_solver': 'ma57'}})
 problem.init()
-
-# problem.export('c++', {'casadi_dir': '/home/ruben/Documents/Work/Repositories/casadi_binary'})
 
 # create simulator
 simulator = Simulator(problem)
