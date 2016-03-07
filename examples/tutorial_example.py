@@ -1,5 +1,5 @@
-# Add the toolbox to your python path and import it!
-from motionplanning import *
+# Import the toolbox!
+from omgtools import *
 
 # Before we start, first some notes on the so called OptiLayer!
 
@@ -73,7 +73,7 @@ environment.add_obstacle(Obstacle({'position': [-2.1, -0.5]}, shape=rectangle))
 environment.add_obstacle(Obstacle({'position': [1.7, -0.5]}, shape=rectangle))
 # Let's also add a circular obstacle which will suddenly start to move.
 # Therefore we define an 'increment' trajectory in velocity:
-trajectory = {'velocity': np.vstack([[3., -0.15, 0.0], [4., 0., 0.15]])}
+trajectory = {'velocity': [[3., -0.15, 0.0], [4., 0., 0.15]]}
 # This means: at t = 3s it will add velocity [-0.15, 0] to its current velocity
 #             at t = 4s it will add velocity [0,  0.15] to its current velocity
 # You could also change position and acceleration in discrete steps

@@ -234,25 +234,25 @@ class Obstacle:
             t1_acc, t2_acc = sample_time, 0.
             time = self.path['time'][-1] + sample_time
             if (hasattr(self, 'pos_traj') and not
-                    (self.pos_index >= self.pos_traj.shape[0])):
-                if np.round(time - self.pos_traj[self.pos_index, 0], 3) >= 0.:
-                    dpos = self.pos_traj[self.pos_index, 1:3]
+                    (self.pos_index >= len(self.pos_traj))):
+                if np.round(time - self.pos_traj[self.pos_index][0], 3) >= 0.:
+                    dpos = self.pos_traj[self.pos_index][1:3]
                     self.pos_index += 1
             if (hasattr(self, 'vel_traj') and not
-                    (self.vel_index >= self.vel_traj.shape[0])):
-                if np.round(time - self.vel_traj[self.vel_index, 0], 3) >= 0.:
+                    (self.vel_index >= len(self.vel_traj))):
+                if np.round(time - self.vel_traj[self.vel_index][0], 3) >= 0.:
                     t1_vel = self.vel_traj[
-                        self.vel_index, 0] - time + update_time
-                    t2_vel = time - self.vel_traj[self.vel_index, 0]
-                    dvel = self.vel_traj[self.vel_index, 1:3]
+                        self.vel_index][0] - time + update_time
+                    t2_vel = time - self.vel_traj[self.vel_index][0]
+                    dvel = self.vel_traj[self.vel_index][1:3]
                     self.vel_index += 1
             if (hasattr(self, 'acc_traj') and not
-                    (self.acc_index >= self.acc_traj.shape[0])):
-                if np.round(time - self.acc_traj[self.acc_index, 0], 3) >= 0.:
+                    (self.acc_index >= len(self.acc_traj))):
+                if np.round(time - self.acc_traj[self.acc_index][0], 3) >= 0.:
                     t1_acc = self.acc_traj[
-                        self.acc_index, 0] - time + update_time
-                    t2_acc = time - self.acc_traj[self.acc_index, 0]
-                    dacc = self.acc_traj[self.acc_index, 1:3]
+                        self.acc_index][0] - time + update_time
+                    t2_acc = time - self.acc_traj[self.acc_index][0]
+                    dacc = self.acc_traj[self.acc_index][1:3]
                     self.acc_index += 1
 
             pos0 = self.path['position'][:, -1]
