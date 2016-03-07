@@ -13,7 +13,7 @@ class Vehicle(OptiChild):
 
     def __init__(self, n_y, n_der, degree, order, shape, options, **kwargs):
         # n_y: number of spline variables
-        # n_der: required number of derivatives of y to express signals
+        # n_der: required number of derivatives of y to save/plot/express signals
         # degree: degree of spline
         # order: order of ode describing the system
 

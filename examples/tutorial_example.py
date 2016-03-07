@@ -1,5 +1,5 @@
-# Add the toolbox to your python path and import it!
-from motionplanning import *
+# Import the toolbox!
+from omgtools import *
 
 # Before we start, first some notes on the so called OptiLayer!
 
@@ -29,9 +29,9 @@ from motionplanning import *
 # which on its turn inherit from the more more general Problem class.
 
 # Ok, let's start with creating a vehicle: a holonomic one!
-# Select type of velocity and acceleration limit, two norm is standard for
+# Select type of velocity and acceleration limit, inf norm is standard for
 # a holonomic vehicle.
-vehicle = Holonomic(options={'syslimit': 'norm_two'})
+vehicle = Holonomic(options={'syslimit': 'norm_inf'})
 # On a vehicle one can define some signals. These value of these are stored
 # during simulation and can be plotted.
 # In the Holonomic class default signals 'input', 'state' and 'position' are
@@ -52,7 +52,7 @@ vehicle.set_terminal_pose([2., 2.])
 vehicle.set_options({'boundary_smoothness': {'initial': 1}})
 # Collision avoidance where we try to keep a distance 0.1m (in a soft way),
 # but distance 0m in a hard way:
-vehicle.set_options({'safety_distance': 0.0})
+vehicle.set_options({'safety_distance': 0.1})
 # For simulation, we can add some input disturbance, which is Gaussian noise
 # with some mean (default 0) and stdev and which if filtered with some
 # cut-off frequency fc (Hz):
@@ -73,7 +73,7 @@ environment.add_obstacle(Obstacle({'position': [-2.1, -0.5]}, shape=rectangle))
 environment.add_obstacle(Obstacle({'position': [1.7, -0.5]}, shape=rectangle))
 # Let's also add a circular obstacle which will suddenly start to move.
 # Therefore we define an 'increment' trajectory in velocity:
-trajectory = {'velocity': np.vstack([[3., -0.15, 0.0], [4., 0., 0.15]])}
+trajectory = {'velocity': [[3., -0.15, 0.0], [4., 0., 0.15]]}
 # This means: at t = 3s it will add velocity [-0.15, 0] to its current velocity
 #             at t = 4s it will add velocity [0,  0.15] to its current velocity
 # You could also change position and acceleration in discrete steps
@@ -110,10 +110,6 @@ simulator.plot.set_options({'knots': True})  # let's plot our spline knots
 # during simulating.
 simulator.plot.create('input', label=['x-velocity (m/s)',
                                       'y-velocity (m/s)'])
-simulator.plot.create('a', label=['x-acceleration (m/s^2)',
-                                  'y-acceleration (m/s^2)'])
-simulator.plot.create('vnorm_two', label=['x-velocity (m/s)',
-                                  'time (s)'])
 # You can also provide the name '2d': this plots a 2d space with the vehicle
 # movement.
 simulator.plot.create('2d')

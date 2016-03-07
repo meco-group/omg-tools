@@ -1,7 +1,11 @@
+<<<<<<< HEAD
 import sys
 sys.path.insert(0, "/home/ruben/Documents/Work/Programs/motionplanningtoolbox/")
 from motionplanning import *
 import numpy as np
+=======
+from omgtools import *
+>>>>>>> develop
 
 # create vehicle
 vehicle = Holonomic()
@@ -18,9 +22,10 @@ vehicle.set_terminal_pose([2., 2.])
 # create environment
 environment = Environment(room={'shape': Square(5.)})
 rectangle = Rectangle(width=3., height=0.2)
+
 # environment.add_obstacle(Obstacle({'position': [-2.1, -0.5]}, shape=rectangle))
 # environment.add_obstacle(Obstacle({'position': [1.7, -0.5]}, shape=rectangle))
-# trajectory = {'velocity': np.vstack([[3., -0.15, 0.0], [4., 0., 0.15]])}
+# trajectory = {'velocity': [[3., -0.15, 0.0], [4., 0., 0.15]]}
 # environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
 #                                   trajectory=trajectory))
 

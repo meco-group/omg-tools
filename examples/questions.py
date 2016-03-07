@@ -1,4 +1,4 @@
-from motionplanning import *
+from omgtools import *
 
 # create fleet
 configuration = [np.array([-5., 0.]), np.array([-2.5, 4.3]),
