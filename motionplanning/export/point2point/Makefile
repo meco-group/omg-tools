@@ -17,7 +17,7 @@ PROBSOURCES = nlp.c hess_lag.c grad_f.c jac_g.c
 PROBOBJECTS = $(PROBSOURCES:.c=.so)
 SOURCES = $(SOURCEFILES) MotionPlanning.cpp
 OBJECTS = $(SOURCES:.cpp=.o)
-LIB = libmp.so
+LIB = libomg.so
 SRCDIR = src
 OBJDIR = obj
 OUTDIR = bin
@@ -30,9 +30,6 @@ lib: dir $(OUTDIR)/$(LIB)
 
 debug: DEBUG = -DDEBUG
 debug: all
-
-lib debug: DEBUG = -DDEBUG
-lib debug: lib
 
 $(OUTDIR)/%.so: $(SRCDIR)/%.c
 	$(CC) $(CFLAGS) $< -o $@

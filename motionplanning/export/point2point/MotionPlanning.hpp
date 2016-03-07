@@ -10,7 +10,7 @@
 #define inf std::numeric_limits<double>::infinity()
 @defines@
 
-namespace mp{
+namespace omg{
 
 typedef struct obstacle {
     double position[N_DIM];
@@ -76,7 +76,8 @@ class MotionPlanning{
         const int n_st = N_ST;
 
         MotionPlanning(double updateTime, double sampleTime, double horizonTime);
-        bool update(std::vector<double>&, std::vector<double>&, std::vector<double>&, std::vector<std::vector<double>>&, std::vector<std::vector<double>>&, std::vector<obstacle_t>&);
+        bool update(std::vector<double>&, std::vector<double>&, std::vector<std::vector<double>>&, std::vector<std::vector<double>>&, std::vector<obstacle_t>&);
+        void reset();
         void setIdealUpdate(bool);
     };
 }

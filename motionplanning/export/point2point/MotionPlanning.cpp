@@ -7,7 +7,7 @@
 using namespace std;
 using namespace casadi;
 
-namespace mp{
+namespace omg{
 
 MotionPlanning::MotionPlanning(double update_time, double sample_time, double horizon_time):
 parameters(N_PAR), variables(N_VAR), lbg(LBG_DEF), ubg(UBG_DEF),
@@ -62,7 +62,20 @@ void MotionPlanning::initSplines(){
 @initSplines@
 }
 
-bool MotionPlanning::update(vector<double>& state0, vector<double>& stateT, vector<double>& inputT, vector<vector<double>>& state_trajectory, vector<vector<double>>& input_trajectory, vector<obstacle_t>& obstacles){
+void MotionPlanning::reset(){
+    for (int k=0; k<int(update_time/sample_time)+1; k++){
+        for (int j=0; j<n_in; j++){
+            this->input_trajectory[k][j] = 0.0;
+        }
+    }
+    for (int i=0; i<n_y; i++){
+        for (int d=1; d<n_der+1; d++){
+            this->ypred[i][d] = 0.0;
+        }
+    }
+}
+
+bool MotionPlanning::update(vector<double>& state0, vector<double>& stateT, vector<vector<double>>& state_trajectory, vector<vector<double>>& input_trajectory, vector<obstacle_t>& obstacles){
     #ifdef DEBUG
     double tmeas;
     clock_t begin;
@@ -100,7 +113,8 @@ bool MotionPlanning::update(vector<double>& state0, vector<double>& stateT, vect
     #ifdef DEBUG
     begin = clock();
     #endif
-    getY(stateT, inputT, this->yT);
+    vector<double> zeros(n_in);
+    getY(stateT, zeros, this->yT);
     #ifdef DEBUG
     end = clock();
     tmeas = double(end-begin)/CLOCKS_PER_SEC;
