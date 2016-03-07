@@ -1,11 +1,7 @@
-<<<<<<< HEAD
 import sys
 sys.path.insert(0, "/home/ruben/Documents/Work/Programs/motionplanningtoolbox/")
-from motionplanning import *
-import numpy as np
-=======
 from omgtools import *
->>>>>>> develop
+
 
 # create vehicle
 vehicle = Holonomic()
@@ -35,8 +31,10 @@ problem.set_options({'solver': {'linear_solver': 'ma57'}})
 problem.init()
 
 options = {}
-options['casadidir'] = '/home/ruben/Documents/Work/Repositories/casadi_binary'
-options['casadiobj'] = '/home/ruben/Documents/Work/Programs/motionplanning/examples/export/bin'
+# options['directory'] = '/home/ruben/ourbot/orocos/ourbot/MotionPlanning/src/Toolbox/'
+# options['casadiobj'] = '/home/odroid/orocos/MotionPlanning/src/Toolbox/bin/'
+options['casadiinc'] = '/home/ruben/Documents/Work/Repositories/casadi_binary/include/'
+options['casadilib'] = '/home/ruben/Documents/Work/Repositories/casadi_binary/casadi/'
 options['sourcefiles'] = 'example.cpp'
 problem.export('c++', options)
 

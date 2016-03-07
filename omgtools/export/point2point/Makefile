@@ -1,6 +1,7 @@
 # Change this
 #------------------------------------------------------------------------------
-CASADIDIR = @casadidir@
+CASADILIB = @casadilib@
+CASADIINC = @casadiinc@
 CASADIOBJ = @casadiobj@
 SOURCEFILES = @sourcefiles@
 EXECUTABLE = @executable@
@@ -8,8 +9,8 @@ EXECUTABLE = @executable@
 
 CXX = g++
 CC = gcc
-INCDIR = $(CASADIDIR)/include
-LIBDIR = $(CASADIDIR)/casadi
+INCDIR = $(CASADIINC)
+LIBDIR = $(CASADILIB)
 CXXFLAGS = -I$(INCDIR) -DUSE_CXX11 -std=c++11 -fPIC -std=c++11 -DCASADIOBJ="\"$(CASADIOBJ)\""
 CFLAGS = -fPIC -shared -std=c99
 LDFLAGS = -L$(LIBDIR) -lcasadi -lstdc++ -lcasadi -Wl,-rpath $(LIBDIR)

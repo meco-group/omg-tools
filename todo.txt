@@ -5,15 +5,11 @@ TODO
 
 - embedded export for single vehicle system
     - run in orocos component
-        + debug every possible line
-        + debug in motion planning toolbox why problem is infeasible? probably wrong stat0, stateT hmm or inputT (is this initialized??)
-        + does everything works ok if number of states > n_st ?
-        - try with estimated pose from teensy
-        - check required build options in orocos
-        + what happens when restarting/resetting? Internal state/input not reset?
-    - vehicle trajectory: list of lists
-    - add all makefile options as options of export
-    - name + github page for toolbox
+        - something with setTargetPose()?
+        - test with estimated pose from teensy
+        - test on xu4
+        - test with obstacles
+    - github page for toolbox
     - license for toolbox
 
 - admm: reorganize such that initial transformation information can be stored
