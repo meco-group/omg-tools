@@ -14,7 +14,8 @@ environment.add_obstacle(Obstacle({'position': [-0.6, -5.4]},
                                   shape=Rectangle(width=0.2, height=12.)))
 
 # create a point-to-point problem
-problem = Point2point(vehicle, environment)
+options = {'horizon_time': 5}
+problem = Point2point(vehicle, environment, options)
 problem.init()
 
 # create simulator

@@ -2,21 +2,15 @@ from optilayer import OptiFather, OptiChild
 from fleet import get_fleet_vehicles
 from plots import Plots
 import time
+import export
+
 
 class Simulator:
 
-    def __init__(self, problem, options={}):
-        self.set_default_options()
-        self.set_options(options)
+    def __init__(self, problem):
         self.problem = problem
         self.environment = problem.environment
         self.plot = Plots(problem.fleet, problem.environment)
-
-    def set_default_options(self):
-        self.options = {'update_time': 0.1}
-
-    def set_options(self, options):
-        self.options.update(options)
 
     def run(self):
         current_time = 0.
@@ -24,15 +18,15 @@ class Simulator:
         stop = False
         while not stop:
             stop = self.update(current_time)
-            current_time += self.options['update_time']
+            current_time += self.problem.options['update_time']
         self.problem.final()
 
     def update(self, current_time):
         # solve problem
         self.problem.solve(current_time)
         # update vehicle(s) and environment
-        self.problem.update_vehicles(current_time, self.options['update_time'])
-        self.environment.update(current_time, self.options['update_time'])
+        self.problem.update_vehicles(current_time, self.problem.options['update_time'])
+        self.environment.update(current_time, self.problem.options['update_time'])
         self.plot.update()
         # check termination criteria
         stop = self.problem.stop_criterium()
@@ -58,7 +52,7 @@ class Problem(OptiChild):
 
     def set_default_options(self):
         self.options = {'verbose': 2, 'update_time': 0.1}
-        self.options['solver'] = {'tol': 1e-3, 'linear_solver': 'ma57',
+        self.options['solver'] = {'tol': 1e-3, 'linear_solver': 'mumps',
                                   'warm_start_init_point': 'yes',
                                   'print_level': 0, 'print_time': 0}
         self.options['codegen'] = {
@@ -145,3 +139,17 @@ class Problem(OptiChild):
 
     def stop_criterium(self):
         raise NotImplementedError('Please implement this method!')
+
+    # ========================================================================
+    # Methods for exporting problem to C++ library
+    # ========================================================================
+
+    def export(self, language='c++', options={}):
+        if not hasattr(self, 'father'):
+            self.init()
+        if language == 'c++':
+            export.ExportCpp(self, 'point2point', options)
+        elif language == 'python':
+            raise ValueError('Python export not yet implemented. Ask Tim Mercy.')
+        else:
+            raise ValueError(language+' export is not implemented.')
