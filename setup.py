@@ -18,6 +18,7 @@ setup(
     keywords="optimization motion planning splines distributed multi-agent",
     # url="",
     packages=['omgtools'],
+    package_data={'':['export/point2point/*']},
     long_description=read('readme.md'),
     classifiers=[
         "Development Status :: 3 - Alpha",

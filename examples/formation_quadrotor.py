@@ -2,9 +2,7 @@ from omgtools import *
 
 # create fleet
 N = 3
-
-veh_opt = {'horizon_time': 5.}
-vehicles = [Quadrotor(0.2, veh_opt) for l in range(N)]
+vehicles = [Quadrotor(0.2) for l in range(N)]
 # for veh in vehicles:
 #     veh.set_options({'safety_distance': 0.1})
 #     veh.set_options({'1storder_delay': True, 'time_constant': 0.1})
@@ -24,7 +22,7 @@ environment.add_obstacle(Obstacle({'position': [-0.6, -5.4]},
                                   shape=Rectangle(width=0.2, height=10.)))
 
 # create a formation point-to-point problem
-options = {'codegen': {'jit': False}, 'admm': {'rho': 0.1}}
+options = {'horizon_time': 5., 'codegen': {'jit': False}, 'admm': {'rho': 0.1}}
 problem = FormationPoint2point(fleet, environment, options=options)
 problem.init()
 
@@ -32,7 +30,7 @@ problem.init()
 simulator = Simulator(problem)
 simulator.plot.set_options({'knots': True})
 simulator.plot.create('2d')
-simulator.plot.create('input')
+simulator.plot.create('input', label=['thrust (m/s^2)', 'rotational velocity (rad/s)'])
 
 # run it!
 simulator.run()
