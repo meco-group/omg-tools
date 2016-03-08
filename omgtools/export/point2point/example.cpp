@@ -25,15 +25,15 @@ int main()
 
     // obstacles
     vector<omg::obstacle_t> obstacles(p2p.n_obs);
-    // obstacles[0].position[0] = -2.1;
-    // obstacles[0].position[1] = -0.5;
+    // obstacles[0].position[0] = 0.5;
+    // obstacles[0].position[1] = 2.0;
     // obstacles[0].velocity[0] = 0.0;
     // obstacles[0].velocity[1] = 0.0;
     // obstacles[0].acceleration[0] = 0.0;
     // obstacles[0].acceleration[1] = 0.0;
 
-    // obstacles[1].position[0] = 1.7;
-    // obstacles[1].position[1] = -0.5;
+    // obstacles[1].position[0] = 4.2;
+    // obstacles[1].position[1] = 2.0;
     // obstacles[1].velocity[0] = 0.0;
     // obstacles[1].velocity[1] = 0.0;
     // obstacles[1].acceleration[0] = 0.0;
@@ -44,7 +44,7 @@ int main()
     p2p.setIdealUpdate(true);
 
     double time;
-    for (int i=0; i<10; i++){
+    for (int i=0; i<1; i++){
         clock_t begin = clock();
         p2p.update(state0, stateT, state_trajectory, input_trajectory, obstacles);
         clock_t end = clock();

@@ -4,13 +4,12 @@ TODO
   relaxed primal problem?? This is probably one of the millenium questions...
 
 - embedded export for single vehicle system
+    + problem with install/export/subfolders
     - run in orocos component
-        - something with setTargetPose()?
         - test with estimated pose from teensy
-        - test on xu4
-        - test with obstacles
-    - github page for toolbox
-    - license for toolbox
+- check Tim's developments and commit/merge my stuff
+- github page for toolbox
+- license for toolbox
 
 - admm: reorganize such that initial transformation information can be stored
 
