@@ -138,7 +138,9 @@ class Point2pointProblem(Problem):
 
     def stop_criterium(self):
         for vehicle in self.vehicles:
-            if (np.linalg.norm(vehicle.trajectory['y'][:, :, 0] - vehicle.yT)
+            # check if pose reached and inputs are zero
+            if ((np.linalg.norm(vehicle.trajectory['pose'][:, :, 0] - vehicle.poseT) 
+               or (np.linalg.norm(vehicle.trajectory['input'][:, :, 0] - np.zeros(len(vehicle.get_input() )))))
                     > 1.e-2):
                 return False
         return True
@@ -303,9 +305,12 @@ class FreeTPoint2point(Point2pointProblem):
 
     def stop_criterium(self):
         for vehicle in self.vehicles:
+            # check if remaining motion time is smaller than update time
             if (self.T < self.options['update_time']):
                 return True
-            if (np.linalg.norm(vehicle.trajectory['y'][:, :, 0] - vehicle.yT)
+            # check if pose reached and inputs are zero
+            if ((np.linalg.norm(vehicle.trajectory['pose'][:, :, 0] - vehicle.poseT) 
+               or (np.linalg.norm(vehicle.trajectory['input'][:, :, 0] - np.zeros(len(vehicle.get_input() )))))
                     > 1.e-2):
                 return False
         return True
