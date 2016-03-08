@@ -16,19 +16,21 @@ class Holonomic(Vehicle):
         self.amax = bounds['amax'] if 'amax' in bounds else 1.
 
         # define physical signals
-        # y was defined in the Vehicle.__init__()
         y = self.get_signal('y')
 
         y0, dy0, ddy0 = y[0, 0], y[0, 1], y[0, 2]
         y1, dy1, ddy1 = y[1, 0], y[1, 1], y[1, 2]
 
-        self.define_position([y0, y1])
         u0, u1 = self.define_input([dy0, dy1])
         x0, x1 = self.define_state([y0, y1])
+        self.define_position([y0, y1])
         self.define_signal('a', [ddy0, ddy1])
         self.define_signal('vnorm_two', [sqrt(dy0**2+dy1**2)])
-        self.define_y([[x0, x1], [u0, u1]])
+
+        # define model
         self.define_dstate([u0, u1])
+        # define y as function of state and input
+        self.define_y([[x0, x1], [u0, u1]])
 
         # define system constraints
         y0, y1 = self.splines[0], self.splines[1]

@@ -163,25 +163,36 @@ class FixedTPoint2point(Point2pointProblem):
         self.t = self.define_parameter('t')
         self.t0 = self.t/self.T
 
-        # define slack 'g' to impose 1-norm objective function
-        g = [self.define_spline_variable(
-            'g_'+str(l), vehicle.n_y, basis=vehicle.basis)
-            for l, vehicle in enumerate(self.vehicles)]
+        if self.options['target_error'] == 'norm_one':
+            # define slack 'g' to impose 1-norm objective function
+            g = [self.define_spline_variable(
+                'g_'+str(l), vehicle.n_y, basis=vehicle.basis)
+                for l, vehicle in enumerate(self.vehicles)]
 
-        # objective + related constraints
-        objective = 0.
-        for l, vehicle in enumerate(self.vehicles):
-            objective += sum([definite_integral(g_k, self.t0, 1.) for g_k in g[l]])
-            for k in range(vehicle.n_y):
-                self.define_constraint(
-                    self.y[l][k] - self.yT[l][k] - g[l][k], -np.inf, 0.)
-                self.define_constraint(-self.y[l][k] +
-                                       self.yT[l][k] - g[l][k], -np.inf, 0.)
+            # objective + related constraints
+            objective = 0.
+            for l, vehicle in enumerate(self.vehicles):
+                objective += sum([definite_integral(g_k, self.t0, 1.) for g_k in g[l]])
+                for k in range(vehicle.n_y):
+                    self.define_constraint(
+                        self.y[l][k] - self.yT[l][k] - g[l][k], -np.inf, 0.)
+                    self.define_constraint(-self.y[l][k] +
+                                           self.yT[l][k] - g[l][k], -np.inf, 0.)
+        elif self.options['target_error'] == 'norm_two':
+            objective = 0.
+            for l, vehicle in enumerate(self.vehicles):
+                for k in range(vehicle.n_y):
+                    objective += definite_integral((self.y[l][k] - self.yT[l][k])*(self.y[l][k] - self.yT[l][k]), self.t0, 1.)
+        else:
+            raise ValueError('Target error type not defined! ' +
+                             'Use set_options({target_error: norm_inf}).')
+
         self.define_objective(objective)
 
     def set_default_options(self):
         Point2pointProblem.set_default_options(self)
         self.options['horizon_time'] = 10.
+        self.options['target_error'] = 'norm_one'
 
     def set_parameters(self, current_time):
         parameters = Point2pointProblem.set_parameters(self, current_time)
