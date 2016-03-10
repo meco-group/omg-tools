@@ -32,25 +32,25 @@ problem = Point2point(vehicle, environment, options)
 problem.init()
 
 options = {}
-options['casadiobj'] = '/home/ruben/programs/motionplanningtoolbox/examples/export/bin/'
+# options['casadiobj'] = '/home/ruben/programs/motionplanningtoolbox/examples/export/bin/'
 
-# options['directory'] = '/home/ruben/ourbot/orocos/ourbot/MotionPlanning/src/Toolbox/'
-# options['casadiobj'] = '/home/odroid/orocos/MotionPlanning/src/Toolbox/bin/'
-options['casadiinc'] = '/home/ruben/Documents/Work/Repositories/casadi_binary/include/'
-options['casadilib'] = '/home/ruben/Documents/Work/Repositories/casadi_binary/casadi/'
+options['directory'] = '/home/ruben/ourbot/orocos/ourbot/MotionPlanning/src/Toolbox/'
+options['casadiobj'] = '/home/odroid/orocos/MotionPlanning/src/Toolbox/bin/'
+# options['casadiinc'] = '/home/ruben/Documents/Work/Repositories/casadi_binary/include/'
+# options['casadilib'] = '/home/ruben/Documents/Work/Repositories/casadi_binary/casadi/'
 options['sourcefiles'] = 'example.cpp'
-# problem.export('c++', options)
+problem.export('c++', options)
 
 # create simulator
-simulator = Simulator(problem)
-simulator.plot.set_options({'knots': True})
-simulator.plot.create('2d')
-simulator.plot.create('input')
+# simulator = Simulator(problem)
+# simulator.plot.set_options({'knots': True})
+# simulator.plot.create('2d')
+# simulator.plot.create('input')
 
 # run it!
-simulator.run()
+# simulator.run()
 
 # show/save some results
-simulator.plot.show_movie('2d', repeat=True)
+# simulator.plot.show_movie('2d', repeat=True)
 
 # matplotlib.pyplot.show(block=True)
