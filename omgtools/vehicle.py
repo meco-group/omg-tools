@@ -125,11 +125,11 @@ class Vehicle(OptiChild):
         self._signals_num[name] = self._generate_function(expr, self._y)
         self._signals_expr[name] = expr
 
-    def define_position(self, expr):
-        self.define_signal('position', expr)
-        self.n_pos = self.signal_length['position']
-        self._position = SX.sym('position', self.n_pos)
-        return self._position
+    def define_pose(self, expr):
+        self.define_signal('pose', expr)
+        self.n_pos = self.signal_length['pose']
+        self._pose = SX.sym('pose', self.n_pos)
+        return self._pose
 
     def define_input(self, expr):
         self.define_signal('input', expr)
@@ -183,10 +183,10 @@ class Vehicle(OptiChild):
                 result = np.vstack(self._signals_num[name](y))
         return result
 
-    def get_position(self, y=None):
-        if not ('position' in self._signals):
-            raise ValueError('Position not defined! Use define_position().')
-        return self.get_signal('position', y)
+    def get_pose(self, y=None):
+        if not ('pose' in self._signals):
+            raise ValueError('Pose not defined! Use define_pose().')
+        return self.get_signal('pose', y)
 
     def get_input(self, y=None):
         if not ('input' in self._signals):
@@ -331,6 +331,7 @@ class Vehicle(OptiChild):
 
     def set_terminal_condition(self, yT):
         self.yT = yT
+        self.poseT = self.get_pose(yT)
         self.init()
 
     def init(self):
@@ -428,7 +429,7 @@ class Vehicle(OptiChild):
                                        np.linspace(sample_time, follow_time,
                                                    n_samp)), axis=1)
         for key in self._signals.keys():
-            # append current info to path: position, input, velocity,...
+            # append current info to path: pose, input, velocity,...
             self.path[key] = np.dstack(
                 (self.path[key], self.get_signal(key, y)))
 
@@ -524,7 +525,7 @@ class Vehicle(OptiChild):
             return self.shape.get_checkpoints(y)
 
     def draw(self, k=-1):
-        return self.path['position'][:, k]
+        return self.path['pose'][:, k]
 
     # ========================================================================
     # Methods required to override (no general implementation possible)

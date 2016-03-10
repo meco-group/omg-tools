@@ -67,7 +67,8 @@ class Polyhedron(Shape2D):
         chck = [[position[0] + self.vertices[0, l],
                  position[1] + self.vertices[1, l]]
                 for l in range(self.n_faces)]
-        return chck, 0.
+        # give small radius to account for anti-collision between two polyhedra
+        return chck, 1e-3
 
     def get_canvas_limits(self):
         max_xy = np.amax(self.vertices, axis=1)
