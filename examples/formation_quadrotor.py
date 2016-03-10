@@ -9,7 +9,7 @@ vehicles = [Quadrotor(0.2) for l in range(N)]
 #     veh.set_input_disturbance(3., 0.5*np.ones(2))
 
 fleet = Fleet(vehicles)
-fleet.set_configuration(polyhedron=SymmetricPolyhedron(0.4, N))
+fleet.set_configuration(polyhedron=RegularPolyhedron(0.4, N))
 
 fleet.set_initial_pose([-4., -4.])
 fleet.set_terminal_pose([4., 4.])
