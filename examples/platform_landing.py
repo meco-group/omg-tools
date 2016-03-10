@@ -4,8 +4,7 @@ from omgtools import *
 configuration = [0.25, -0.25, 0.]
 N_quad = len(configuration)-1
 
-quad_opt = {'horizon_time': 5.}
-quadrotors = [Quadrotor(0.2, quad_opt) for l in range(N_quad)]
+quadrotors = [Quadrotor(0.2) for l in range(N_quad)]
 vehicles = quadrotors + [Platform()]
 
 fleet = Fleet(vehicles)
@@ -22,7 +21,7 @@ environment.add_obstacle(Obstacle({'position': [1., 1.5]},
                                   shape=Rectangle(width=1, height=0.2)))
 
 # create a formation point-to-point problem
-options = {'codegen': {'jit': False}, 'admm': {'rho': 3.}}
+options = {'horizon_time': 3., 'codegen': {'jit': False}, 'admm': {'rho': 3.}}
 options['fixed_yT'] = [[1], [1], []]
 problem = RendezVous(fleet, environment, options=options)
 problem.init()
