@@ -22,7 +22,7 @@ class Holonomic(Vehicle):
         y0, dy0, ddy0 = y[0, 0], y[0, 1], y[0, 2]
         y1, dy1, ddy1 = y[1, 0], y[1, 1], y[1, 2]
 
-        self.define_position([y0, y1])
+        self.define_pose([y0, y1])
         u0, u1 = self.define_input([dy0, dy1])
         x0, x1 = self.define_state([y0, y1])
         self.define_signal('a', [ddy0, ddy1])
@@ -68,4 +68,4 @@ class Holonomic(Vehicle):
         self.set_terminal_condition(y)
 
     def draw(self, t=-1):
-        return self.path['position'][:, :, t] + self.shape.draw()
+        return self.path['pose'][:, :, t] + self.shape.draw()

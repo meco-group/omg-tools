@@ -193,10 +193,10 @@ class Plots:
                 env[0, :].ravel(), env[1, :].ravel())
         for l, veh in enumerate(vehicles):
             if t == -1:
-                pos_path = veh.path['position'][:, :]
+                pos_path = veh.path['pose'][:, :]
             else:
-                pos_path = veh.path['position'][:, :, :t+1]
-            pos_traj = veh.trajectories['position'][t]
+                pos_path = veh.path['pose'][:, :, :t+1]
+            pos_traj = veh.trajectories['pose'][t]
             veh_cnt = veh.draw(t)
             plt_2d['trajectory'][l].set_data(pos_traj[0, :].ravel(),
                                              pos_traj[1, :].ravel())
