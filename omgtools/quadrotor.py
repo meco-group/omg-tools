@@ -26,7 +26,7 @@ class Quadrotor(Vehicle):
             ((ddy1 + self.g)**2 + ddy0**2)
         theta = arctan2(ddy0, (ddy1 + self.g))
 
-        self.define_position([y0, y1])
+        self.define_pose([y0, y1])
         u1, u2 = self.define_input([u1, u2])
         x, z, th, dx, dz = self.define_state([y0, y1, theta, dy0, dy1])
         self.define_y([[x, z], [dx, dz], [u1*sin(th), u1*cos(th) - self.g]])
@@ -64,5 +64,5 @@ class Quadrotor(Vehicle):
         self.set_terminal_condition(y)
 
     def draw(self, t=-1):
-        return (self.path['position'][:, :, t] +
+        return (self.path['pose'][:, :, t] +
                 self.shape.draw(-self.path['state'][2, :, t]))

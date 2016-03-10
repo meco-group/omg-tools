@@ -8,8 +8,7 @@ configuration = [np.array([-5., 0.]), np.array([-2.5, 4.3]),
 configuration = [0.3*conf for conf in configuration]
 N = len(configuration)
 
-veh_opt = {'horizon_time': 5.}
-vehicles = [Quadrotor(0.2, veh_opt) for l in range(N)]
+vehicles = [Quadrotor(0.2) for l in range(N)]
 # for veh in vehicles:
 #     veh.set_options({'safety_distance': 0.1})
 #     veh.set_options({'1storder_delay': True, 'time_constant': 0.1})
@@ -30,7 +29,7 @@ fleet.set_initial_pose(init_pos)
 environment = Environment(room={'shape': Square(10.)})
 
 # create a formation point-to-point problem
-options = {'codegen': {'jit': False}, 'admm': {'rho': 3.}}
+options = {'horizon_time': 5, 'codegen': {'jit': False}, 'admm': {'rho': 3.}}
 problem = RendezVous(fleet, environment, options=options)
 problem.init()
 

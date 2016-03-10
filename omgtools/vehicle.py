@@ -180,6 +180,7 @@ class Vehicle(OptiChild):
                     result.append(ret)
                 result = np.dstack(result)
             else:
+                self._signals_num[name](y)
                 result = np.vstack(self._signals_num[name](y))
         return result
 
