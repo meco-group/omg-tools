@@ -13,7 +13,7 @@ To install the toolbox itself, run the following command in the root directory o
 The code example below illustrates the basic functionality of the toolbox for steering a holonomic vehicle from an initial to terminal pose in an obstructed environment.
 
 ```python
-from motionplanning import *
+from omgtools import *
 
 # make and set-up vehicle
 vehicle = Holonomic()
