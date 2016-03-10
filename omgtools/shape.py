@@ -77,7 +77,7 @@ class Polyhedron(Shape2D):
                 np.array([min_xy[1], max_xy[1]])]
 
 
-class SymmetricPolyhedron(Polyhedron):
+class RegularPolyhedron(Polyhedron):
 
     def __init__(self, radius, n_faces, orientation=0.):
         # radius of outer circle (the one through the vertices)
@@ -100,10 +100,10 @@ class SymmetricPolyhedron(Polyhedron):
         return vertices
 
 
-class Square(SymmetricPolyhedron):
+class Square(RegularPolyhedron):
 
     def __init__(self, width, orientation=0.):
-        SymmetricPolyhedron.__init__(self, width/np.sqrt(2), 4, orientation)
+        RegularPolyhedron.__init__(self, width/np.sqrt(2), 4, orientation)
 
 
 class Rectangle(Polyhedron):
