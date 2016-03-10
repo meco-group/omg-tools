@@ -6,7 +6,12 @@ TODO
 - embedded export for single vehicle system
     + problem with install/export/subfolders
     - run in orocos component
+        - smarter reference
+            - longer path_length
+            - better take-over
+            - better est_pose
         - test with estimated pose from teensy
+- SymmetricPolyhedron -> regular polyhedron
 - check Tim's developments and commit/merge my stuff
 - github page for toolbox
 - license for toolbox

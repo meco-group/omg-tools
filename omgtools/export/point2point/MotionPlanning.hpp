@@ -26,6 +26,7 @@ class MotionPlanning{
         double horizon_time;
         double update_time;
         double sample_time;
+        int trajectory_length;
         casadi::NlpSolver problem;
         std::map<std::string, casadi::DMatrix> args, sol;
         std::vector<double> parameters;
@@ -36,9 +37,9 @@ class MotionPlanning{
         std::vector<double> time;
         std::vector<std::vector<double>> input_trajectory;
         std::vector<std::vector<double>> state_trajectory;
+        std::vector<std::vector<std::vector<double>>> y_trajectory;
         std::vector<std::vector<double>> y0;
         std::vector<std::vector<double>> yT;
-        std::vector<std::vector<double>> ypred;
         std::map<std::string, spline_t> splines;
         std::string solver_output;
 
@@ -61,7 +62,7 @@ class MotionPlanning{
         void interpreteVariables();
         void predict(std::vector<double>&, std::vector<std::vector<double>>&, std::vector<std::vector<double>>&, double);
         void integrate(std::vector<double>&, std::vector<std::vector<double>>&, std::vector<double>&, int);
-        void sampleSplines(std::vector<std::vector<double>>&, std::vector<std::vector<double>>&, std::vector<std::vector<double>>&);
+        void sampleSplines(std::vector<std::vector<std::vector<double>>>&, std::vector<std::vector<double>>&, std::vector<std::vector<double>>&);
         double evalSpline(double, std::vector<double>&, std::vector<double>&, int);
         void transformSplines(double);
         void updateModel(std::vector<double>&, std::vector<double>&, std::vector<double>&);
@@ -75,8 +76,10 @@ class MotionPlanning{
         const int n_in = N_IN;
         const int n_st = N_ST;
 
-        MotionPlanning(double updateTime, double sampleTime, double horizonTime);
+        MotionPlanning(double update_time, double sample_time, double horizon_time);
+        MotionPlanning(double update_time, double sample_time, double horizon_time, double trajectory_length);
         bool update(std::vector<double>&, std::vector<double>&, std::vector<std::vector<double>>&, std::vector<std::vector<double>>&, std::vector<obstacle_t>&);
+        bool update(std::vector<double>&, std::vector<double>&, std::vector<std::vector<double>>&, std::vector<std::vector<double>>&, std::vector<obstacle_t>&, int);
         void reset();
         void setIdealUpdate(bool);
     };

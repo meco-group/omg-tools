@@ -17,7 +17,7 @@ Build instructions
 
 * Build the source files
     * Build to executable: make
-    * Build to library (.so): make library
+    * Build to library (.so): make lib
     in the bin/ directory you can find your executable or library
 
 * Link the library with your project (only if built to .so)
