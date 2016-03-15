@@ -193,8 +193,8 @@ class Vehicle(OptiChild):
             if self.options['input_disturbance']:
                 input = self.add_disturbance(input)
             if self.options['1storder_delay']:
-                input = self.integrate_ode(
-                    self, input[:, 0], input, simulation_time, ode=self._ode_1storder)
+                input0 = self.signals['input'][:, -1]
+                input = self.integrate_ode(input0, input, simulation_time, self._ode_1storder)
             state0 = self.signals['state'][:, -1]  # current state
             state = self.integrate_ode(state0, input, simulation_time)
             self.signals['input'] = np.c_[
@@ -246,7 +246,7 @@ class Vehicle(OptiChild):
             if 'mean' in self.options['input_disturbance']:
                 mean = self.options['input_disturbance']['mean']
             else:
-                mean = 0.0
+                mean = np.zeros(stdev.shape)
             n_sign = input.shape[0]
             n_samp = input.shape[1]
             disturbance = np.zeros((n_sign, n_samp))
