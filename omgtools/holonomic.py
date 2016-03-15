@@ -53,36 +53,45 @@ class Holonomic(Vehicle):
                 (dx, self.T*input0[0]), (dy, self.T*input0[1])]
 
     def get_terminal_constraints(self, splines):
-        poseT = self.define_parameter('poseT', 2)
+        position = self.define_parameter('positionT', 2)
         x, y = splines
-        term_con = [(x, poseT[0]), (y, poseT[1])]
+        term_con = [(x, position[0]), (y, position[1])]
         return term_con
 
-    def set_initial_conditions(self, state, input=np.zeros(2)):
-        self.prediction['state'] = state
+    def set_initial_conditions(self, position, input=np.zeros(2)):
+        self.prediction['state'] = position
         self.prediction['input'] = input
 
-    def set_terminal_conditions(self, pose):
-        self.poseT = pose
+    def set_terminal_conditions(self, position):
+        self.positionT = position
+
+    def get_init_spline_value(self):
+        init_value = np.zeros((len(self.basis), 2))
+        pos0 = self.prediction['state']
+        posT = self.positionT
+        for k in range(2):
+            # init_value[:, k] = np.r_[pos0[k]*np.ones(self.degree), np.linspace(pos0[k], posT[k], len(self.basis) - 2*self.degree), posT[k]*np.ones(self.degree)]
+            init_value[:, k] = np.linspace(pos0[k], posT[k], len(self.basis))
+        return init_value
 
     def check_terminal_conditions(self):
-        if (np.linalg.norm(self.signals['state'][:, -1] - self.poseT) > 1.e-3 or
+        if (np.linalg.norm(self.signals['state'][:, -1] - self.positionT) > 1.e-3 or
                 np.linalg.norm(self.signals['input'][:, -1])) > 1.e-3:
             return False
         else:
             return True
 
+
     def set_parameters(self, current_time):
         parameters = {}
         parameters['state0'] = self.prediction['state']
         parameters['input0'] = self.prediction['input']
-        parameters['poseT'] = self.poseT
+        parameters['positionT'] = self.positionT
         return parameters
 
-    def define_collision_constraints(self, hyperplane):
-        a, b = hyperplane['a'], hyperplane['b']
-        x, y = self.splines
-        # run over all shapes... -> in vehicle
+    def define_collision_constraints(self, hyperplane, shape, splines):
+        x, y = splines[0], splines[1]
+        self.define_collision_constraints_2d(hyperplane, shape, [x, y])
 
     def splines2signals(self, splines, time):
         signals = {}
