@@ -7,8 +7,8 @@ import numpy as np
 
 class Holonomic(Vehicle):
 
-    def __init__(self, shape=Circle(0.1), options={}, bounds={}):
-        Vehicle.__init__(self, n_spl=2, degree=3, shape=shape, options=options)
+    def __init__(self, shapes=Circle(0.1), options={}, bounds={}):
+        Vehicle.__init__(self, n_spl=2, degree=3, shapes=shapes, options=options)
         self.vmin = bounds['vmin'] if 'vmin' in bounds else -0.5
         self.vmax = bounds['vmax'] if 'vmax' in bounds else 0.5
         self.amin = bounds['amin'] if 'amin' in bounds else -1.
@@ -99,6 +99,3 @@ class Holonomic(Vehicle):
 
     def ode(self, state, input):
         return input
-
-    def draw(self, t=-1):
-        return np.c_[self.signals['state'][:, t]] + self.shape.draw()
