@@ -1,71 +1,104 @@
 from vehicle import Vehicle
 from shape import Circle
-from casadi import inf, sqrt
+from spline_extra import sample_splines
 
 import numpy as np
 
 
 class Holonomic(Vehicle):
 
-    def __init__(self, shape=Circle(0.1), options={}, bounds={}, **kwargs):
-        Vehicle.__init__(self, n_y=2, n_der=2, degree=3, order=1, shape=shape,
-                         options=options, **kwargs)
+    def __init__(self, shape=Circle(0.1), options={}, bounds={}):
+        Vehicle.__init__(self, n_spl=2, degree=3, shape=shape, options=options)
         self.vmin = bounds['vmin'] if 'vmin' in bounds else -0.5
         self.vmax = bounds['vmax'] if 'vmax' in bounds else 0.5
         self.amin = bounds['amin'] if 'amin' in bounds else -1.
         self.amax = bounds['amax'] if 'amax' in bounds else 1.
-
-        # define physical signals
-        # y was defined in the Vehicle.__init__()
-        y = self.get_signal('y')
-
-        y0, dy0, ddy0 = y[0, 0], y[0, 1], y[0, 2]
-        y1, dy1, ddy1 = y[1, 0], y[1, 1], y[1, 2]
-
-        self.define_pose([y0, y1])
-        u0, u1 = self.define_input([dy0, dy1])
-        x0, x1 = self.define_state([y0, y1])
-        self.define_signal('a', [ddy0, ddy1])
-        self.define_signal('vnorm_two', [sqrt(dy0**2+dy1**2)])
-        self.define_y([[x0, x1], [u0, u1]])
-        self.define_dstate([u0, u1])
-
-        # define system constraints
-        y0, y1 = self.splines[0], self.splines[1]
-        dy0, dy1 = y0.derivative(), y1.derivative()
-        ddy0, ddy1 = y0.derivative(2), y1.derivative(2)
-        T = self.define_symbol('T')
-
-        if self.options['syslimit'] is 'norm_two':
-            self.define_constraint((dy0**2+dy1**2) - T**2*self.vmax**2, -inf, 0.)
-            self.define_constraint((ddy0**2+ddy1**2) - (T**2)**2*self.amax**2, -inf, 0.)
-
-        elif self.options['syslimit'] is 'norm_inf':
-            self.define_constraint(-dy0 + T*self.vmin, -inf, 0.)
-            self.define_constraint(-dy1 + T*self.vmin, -inf, 0.)
-            self.define_constraint(dy0 - T*self.vmax, -inf, 0.)
-            self.define_constraint(dy1 - T*self.vmax, -inf, 0.)
-
-            self.define_constraint(-ddy0 + (T**2)*self.amin, -inf, 0.)
-            self.define_constraint(-ddy1 + (T**2)*self.amin, -inf, 0.)
-            self.define_constraint(ddy0 - (T**2)*self.amax, -inf, 0.)
-            self.define_constraint(ddy1 - (T**2)*self.amax, -inf, 0.)
-        else:
-            raise ValueError('System limit type not defined! Use set_options({syslimit: norm_inf}).')
+        # time horizon
+        self.T = self.define_symbol('T')
 
     def set_default_options(self):
         Vehicle.set_default_options(self)
-        self.options['syslimit'] = 'norm_inf'
+        self.options.update({'syslimit': 'norm_inf'})
+        self.options.update({'terminal_smoothness': self.degree})
 
-    def set_initial_pose(self, position):
-        y = np.zeros((self.n_y, self.n_der+1))
-        y[:, 0] = position
-        self.set_initial_condition(y)
+    def define_trajectory_constraints(self, splines):
+        x, y = splines
+        dx, dy = x.derivative(), y.derivative()
+        ddx, ddy = x.derivative(2), y.derivative(2)
+        if self.options['syslimit'] is 'norm_2':
+            self.define_constraint(
+                (dx**2+dy**2) - (self.T**2)*self.vmax**2, -np.inf, 0.)
+            self.define_constraint(
+                (ddx**2+ddy**2) - (self.T**4)*self.amax**2, -np.inf, 0.)
+        elif self.options['syslimit'] is 'norm_inf':
+            self.define_constraint(-dx + self.T*self.vmin, -np.inf, 0.)
+            self.define_constraint(-dy + self.T*self.vmin, -np.inf, 0.)
+            self.define_constraint(dx - self.T*self.vmax, -np.inf, 0.)
+            self.define_constraint(dy - self.T*self.vmax, -np.inf, 0.)
 
-    def set_terminal_pose(self, position):
-        y = np.zeros((self.n_y, self.n_der+1))
-        y[:, 0] = position
-        self.set_terminal_condition(y)
+            self.define_constraint(-ddx + (self.T**2)*self.amin, -np.inf, 0.)
+            self.define_constraint(-ddy + (self.T**2)*self.amin, -np.inf, 0.)
+            self.define_constraint(ddx - (self.T**2)*self.amax, -np.inf, 0.)
+            self.define_constraint(ddy - (self.T**2)*self.amax, -np.inf, 0.)
+        else:
+            raise ValueError(
+                'Only norm_2 and norm_inf are defined as system limit.')
+
+    def get_initial_constraints(self, splines):
+        state0 = self.define_parameter('state0', 2)
+        input0 = self.define_parameter('input0', 2)
+        x, y = splines
+        dx, dy = x.derivative(), y.derivative()
+        return [(x, state0[0]), (y, state0[1]),
+                (dx, self.T*input0[0]), (dy, self.T*input0[1])]
+
+    def get_terminal_constraints(self, splines):
+        poseT = self.define_parameter('poseT', 2)
+        x, y = splines
+        term_con = [(x, poseT[0]), (y, poseT[1])]
+        return term_con
+
+    def set_initial_conditions(self, state, input=np.zeros(2)):
+        self.prediction['state'] = state
+        self.prediction['input'] = input
+
+    def set_terminal_conditions(self, pose):
+        self.poseT = pose
+
+    def check_terminal_conditions(self):
+        if (np.linalg.norm(self.signals['state'][:, -1] - self.poseT) > 1.e-3 or
+                np.linalg.norm(self.signals['input'][:, -1])) > 1.e-3:
+            return False
+        else:
+            return True
+
+    def set_parameters(self, current_time):
+        parameters = {}
+        parameters['state0'] = self.prediction['state']
+        parameters['input0'] = self.prediction['input']
+        parameters['poseT'] = self.poseT
+        return parameters
+
+    def define_collision_constraints(self, hyperplane):
+        a, b = hyperplane['a'], hyperplane['b']
+        x, y = self.splines
+        # run over all shapes... -> in vehicle
+
+    def splines2signals(self, splines, time):
+        signals = {}
+        x, y = splines[0], splines[1]
+        dx, dy = x.derivative(), y.derivative()
+        ddx, ddy = x.derivative(2), y.derivative(2)
+        input = np.c_[sample_splines([dx, dy], time)]
+        signals['state'] = np.c_[sample_splines([x, y], time)]
+        signals['input'] = input
+        signals['position'] = signals['state']
+        signals['v_tot'] = np.sqrt(input[0, :]**2 + input[1, :]**2)
+        signals['a'] = np.c_[sample_splines([ddx, ddy], time)]
+        return signals
+
+    def ode(self, state, input):
+        return input
 
     def draw(self, t=-1):
-        return self.path['pose'][:, :, t] + self.shape.draw()
+        return np.c_[self.signals['state'][:, t]] + self.shape.draw()
