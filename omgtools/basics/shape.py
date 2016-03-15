@@ -142,20 +142,3 @@ class Rocket(Rectangle):
                  0.5*w, 0.25*w, -0.25*w, -0.5*w]
         plt_y = [0., 0.25*h, 0.25*h, 0.5*h, -0.5*h, -0.25*h, -0.25*h, 0.]
         self.plt_co = np.vstack((plt_x, plt_y))
-
-
-class Quad(Circle):
-
-    def __init__(self, radius):
-        Circle.__init__(self, radius)
-
-    def _prepare_draw(self):
-        r = self.radius
-        h = 0.2*r
-        rw = (1./3.)*r
-        plt_x = [r, r-2*rw, r-rw, r-rw, -r+rw, -r+rw, -r, -r+2*rw]
-        plt_y = [h, h, h, 0, 0, h, h, h]
-        self.plt_co = np.vstack((plt_x, plt_y))
-
-    def draw(self, orientation=0.):
-        return self.rotate(orientation, self.plt_co)
