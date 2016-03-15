@@ -10,9 +10,9 @@ import numpy as np
 
 class Vehicle(OptiChild):
 
-    def __init__(self, n_spl, degree, shape, options):
+    def __init__(self, n_spl, degree, shapes, options):
         OptiChild.__init__(self, 'vehicle')
-        self.shape = shape
+        self.shapes = shapes if isinstance(shapes, list) else [shapes]
 
         self.prediction = {}
 
@@ -117,13 +117,13 @@ class Vehicle(OptiChild):
         n_samp = int(simulation_time/self.options['sample_time'])
         if self.options['ideal_update']:
             for key in self.trajectories:
-                self.signals[key] = np.hstack(
-                    (self.signals[key], self.trajectories[key][:, 1:n_samp+1]))
+                self.signals[key] = np.c_[
+                    self.signals[key], self.trajectories[key][:, 1:n_samp+1]]
         else:
             for key in self.trajectories:
                 if key not in ['state', 'input']:
-                    self.signals[key] = np.hstack(
-                        (self.signals[key], self.trajectories[key][:, 1:n_samp+1]))
+                    self.signals[key] = np.c_[
+                        self.signals[key], self.trajectories[key][:, 1:n_samp+1]]
             input = self.trajectories['input']
             if self.options['input_disturbance']:
                 input = self.add_disturbance(input)
@@ -132,10 +132,10 @@ class Vehicle(OptiChild):
                     self, input[:, 0], input, simulation_time, ode=self._ode_1storder)
             state0 = self.signals['state'][:, -1]  # current state
             state = self.integrate_ode(state0, input, simulation_time)
-            self.signals['input'] = np.hstack(
-                (self.signals['input'], input[:, 1:n_samp+1]))
-            self.signals['state'] = np.hstack(
-                (self.signals['state'], state[:, 1:n_samp+1]))
+            self.signals['input'] = np.c_[
+                self.signals['input'], input[:, 1:n_samp+1]]
+            self.signals['state'] = np.c_[
+                self.signals['state'], state[:, 1:n_samp+1]]
 
     def store(self, update_time):
         if not hasattr(self, 'traj_storage'):
@@ -150,7 +150,7 @@ class Vehicle(OptiChild):
     def init_signals(self):
         self.signals = {}
         for key in self.trajectories:
-            self.signals[key] = np.vstack(self.trajectories[key][:, 0])
+            self.signals[key] = np.c_[self.trajectories[key][:, 0]]
 
     def integrate_ode(self, state0, input, integration_time, ode=None):
         if ode is None:
@@ -209,8 +209,8 @@ class Vehicle(OptiChild):
         else:
             return self.shape.get_checkpoints(y)
 
-    # def draw(self, k=-1):
-    #     return self.path['pose'][:, k]
+    def draw(self, k=-1):
+        return [np.c_[self.signals['position'][:, k]] + shape.draw() for shape in self.shapes]
 
     # ========================================================================
     # Methods required to override
