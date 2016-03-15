@@ -145,7 +145,7 @@ class Plots:
         plt_2d['pos_sign'] = [axis.plot(
             [], [], '-', color=self.col[veh])[0] for veh in vehicles]
         plt_2d['vehicle'] = [[axis.plot(
-            [], [], '-', color=self.col[veh])[0] for shape in veh.shapes] for veh in vehicles]
+            [], [], '-', color=self.col[veh])[0] for shape in range(len(veh.draw()))] for veh in vehicles]
         return {'figure': figure, 'axis': axis, 'plt_2d': plt_2d}
 
     def _sort_vehicles(self, vehicles):
@@ -220,9 +220,8 @@ class Plots:
             plt_2d['pos_sign'][l].set_data(pos_sign[0, :].ravel(),
                                            pos_sign[1, :].ravel())
             veh_cnt = veh.draw(t)
-            for k, shape in enumerate(veh.shapes):
-                plt_2d['vehicle'][l][k].set_data(veh_cnt[k][0].ravel(),
-                                                 veh_cnt[k][1].ravel())
+            for k, cnt in enumerate(veh_cnt):
+                plt_2d['vehicle'][l][k].set_data(cnt[0].ravel(), cnt[1].ravel())
         plot['figure'].canvas.draw()
 
     # ========================================================================
