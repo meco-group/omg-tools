@@ -6,11 +6,8 @@ import numpy as np
 
 class Environment(OptiChild):
 
-    def __init__(self, room, obstacles=[], options={}):
+    def __init__(self, room, obstacles=[]):
         OptiChild.__init__(self, 'environment')
-
-        self.set_default_options()
-        self.set_options(options)
 
         # create room and define dimension of the space
         self.room, self.n_dim = room, room['shape'].n_dim
@@ -23,21 +20,11 @@ class Environment(OptiChild):
             self.add_obstacle(obstacle)
 
     # ========================================================================
-    # Environment options
-    # ========================================================================
-
-    def set_default_options(self):
-        self.options = {}
-
-    def set_options(self, options):
-        self.options.update(options)
-
-    # ========================================================================
     # Copy function
     # ========================================================================
 
     def copy(self):
-        return Environment(self.room, self.obstacles, self.options)
+        return Environment(self.room, self.obstacles)
 
     # ========================================================================
     # Add obstacles/vehicles
@@ -56,8 +43,12 @@ class Environment(OptiChild):
             for veh in vehicle:
                 self.add_vehicle(veh)
         else:
+            hyp_veh, hyp_obs = {}, {}
             for k, shape in enumerate(vehicle.shapes):
+                hyp_veh[shape] = []
                 for l, obstacle in enumerate(self.obstacles):
+                    if obstacle not in hyp_obs:
+                        hyp_obs[obstacle] = []
                     degree = 1
                     knots = np.r_[np.zeros(degree),
                                   vehicle.knots[vehicle.degree:-vehicle.degree],
@@ -69,10 +60,13 @@ class Environment(OptiChild):
                         'b'+str(k)+str(l), 1, basis=basis)[0]
                     self.define_constraint(
                         sum([a[k]*a[k] for k in range(self.n_dim)])-1, -inf, 0.)
-                    obstacle.define_collision_constraints({'a': a, 'b': b})
-                    for spline in vehicle.splines:
-                        vehicle.define_collision_constraints(
-                            {'a': a, 'b': b}, shape, spline)
+                    hyp_veh[shape].append({'a': a, 'b': b})
+                    hyp_obs[obstacle].append({'a': a, 'b': b})
+            for obstacle in self.obstacles:
+                obstacle.define_collision_constraints(hyp_obs[obstacle])
+            limits = self.get_canvas_limits()
+            for spline in vehicle.splines:
+                vehicle.define_collision_constraints(hyp_veh, limits, spline)
             self.sample_time = vehicle.options['sample_time']
 
     # ========================================================================
@@ -138,12 +132,13 @@ class Obstacle(OptiChild):
     # Optimization modelling related functions
     # ========================================================================
 
-    def define_collision_constraints(self, hyperplane):
-        a, b = hyperplane['a'], hyperplane['b']
-        checkpoints, rad = self.shape.get_checkpoints()
-        for l, chck in enumerate(checkpoints):
-            self.define_constraint(-sum([a[k]*(chck[k]+self.pos_spline[k])
-                                         for k in range(self.n_dim)]) + b + rad[l], -inf, 0.)
+    def define_collision_constraints(self, hyperplanes):
+        for hyperplane in hyperplanes:
+            a, b = hyperplane['a'], hyperplane['b']
+            checkpoints, rad = self.shape.get_checkpoints()
+            for l, chck in enumerate(checkpoints):
+                self.define_constraint(-sum([a[k]*(chck[k]+self.pos_spline[k])
+                                             for k in range(self.n_dim)]) + b + rad[l], -inf, 0.)
 
     def set_parameters(self, current_time):
         parameters = {}
