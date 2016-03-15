@@ -1,6 +1,5 @@
-from optilayer import OptiChild
-from spline import BSplineBasis, BSpline
-from spline_extra import definite_integral
+from ..basics.optilayer import OptiChild
+from ..basics.spline import BSplineBasis, BSpline
 from casadi import inf, vertcat
 import numpy as np
 
@@ -60,14 +59,20 @@ class Environment(OptiChild):
             for k, shape in enumerate(vehicle.shapes):
                 for l, obstacle in enumerate(self.obstacles):
                     degree = 1
-                    knots = np.r_[np.zeros(degree), vehicle.knots[vehicle.degree:-vehicle.degree], np.ones(degree)]
+                    knots = np.r_[np.zeros(degree),
+                                  vehicle.knots[vehicle.degree:-vehicle.degree],
+                                  np.ones(degree)]
                     basis = BSplineBasis(knots, degree)
-                    a = self.define_spline_variable('a'+str(k)+str(l), self.n_dim, basis=basis)
-                    b = self.define_spline_variable('b'+str(k)+str(l), 1, basis=basis)[0]
-                    self.define_constraint(sum([a[k]*a[k] for k in range(self.n_dim)])-1, -inf, 0.)
+                    a = self.define_spline_variable(
+                        'a'+str(k)+str(l), self.n_dim, basis=basis)
+                    b = self.define_spline_variable(
+                        'b'+str(k)+str(l), 1, basis=basis)[0]
+                    self.define_constraint(
+                        sum([a[k]*a[k] for k in range(self.n_dim)])-1, -inf, 0.)
                     obstacle.define_collision_constraints({'a': a, 'b': b})
                     for spline in vehicle.splines:
-                        vehicle.define_collision_constraints({'a': a, 'b': b}, shape, spline)
+                        vehicle.define_collision_constraints(
+                            {'a': a, 'b': b}, shape, spline)
             self.sample_time = vehicle.options['sample_time']
 
     # ========================================================================
@@ -124,7 +129,10 @@ class Obstacle(OptiChild):
         x0 = x - self.t*v0 - 0.5*(self.t**2)*a
         a0 = a
         # pos spline over time horizon
-        self.pos_spline = [BSpline(self.basis, vertcat([x0[k], 0.5*v0[k]*self.T + x0[k], x0[k] + v0[k]*self.T + 0.5*a0[k]*(self.T**2)])) for k in range(self.n_dim)]
+        self.pos_spline = [BSpline(self.basis, vertcat(
+            [x0[k], 0.5*v0[k]*self.T + x0[k],
+             x0[k] + v0[k]*self.T + 0.5*a0[k]*(self.T**2)]))
+                           for k in range(self.n_dim)]
 
     # ========================================================================
     # Optimization modelling related functions
@@ -134,7 +142,8 @@ class Obstacle(OptiChild):
         a, b = hyperplane['a'], hyperplane['b']
         checkpoints, rad = self.shape.get_checkpoints()
         for l, chck in enumerate(checkpoints):
-            self.define_constraint(-sum([a[k]*(chck[k]+self.pos_spline[k]) for k in range(self.n_dim)]) + b + rad[l], -inf, 0.)
+            self.define_constraint(-sum([a[k]*(chck[k]+self.pos_spline[k])
+                                         for k in range(self.n_dim)]) + b + rad[l], -inf, 0.)
 
     def set_parameters(self, current_time):
         parameters = {}
@@ -180,9 +189,12 @@ class Obstacle(OptiChild):
             acceleration = acc0 + dacc
 
             self.signals['time'] = np.c_[self.signals['time'], time]
-            self.signals['position'] = np.c_[self.signals['position'], position]
-            self.signals['velocity'] = np.c_[self.signals['velocity'], velocity]
-            self.signals['acceleration'] = np.c_[self.signals['acceleration'], acceleration]
+            self.signals['position'] = np.c_[
+                self.signals['position'], position]
+            self.signals['velocity'] = np.c_[
+                self.signals['velocity'], velocity]
+            self.signals['acceleration'] = np.c_[
+                self.signals['acceleration'], acceleration]
 
     def draw(self, t=-1):
         return np.c_[self.signals['position'][:, t]] + self.shape.draw()

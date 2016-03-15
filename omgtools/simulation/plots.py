@@ -144,9 +144,8 @@ class Plots:
             [], [], '-', color=self.col_w[veh])[0] for veh in vehicles]
         plt_2d['pos_sign'] = [axis.plot(
             [], [], '-', color=self.col[veh])[0] for veh in vehicles]
-        plt_2d['vehicle'] = [[axis.plot([], [], '-', color=self.col[veh])[0] for shape in veh.shapes] for veh in vehicles]
-        # plt_2d['vehicle'] = [
-        #     axis.plot([], [], '-', color=self.col[veh])[0] for veh in vehicles]
+        plt_2d['vehicle'] = [[axis.plot(
+            [], [], '-', color=self.col[veh])[0] for shape in veh.shapes] for veh in vehicles]
         return {'figure': figure, 'axis': axis, 'plt_2d': plt_2d}
 
     def _sort_vehicles(self, vehicles):

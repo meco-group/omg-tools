@@ -1,6 +1,6 @@
-from optilayer import OptiChild
-from spline import BSplineBasis
-from spline_extra import concat_splines, definite_integral
+from ..basics.optilayer import OptiChild
+from ..basics.spline import BSplineBasis
+from ..basics.spline_extra import concat_splines, definite_integral
 from casadi import inf
 from scipy.signal import filtfilt, butter
 from scipy.interpolate import interp1d
@@ -51,7 +51,8 @@ class Vehicle(OptiChild):
         self.splines = []
         for k in range(n_seg):
             init = self.get_init_spline_value()
-            spline = self.define_spline_variable('splines'+str(k), self.n_spl, value=init)
+            spline = self.define_spline_variable(
+                'splines'+str(k), self.n_spl, value=init)
             self.splines.append(spline)
         return self.splines
 
@@ -72,8 +73,10 @@ class Vehicle(OptiChild):
         checkpoints, rad = self.shapes[0].get_checkpoints()
         for l, chck in enumerate(checkpoints):
             con = 0
-            con += (a[0]*(chck[0]+position[0]) + a[1]*(chck[1]+position[1]))*(1.-tg_ha**2)
-            con += (-a[0]*(chck[1]+position[1]) + a[1]*(chck[0]+position[0]))*(2*tg_ha)
+            con += (a[0]*(chck[0]+position[0]) + a[1]
+                    * (chck[1]+position[1]))*(1.-tg_ha**2)
+            con += (-a[0]*(chck[1]+position[1]) + a[1]
+                    * (chck[0]+position[0]))*(2*tg_ha)
             con += (-b+rad[l]+safety_distance-eps)*(1+tg_ha**2)
             self.define_constraint(con, -inf, 0)
 
@@ -94,7 +97,8 @@ class Vehicle(OptiChild):
             eps = 0.
         checkpoints, rad = shape.get_checkpoints()
         for l, chck in enumerate(checkpoints):
-            self.define_constraint(sum([a[k]*(chck[k]+position[k]) for k in range(3)])-b+rad[l], -inf, 0)
+            self.define_constraint(
+                sum([a[k]*(chck[k]+position[k]) for k in range(3)])-b+rad[l], -inf, 0)
 
     # ========================================================================
     # Simulation and prediction related functions
