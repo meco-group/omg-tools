@@ -1,18 +1,14 @@
 from problem import Problem
-from spline_extra import definite_integral, evalspline
-from spline_extra import shiftoverknot_T, shift_spline
-from casadi import vertcat, inf
+from spline_extra import definite_integral
+from spline_extra import shiftoverknot_T, shift_spline, evalspline
 import numpy as np
 
 
 class Point2point(object):
-    # This class looks at the problem type of the created problem and
-    # creates the corresponding instance (freeTProblem or fixedTProblem)
-    def __new__(cls, fleet, environment, options={}):
-        # by default fixed T problem
-        if 'freeTProblem' not in options:
-            options['freeTProblem'] = False
-        if (options['freeTProblem'] is True):
+    # this class selects between fixed T and free T problem
+
+    def __new__(cls, fleet, environment, options={}, freeT=False):
+        if freeT:
             return FreeTPoint2point(fleet, environment, options)
         else:
             return FixedTPoint2point(fleet, environment, options)
@@ -20,110 +16,17 @@ class Point2point(object):
 
 class Point2pointProblem(Problem):
 
-    def __init__(self, fleet, environment, options={}, label='p2p'):
-        Problem.__init__(self, fleet, environment, options, label=label)
+    def __init__(self, fleet, environment, options={}):
+        Problem.__init__(self, fleet, environment, options, label='p2p')
+        for vehicle in self.vehicles:
+            splines = vehicle.define_splines(n_seg=1)[0]
+            vehicle.define_trajectory_constraints(splines)
 
-        T = self.define_symbol('T')
-        t = self.define_symbol('t')
-        self.t0 = t/T
-
-        # initial state
-        y0 = [self.define_parameter('y0_'+str(l), vehicle.n_y)
-              for l, vehicle in enumerate(self.vehicles)]
-        dy0 = [self.define_parameter(
-            'dy0_'+str(l), vehicle.n_der, vehicle.n_y)
-               for l, vehicle in enumerate(self.vehicles)]
-
-        # terminal state
-        fxd_yT = self.options['fixed_yT']
-        # part of goal positions which are parameters
-        yT_par = [self.define_parameter(
-            'yTp_'+str(l), len(fxd_yT[l]))
-                  for l, vehicle in enumerate(self.vehicles)]
-        # part of goal positions which are variables
-        yT_var = [self.define_variable(
-            'yTv_'+str(l), vehicle.n_y-len(fxd_yT[l]))
-                  for l, vehicle in enumerate(self.vehicles) if (vehicle.n_y-len(fxd_yT[l]) > 0)]
-
-        # final vel, acc,... depending on vehicle.n_der
-        dyT = [self.define_parameter(
-            'dyT_'+str(l), vehicle.n_der, vehicle.n_y)
-               for l, vehicle in enumerate(self.vehicles)]
-
-        self.yT = []
-        for l, veh in enumerate(self.vehicles):
-            yT_, cnt_par, cnt_var = [], 0, 0
-            for k in range(veh.n_y):
-                if k in fxd_yT[l]:
-                    yT_.append(yT_par[l][cnt_par])
-                    cnt_par += 1
-                else:
-                    yT_.append(yT_var[l][cnt_var])
-                    cnt_var += 1
-            # collect parametric and variable parts of goal positions in yT
-            self.yT.append(vertcat(yT_))
-
-        # vehicle splines
-        self.y = [vehicle.splines for vehicle in self.vehicles]
-
-        # initial & terminal constraints
-        for l, vehicle in enumerate(self.vehicles):
-            bs = vehicle.options['boundary_smoothness']
-            for k in range(vehicle.n_y):
-                # d = deg of derivative used to impose smoothness on first
-                # knots and internal knots
-                for d in range(max(bs['initial'], bs['internal'])+1):
-                    if (d > bs['initial']) and (d <= bs['internal']):
-                        shutdown = 't == 0.'
-                    elif (d > bs['internal']) and (d <= bs['initial']):
-                        shutdown = 't > 0.'
-                    else:
-                        shutdown = False
-                    if d == 0:
-                        self.define_constraint(
-                            evalspline(self.y[l][k], self.t0) - y0[l][k],
-                            0., 0., shutdown)
-                    else:
-                        # dy0 = [dx0 dy0 ; ddx0 ddy0] for n_y=2 and n_der=2
-                        if d <= vehicle.n_der:
-                            self.define_constraint(
-                                (evalspline(self.y[l][k].derivative(d), self.t0) -
-                                 (T**d)*dy0[l][d-1, k]), 0., 0.,
-                                shutdown, str(d)+str(k))
-                        else:
-                            self.define_constraint(
-                                evalspline(self.y[l][k].derivative(d), self.t0),
-                                0., 0., shutdown, str(d)+str(k))
-                # d = deg of derivative you used on the last knots to impose
-                # continuity/smoothness
-                for d in range(bs['terminal']+1):
-                    if not (d == 0):
-                        if d <= vehicle.n_der:
-                            self.define_constraint(
-                                self.y[l][k].derivative(d)(
-                                    1.) - (T**d)*dyT[l][d-1, k],
-                                0., 0.)
-                        else:
-                            self.define_constraint(
-                                (self.y[l][k].derivative(d))(1.), 0., 0.)
-
-    def set_default_options(self):
-        Problem.set_default_options(self)
-        # by default assign all end positions as parameters
-        self.options['fixed_yT'] = [range(veh.n_y) for veh in self.vehicles]
-
-    def set_parameters(self, current_time):
-        parameters = {}
-        for l, vehicle in enumerate(self.vehicles):
-            parameters['y0_'+str(l)] = vehicle.prediction['y'][:, 0]
-            yT = []
-            if len(self.options['fixed_yT'][l]) > 0:
-                for ind in self.options['fixed_yT'][l]:
-                    yT.append(vehicle.yT[ind, 0])
-                parameters['yTp_'+str(l)] = np.array(yT)
-            parameters['dy0_'+str(l)] = vehicle.prediction['y'][:, 1:].T
-            parameters['dyT_'+str(l)] = vehicle.yT[:, 1:].T
-        return parameters
+    def stop_criterium(self):
+        check = True
+        for vehicle in self.vehicles:
+            check *= vehicle.check_terminal_conditions()
+        return check
 
     def final(self):
         obj = self.compute_objective()
@@ -135,66 +38,42 @@ class Point2pointProblem(Problem):
                                 (sum(self.update_times)*1000. /
                                  len(self.update_times)))
 
-    def stop_criterium(self):
-        for vehicle in self.vehicles:
-            # check if pose reached and inputs are zero
-            if ((np.linalg.norm(vehicle.trajectory['pose'][:, :, 0] - vehicle.poseT) 
-               or (np.linalg.norm(vehicle.trajectory['input'][:, :, 0] - np.zeros(len(vehicle.get_input() )))))
-                    > 1.e-2):
-                return False
-        return True
-
-    # ========================================================================
-    # Methods encouraged to override (very basic implementation)
-    # ========================================================================
-
     def compute_objective(self):
-        return {}
+        raise NotImplementedError('Please implement this method!')
 
 
 class FixedTPoint2point(Point2pointProblem):
 
-    def __init__(self, fleet, environment, options={}, label='fixedT'):
-        Point2pointProblem.__init__(self, fleet, environment, options, label)
-        if not hasattr(self.vehicles[0], 'knot_intervals'):
-            raise ValueError('There should be a well-defined fixed ' +
-                             'knot_interval when using fixed time point2point.')
+    def __init__(self, fleet, environment, options={}):
+        Point2pointProblem.__init__(self, fleet, environment, options)
+        self.objective = 0.
         self.knot_time = (int(self.options['horizon_time']*1000.) /
-                          self.vehicles[0].knot_intervals) / 1000.
-        self.T = self.define_parameter('T')
-        self.t = self.define_parameter('t')
-        self.t0 = self.t/self.T
-
-        if self.options['target_error'] == 'norm_one':
-            # define slack 'g' to impose 1-norm objective function
-            g = [self.define_spline_variable(
-                'g_'+str(l), vehicle.n_y, basis=vehicle.basis)
-                for l, vehicle in enumerate(self.vehicles)]
-
-            # objective + related constraints
-            objective = 0.
-            for l, vehicle in enumerate(self.vehicles):
-                objective += sum([definite_integral(g_k, self.t0, 1.) for g_k in g[l]])
-                for k in range(vehicle.n_y):
-                    self.define_constraint(
-                        self.y[l][k] - self.yT[l][k] - g[l][k], -np.inf, 0.)
-                    self.define_constraint(-self.y[l][k] +
-                                           self.yT[l][k] - g[l][k], -np.inf, 0.)
-        elif self.options['target_error'] == 'norm_two':
-            objective = 0.
-            for l, vehicle in enumerate(self.vehicles):
-                for k in range(vehicle.n_y):
-                    objective += definite_integral((self.y[l][k] - self.yT[l][k])*(self.y[l][k] - self.yT[l][k]), self.t0, 1.)
-        else:
-            raise ValueError('Target error type not defined! ' +
-                             'Use set_options({target_error: norm_inf}).')
-
+                          self.vehicles[0].options['knot_intervals']) / 1000.
+        T, t = self.define_parameter('T'), self.define_parameter('t')
+        t0 = t/T
+        # objective + initial & terminal constraints
+        objective = 0.
+        for vehicle in self.vehicles:
+            init_con = vehicle.get_initial_constraints(vehicle.splines[0])
+            for con in init_con:
+                spline, condition = con[0], con[1]
+                self.define_constraint(
+                    evalspline(spline, t0) - condition, 0., 0.)
+            term_con = vehicle.get_terminal_constraints(vehicle.splines[0])
+            for k, con in enumerate(term_con):
+                spline, condition = con[0], con[1]
+                g = self.define_spline_variable(
+                    'g'+str(k), 1, basis=spline.basis)[0]
+                objective += definite_integral(g, t0, 1.)
+                self.define_constraint(spline - condition - g, -np.inf, 0.)
+                self.define_constraint(-spline + condition - g, -np.inf, 0.)
+                for d in range(1, spline.basis.degree):
+                    self.define_constraint(spline.derivative(d)(1.), 0., 0.)
         self.define_objective(objective)
 
     def set_default_options(self):
         Point2pointProblem.set_default_options(self)
         self.options['horizon_time'] = 10.
-        self.options['target_error'] = 'norm_one'
 
     def set_parameters(self, current_time):
         parameters = Point2pointProblem.set_parameters(self, current_time)
@@ -219,64 +98,67 @@ class FixedTPoint2point(Point2pointProblem):
     #     T = shiftoverknot_T(basis)
     #     return B.dot(T).dot(Binv)
 
-    def update_vehicles(self, current_time, update_time):
+    def update(self, current_time):
+        self.compute_partial_objective(current_time)
+        update_time = self.options['update_time']
+        # update vehicles
         for vehicle in self.vehicles:
             # y_coeffs represents coefficients of a spline, for which a part of
             # its time horizon lies in the past. Therefore, we need to pass the
             # current time relatively to the begin of this time horizon. In this
-            # way, only the future, relevant, part will be saved/plotted. Also an
-            # adapted time axis of the knots is passed: the first knot is shifted
-            # towards the current itme point.
-            y_coeffs = vehicle.get_variable('y', solution=True, spline=False)
+            # way, only the future, relevant, part will be saved/plotted.
             rel_current_time = np.round(current_time, 6) % self.knot_time
+            sample_time = vehicle.options['sample_time']
             horizon_time = self.options['horizon_time']
-            time_axis_knots = np.copy(vehicle.knots)*horizon_time
-            time_axis_knots[:vehicle.degree+1] = rel_current_time
-            time_axis_knots += current_time - rel_current_time
-            vehicle.update(y_coeffs, current_time, update_time, horizon_time,
-                           rel_current_time=rel_current_time,
-                           time_axis_knots=time_axis_knots)
+            n_samp = int(
+                round((horizon_time-rel_current_time)/sample_time, 3)) + 1
+            time_axis = np.linspace(rel_current_time, horizon_time, n_samp)
+            vehicle.update(current_time, update_time, horizon_time, time_axis)
+        # update environment
+        self.environment.update(current_time, update_time)
+        return current_time + update_time
+
+    def compute_partial_objective(self, current_time):
+        rel_current_time = np.round(current_time, 6) % self.knot_time
+        update_time = self.options['update_time']
+        horizon_time = self.options['horizon_time']
+        t0 = rel_current_time/horizon_time
+        t1 = t0 + update_time/horizon_time
+        part_objective = 0.
+        for vehicle in self.vehicles:
+            term_con = vehicle.get_terminal_constraints(vehicle.splines[0])
+            for k in range(len(term_con)):
+                g = self.get_variable('g'+str(k), solution=True)[0]
+                part_objective += horizon_time*definite_integral(g, t0, t1)
+        self.objective += part_objective
 
     def compute_objective(self):
-        objective = 0.
-        for vehicle in self.vehicles:
-            n_samp = vehicle.path['y'].shape[2]
-            err = vehicle.path['y'][:, 0, :] - np.vstack(vehicle.yT[:, 0])
-            err_nrm = np.zeros(n_samp)
-            for k in range(n_samp):
-                err_nrm[k] = np.linalg.norm(err[:, k], 1)
-            for k in range(n_samp-1):
-                objective += 0.5 * \
-                    (err_nrm[k] + err_nrm[k+1])*vehicle.options['sample_time']
-        return objective
+        return self.objective
 
 
 class FreeTPoint2point(Point2pointProblem):
 
-    def __init__(self, fleet, environment, options={}, label='freeT'):
-        Point2pointProblem.__init__(self, fleet, environment, options, label)
-
-        # unknown motion time
-        self.T = self.define_variable('T', value=10)
-        # current time
+    def __init__(self, fleet, environment, options={}):
+        Point2pointProblem.__init__(self, fleet, environment, options)
+        self.objective = 0.
+        T = self.define_variable('T', value=10)
         self.define_parameter('t')
-
         # objective
-        objective = self.T
-        # Todo: include soft constraints here
-        self.define_objective(objective)
-
-        # add terminal constraint on position
-        # l = vehicle number
-        for l, vehicle in enumerate(self.vehicles):
-            # k = select x(=y0), y(=y1),...
-            for k in range(vehicle.n_y):
-                self.define_constraint(
-                    self.y[l][k](1) - self.yT[l][k],
-                    0., 0.)
-
-        # add positivity constraint for motion time
-        self.define_constraint(-self.T, -inf, 0)
+        self.define_objective(T)
+        # initial & terminal constraints
+        for vehicle in self.vehicles:
+            init_con = vehicle.get_initial_constraints(vehicle.splines[0])
+            for con in init_con:
+                spline, condition = con[0], con[1]
+                self.define_constraint(spline(0) - condition, 0., 0.)
+            term_con = vehicle.get_terminal_constraints(vehicle.splines[0])
+            for con in term_con:
+                spline, condition = con[0], con[1]
+                self.define_constraint(spline(1.) - condition, 0., 0.)
+                for d in range(1, spline.basis.degree):
+                    self.define_constraint(spline.derivative(d)(1.), 0., 0.)
+        # positivity contraint on motion time
+        self.define_constraint(-T, -np.inf, 0.)
 
     def set_parameters(self, current_time):
         parameters = Point2pointProblem.set_parameters(self, current_time)
@@ -284,46 +166,43 @@ class FreeTPoint2point(Point2pointProblem):
         parameters['t'] = 0
         return parameters
 
+    def update(self, current_time):
+        self.compute_partial_objective(current_time)
+        update_time = self.options['update_time']
+        # update vehicles
+        for vehicle in self.vehicles:
+            horizon_time = self.get_variable('T', solution=True)[0][0]
+            if horizon_time < update_time:
+                update_time = horizon_time
+            vehicle.update(current_time, update_time, horizon_time)
+        # update environment
+        self.environment.update(current_time, update_time)
+        return current_time + update_time
+
+    def stop_criterium(self):
+        T = self.get_variable('T', solution=True)[0][0]
+        if T < self.options['update_time']:
+            return True
+        return Point2pointProblem.stop_criterium(self)
+
     def init_step(self, current_time):
-        # transform spline variables to get better initialization
-        # use optimal motion time from previous iteration
-        Tprev = float(self.father._var_result['freeT0', 'T'])
+        T = self.get_variable('T', solution=True)[0][0]
         # check if almost arrived, if so lower the update time
-        if Tprev - self.options['update_time'] < self.options['update_time']:
-            update_time = Tprev - self.options['update_time']
-            target_time = Tprev
+        if T < 2*self.options['update_time']:
+            update_time = T - self.options['update_time']
+            target_time = T
         else:
             update_time = self.options['update_time']
-            target_time = Tprev - update_time
+            target_time = T - update_time
         # create spline which starts from the position at update_time and goes
         # to goal position at target_time. Approximate/Represent this spline in
         # a new basis with new equidistant knots.
-        self.father.transform_primal_splines(lambda coeffs, basis:
-            shift_spline(coeffs, update_time/target_time, basis))
+        self.father.transform_primal_splines(
+            lambda coeffs, basis: shift_spline(coeffs, update_time/target_time, basis))
+        self.set_variable('T', target_time)
+
+    def compute_partial_objective(self, current_time):
+        self.objective = current_time
 
     def compute_objective(self):
-        # gives the current value of the objective
-        # motion time is known at this point
-        objective = self.current_time
-        return objective
-
-    def update_vehicles(self, current_time, update_time):
-        for vehicle in self.vehicles:
-            # assign numerical value of T
-            self.T = float(self.father._var_result['freeT0', 'T'])
-            horizon_time = self.T
-            # current solution
-            y_coeffs = vehicle.get_variable('y', solution=True, spline=False)
-            vehicle.update(y_coeffs, current_time, update_time, horizon_time)
-
-    def stop_criterium(self):
-        for vehicle in self.vehicles:
-            # check if remaining motion time is smaller than update time
-            if (self.T < self.options['update_time']):
-                return True
-            # check if pose reached and inputs are zero
-            if ((np.linalg.norm(vehicle.trajectory['pose'][:, :, 0] - vehicle.poseT) 
-               or (np.linalg.norm(vehicle.trajectory['input'][:, :, 0] - np.zeros(len(vehicle.get_input() )))))
-                    > 1.e-2):
-                return False
-        return True
+        return self.objective
