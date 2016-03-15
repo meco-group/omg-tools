@@ -38,7 +38,7 @@ class Fleet:
             if self.interconnection == 'full':
                 nghb_ind = [k for k in range(self.N) if k != l]
             self.nghb_list[vehicle] = [self.vehicles[ind] for ind in nghb_ind]
-        self.configuration = [np.zeros(veh.n_y) for veh in self.vehicles]
+        self.configuration = [np.zeros(veh.n_spl) for veh in self.vehicles]
 
     def set_configuration(self, **kwargs):
         if 'polyhedron' in kwargs:
