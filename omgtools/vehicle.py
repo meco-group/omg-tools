@@ -48,8 +48,11 @@ class Vehicle(OptiChild):
 
     def define_splines(self, n_seg=1):
         self.n_seg = n_seg
-        self.splines = [self.define_spline_variable(
-            'splines'+str(k), self.n_spl) for k in range(n_seg)]
+        self.splines = []
+        for k in range(n_seg):
+            init = self.get_init_spline_value()
+            spline = self.define_spline_variable('splines'+str(k), self.n_spl, value=init)
+            self.splines.append(spline)
         return self.splines
 
     def define_collision_constraints_2d(self, hyperplane, shape, position, tg_ha=0):
