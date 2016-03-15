@@ -56,49 +56,65 @@ class Vehicle(OptiChild):
             self.splines.append(spline)
         return self.splines
 
-    def define_collision_constraints_2d(self, hyperplane, shape, position, tg_ha=0):
-        a, b = hyperplane['a'], hyperplane['b']
+    def define_collision_constraints_2d(self, hyperplanes, room_lim, position, tg_ha=0):
+        t = self.define_symbol('t')
+        T = self.define_symbol('T')
         safety_distance = self.options['safety_distance']
         safety_weight = self.options['safety_weight']
-        if safety_distance > 0.:
-            t = self.define_symbol('t')
-            T = self.define_symbol('T')
-            eps = self.define_spline_variable('eps_'+str(shape))[0]
-            obj = safety_weight*definite_integral(eps, t/T, 1.)
-            self.define_objective(obj)
-            self.define_constraint(eps - safety_distance, -inf, 0.)
-            self.define_constraint(-eps, -inf, 0.)
-        else:
-            eps = 0.
-        checkpoints, rad = self.shapes[0].get_checkpoints()
-        for l, chck in enumerate(checkpoints):
-            con = 0
-            con += (a[0]*(chck[0]+position[0]) + a[1]
-                    * (chck[1]+position[1]))*(1.-tg_ha**2)
-            con += (-a[0]*(chck[1]+position[1]) + a[1]
-                    * (chck[0]+position[0]))*(2*tg_ha)
-            con += (-b+rad[l]+safety_distance-eps)*(1+tg_ha**2)
-            self.define_constraint(con, -inf, 0)
+        for shape, hyps in hyperplanes.items():
+            for k, hyperplane in enumerate(hyps):
+                a, b = hyperplane['a'], hyperplane['b']
+                if safety_distance > 0.:
+                    eps = self.define_spline_variable('eps_'+str(shape)+str(k))[0]
+                    obj = safety_weight*definite_integral(eps, t/T, 1.)
+                    self.define_objective(obj)
+                    self.define_constraint(eps - safety_distance, -inf, 0.)
+                    self.define_constraint(-eps, -inf, 0.)
+                else:
+                    eps = 0.
+                checkpoints, rad = shape.get_checkpoints()
+                for l, chck in enumerate(checkpoints):
+                    con = 0
+                    con += (a[0]*(chck[0]+position[0]) + a[1]
+                            * (chck[1]+position[1]))*(1.-tg_ha**2)
+                    con += (-a[0]*(chck[1]+position[1]) + a[1]
+                            * (chck[0]+position[0]))*(2*tg_ha)
+                    con += (-b+rad[l]+safety_distance-eps)*(1+tg_ha**2)
+                    self.define_constraint(con, -inf, 0)
+                    # room constraints
+                    for k in range(2):
+                        self.define_constraint(-chck[k] + room_lim[k][0], -inf, 0.)
+                        self.define_constraint(chck[k] - room_lim[k][1], -inf, 0.)
 
-    def define_collision_constraints_3d(self, hyperplane, shape, position):
+    def define_collision_constraints_3d(self, hyperplanes, room_lim, position):
         # orientation for 3d not yet implemented!
-        a, b = hyperplane['a'], hyperplane['b']
+        t = self.define_symbol('t')
+        T = self.define_symbol('T')
         safety_distance = self.options['safety_distance']
         safety_weight = self.options['safety_weight']
-        if safety_distance > 0.:
-            t = self.define_symbol('t')
-            T = self.define_symbol('T')
-            eps = self.define_spline_variable('eps_'+str(shape))[0]
-            obj = safety_weight*definite_integral(eps, t/T, 1.)
-            self.define_objective(obj)
-            self.define_constraint(eps - safety_distance, -inf, 0.)
-            self.define_constraint(-eps, -inf, 0.)
-        else:
-            eps = 0.
-        checkpoints, rad = shape.get_checkpoints()
-        for l, chck in enumerate(checkpoints):
-            self.define_constraint(
-                sum([a[k]*(chck[k]+position[k]) for k in range(3)])-b+rad[l], -inf, 0)
+        for shape, hyps in hyperplanes.items():
+            for k, hyperplane in enumerate(hyps):
+                a, b = hyperplane['a'], hyperplane['b']
+                safety_distance = self.options['safety_distance']
+                safety_weight = self.options['safety_weight']
+                if safety_distance > 0.:
+                    t = self.define_symbol('t')
+                    T = self.define_symbol('T')
+                    eps = self.define_spline_variable('eps_'+str(shape)+str(k))[0]
+                    obj = safety_weight*definite_integral(eps, t/T, 1.)
+                    self.define_objective(obj)
+                    self.define_constraint(eps - safety_distance, -inf, 0.)
+                    self.define_constraint(-eps, -inf, 0.)
+                else:
+                    eps = 0.
+                checkpoints, rad = shape.get_checkpoints()
+                for l, chck in enumerate(checkpoints):
+                    self.define_constraint(
+                        sum([a[k]*(chck[k]+position[k]) for k in range(3)])-b+rad[l], -inf, 0)
+                    # room constraints
+                    for k in range(3):
+                        self.define_constraint(-chck[k] + room_lim[k][0], -inf, 0.)
+                        self.define_constraint(chck[k] - room_lim[k][1], -inf, 0.)
 
     # ========================================================================
     # Simulation and prediction related functions
@@ -248,8 +264,8 @@ class Vehicle(OptiChild):
                 memory[key] = []
             memory[key].extend([dictionary[key] for k in range(repeat)])
 
-    def draw(self, k=-1):
-        return [np.c_[self.signals['position'][:, k]] + shape.draw() for shape in self.shapes]
+    def draw(self, t=-1):
+        return [np.c_[self.signals['position'][:, t]] + shape.draw() for shape in self.shapes]
 
     # ========================================================================
     # Methods required to override
