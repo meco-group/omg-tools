@@ -1,5 +1,5 @@
 from vehicle import Vehicle
-from shape import Quad
+from ..basics.shape import Quad
 import numpy as np
 from casadi import inf, sqrt, arctan2, sin, cos
 

@@ -1,6 +1,6 @@
 from vehicle import Vehicle
-from shape import Circle
-from spline_extra import sample_splines
+from ..basics.shape import Circle
+from ..basics.spline_extra import sample_splines
 
 import numpy as np
 

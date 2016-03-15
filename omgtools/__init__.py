@@ -1,20 +1,5 @@
-import matplotlib
-
-from optilayer import OptiChild, OptiFather
-from environment import Environment
-from environment import Obstacle
-from shape import *
-
-from fleet import Fleet
-from vehicle import Vehicle
-from quadrotor import Quadrotor
-from holonomic import Holonomic
-from platform import Platform
-
-from plots import Plots
-from problem import Simulator
-from problem import Problem
-from point2point import Point2point
-
-from formation import FormationPoint2point
-from rendezvous import RendezVous
+from .vehicles import *
+from .environment import *
+from .basics import *
+from .problems import *
+from .simulation import *

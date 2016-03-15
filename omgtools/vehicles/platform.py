@@ -1,5 +1,5 @@
 from vehicle import Vehicle
-from shape import Rectangle
+from ..basics.shape import Rectangle
 from casadi import inf
 
 import numpy as np

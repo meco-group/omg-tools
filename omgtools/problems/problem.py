@@ -1,7 +1,6 @@
-from optilayer import OptiFather, OptiChild
-from fleet import get_fleet_vehicles
+from ..basics.optilayer import OptiFather, OptiChild
+from ..vehicles.fleet import get_fleet_vehicles
 import time
-import export
 
 class Problem(OptiChild):
 
@@ -45,7 +44,8 @@ class Problem(OptiChild):
         children += [obstacle for obstacle in self.environment.obstacles]
         children += [self, self.environment]
         self.father = OptiFather(children)
-        self.problem, compile_time = self.father.construct_problem(self.options)
+        self.problem, compile_time = self.father.construct_problem(
+            self.options)
         self.father.init_transformations(self.init_primal_transform,
                                          self.init_dual_transform)
 

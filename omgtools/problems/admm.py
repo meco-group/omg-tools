@@ -1,10 +1,10 @@
-from optilayer import OptiFather
+from ..basics.optilayer import OptiFather
+from ..basics.spline_extra import shift_knot1_fwd, shift_knot1_bwd, shift_over_knot
 from problem import Problem
 from distributedproblem import DistributedProblem
 from casadi import symvar, mul, SX, MX, DMatrix, MXFunction, reshape
 from casadi import vertcat, horzcat, jacobian, solve, substitute
 from casadi.tools import struct, struct_symMX, struct_symSX, entry, structure
-from spline_extra import shift_knot1_fwd, shift_knot1_bwd, shift_over_knot
 import numpy as np
 import numpy.linalg as la
 import time

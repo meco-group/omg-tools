@@ -1,6 +1,6 @@
 from problem import Problem
-from spline_extra import definite_integral
-from spline_extra import shiftoverknot_T, shift_spline, evalspline
+from ..basics.spline_extra import definite_integral
+from ..basics.spline_extra import shiftoverknot_T, shift_spline, evalspline
 from casadi import inf
 import numpy as np
 
@@ -66,7 +66,7 @@ class FixedTPoint2point(Point2pointProblem):
                 g = self.define_spline_variable(
                     'g'+str(k), 1, basis=spline.basis)[0]
                 objective += definite_integral(g, t0, 1.)
-                self.define_constraint( spline - condition - g, -inf, 0.)
+                self.define_constraint(spline - condition - g, -inf, 0.)
                 self.define_constraint(-spline + condition - g, -inf, 0.)
                 for d in range(1, spline.basis.degree):
                     self.define_constraint(spline.derivative(d)(1.), 0., 0.)
