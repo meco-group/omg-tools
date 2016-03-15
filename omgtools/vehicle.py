@@ -1,6 +1,7 @@
 from optilayer import OptiChild
 from spline import BSplineBasis
-from spline_extra import concat_splines
+from spline_extra import concat_splines, definite_integral
+from casadi import inf
 from scipy.signal import filtfilt, butter
 from scipy.interpolate import interp1d
 from scipy.integrate import odeint
@@ -50,6 +51,47 @@ class Vehicle(OptiChild):
         self.splines = [self.define_spline_variable(
             'splines'+str(k), self.n_spl) for k in range(n_seg)]
         return self.splines
+
+    def define_collision_constraints_2d(self, hyperplane, shape, position, tg_ha=0):
+        a, b = hyperplane['a'], hyperplane['b']
+        safety_distance = self.options['safety_distance']
+        safety_weight = self.options['safety_weight']
+        if safety_distance > 0.:
+            t = self.define_symbol('t')
+            T = self.define_symbol('T')
+            eps = self.define_spline_variable('eps_'+str(shape))[0]
+            obj = safety_weight*definite_integral(eps, t/T, 1.)
+            self.define_objective(obj)
+            self.define_constraint(eps - safety_distance, -inf, 0.)
+            self.define_constraint(-eps, -inf, 0.)
+        else:
+            eps = 0.
+        checkpoints, rad = self.shapes[0].get_checkpoints()
+        for l, chck in enumerate(checkpoints):
+            con = 0
+            con += (a[0]*(chck[0]+position[0]) + a[1]*(chck[1]+position[1]))*(1.-tg_ha**2)
+            con += (-a[0]*(chck[1]+position[1]) + a[1]*(chck[0]+position[0]))*(2*tg_ha)
+            con += (-b+rad[l]+safety_distance-eps)*(1+tg_ha**2)
+            self.define_constraint(con, -inf, 0)
+
+    def define_collision_constraints_3d(self, hyperplane, shape, position):
+        # orientation for 3d not yet implemented!
+        a, b = hyperplane['a'], hyperplane['b']
+        safety_distance = self.options['safety_distance']
+        safety_weight = self.options['safety_weight']
+        if safety_distance > 0.:
+            t = self.define_symbol('t')
+            T = self.define_symbol('T')
+            eps = self.define_spline_variable('eps_'+str(shape))[0]
+            obj = safety_weight*definite_integral(eps, t/T, 1.)
+            self.define_objective(obj)
+            self.define_constraint(eps - safety_distance, -inf, 0.)
+            self.define_constraint(-eps, -inf, 0.)
+        else:
+            eps = 0.
+        checkpoints, rad = shape.get_checkpoints()
+        for l, chck in enumerate(checkpoints):
+            self.define_constraint(sum([a[k]*(chck[k]+position[k]) for k in range(3)])-b+rad[l], -inf, 0)
 
     # ========================================================================
     # Simulation and prediction related functions
@@ -198,16 +240,6 @@ class Vehicle(OptiChild):
             if not (key in memory):
                 memory[key] = []
             memory[key].extend([dictionary[key] for k in range(repeat)])
-
-    # ========================================================================
-    # Methods encouraged to override (very basic implementation)
-    # ========================================================================
-
-    def get_checkpoints(self, y=None):
-        if y is None:
-            return self.shape.get_checkpoints(self.splines)
-        else:
-            return self.shape.get_checkpoints(y)
 
     def draw(self, k=-1):
         return [np.c_[self.signals['position'][:, k]] + shape.draw() for shape in self.shapes]

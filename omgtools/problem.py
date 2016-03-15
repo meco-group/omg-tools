@@ -9,7 +9,6 @@ class Problem(OptiChild):
         OptiChild.__init__(self, label)
         self.fleet, self.vehicles = get_fleet_vehicles(fleet)
         self.environment = environment
-        self.environment.add_vehicle(self.vehicles)
         self.set_default_options()
         self.set_options(options)
         self.iteration = 0
@@ -41,8 +40,10 @@ class Problem(OptiChild):
     # ========================================================================
 
     def init(self):
+        self.environment.add_vehicle(self.vehicles)
         children = [vehicle for vehicle in self.vehicles]
-        children.extend([self.environment, self])
+        children += [obstacle for obstacle in self.environment.obstacles]
+        children += [self, self.environment]
         self.father = OptiFather(children)
         self.problem, compile_time = self.father.construct_problem(self.options)
         self.father.init_transformations(self.init_primal_transform,

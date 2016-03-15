@@ -1,6 +1,7 @@
 from problem import Problem
 from spline_extra import definite_integral
 from spline_extra import shiftoverknot_T, shift_spline, evalspline
+from casadi import inf
 import numpy as np
 
 
@@ -65,8 +66,8 @@ class FixedTPoint2point(Point2pointProblem):
                 g = self.define_spline_variable(
                     'g'+str(k), 1, basis=spline.basis)[0]
                 objective += definite_integral(g, t0, 1.)
-                self.define_constraint(spline - condition - g, -np.inf, 0.)
-                self.define_constraint(-spline + condition - g, -np.inf, 0.)
+                self.define_constraint( spline - condition - g, -inf, 0.)
+                self.define_constraint(-spline + condition - g, -inf, 0.)
                 for d in range(1, spline.basis.degree):
                     self.define_constraint(spline.derivative(d)(1.), 0., 0.)
         self.define_objective(objective)
@@ -115,7 +116,7 @@ class FixedTPoint2point(Point2pointProblem):
             time_axis = np.linspace(rel_current_time, horizon_time, n_samp)
             vehicle.update(current_time, update_time, horizon_time, time_axis)
         # update environment
-        self.environment.update(current_time, update_time)
+        self.environment.update(update_time)
         return current_time + update_time
 
     def compute_partial_objective(self, current_time):
@@ -158,7 +159,7 @@ class FreeTPoint2point(Point2pointProblem):
                 for d in range(1, spline.basis.degree):
                     self.define_constraint(spline.derivative(d)(1.), 0., 0.)
         # positivity contraint on motion time
-        self.define_constraint(-T, -np.inf, 0.)
+        self.define_constraint(-T, -inf, 0.)
 
     def set_parameters(self, current_time):
         parameters = Point2pointProblem.set_parameters(self, current_time)
@@ -176,7 +177,7 @@ class FreeTPoint2point(Point2pointProblem):
                 update_time = horizon_time
             vehicle.update(current_time, update_time, horizon_time)
         # update environment
-        self.environment.update(current_time, update_time)
+        self.environment.update(update_time)
         return current_time + update_time
 
     def stop_criterium(self):

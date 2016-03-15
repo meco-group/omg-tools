@@ -139,14 +139,14 @@ class Plots:
         plt.ylim(canvas_lim[1][0], canvas_lim[1][1])
         plt_2d = {}
         plt_2d['environment'] = [
-            axis.plot([], [], 'k-')[0] for l in range(self.environment.No)]
+            axis.plot([], [], 'k-')[0] for l in range(self.environment.n_obs)]
         plt_2d['pos_traj'] = [axis.plot(
             [], [], '-', color=self.col_w[veh])[0] for veh in vehicles]
         plt_2d['pos_sign'] = [axis.plot(
             [], [], '-', color=self.col[veh])[0] for veh in vehicles]
-        # plt_2d['vehicle'] = [[axis.plot([], [], '-', color=self.col[veh])[0] for shape in veh.shapes] for veh in vehicles]
-        plt_2d['vehicle'] = [
-            axis.plot([], [], '-', color=self.col[veh])[0] for veh in vehicles]
+        plt_2d['vehicle'] = [[axis.plot([], [], '-', color=self.col[veh])[0] for shape in veh.shapes] for veh in vehicles]
+        # plt_2d['vehicle'] = [
+        #     axis.plot([], [], '-', color=self.col[veh])[0] for veh in vehicles]
         return {'figure': figure, 'axis': axis, 'plt_2d': plt_2d}
 
     def _sort_vehicles(self, vehicles):
@@ -216,13 +216,14 @@ class Plots:
             else:
                 pos_sign = veh.signals['position'][:, :t+1]
             pos_traj = veh.traj_storage['position'][t]
-            veh_cnt = veh.draw(t)
             plt_2d['pos_traj'][l].set_data(pos_traj[0, :].ravel(),
                                            pos_traj[1, :].ravel())
             plt_2d['pos_sign'][l].set_data(pos_sign[0, :].ravel(),
                                            pos_sign[1, :].ravel())
-            plt_2d['vehicle'][l].set_data(veh_cnt[0].ravel(),
-                                          veh_cnt[1].ravel())
+            veh_cnt = veh.draw(t)
+            for k, shape in enumerate(veh.shapes):
+                plt_2d['vehicle'][l][k].set_data(veh_cnt[k][0].ravel(),
+                                                 veh_cnt[k][1].ravel())
         plot['figure'].canvas.draw()
 
     # ========================================================================

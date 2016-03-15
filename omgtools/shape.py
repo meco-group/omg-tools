@@ -37,8 +37,8 @@ class Circle(Shape2D):
         self.plt_co = np.vstack(
             (self.radius*np.cos(s*2*np.pi), self.radius*np.sin(s*2*np.pi)))
 
-    def get_checkpoints(self, position):
-        return [position], self.radius
+    def get_checkpoints(self):
+        return [[0., 0.]], [self.radius]
 
     def get_canvas_limits(self):
         return [np.array([-self.radius, self.radius]),
@@ -63,12 +63,12 @@ class Polyhedron(Shape2D):
     def draw(self, orientation=0.):
         return self.rotate(orientation, self.plt_co)
 
-    def get_checkpoints(self, position):
-        chck = [[position[0] + self.vertices[0, l],
-                 position[1] + self.vertices[1, l]]
+    def get_checkpoints(self):
+        chck = [[self.vertices[0, l], self.vertices[1, l]]
                 for l in range(self.n_faces)]
         # give small radius to account for anti-collision between two polyhedra
-        return chck, 1e-3
+        rad = [1e-3 for l in range(self.n_faces)]
+        return chck, rad
 
     def get_canvas_limits(self):
         max_xy = np.amax(self.vertices, axis=1)
