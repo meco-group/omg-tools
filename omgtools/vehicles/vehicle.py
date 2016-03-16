@@ -61,7 +61,6 @@ class Vehicle(OptiChild):
         T = self.define_symbol('T')
         safety_distance = self.options['safety_distance']
         safety_weight = self.options['safety_weight']
-        obj = 0.
         for shape, hyps in hyperplanes.items():
             for k, hyperplane in enumerate(hyps):
                 a, b = hyperplane['a'], hyperplane['b']
@@ -86,8 +85,6 @@ class Vehicle(OptiChild):
                     for k in range(2):
                         self.define_constraint(-(chck[k]+position[k]) + room_lim[k][0], -inf, 0.)
                         self.define_constraint( (chck[k]+position[k]) - room_lim[k][1], -inf, 0.)
-        # if safety_distance > 0.:
-        #     self.define_objective(obj)
 
     def define_collision_constraints_3d(self, hyperplanes, room_lim, position):
         # orientation for 3d not yet implemented!
