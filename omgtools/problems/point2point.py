@@ -22,6 +22,7 @@ class Point2pointProblem(Problem):
         for vehicle in self.vehicles:
             splines = vehicle.define_splines(n_seg=1)[0]
             vehicle.define_trajectory_constraints(splines)
+            environment.define_collision_constraints(vehicle, splines)
 
     def stop_criterium(self):
         check = True
@@ -51,24 +52,30 @@ class FixedTPoint2point(Point2pointProblem):
         self.knot_time = (int(self.options['horizon_time']*1000.) /
                           self.vehicles[0].options['knot_intervals']) / 1000.
         T, t = self.define_parameter('T'), self.define_parameter('t')
-        t0 = t/T
-        # objective + initial & terminal constraints
-        objective = 0.
+        self.t0 = t/T
+        self.define_init_constraints()
+        self.define_terminal_constraints()
+
+    def define_init_constraints(self):
         for vehicle in self.vehicles:
             init_con = vehicle.get_initial_constraints(vehicle.splines[0])
             for con in init_con:
                 spline, condition = con[0], con[1]
                 self.define_constraint(
-                    evalspline(spline, t0) - condition, 0., 0.)
+                    evalspline(spline, self.t0) - condition, 0., 0.)
+
+    def define_terminal_constraints(self):
+        objective = 0.
+        for vehicle in self.vehicles:
             term_con = vehicle.get_terminal_constraints(vehicle.splines[0])
             for k, con in enumerate(term_con):
                 spline, condition = con[0], con[1]
                 g = self.define_spline_variable(
                     'g'+str(k), 1, basis=spline.basis)[0]
-                objective += definite_integral(g, t0, 1.)
+                objective += definite_integral(g, self.t0, 1.)
                 self.define_constraint(spline - condition - g, -inf, 0.)
                 self.define_constraint(-spline + condition - g, -inf, 0.)
-                for d in range(1, spline.basis.degree):
+                for d in range(1, spline.basis.degree+1):
                     self.define_constraint(spline.derivative(d)(1.), 0., 0.)
         self.define_objective(objective)
 
@@ -144,22 +151,27 @@ class FreeTPoint2point(Point2pointProblem):
         self.objective = 0.
         T = self.define_variable('T', value=10)
         self.define_parameter('t')
-        # objective
         self.define_objective(T)
-        # initial & terminal constraints
+        # positivity contraint on motion time
+        self.define_constraint(-T, -inf, 0.)
+        self.define_init_constraints()
+        self.define_terminal_constraints()
+
+    def define_init_constraints(self):
         for vehicle in self.vehicles:
             init_con = vehicle.get_initial_constraints(vehicle.splines[0])
             for con in init_con:
                 spline, condition = con[0], con[1]
                 self.define_constraint(spline(0) - condition, 0., 0.)
+
+    def define_terminal_constraints(self):
+        for vehicle in self.vehicles:
             term_con = vehicle.get_terminal_constraints(vehicle.splines[0])
             for con in term_con:
                 spline, condition = con[0], con[1]
                 self.define_constraint(spline(1.) - condition, 0., 0.)
-                for d in range(1, spline.basis.degree):
+                for d in range(1, spline.basis.degree+1):
                     self.define_constraint(spline.derivative(d)(1.), 0., 0.)
-        # positivity contraint on motion time
-        self.define_constraint(-T, -inf, 0.)
 
     def set_parameters(self, current_time):
         parameters = Point2pointProblem.set_parameters(self, current_time)
@@ -207,3 +219,36 @@ class FreeTPoint2point(Point2pointProblem):
 
     def compute_objective(self):
         return self.objective
+
+
+class FreeEndPoint2point(FixedTPoint2point):
+
+    def __init__(self, fleet, environment, options, free_ind=None):
+        if free_ind is None:
+            self.free_ind = {}
+            for vehicle in fleet:
+                term_con = vehicle.get_terminal_constraints(vehicle.splines[0])
+                self.free_ind[vehicle] = range(len(term_con))
+        else:
+            self.free_ind = free_ind
+        FixedTPoint2point.__init__(self, fleet, environment, options)
+
+    def define_terminal_constraints(self):
+        objective = 0.
+        for l, vehicle in enumerate(self.vehicles):
+            term_con = vehicle.get_terminal_constraints(vehicle.splines[0])
+            conditions = self.define_variable('conT'+str(l), len(self.free_ind[vehicle]))
+            cnt = 0
+            for k, con in enumerate(term_con):
+                if k in self.free_ind[vehicle]:
+                    spline, condition = con[0], conditions[cnt]
+                    cnt += 1
+                else:
+                    spline, condition = con[0], con[1]
+                g = self.define_spline_variable(
+                    'g'+str(k), 1, basis=spline.basis)[0]
+                objective += definite_integral(g, self.t0, 1.)
+                self.define_constraint(spline - condition - g, -inf, 0.)
+                self.define_constraint(-spline + condition - g, -inf, 0.)
+                for d in range(1, spline.basis.degree+1):
+                    self.define_constraint(spline.derivative(d)(1.), 0., 0.)

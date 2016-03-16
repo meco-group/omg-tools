@@ -39,7 +39,6 @@ class Problem(OptiChild):
     # ========================================================================
 
     def init(self):
-        self.environment.add_vehicle(self.vehicles)
         children = [vehicle for vehicle in self.vehicles]
         children += [obstacle for obstacle in self.environment.obstacles]
         children += [self, self.environment]
@@ -110,10 +109,10 @@ class Problem(OptiChild):
     # Methods for exporting problem to C++ library
     # ========================================================================
 
-    def export(self, language='c++', options={}):
-        if not hasattr(self, 'father'):
-            self.init()
-        if language == 'c++':
-            export.ExportCpp(self, 'point2point', options)
-        else:
-            raise ValueError(language+' export is not implemented.')
+    # def export(self, language='c++', options={}):
+    #     if not hasattr(self, 'father'):
+    #         self.init()
+    #     if language == 'c++':
+    #         export.ExportCpp(self, 'point2point', options)
+    #     else:
+    #         raise ValueError(language+' export is not implemented.')
