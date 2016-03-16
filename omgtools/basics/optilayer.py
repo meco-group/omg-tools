@@ -430,7 +430,7 @@ class OptiChild:
             self._constraints[name] = (expr, lb, ub, shutdown)
 
     def define_objective(self, expr):
-        self._objective = expr
+        self._objective += expr
 
     def set_variable(self, name, value):
         self.father.set_variables(value, self.label, name)
