@@ -28,7 +28,7 @@ class DistributedProblem(Problem):
         self.updaters = []
         for index, vehicle in enumerate(self.vehicles):
             updater = self.updater_type(index, vehicle, self.problems[index],
-                                        self.environment.copy(), self,
+                                        self.problems[index].environment, self,
                                         self.options)
             self.updaters.append(updater)
         self.interprete_constraints(self.updaters)
@@ -60,7 +60,7 @@ class DistributedProblem(Problem):
 
             for child, dic in dep.items():
                 # q_i: structure of local variables i
-                upd = updaters[child.index]
+                upd = updaters[child._index]
                 upd.constraints.append(constraint)
                 for name, sym in par.items():
                     if name not in upd.par_i:
@@ -77,7 +77,7 @@ class DistributedProblem(Problem):
                 # q_ij: structure of remote variables j seen from local i
                 for ch, dic_ch in dep.items():
                     if not (child == ch):
-                        upd2 = updaters[ch.index]
+                        upd2 = updaters[ch._index]
                         if upd2 not in upd.q_ij:
                             upd.q_ij[upd2] = {}
                         if ch not in upd.q_ij[upd2]:
@@ -98,6 +98,7 @@ class DistributedProblem(Problem):
         children = [veh for veh in self.vehicles]
         children.extend(self.problems)
         children.append(self.environment)
+        children.extend(self.environment.obstacles)
         symbol_dict = {}
         for child in children:
             symbol_dict.update(child.symbol_dict)
@@ -107,9 +108,10 @@ class DistributedProblem(Problem):
     # Methods required for simulation
     # ========================================================================
 
-    def update_vehicles(self, current_time, update_time):
+    def update(self, current_time):
         for problem in self.problems:
-            problem.update_vehicles(current_time, update_time)
+            problem.update(current_time)
+        return current_time + self.options['update_time']
 
     def stop_criterium(self):
         stop = True
