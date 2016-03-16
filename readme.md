@@ -4,7 +4,7 @@ optimal motion generation-tools is a software toolbox that facilitates the model
 Any questions can be addressed to the developers: ruben[dot]vanparys[at]kuleuven.be and tim[dot]mercy[at]kuleuven.be.
 
 ## Installation
-The software is developed in Python and uses [CasADi](https://github.com/casadi/casadi/wiki) as a framework for symbolic computations. Furthermore CasADi provides an interface to IPOPT, a software package for large-scale nonlinear optimization. For installation instructions regarding these software packages, the user is referred to the [CasADi installation page](https://github.com/casadi/casadi/wiki/InstallationInstructions).
+The software is developed in Python and uses [CasADi](https://github.com/casadi/casadi/wiki) as a framework for symbolic computations. Furthermore CasADi provides an interface to IPOPT, a software package for large-scale nonlinear optimization. For installation instructions regarding these software packages, the user is referred to the [CasADi installation page](https://github.com/casadi/casadi/wiki/InstallationInstructions). Note that the current implementation relies on CasADi 2.4.
 With the toolbox it is possible to save your simulation results in Tikz format. This functionality uses the [matplotlib2tikz](https://github.com/nschloe/matplotlib2tikz) script.
 To install the toolbox itself, run the following command in the root directory of this repository: `sudo python setup.py install`
 
