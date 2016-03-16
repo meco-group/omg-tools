@@ -1,6 +1,6 @@
 from ..basics.optilayer import OptiChild
 from ..basics.spline import BSplineBasis
-from ..basics.spline_extra import concat_splines, definite_integral
+from ..basics.spline_extra import concat_splines, definite_integral, sample_splines
 from casadi import inf
 from scipy.signal import filtfilt, butter
 from scipy.interpolate import interp1d
@@ -61,6 +61,7 @@ class Vehicle(OptiChild):
         T = self.define_symbol('T')
         safety_distance = self.options['safety_distance']
         safety_weight = self.options['safety_weight']
+        obj = 0.
         for shape, hyps in hyperplanes.items():
             for k, hyperplane in enumerate(hyps):
                 a, b = hyperplane['a'], hyperplane['b']
@@ -83,8 +84,10 @@ class Vehicle(OptiChild):
                     self.define_constraint(con, -inf, 0)
                     # room constraints
                     for k in range(2):
-                        self.define_constraint(-chck[k] + room_lim[k][0], -inf, 0.)
-                        self.define_constraint(chck[k] - room_lim[k][1], -inf, 0.)
+                        self.define_constraint(-(chck[k]+position[k]) + room_lim[k][0], -inf, 0.)
+                        self.define_constraint( (chck[k]+position[k]) - room_lim[k][1], -inf, 0.)
+        # if safety_distance > 0.:
+        #     self.define_objective(obj)
 
     def define_collision_constraints_3d(self, hyperplanes, room_lim, position):
         # orientation for 3d not yet implemented!
@@ -144,14 +147,13 @@ class Vehicle(OptiChild):
             raise ValueError(
                 'Signals should contain at least state, input and position.')
         self.trajectories['time'] = time_axis - time_axis[0] + current_time
+        self.trajectories['splines'] = np.c_[sample_splines(splines, time_axis)]
         knots = splines[0].basis.knots
         time_axis_kn = np.r_[
             knots[self.degree] + time_axis[0], knots[self.degree+1:-self.degree]]
         self.trajectories_kn = self.splines2signals(splines, time_axis_kn)
-        self.trajectories_kn['time'] = time_axis_kn - \
-            time_axis_kn[0] + current_time
-        self.trajectories_kn.update(
-            self.splines2signals(splines, time_axis_kn))
+        self.trajectories_kn['time'] = time_axis_kn - time_axis_kn[0] + current_time
+        self.trajectories_kn['splines'] = np.c_[sample_splines(splines, time_axis_kn)]
         for key in self.trajectories:
             shape = self.trajectories[key].shape
             if len(shape) == 1:
