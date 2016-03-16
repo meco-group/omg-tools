@@ -6,62 +6,70 @@ import numpy as np
 class FormationPoint2point(ADMMProblem):
 
     def __init__(self, fleet, environment, options={}):
-        self.environment = environment
-        problems = [Point2point(vehicle, environment, options)
+        self.environment = environment.copy()
+        problems = [Point2point(vehicle, environment.copy(), options)
                     for vehicle in fleet.vehicles]
         ADMMProblem.__init__(self, problems, options)
         self.fleet = fleet
 
         # define parameters
-        rel_poses = {veh: self.define_parameter('rp_'+str(l), veh.n_y, len(self.fleet.get_neighbors(veh))) for l, veh in enumerate(self.vehicles)}
+        rel_splines = {veh: self.define_parameter('rs'+str(l), len(self.fleet.configuration[veh].keys()), len(self.fleet.get_neighbors(veh))) for l, veh in enumerate(self.vehicles)}
 
         # formation constraints
-        _couples = {veh: [] for veh in self.vehicles}
+        couples = {veh: [] for veh in self.vehicles}
         for veh in self.vehicles:
-            rp = rel_poses[veh]
+            ind_veh = sorted(self.fleet.configuration[veh].keys())
+            rs = rel_splines[veh]
             for l, nghb in enumerate(self.fleet.get_neighbors(veh)):
-                if veh not in _couples[nghb]:
-                    _couples[veh].append(nghb)
-                    y_veh = veh.get_variable('y')
-                    y_nghb = nghb.get_variable('y')
-                    rel_pos = rp[:, l]
-                    for k in range(veh.n_y):
-                        self.define_constraint(
-                            y_veh[k] - y_nghb[k] - rel_pos[k], 0., 0.)
+                ind_nghb = sorted(self.fleet.configuration[nghb].keys())
+                if veh not in couples[nghb] and nghb not in couples[veh]:
+                    couples[veh].append(nghb)
+                    spl_veh = veh.get_variable('splines0')
+                    spl_nghb = nghb.get_variable('splines0')
+                    rel_spl = rs[:, l]
+                    for k in range(len(ind_veh)):
+                        self.define_constraint(spl_veh[ind_veh[k]] - spl_nghb[ind_nghb[k]] - rel_spl[k], 0., 0.)
 
         # terminal constraints (stability issue)
         for veh in self.vehicles:
-            y = veh.get_variable('y')
-            for k in range(veh.n_y):
+            splines = veh.get_variable('splines0')
+            for spline in splines:
                 for d in range(1, veh.degree+1):
-                    self.define_constraint(y[k].derivative(d)(1.), 0., 0.)
+                    # constraints imposed on distributedproblem instance will be
+                    # invoked on the z-variables (because it is interpreted as
+                    # 'interconnection constraint')
+                    self.define_constraint(spline.derivative(d)(1.), 0., 0.)
+                    # this one will be invoked on the x-trajectory
+                    veh.define_constraint(spline.derivative(d)(1.), 0., 0.)
 
     def set_parameters(self, current_time):
         parameters = {}
         for l, veh in enumerate(self.vehicles):
-            rel_pos, rp_ = self.fleet.get_rel_pos(veh), []
+            rel_spl, rs_ = self.fleet.get_rel_config(veh), []
             for nghb in self.fleet.get_neighbors(veh):
-                rp_.append(np.c_[rel_pos[nghb]])
-            parameters['rp_'+str(l)] = np.hstack(rp_)
+                rs_.append(np.c_[rel_spl[nghb]])
+            parameters['rs'+str(l)] = np.hstack(rs_)
         return parameters
 
     def get_interaction_error(self):
         error = 0.
         for veh in self.vehicles:
-            n_samp = veh.path['y'].shape[2]
-            end_time = veh.path['time'][-1]
+            ind_veh = sorted(self.fleet.configuration[veh].keys())
+            n_samp = veh.signals['time'].shape[1]
+            end_time = veh.signals['time'][:, -1]
             Ts = veh.options['sample_time']
-            rp = self.fleet.get_rel_pos(veh)
-            y_veh = veh.path['y'][:, 0, :]
+            rs = self.fleet.get_rel_config(veh)
+            spl_veh = veh.signals['splines']
             nghbs = self.fleet.get_neighbors(veh)
             for nghb in nghbs:
-                y_nghb = nghb.path['y'][:, 0, :]
-                Dy = y_veh - y_nghb
+                ind_nghb = sorted(self.fleet.configuration[nghb].keys())
+                spl_nghb = nghb.signals['splines']
+                Dspl = spl_veh[ind_veh] - spl_nghb[ind_nghb]
                 err_rel = np.zeros(n_samp)
                 for k in range(n_samp):
-                    Dy_nrm = np.linalg.norm(Dy[:, k])
-                    rp_nrm = np.linalg.norm(rp[nghb])
-                    err_rel[k] = ((Dy_nrm - rp_nrm)/rp_nrm)**2
+                    Dspl_nrm = np.linalg.norm(Dspl[:, k])
+                    rs_nrm = np.linalg.norm(rs[nghb])
+                    err_rel[k] = ((Dspl_nrm - rs_nrm)/rs_nrm)**2
                 err_rel_int = 0.
                 for k in range(n_samp-1):
                     err_rel_int += 0.5*(err_rel[k+1] + err_rel[k])*Ts
