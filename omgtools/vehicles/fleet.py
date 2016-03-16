@@ -35,45 +35,44 @@ class Fleet:
             if self.interconnection == 'circular':
                 nghb_ind = [(self.N + l + 1) %
                             self.N, (self.N + l - 1) % self.N]
-            if self.interconnection == 'full':
+            elif self.interconnection == 'full':
                 nghb_ind = [k for k in range(self.N) if k != l]
+            else:
+                raise ValueError('Interconnection type ' + self.interconnection +
+                                 ' not understood.')
             self.nghb_list[vehicle] = [self.vehicles[ind] for ind in nghb_ind]
-        self.configuration = [np.zeros(veh.n_spl) for veh in self.vehicles]
 
-    def set_configuration(self, **kwargs):
-        if 'polyhedron' in kwargs:
-            poly = kwargs['polyhedron']
-            if self.N != poly.n_faces:
-                raise ValueError('Configuration polyhedron shape should have '
-                                 'as many vertices as vehicles in the fleet!')
-            self.configuration = {
-                veh: poly.vertices[:, l] for l, veh in enumerate(self.vehicles)}
-        if 'points' in kwargs:
-            points = kwargs['points']
-            self.configuration = {veh: points[l]
-                                  for l, veh in enumerate(self.vehicles)}
-        self.rel_pos = {}
-        for veh in self.vehicles:
-            self.rel_pos[veh] = {}
-            for nghb in self.get_neighbors(veh):
-                self.rel_pos[veh][nghb] = self.configuration[
-                    veh] - self.configuration[nghb]
+    def set_configuration(self, splines):
+        self.configuration = {}
+        if len(splines) != self.N:
+            raise ValueError('You should provide configuration info ' +
+                             'for each vehicle.')
+        for l, spline in enumerate(splines):
+            if isinstance(spline, dict):
+                self.configuration[self.vehicles[l]] = spline
+            if isinstance(spline, list):
+                self.configuration[self.vehicles[l]] = {k: s for k, s in enumerate(spline)}
+        self.rel_config = {}
+        for vehicle in self.vehicles:
+            self.rel_config[vehicle] = {}
+            for nghb in self.get_neighbors(vehicle):
+                self.rel_config[vehicle][nghb] = []
+                ind_veh = sorted(self.configuration[vehicle].keys())
+                ind_nghb = sorted(self.configuration[nghb].keys())
+                if len(ind_veh) != len(ind_nghb):
+                    raise ValueError('All vehicles should have same number ' +
+                                     'of splines for which the configuration ' +
+                                     'is imposed.')
+                for k in range(len(ind_veh)):
+                    self.rel_config[vehicle][nghb].append(self.configuration[vehicle][ind_veh[k]] - self.configuration[nghb][ind_nghb[k]])
 
-    def get_rel_pos(self, vehicle):
-        return self.rel_pos[vehicle]
+    def get_rel_config(self, vehicle):
+        return self.rel_config[vehicle]
 
-    def set_initial_pose(self, pose):
-        if isinstance(pose, list) and len(pose) == self.N:
-            poses = pose
-        else:
-            poses = [pose + self.configuration[veh] for veh in self.vehicles]
-        for l, veh in enumerate(self.vehicles):
-            veh.set_initial_pose(poses[l])
+    def set_initial_conditions(self, conditions):
+        for l, vehicle in enumerate(self.vehicles):
+            vehicle.set_initial_conditions(conditions[l])
 
-    def set_terminal_pose(self, pose):
-        if isinstance(pose, list) and len(pose) == self.N:
-            poses = pose
-        else:
-            poses = [pose + self.configuration[veh] for veh in self.vehicles]
-        for l, veh in enumerate(self.vehicles):
-            veh.set_terminal_pose(poses[l])
+    def set_terminal_conditions(self, conditions):
+        for l, vehicle in enumerate(self.vehicles):
+            vehicle.set_terminal_conditions(conditions[l])
