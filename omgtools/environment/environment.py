@@ -24,7 +24,9 @@ class Environment(OptiChild):
     # ========================================================================
 
     def copy(self):
-        return Environment(self.room, self.obstacles)
+        obstacles = [Obstacle(o.initial, o.shape, o.trajectories) for o in self.obstacles]
+        return  Environment(self.room, obstacles)
+
 
     # ========================================================================
     # Add obstacles/vehicles
@@ -38,36 +40,32 @@ class Environment(OptiChild):
             self.obstacles.append(obstacle)
             self.n_obs += 1
 
-    def add_vehicle(self, vehicle):
-        if isinstance(vehicle, list):
-            for veh in vehicle:
-                self.add_vehicle(veh)
-        else:
-            hyp_veh, hyp_obs = {}, {}
-            for k, shape in enumerate(vehicle.shapes):
-                hyp_veh[shape] = []
-                for l, obstacle in enumerate(self.obstacles):
-                    if obstacle not in hyp_obs:
-                        hyp_obs[obstacle] = []
-                    degree = 1
-                    knots = np.r_[np.zeros(degree),
-                                  vehicle.knots[vehicle.degree:-vehicle.degree],
-                                  np.ones(degree)]
-                    basis = BSplineBasis(knots, degree)
-                    a = self.define_spline_variable(
-                        'a'+str(k)+str(l), self.n_dim, basis=basis)
-                    b = self.define_spline_variable(
-                        'b'+str(k)+str(l), 1, basis=basis)[0]
-                    self.define_constraint(
-                        sum([a[k]*a[k] for k in range(self.n_dim)])-1, -inf, 0.)
-                    hyp_veh[shape].append({'a': a, 'b': b})
-                    hyp_obs[obstacle].append({'a': a, 'b': b})
-            for obstacle in self.obstacles:
-                obstacle.define_collision_constraints(hyp_obs[obstacle])
-            limits = self.get_canvas_limits()
-            for spline in vehicle.splines:
-                vehicle.define_collision_constraints(hyp_veh, limits, spline)
-            self.sample_time = vehicle.options['sample_time']
+    def define_collision_constraints(self, vehicle, splines):
+        hyp_veh, hyp_obs = {}, {}
+        for k, shape in enumerate(vehicle.shapes):
+            hyp_veh[shape] = []
+            for l, obstacle in enumerate(self.obstacles):
+                if obstacle not in hyp_obs:
+                    hyp_obs[obstacle] = []
+                degree = 1
+                knots = np.r_[np.zeros(degree),
+                              vehicle.knots[vehicle.degree:-vehicle.degree],
+                              np.ones(degree)]
+                basis = BSplineBasis(knots, degree)
+                a = self.define_spline_variable(
+                    'a'+str(k)+str(l), self.n_dim, basis=basis)
+                b = self.define_spline_variable(
+                    'b'+str(k)+str(l), 1, basis=basis)[0]
+                self.define_constraint(
+                    sum([a[p]*a[p] for p in range(self.n_dim)])-1, -inf, 0.)
+                hyp_veh[shape].append({'a': a, 'b': b})
+                hyp_obs[obstacle].append({'a': a, 'b': b})
+        for obstacle in self.obstacles:
+            obstacle.define_collision_constraints(hyp_obs[obstacle])
+        limits = self.get_canvas_limits()
+        for spline in vehicle.splines:
+            vehicle.define_collision_constraints(hyp_veh, limits, spline)
+        self.sample_time = vehicle.options['sample_time']
 
     # ========================================================================
     # Update environment
@@ -75,7 +73,8 @@ class Environment(OptiChild):
 
     def update(self, update_time):
         for obstacle in self.obstacles:
-            obstacle.update(update_time, self.sample_time)
+            # obstacle.update(update_time, self.sample_time)
+            obstacle.update(update_time, 0.01)
 
     def draw(self, t=-1):
         draw = []
@@ -95,6 +94,7 @@ class Obstacle(OptiChild):
         self.shape = shape
         self.n_dim = shape.n_dim
         self.basis = BSplineBasis([0, 0, 0, 1, 1, 1], 2)
+        self.initial = initial
 
         # initialize trajectories
         self.trajectories = trajectories
