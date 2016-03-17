@@ -1,10 +1,10 @@
-from optilayer import OptiFather
+from ..basics.optilayer import OptiFather
+from ..basics.spline_extra import shift_knot1_fwd, shift_knot1_bwd, shift_over_knot
 from problem import Problem
 from distributedproblem import DistributedProblem
 from casadi import symvar, mul, SX, MX, DMatrix, MXFunction, reshape
 from casadi import vertcat, horzcat, jacobian, solve, substitute
 from casadi.tools import struct, struct_symMX, struct_symSX, entry, structure
-from spline_extra import shift_knot1_fwd, shift_knot1_bwd, shift_over_knot
 import numpy as np
 import numpy.linalg as la
 import time
@@ -32,10 +32,12 @@ class ADMM(Problem):
         Problem.__init__(self, vehicle, environment, options, label='admm')
         self.problem = problem
         self.distr_problem = distr_problem
-        self.group = {child.label: child for child in [
-            vehicle, problem, environment, self]}
+        self.vehicle = vehicle
+        self.environment = environment
+        self.group = {child.label: child for child in ([
+            vehicle, problem, environment, self] + environment.obstacles)}
         for child in self.group.values():
-            child.index = index
+            child._index = index
 
     # ========================================================================
     # ADMM options
@@ -449,7 +451,7 @@ class ADMM(Problem):
         self.var_admm['x_i'] = self._get_x_variables(solution=True)
         stats = self.problem_upd_x.getStats()
         if (stats.get('return_status') != 'Solve_Succeeded'):
-            print 'upd_x %d: %s' % (self.index, stats.get('return_status'))
+            print 'upd_x %d: %s' % (self._index, stats.get('return_status'))
         return t_upd
 
     def set_parameters_upd_z(self, current_time):

@@ -9,15 +9,16 @@ def read(fname):
 setup(
     name="omg-tools",
     version="0.1",
-    author="Ruben Van Parys & Tim Mercy",
+    author="Ruben Van Parys",
     author_email="ruben.vanparys@kuleuven.be",
     description=('optimal motion generation tools: a user-friendly tool for ' +
                  'modeling, simulating and embedding of (spline-based) motion ' +
                  'planning problems'),
     license="LGPLv3",
     keywords="optimization motion planning splines distributed multi-agent",
-    # url="",
-    packages=['omgtools'],
+    url="https://github.com/meco-group/omg-tools",
+    packages=['omgtools', 'omgtools/basics', 'omgtools/environment',
+              'omgtools/problems', 'omgtools/simulation', 'omgtools/vehicles'],
     package_data={'':['export/point2point/*']},
     long_description=read('readme.md'),
     classifiers=[
