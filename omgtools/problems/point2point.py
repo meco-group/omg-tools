@@ -7,7 +7,6 @@ import numpy as np
 
 class Point2point(object):
     # this class selects between fixed T and free T problem
-
     def __new__(cls, fleet, environment, options={}, freeT=False):
         if freeT:
             return FreeTPoint2point(fleet, environment, options)
@@ -248,7 +247,8 @@ class FreeEndPoint2point(FixedTPoint2point):
                 g = self.define_spline_variable(
                     'g'+str(k), 1, basis=spline.basis)[0]
                 objective += definite_integral(g, self.t0, 1.)
-                self.define_constraint(spline - condition - g, -inf, 0.)
+                self.define_constraint( spline - condition - g, -inf, 0.)
                 self.define_constraint(-spline + condition - g, -inf, 0.)
                 for d in range(1, spline.basis.degree+1):
                     self.define_constraint(spline.derivative(d)(1.), 0., 0.)
+        self.define_objective(objective)
