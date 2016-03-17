@@ -7,7 +7,7 @@ class Shape:
         self.n_dim = dimensions
         self._prepare_draw()
 
-    def draw(self):
+    def draw(self, pose):
         return self.plt_co
 
 
@@ -23,6 +23,9 @@ class Shape2D(Shape):
         sth = np.sin(orientation)
         rot = np.array([[cth, -sth], [sth, cth]])
         return rot.dot(coordinate)
+
+    def draw(self, pose=np.zeros(2)):
+        return np.c_[pose[:2]] + self.plt_co
 
 
 class Circle(Shape2D):
@@ -60,8 +63,8 @@ class Polyhedron(Shape2D):
         self.plt_co = np.hstack(
             (self.vertices, np.vstack(self.vertices[:, 0])))
 
-    def draw(self, orientation=0.):
-        return self.rotate(orientation, self.plt_co)
+    def draw(self, pose=np.zeros(3)):
+        return np.c_[pose[:2]] + self.rotate(pose[2], self.plt_co)
 
     def get_checkpoints(self):
         chck = [[self.vertices[0, l], self.vertices[1, l]]
