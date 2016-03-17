@@ -6,14 +6,14 @@ import numpy as np
 class FormationPoint2point(ADMMProblem):
 
     def __init__(self, fleet, environment, options={}):
-        self.environment = environment.copy()
         problems = [Point2point(vehicle, environment.copy(), options)
                     for vehicle in fleet.vehicles]
         ADMMProblem.__init__(self, problems, options)
         self.fleet = fleet
 
         # define parameters
-        rel_splines = {veh: self.define_parameter('rs'+str(l), len(self.fleet.configuration[veh].keys()), len(self.fleet.get_neighbors(veh))) for l, veh in enumerate(self.vehicles)}
+        rel_splines = {veh: self.define_parameter('rs'+str(l), len(self.fleet.configuration[
+                                                  veh].keys()), len(self.fleet.get_neighbors(veh))) for l, veh in enumerate(self.vehicles)}
 
         # formation constraints
         couples = {veh: [] for veh in self.vehicles}
@@ -28,7 +28,8 @@ class FormationPoint2point(ADMMProblem):
                     spl_nghb = nghb.get_variable('splines0')
                     rel_spl = rs[:, l]
                     for k in range(len(ind_veh)):
-                        self.define_constraint(spl_veh[ind_veh[k]] - spl_nghb[ind_nghb[k]] - rel_spl[k], 0., 0.)
+                        self.define_constraint(
+                            spl_veh[ind_veh[k]] - spl_nghb[ind_nghb[k]] - rel_spl[k], 0., 0.)
 
         # terminal constraints (stability issue)
         for veh in self.vehicles:
@@ -80,4 +81,4 @@ class FormationPoint2point(ADMMProblem):
     def final(self):
         ADMMProblem.final(self)
         err = self.get_interaction_error()
-        print '%-18s %6g' % ('Formation error:', err*100.)
+        print '%-18s %6g %%' % ('Formation error:', err*100.)
