@@ -67,30 +67,36 @@ class Vehicle(OptiChild):
         T = self.define_symbol('T')
         safety_distance = self.options['safety_distance']
         safety_weight = self.options['safety_weight']
-        for shape, hyps in hyperplanes.items():
-            for k, hyperplane in enumerate(hyps):
-                a, b = hyperplane['a'], hyperplane['b']
-                if safety_distance > 0.:
-                    eps = self.define_spline_variable('eps_'+str(shape)+str(k))[0]
-                    obj = safety_weight*definite_integral(eps, t/T, 1.)
-                    self.define_objective(obj)
-                    self.define_constraint(eps - safety_distance, -inf, 0.)
-                    self.define_constraint(-eps, -inf, 0.)
-                else:
-                    eps = 0.
-                checkpoints, rad = shape.get_checkpoints()
-                for l, chck in enumerate(checkpoints):
-                    con = 0
-                    con += (a[0]*(chck[0]+position[0]) + a[1]
-                            * (chck[1]+position[1]))*(1.-tg_ha**2)
-                    con += (-a[0]*(chck[1]+position[1]) + a[1]
-                            * (chck[0]+position[0]))*(2*tg_ha)
-                    con += (-b+rad[l]+safety_distance-eps)*(1+tg_ha**2)
-                    self.define_constraint(con, -inf, 0)
-                    # room constraints
-                    for k in range(2):
-                        self.define_constraint(-(chck[k]+position[k]) + room_lim[k][0], -inf, 0.)
-                        self.define_constraint( (chck[k]+position[k]) - room_lim[k][1], -inf, 0.)
+        for shape in self.shapes:
+            checkpoints, rad = shape.get_checkpoints()
+            # obstacle avoidance
+            if shape in hyperplanes:
+                for k, hyperplane in enumerate(hyperplanes[shape]):
+                    a, b = hyperplane['a'], hyperplane['b']
+                    if safety_distance > 0.:
+                        eps = self.define_spline_variable(
+                            'eps_'+str(shape)+str(k))[0]
+                        obj = safety_weight*definite_integral(eps, t/T, 1.)
+                        self.define_objective(obj)
+                        self.define_constraint(eps - safety_distance, -inf, 0.)
+                        self.define_constraint(-eps, -inf, 0.)
+                    else:
+                        eps = 0.
+                    for l, chck in enumerate(checkpoints):
+                        con = 0
+                        con += (a[0]*(chck[0]+position[0]) + a[1]
+                                * (chck[1]+position[1]))*(1.-tg_ha**2)
+                        con += (-a[0]*(chck[1]+position[1]) + a[1]
+                                * (chck[0]+position[0]))*(2*tg_ha)
+                        con += (-b+rad[l]+safety_distance-eps)*(1+tg_ha**2)
+                        self.define_constraint(con, -inf, 0)
+            # room constraints
+            for chck in checkpoints:
+                for k in range(2):
+                    self.define_constraint(-
+                                           (chck[k]+position[k]) + room_lim[k][0], -inf, 0.)
+                    self.define_constraint(
+                        (chck[k]+position[k]) - room_lim[k][1], -inf, 0.)
 
     def define_collision_constraints_3d(self, hyperplanes, room_lim, position):
         # orientation for 3d not yet implemented!
@@ -98,29 +104,35 @@ class Vehicle(OptiChild):
         T = self.define_symbol('T')
         safety_distance = self.options['safety_distance']
         safety_weight = self.options['safety_weight']
-        for shape, hyps in hyperplanes.items():
-            for k, hyperplane in enumerate(hyps):
-                a, b = hyperplane['a'], hyperplane['b']
-                safety_distance = self.options['safety_distance']
-                safety_weight = self.options['safety_weight']
-                if safety_distance > 0.:
-                    t = self.define_symbol('t')
-                    T = self.define_symbol('T')
-                    eps = self.define_spline_variable('eps_'+str(shape)+str(k))[0]
-                    obj = safety_weight*definite_integral(eps, t/T, 1.)
-                    self.define_objective(obj)
-                    self.define_constraint(eps - safety_distance, -inf, 0.)
-                    self.define_constraint(-eps, -inf, 0.)
-                else:
-                    eps = 0.
-                checkpoints, rad = shape.get_checkpoints()
-                for l, chck in enumerate(checkpoints):
+        for shape in self.shapes:
+            checkpoints, rad = shape.get_checkpoints()
+            # obstacle avoidance
+            if shape in hyperplanes:
+                for k, hyperplane in enumerate(hyperplanes[shape]):
+                    a, b = hyperplane['a'], hyperplane['b']
+                    safety_distance = self.options['safety_distance']
+                    safety_weight = self.options['safety_weight']
+                    if safety_distance > 0.:
+                        t = self.define_symbol('t')
+                        T = self.define_symbol('T')
+                        eps = self.define_spline_variable(
+                            'eps_'+str(shape)+str(k))[0]
+                        obj = safety_weight*definite_integral(eps, t/T, 1.)
+                        self.define_objective(obj)
+                        self.define_constraint(eps - safety_distance, -inf, 0.)
+                        self.define_constraint(-eps, -inf, 0.)
+                    else:
+                        eps = 0.
+                    for l, chck in enumerate(checkpoints):
+                        self.define_constraint(
+                            sum([a[k]*(chck[k]+position[k]) for k in range(3)])-b+rad[l], -inf, 0)
+            # room constraints
+            for chck in checkpoints:
+                for k in range(3):
+                    self.define_constraint(-
+                                           (chck[k]+position[k]) + room_lim[k][0], -inf, 0.)
                     self.define_constraint(
-                        sum([a[k]*(chck[k]+position[k]) for k in range(3)])-b+rad[l], -inf, 0)
-                    # room constraints
-                    for k in range(3):
-                        self.define_constraint(-chck[k] + room_lim[k][0], -inf, 0.)
-                        self.define_constraint(chck[k] - room_lim[k][1], -inf, 0.)
+                        (chck[k]+position[k]) - room_lim[k][1], -inf, 0.)
 
     # ========================================================================
     # Simulation and prediction related functions
@@ -150,13 +162,16 @@ class Vehicle(OptiChild):
             raise ValueError(
                 'Signals should contain at least state, input and pose.')
         self.trajectories['time'] = time_axis - time_axis[0] + current_time
-        self.trajectories['splines'] = np.c_[sample_splines(splines, time_axis)]
+        self.trajectories['splines'] = np.c_[
+            sample_splines(splines, time_axis)]
         knots = splines[0].basis.knots
         time_axis_kn = np.r_[
             knots[self.degree] + time_axis[0], knots[self.degree+1:-self.degree]]
         self.trajectories_kn = self.splines2signals(splines, time_axis_kn)
-        self.trajectories_kn['time'] = time_axis_kn - time_axis_kn[0] + current_time
-        self.trajectories_kn['splines'] = np.c_[sample_splines(splines, time_axis_kn)]
+        self.trajectories_kn['time'] = time_axis_kn - \
+            time_axis_kn[0] + current_time
+        self.trajectories_kn['splines'] = np.c_[
+            sample_splines(splines, time_axis_kn)]
         for key in self.trajectories:
             shape = self.trajectories[key].shape
             if len(shape) == 1:
@@ -199,7 +214,8 @@ class Vehicle(OptiChild):
                 input = self.add_disturbance(input)
             if self.options['1storder_delay']:
                 input0 = self.signals['input'][:, -1]
-                input = self.integrate_ode(input0, input, simulation_time, self._ode_1storder)
+                input = self.integrate_ode(
+                    input0, input, simulation_time, self._ode_1storder)
             state0 = self.signals['state'][:, -1]  # current state
             state = self.integrate_ode(state0, input, simulation_time)
             self.signals['input'] = np.c_[
