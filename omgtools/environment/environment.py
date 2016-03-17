@@ -192,4 +192,6 @@ class Obstacle(OptiChild):
                 self.signals['acceleration'], acceleration]
 
     def draw(self, t=-1):
-        return np.c_[self.signals['position'][:, t]] + self.shape.draw()
+        pose = np.zeros(2*self.n_dim)
+        pose[:self.n_dim] = self.signals['position'][:, t]
+        return self.shape.draw(pose)
