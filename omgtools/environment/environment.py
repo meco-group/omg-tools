@@ -24,9 +24,9 @@ class Environment(OptiChild):
     # ========================================================================
 
     def copy(self):
-        obstacles = [Obstacle(o.initial, o.shape, o.trajectories) for o in self.obstacles]
-        return  Environment(self.room, obstacles)
-
+        obstacles = [Obstacle(o.initial, o.shape, o.trajectories)
+                     for o in self.obstacles]
+        return Environment(self.room, obstacles)
 
     # ========================================================================
     # Add obstacles/vehicles
@@ -37,10 +37,18 @@ class Environment(OptiChild):
             for obst in obstacle:
                 self.add_obstacle(obst)
         else:
+            if obstacle.n_dim != self.n_dim:
+                raise ValueError('Not possible to combine ' +
+                                 str(obstacle.n_dim) + 'D obstacle with ' +
+                                 str(self.n_dim) + 'D environment.')
             self.obstacles.append(obstacle)
             self.n_obs += 1
 
     def define_collision_constraints(self, vehicle, splines):
+        if vehicle.n_dim != self.n_dim:
+            raise ValueError('Not possible to combine ' +
+                             str(vehicle.n_dim) + 'D vehicle with ' +
+                             str(self.n_dim) + 'D environment.')
         hyp_veh, hyp_obs = {}, {}
         for k, shape in enumerate(vehicle.shapes):
             hyp_veh[shape] = []
@@ -126,7 +134,7 @@ class Obstacle(OptiChild):
         self.pos_spline = [BSpline(self.basis, vertcat(
             [x0[k], 0.5*v0[k]*self.T + x0[k],
              x0[k] + v0[k]*self.T + 0.5*a0[k]*(self.T**2)]))
-                           for k in range(self.n_dim)]
+            for k in range(self.n_dim)]
 
     # ========================================================================
     # Optimization modelling related functions
