@@ -3,16 +3,15 @@ from omgtools import *
 # create fleet
 N = 3
 vehicles = [Quadrotor(0.2) for l in range(N)]
-# for veh in vehicles:
-#     veh.set_options({'safety_distance': 0.1})
-#     veh.set_options({'1storder_delay': True, 'time_constant': 0.1})
-#     veh.set_input_disturbance(3., 0.5*np.ones(2))
 
 fleet = Fleet(vehicles)
-fleet.set_configuration(polyhedron=RegularPolyhedron(0.4, N))
+configuration = RegularPolyhedron(0.4, N).vertices.T
+init_positions = [-4., -4.] + configuration
+terminal_positions = [4., 4.] + configuration
 
-fleet.set_initial_pose([-4., -4.])
-fleet.set_terminal_pose([4., 4.])
+fleet.set_configuration(configuration.tolist())
+fleet.set_initial_conditions(init_positions.tolist())
+fleet.set_terminal_conditions(terminal_positions.tolist())
 
 # create environment
 environment = Environment(room={'shape': Square(10.)})
@@ -24,18 +23,18 @@ environment.add_obstacle(Obstacle({'position': [-0.6, -5.4]},
 # create a formation point-to-point problem
 options = {'horizon_time': 5., 'codegen': {'jit': False}, 'admm': {'rho': 0.1}}
 problem = FormationPoint2point(fleet, environment, options=options)
+problem.set_options({'solver': {'linear_solver': 'ma57'}})
 problem.init()
 
 # create simulator
 simulator = Simulator(problem)
 simulator.plot.set_options({'knots': True})
-simulator.plot.create('2d')
-simulator.plot.create('input', label=['thrust (m/s^2)', 'rotational velocity (rad/s)'])
+simulator.plot.show('scene')
+simulator.plot.show('input', label=['Thrust force (N/kg)',
+                                    'Pitch rate (rad/s)'])
 
 # run it!
 simulator.run()
 
 # show/save some results
-simulator.plot.show_movie('2d', repeat=False)
-
-matplotlib.pyplot.show(block=True)
+simulator.plot.show_movie('scene', repeat=False)
