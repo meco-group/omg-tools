@@ -300,9 +300,13 @@ class Plots:
         if not os.path.isdir(directory):
             os.makedirs(directory)
         self.show(signal, **kwargs)
+        if signal == 'scene':
+            plt.axis('off')
         figurewidth = kwargs[
             'figurewidth'] if 'figurewidth' in kwargs else '8cm'
-        tikz_save(directory+'/'+name+'.tikz', figurewidth=figurewidth)
+        path = directory+'/'+name+'.tikz'
+        tikz_save(path, figurewidth=figurewidth)
+        self._remove_rubbish(path)
 
     def show_movie(self, signal, repeat=False, **kwargs):
         t = self.vehicles[0].signals['time']
@@ -331,15 +335,34 @@ class Plots:
             number_of_frames = kwargs['number_of_frames']
         else:
             number_of_frames = t.shape[1]-1
-        figwidth = kwargs['figurewidth'] if 'figurewidth' in kwargs else '8cm'
+        figurewidth = kwargs['figurewidth'] if 'figurewidth' in kwargs else '8cm'
         subsample = (t.shape[1]-2)/(number_of_frames-1)
         kwargs['no_update'] = True
         plot = self.show(signal, **kwargs)
         cnt = 0
-        if signal in ('scene'):
-            plt.axis('off')
         for k in range(0, t.shape[1]-1, subsample):
             self.update(k, plots=plot)
-            tikz_save(
-                directory+'/'+name+'_'+str(cnt)+'.tikz', figurewidth=figwidth)
+            if signal == 'scene':
+                plt.axis('off')
+                path = directory+'/'+name+'_'+str(cnt)+'.tikz'
+                tikz_save(path, figurewidth=figurewidth)
+                self._remove_rubbish(path)
             cnt += 1
+
+    def _remove_rubbish(self, path):
+        # remove rubbish due to bugs in matplotlib2tikz
+        with open(path, 'r+') as f:
+            body = f.read()
+            proceed = True
+            while(proceed):
+                try:
+                    start = body.rindex('\path')
+                    end = body.index(';', start)
+                    body = body.replace(body[start:end+1], '')
+                except ValueError:
+                    proceed = False
+            f.seek(0)
+            f.truncate()
+            f.write(body)
+
+
