@@ -2,6 +2,7 @@ from ..basics.optilayer import OptiFather, OptiChild
 from ..vehicles.fleet import get_fleet_vehicles
 import time
 
+
 class Problem(OptiChild):
 
     def __init__(self, fleet, environment, options={}, label='problem'):
@@ -104,15 +105,3 @@ class Problem(OptiChild):
 
     def stop_criterium(self):
         raise NotImplementedError('Please implement this method!')
-
-    # ========================================================================
-    # Methods for exporting problem to C++ library
-    # ========================================================================
-
-    # def export(self, language='c++', options={}):
-    #     if not hasattr(self, 'father'):
-    #         self.init()
-    #     if language == 'c++':
-    #         export.ExportCpp(self, 'point2point', options)
-    #     else:
-    #         raise ValueError(language+' export is not implemented.')

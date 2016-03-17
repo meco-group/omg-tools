@@ -149,6 +149,21 @@ class Rocket(Rectangle):
         self.plt_co = np.vstack((plt_x, plt_y))
 
 
+class UFO(Rectangle):
+
+    def __init__(self, width, height, orientation=0.):
+        Rectangle.__init__(self, width, height, orientation)
+
+    def _prepare_draw(self):
+        w = self.width
+        h = self.height
+        plt_x = [-0.5*w, -0.2*w, 0.2*w, 0.5*w,
+                 0.2*w, 0.15*w, -0.15*w, -0.2*w, -0.5*w]
+        plt_y = [-0.15*h, -0.5*h, -0.5*h, -0.15*h,
+                 0.2*h, 0.5*h, 0.5*h, 0.2*h, -0.15*h]
+        self.plt_co = np.vstack((plt_x, plt_y))
+
+
 class Shape3D(Shape):
 
     def __init__(self):
