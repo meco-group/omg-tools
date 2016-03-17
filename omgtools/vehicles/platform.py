@@ -1,59 +1,80 @@
 from vehicle import Vehicle
 from ..basics.shape import Rectangle
+from ..basics.spline_extra import sample_splines
 from casadi import inf
-
 import numpy as np
 
 
 class Platform(Vehicle):
 
-    def __init__(self, width=0.7, height=0.1, options={}, bounds={}, **kwargs):
-        Vehicle.__init__(self, n_y=1, n_der=2, degree=3, order=1, shape=Rectangle(width, height),
-                         options=options, **kwargs)
+    def __init__(self, width=0.7, height=0.1, options={}, bounds={}):
+        Vehicle.__init__(self, n_spl=1, degree=3, shapes=Rectangle(width, height), options=options)
         self.vmin = bounds['vmin'] if 'vmin' in bounds else -0.8
         self.vmax = bounds['vmax'] if 'vmax' in bounds else 0.8
         self.amin = bounds['amin'] if 'amin' in bounds else -2.
         self.amax = bounds['amax'] if 'amax' in bounds else 2.
+        # time horizon
+        self.T = self.define_symbol('T')
 
-        # define physical signals
-        y = self.get_signal('y')
+    def define_trajectory_constraints(self, splines):
+        x = splines[0]
+        dx, ddx = x.derivative(), x.derivative(2)
+        self.define_constraint(-dx + self.T*self.vmin, -inf, 0.)
+        self.define_constraint(dx - self.T*self.vmax, -inf, 0.)
+        self.define_constraint(-ddx + (self.T**2)*self.amin, -inf, 0.)
+        self.define_constraint(ddx - (self.T**2)*self.amax, -inf, 0.)
 
-        y, dy, ddy = y[0, 0], y[0, 1], y[0, 2]
+    def get_initial_constraints(self, splines):
+        state0 = self.define_parameter('state0')
+        input0 = self.define_parameter('input0')
+        x, dx = splines[0], splines[0].derivative()
+        return [(x, state0[0]), (dx, self.T*input0[0])]
 
-        self.define_pose([y, 0.])
-        u = self.define_input(dy)
-        x = self.define_state(y)
-        self.define_signal('a', ddy)
-        self.define_y([[x], [u]])
-        self.define_dstate([u])
+    def get_terminal_constraints(self, splines):
+        position = self.define_parameter('positionT')
+        x = splines[0]
+        return [(x, position[0])]
 
-        # define system constraints
-        y = self.splines[0]
-        dy = y.derivative()
-        ddy = y.derivative(2)
-        T = self.define_symbol('T')
+    def set_initial_conditions(self, position, input=0.):
+        self.prediction['state'] = position
+        self.prediction['input'] = input
 
-        self.define_constraint(-dy + T*self.vmin, -inf, 0.)
-        self.define_constraint(dy - T*self.vmax, -inf, 0.)
+    def set_terminal_conditions(self, position):
+        self.positionT = position
 
-        self.define_constraint(-ddy + (T**2)*self.amin, -inf, 0.)
-        self.define_constraint(ddy - (T**2)*self.amax, -inf, 0.)
+    def get_init_spline_value(self):
+        pos0 = self.prediction['state']
+        posT = self.positionT
+        # init_value = np.r_[pos0[0]*np.ones(self.degree), np.linspace(pos0[0], posT[0], len(self.basis) - 2*self.degree), posT[0]*np.ones(self.degree)]
+        init_value = np.linspace(pos0[0], posT[0], len(self.basis))
+        return init_value
 
-    def set_initial_pose(self, position):
-        y = np.zeros((self.n_y, self.n_der+1))
-        y[:, 0] = position
-        self.set_initial_condition(y)
-
-    def set_terminal_pose(self, position):
-        y = np.zeros((self.n_y, self.n_der+1))
-        y[:, 0] = position
-        self.set_terminal_condition(y)
-
-    def get_checkpoints(self, y=None):
-        if y is None:
-            return self.shape.get_checkpoints([self.splines[0], 0.])
+    def check_terminal_conditions(self):
+        if (np.linalg.norm(self.signals['state'][:, -1] - self.positionT) > 1.e-3 or
+                np.linalg.norm(self.signals['input'][:, -1])) > 1.e-3:
+            return False
         else:
-            return self.shape.get_checkpoints([y[0], 0.])
+            return True
 
-    def draw(self, t=-1):
-        return np.vstack((self.path['pose'][:, :, t])) + self.shape.draw()
+    def set_parameters(self, current_time):
+        parameters = {}
+        parameters['state0'] = self.prediction['state']
+        parameters['input0'] = self.prediction['input']
+        parameters['positionT'] = self.positionT
+        return parameters
+
+    def define_collision_constraints(self, hyperplanes, room_lim, splines):
+        pass
+
+    def splines2signals(self, splines, time):
+        signals = {}
+        x = splines[0]
+        dx, ddx = x.derivative(), x.derivative(2)
+        signals['state'] = np.c_[sample_splines(x, time)].T
+        signals['input'] = np.c_[sample_splines(dx, time)].T
+        signals['pose'] = np.r_[signals['state'], np.zeros((2, len(time)))]
+        signals['a'] = np.c_[sample_splines(ddx, time)].T
+        return signals
+
+    def ode(self, state, input):
+        return input
