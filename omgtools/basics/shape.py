@@ -8,7 +8,10 @@ class Shape:
         self._prepare_draw()
 
     def draw(self, pose):
-        return self.plt_co
+        raise ValueError('Please implement this method.')
+
+    def _prepare_draw():
+        raise ValueError('Please implement this method.')
 
 
 class Shape2D(Shape):
@@ -52,8 +55,7 @@ class Polyhedron(Shape2D):
 
     def __init__(self, vertices, orientation=0.):
         self.vertices = vertices
-        self.n_faces = vertices.shape[1]
-        self.n_chck = self.n_faces
+        self.n_vert = vertices.shape[1]
         Shape2D.__init__(self)
         self.orientation = orientation
         self.plt_co = self.rotate(orientation, self.plt_co)
@@ -68,9 +70,9 @@ class Polyhedron(Shape2D):
 
     def get_checkpoints(self):
         chck = [[self.vertices[0, l], self.vertices[1, l]]
-                for l in range(self.n_faces)]
+                for l in range(self.n_vert)]
         # give small radius to account for anti-collision between two polyhedra
-        rad = [1e-3 for l in range(self.n_faces)]
+        rad = [1e-3 for l in range(self.n_vert)]
         return chck, rad
 
     def get_canvas_limits(self):
@@ -82,31 +84,31 @@ class Polyhedron(Shape2D):
 
 class RegularPolyhedron(Polyhedron):
 
-    def __init__(self, radius, n_faces, orientation=0.):
+    def __init__(self, radius, n_vert, orientation=0.):
         # radius of outer circle (the one through the vertices)
         self.radius = radius
-        self.n_faces = n_faces
+        self.n_vert = n_vert
         Polyhedron.__init__(self, self.getVertices(), orientation)
 
     def getVertices(self):
-        A = np.zeros((self.n_faces, 2))
-        B = np.zeros((self.n_faces, 1))
-        dth = (2*np.pi)/self.n_faces
-        for l in range(self.n_faces):
+        A = np.zeros((self.n_vert, 2))
+        B = np.zeros((self.n_vert, 1))
+        dth = (2*np.pi)/self.n_vert
+        for l in range(self.n_vert):
             A[l, :] = np.array([np.sin(l*dth), np.cos(l*dth)])
-            B[l] = self.radius*np.cos(np.pi/self.n_faces)
-        vertices = np.zeros((2, self.n_faces))
-        for l in range(self.n_faces):
-            a = np.vstack((A[l, :], A[(l+1) % self.n_faces, :]))
-            b = np.vstack((B[l], B[(l+1) % self.n_faces]))
+            B[l] = self.radius*np.cos(np.pi/self.n_vert)
+        vertices = np.zeros((2, self.n_vert))
+        for l in range(self.n_vert):
+            a = np.vstack((A[l, :], A[(l+1) % self.n_vert, :]))
+            b = np.vstack((B[l], B[(l+1) % self.n_vert]))
             vertices[:, l] = np.linalg.solve(a, b).ravel()
         return vertices
 
 
 class Square(RegularPolyhedron):
 
-    def __init__(self, width, orientation=0.):
-        RegularPolyhedron.__init__(self, width/np.sqrt(2), 4, orientation)
+    def __init__(self, side, orientation=0.):
+        RegularPolyhedron.__init__(self, side/np.sqrt(2), 4, orientation)
 
 
 class Rectangle(Polyhedron):
@@ -145,3 +147,114 @@ class Rocket(Rectangle):
                  0.5*w, 0.25*w, -0.25*w, -0.5*w]
         plt_y = [0., 0.25*h, 0.25*h, 0.5*h, -0.5*h, -0.25*h, -0.25*h, 0.]
         self.plt_co = np.vstack((plt_x, plt_y))
+
+
+class Shape3D(Shape):
+
+    def __init__(self):
+        Shape.__init__(self, 3)
+
+    def draw(self, pose=np.zeros(6)):
+        return [np.c_[pose[:3]] + p for p in self.plt_co]
+
+
+class Polyhedron3D(Shape3D):
+
+    def __init__(self, vertices):
+        self.vertices = vertices
+        self.n_vert = vertices.shape[1]
+        Shape3D.__init__(self)
+
+    def get_checkpoints(self):
+        chck = [[self.vertices[0, l], self.vertices[1, l], self.vertices[2, l]]
+                for l in range(self.n_vert)]
+        # give small radius to account for anti-collision between two polyhedra
+        rad = [1e-3 for l in range(self.n_vert)]
+        return chck, rad
+
+    def get_canvas_limits(self):
+        max_xyz = np.amax(self.vertices, axis=1)
+        min_xyz = np.amin(self.vertices, axis=1)
+        return [np.array([min_xyz[0], max_xyz[0]]),
+                np.array([min_xyz[1], max_xyz[1]]),
+                np.array([min_xyz[2], max_xyz[2]])]
+
+
+class RegularPolyhedron3D(Polyhedron3D):
+
+    def __init__(self, radius, height, n_faces):
+        # radius of outer circle of surface (the one through the vertices)
+        self.radius = radius
+        self.n_faces = n_faces
+        Polyhedron3D.__init__(self, self.getVertices())
+
+    def _prepare_draw(self):
+        self.plt_co = []
+        for l in range(4):
+            self.plt_co.append(
+                np.c_[self.vertices[:, l], self.vertics[:, (l+1) % self.n_faces]])
+            self.plt_co.append(np.c_[self.vertices[
+                               :, l+self.n_faces], self.vertics[:, (l+1) % self.n_faces + self.n_faces]])
+            self.plt_co.append(
+                np.c_[self.vertices[:, l], self.vertics[:, (l+self.n_faces)]])
+
+    def getVertices(self):
+        A = np.zeros((self.n_faces, 2))
+        B = np.zeros((self.n_faces, 1))
+        dth = (2*np.pi)/self.n_faces
+        for l in range(self.n_faces):
+            A[l, :] = np.array([np.sin(l*dth), np.cos(l*dth)])
+            B[l] = self.radius*np.cos(np.pi/self.n_faces)
+        vertices = np.zeros((3, self.n_faces*2))
+        for l in range(self.n_faces):
+            a = np.vstack((A[l, :], A[(l+1) % self.n_faces, :]))
+            b = np.vstack((B[l], B[(l+1) % self.n_faces]))
+            vertices[:, l] = np.linalg.solve(a, b).ravel()
+            vertices[2, l] = -0.5*self.height
+            vertices[:2, l+self.n_faces] = vertices[:2, l]
+            vertices[2, l+self.n_faces] = vertices[2, l] + self.height
+        return vertices
+
+
+class Cuboid(Polyhedron3D):
+
+    def __init__(self, width, height, depth):
+        self.width = width
+        self.height = height
+        self.depth = depth
+        Polyhedron3D.__init__(self, self.getVertices())
+
+    def _prepare_draw(self):
+        self.plt_co = []
+        for l in range(4):
+            self.plt_co.append(
+                np.c_[self.vertices[:, l], self.vertices[:, (l+1) % 4]])
+            self.plt_co.append(
+                np.c_[self.vertices[:, l+4], self.vertices[:, (l+1) % 4 + 4]])
+            self.plt_co.append(
+                np.c_[self.vertices[:, l], self.vertices[:, (l+4)]])
+
+    def getVertices(self):
+        A = np.zeros((4, 2))
+        B = np.zeros((4, 1))
+        radius = [0.5*self.depth, 0.5*self.width,
+                  0.5*self.depth, 0.5*self.width]
+        dth = 0.5*np.pi
+        for l in range(4):
+            A[l, :] = np.array([np.sin(l*dth), np.cos(l*dth)])
+            B[l] = radius[l]
+        vertices = np.zeros((3, 8))
+        for l in range(4):
+            a = np.vstack((A[l, :], A[(l+1) % 4, :]))
+            b = np.vstack((B[l], B[(l+1) % 4]))
+            vertices[:2, l] = np.linalg.solve(a, b).ravel()
+            vertices[2, l] = -0.5*self.height
+            vertices[:2, l+4] = vertices[:2, l]
+            vertices[2, l+4] = vertices[2, l] + self.height
+        return vertices
+
+
+class Cube(Cuboid):
+
+    def __init__(self, side):
+        Cuboid.__init__(self, side, side, side)
