@@ -220,8 +220,13 @@ class OptiFather:
         self._var_result = variables
         self._dual_var_result = self._con_struct(0.)
 
-    def set_variables(self, variables):
-        self._var_result = self._var_struct(variables)
+    def set_variables(self, variables, label=None, name=None):
+        if label is None:
+            self._var_result = self._var_struct(variables)
+        elif name is None:
+            self._var_result[label] = variables
+        else:
+            self._var_result[label, name] = variables
 
     def set_parameters(self, time):
         self._par = self._par_struct(0.)
@@ -237,16 +242,16 @@ class OptiFather:
     def get_variables(self, label=None, name=None):
         if label is None:
             return self._var_result
-        if name is None:
-            return self._var_result.prefix(name)
+        elif name is None:
+            return self._var_result.prefix(label)
         else:
             return self._var_result[label, name].toArray()
 
     def get_parameters(self, label=None, name=None):
         if label is None:
             return self._par_result
-        if name is None:
-            return self._par_result.prefix(name)
+        elif name is None:
+            return self._par_result.prefix(label)
         else:
             return self._par_result[label, name].toArray()
 
@@ -425,25 +430,34 @@ class OptiChild:
             self._constraints[name] = (expr, lb, ub, shutdown)
 
     def define_objective(self, expr):
-        self._objective = expr
+        self._objective += expr
+
+    def set_variable(self, name, value):
+        self.father.set_variables(value, self.label, name)
 
     def get_variable(self, name, **kwargs):
-        if 'solution' in kwargs and kwargs['solution']:
-            return self.father.get_variables(self.label, name)
         if name in self._splines_prim and not('spline' in kwargs and not kwargs['spline']):
             basis = self._splines_prim[name]['basis']
-            coeffs = self._variables[name]
+            if 'solution' in kwargs and kwargs['solution']:
+                coeffs = self.father.get_variables(self.label, name)
+            else:
+                coeffs = self._variables[name]
             return [BSpline(basis, coeffs[:, k]) for k in range(coeffs.shape[1])]
+        if 'solution' in kwargs and kwargs['solution']:
+            return self.father.get_variables(self.label, name)
         else:
             return self._variables[name]
 
     def get_parameter(self, name, **kwargs):
-        if 'solution' in kwargs and kwargs['solution']:
-            return self.father.get_parameters(self.label, name)
         if name in self._splines_prim and not('spline' in kwargs and not kwargs['spline']):
             basis = self._splines_prim[name]['basis']
-            coeffs = self._parameters[name]
+            if 'solution' in kwargs and kwargs['solution']:
+                coeffs = self.father.get_variables(self.label, name)
+            else:
+                coeffs = self._variables[name]
             return [BSpline(basis, coeffs[:, k]) for k in range(coeffs.shape[1])]
+        if 'solution' in kwargs and kwargs['solution']:
+            return self.father.get_parameters(self.label, name)
         else:
             return self._parameters[name]
 
