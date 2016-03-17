@@ -67,7 +67,7 @@ class Quadrotor(Vehicle):
         return init_value
 
     def check_terminal_conditions(self):
-        if (np.linalg.norm(self.signals['position'][:, -1] - self.positionT) > 1.e-2 or
+        if (np.linalg.norm(self.signals['pose'][:2, -1] - self.positionT) > 1.e-2 or
                 np.linalg.norm(self.signals['dspl'][:, -1])) > 1.e-2:
             return False
         else:
@@ -103,7 +103,7 @@ class Quadrotor(Vehicle):
             ((ddy_s + self.g)**2 + ddx_s**2)
         signals['state'] = np.c_[x_s, y_s, dx_s, dy_s, theta].T
         signals['input'] = np.c_[u1, u2].T
-        signals['position'] = np.c_[x_s, y_s].T
+        signals['pose'] = np.c_[x_s, y_s, -theta].T
         signals['dspl'] = np.c_[dx_s, dy_s].T
         signals['ddspl'] = np.c_[ddx_s, ddy_s].T
         return signals
@@ -114,11 +114,11 @@ class Quadrotor(Vehicle):
         return np.r_[state[2:4], u1*np.sin(theta), u1*np.cos(theta)-self.g, u2].T
 
     def draw(self, t=-1):
-        theta = -self.signals['state'][4, t]
+        theta = self.signals['pose'][2, t]
         cth, sth = np.cos(theta), np.sin(theta)
         rot = np.array([[cth, -sth], [sth, cth]])
         r = self.radius
         h, rw = 0.2*r, (1./3.)*r
         plt_x = [r, r-2*rw, r-rw, r-rw, -r+rw, -r+rw, -r, -r+2*rw]
         plt_y = [h, h, h, 0, 0, h, h, h]
-        return [np.c_[self.signals['position'][:, t]] + rot.dot(np.vstack((plt_x, plt_y)))]
+        return [np.c_[self.signals['pose'][:2, t]] + rot.dot(np.vstack((plt_x, plt_y)))]

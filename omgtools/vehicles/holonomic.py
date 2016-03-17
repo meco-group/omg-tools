@@ -69,9 +69,9 @@ class Holonomic(Vehicle):
         pos0 = self.prediction['state']
         posT = self.positionT
         for k in range(2):
-            init_value[:, k] = np.r_[pos0[k]*np.ones(self.degree), np.linspace(
-                pos0[k], posT[k], len(self.basis) - 2*self.degree), posT[k]*np.ones(self.degree)]
-            # init_value[:, k] = np.linspace(pos0[k], posT[k], len(self.basis))
+            # init_value[:, k] = np.r_[pos0[k]*np.ones(self.degree), np.linspace(
+            #     pos0[k], posT[k], len(self.basis) - 2*self.degree), posT[k]*np.ones(self.degree)]
+            init_value[:, k] = np.linspace(pos0[k], posT[k], len(self.basis))
         return init_value
 
     def check_terminal_conditions(self):
@@ -100,7 +100,7 @@ class Holonomic(Vehicle):
         input = np.c_[sample_splines([dx, dy], time)]
         signals['state'] = np.c_[sample_splines([x, y], time)]
         signals['input'] = input
-        signals['position'] = signals['state']
+        signals['pose'] = np.r_[signals['state'], np.zeros((1, len(time)))]
         signals['v_tot'] = np.sqrt(input[0, :]**2 + input[1, :]**2)
         signals['a'] = np.c_[sample_splines([ddx, ddy], time)]
         return signals

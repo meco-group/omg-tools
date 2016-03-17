@@ -14,9 +14,15 @@ class Vehicle(OptiChild):
     def __init__(self, n_spl, degree, shapes, options):
         OptiChild.__init__(self, 'vehicle')
         self.shapes = shapes if isinstance(shapes, list) else [shapes]
+        self.n_dim = self.shapes[0].n_dim
+        for shape in self.shapes:
+            if shape.n_dim == self.n_dim:
+                self.n_dim = shape.n_dim
+            else:
+                raise ValueError('All vehicle shapes should have same spatial' +
+                                 'dimension.')
 
         self.prediction = {}
-
         self.degree = degree
         # set options
         self.set_default_options()
@@ -140,9 +146,9 @@ class Vehicle(OptiChild):
 
     def get_trajectories(self, splines, time_axis, current_time):
         self.trajectories = self.splines2signals(splines, time_axis)
-        if not set(['state', 'input', 'position']).issubset(self.trajectories):
+        if not set(['state', 'input', 'pose']).issubset(self.trajectories):
             raise ValueError(
-                'Signals should contain at least state, input and position.')
+                'Signals should contain at least state, input and pose.')
         self.trajectories['time'] = time_axis - time_axis[0] + current_time
         self.trajectories['splines'] = np.c_[sample_splines(splines, time_axis)]
         knots = splines[0].basis.knots
@@ -264,7 +270,7 @@ class Vehicle(OptiChild):
             memory[key].extend([dictionary[key] for k in range(repeat)])
 
     def draw(self, t=-1):
-        return [np.c_[self.signals['position'][:, t]] + shape.draw() for shape in self.shapes]
+        return [shape.draw(self.signals['pose'][:, t]) for shape in self.shapes]
 
     # ========================================================================
     # Methods required to override
