@@ -211,10 +211,10 @@ class Plots:
                 env[0, :].ravel(), env[1, :].ravel())
         for l, veh in enumerate(vehicles):
             if t == -1:
-                pos_sign = veh.signals['position'][:, :]
+                pos_sign = veh.signals['pose'][:, :]
             else:
-                pos_sign = veh.signals['position'][:, :t+1]
-            pos_traj = veh.traj_storage['position'][t]
+                pos_sign = veh.signals['pose'][:, :t+1]
+            pos_traj = veh.traj_storage['pose'][t]
             plt_2d['pos_traj'][l].set_data(pos_traj[0, :].ravel(),
                                            pos_traj[1, :].ravel())
             plt_2d['pos_sign'][l].set_data(pos_sign[0, :].ravel(),
