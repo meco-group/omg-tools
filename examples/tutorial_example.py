@@ -110,7 +110,7 @@ simulator.plot.show('scene', time=2.)
 # Show movie of some signal
 simulator.plot.show_movie('scene', repeat=False)
 # Save a plot as Tikz: you need matplotlib2tikz for this!
-simulator.plot.save('state', name='MySignals')
+simulator.plot.save('state', name='state')
 # Save a movie as multiple Tikz: you need matplotlib2tikz for this!
 simulator.plot.save_movie('input', number_of_frames=4)
 simulator.plot.save_movie('scene', number_of_frames=4, name='holonomic')

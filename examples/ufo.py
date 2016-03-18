@@ -27,10 +27,11 @@ problem.init()
 # create simulator
 simulator = Simulator(problem)
 simulator.plot.set_options({'knots': True})
-simulator.plot.show('scene')
+# simulator.plot.show('scene')
 
 # run it!
 simulator.run()
 
 # show/save some results
-simulator.plot.show_movie('scene', repeat=True)
+# simulator.plot.show_movie('scene', repeat=True)
+simulator.plot.save_movie('scene', name='ufo', number_of_frames=300)
