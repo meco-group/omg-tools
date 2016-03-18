@@ -335,7 +335,9 @@ class Plots:
             number_of_frames = kwargs['number_of_frames']
         else:
             number_of_frames = t.shape[1]-1
+        root = kwargs['root'] if 'root' in kwargs else None
         figurewidth = kwargs['figurewidth'] if 'figurewidth' in kwargs else '8cm'
+        figureheight = kwargs['figureheight'] if 'figureheight' in kwargs else None
         subsample = (t.shape[1]-2)/(number_of_frames-1)
         kwargs['no_update'] = True
         plot = self.show(signal, **kwargs)
@@ -344,25 +346,22 @@ class Plots:
             self.update(k, plots=plot)
             if signal == 'scene':
                 plt.axis('off')
-                path = directory+'/'+name+'_'+str(cnt)+'.tikz'
+            path = directory+'/'+name+'_'+str(cnt)+'.tikz'
+            if figureheight is None:
                 tikz_save(path, figurewidth=figurewidth)
-                self._remove_rubbish(path)
+            else:
+                tikz_save(path, figurewidth=figurewidth, figureheight=figureheight)
+            self._cleanup_rubbish(path, root)
             cnt += 1
 
-    def _remove_rubbish(self, path):
-        # remove rubbish due to bugs in matplotlib2tikz
+    def _cleanup_rubbish(self, path, root=None):
+        # cleanup rubbish due to bugs in matplotlib2tikz
         with open(path, 'r+') as f:
             body = f.read()
-            proceed = True
-            while(proceed):
-                try:
-                    start = body.rindex('\path')
-                    end = body.index(';', start)
-                    body = body.replace(body[start:end+1], '')
-                except ValueError:
-                    proceed = False
+            body = body.replace('fill opacity=0', 'opacity=0')
+            # add root at beginning of tikz file
+            if root is not None:
+                body = '%root=' + root + '\n' + body
             f.seek(0)
             f.truncate()
             f.write(body)
-
-
