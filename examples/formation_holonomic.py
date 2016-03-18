@@ -30,7 +30,7 @@ problem.init()
 
 # create simulator
 simulator = Simulator(problem)
-simulator.plot.set_options({'knots': True, 'prediction': False})
+simulator.plot.set_options({'knots': True})
 simulator.plot.show('scene')
 simulator.plot.show('input')
 
