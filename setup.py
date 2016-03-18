@@ -7,11 +7,11 @@ def read(fname):
 
 
 setup(
-    name="omg-tools",
+    name="OMG-tools",
     version="0.1",
     author="Ruben Van Parys",
     author_email="ruben.vanparys@kuleuven.be",
-    description=('optimal motion generation tools: a user-friendly tool for ' +
+    description=('Optimal Motion Generation tools: a user-friendly tool for ' +
                  'modeling, simulating and embedding of (spline-based) motion ' +
                  'planning problems'),
     license="LGPLv3",

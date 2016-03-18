@@ -1,5 +1,5 @@
-# omg-tools
-optimal motion generation-tools is a software toolbox that facilitates the modeling, simulation and embedding of motion planning problems. Its main goal is to bring several research topics concerning (spline-based) motion planning together into a user-friendly package in order to enlarge its visibility towards the scientific and industrial world.
+# OMG-tools
+Optimal Motion Generation-tools is a software toolbox that facilitates the modeling, simulation and embedding of motion planning problems. Its main goal is to bring several research topics concerning (spline-based) motion planning together into a user-friendly package in order to enlarge its visibility towards the scientific and industrial world.
 
 Any questions can be addressed to the developers: ruben[dot]vanparys[at]kuleuven.be and tim[dot]mercy[at]kuleuven.be.
 
