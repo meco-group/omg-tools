@@ -195,7 +195,7 @@ class Polyhedron3D(Shape3D):
                 np.array([min_xyz[2], max_xyz[2]])]
 
 
-class RegularPolyhedron3D(Polyhedron3D):
+class RegularPrisma(Polyhedron3D):
 
     def __init__(self, radius, height, n_faces):
         # radius of outer circle of surface (the one through the vertices)
