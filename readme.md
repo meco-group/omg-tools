@@ -10,7 +10,7 @@ If these approaches help you with your research, please cite us!
 Any questions can be addressed to the developers: ruben[dot]vanparys[at]kuleuven[dot]be and tim[dot]mercy[at]kuleuven[dot]be.
 
 ## Installation
-OMG-tools is written in Python and uses [CasADi](https://github.com/casadi/casadi/wiki) as a framework for symbolic computations. Furthermore CasADi provides an interface to IPOPT, a software package for large-scale nonlinear optimization. For installation instructions regarding these software packages, the user is referred to the [CasADi installation page](https://github.com/casadi/casadi/wiki/InstallationInstructions). The current implementation of this toolbox relies on CasADi 2.4.
+OMG-tools is written in Python and uses [CasADi](http://casadi.org) as a framework for symbolic computations. Furthermore CasADi provides an interface to IPOPT, a software package for large-scale nonlinear optimization. For installation instructions regarding these software packages, the user is referred to the [CasADi installation page](http://install.casadi.org). The current implementation of this toolbox relies on CasADi 2.4.
 With the toolbox it is possible to save your simulation results in Tikz format. This functionality uses the [matplotlib2tikz](https://github.com/nschloe/matplotlib2tikz) script.
 To install the toolbox itself, run the following command in the root directory of this repository: `sudo python setup.py install`
 
