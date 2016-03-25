@@ -1,8 +1,8 @@
 *.pyc
 *~
-*/movies/*
-*/images/*
-*/export/*
+examples/movies/*
+examples/images/*
+examples/export/*
 .*
 !.gitignore
 jit_tmp.c
