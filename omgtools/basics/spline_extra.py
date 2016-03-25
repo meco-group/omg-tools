@@ -1,5 +1,25 @@
+# This file is part of OMG-tools.
+#
+# OMG-tools -- Optimal Motion Generation-tools
+# Copyright (C) 2016 Ruben Van Parys & Tim Mercy, KU Leuven.
+# All rights reserved.
+#
+# OMG-tools is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 3 of the License, or (at your option) any later version.
+# This software is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+
 from spline import BSpline, BSplineBasis
 from casadi import SX, MX, mul, SXFunction, MXFunction
+from scipy.interpolate import splev
 import numpy as np
 
 
@@ -194,7 +214,8 @@ def shift_knot1_bwd(cfs, basis, t_shift):
 
 def shiftfirstknot_T(basis, t_shift, inverse=False):
     # Create transformation matrix that shift the first (degree+1) knots over
-    # t_shift. With inverse = True, the inverse transformation is also computed.
+    # t_shift. With inverse = True, the inverse transformation is also
+    # computed.
     knots, deg = basis.knots, basis.degree
     N = len(basis)
     if isinstance(t_shift, SX):
@@ -227,6 +248,31 @@ def shiftfirstknot_T(basis, t_shift, inverse=False):
         return T, Tinv
     else:
         return T
+
+
+def concat_splines(segments, segment_times):
+    spl0 = segments[0]
+    knots = [s.basis.knots*segment_times[0] for s in spl0]
+    degree = [s.basis.degree for s in spl0]
+    coeffs = [s.coeffs for s in spl0]
+    for k in range(1, len(segments)):
+        for l, s in enumerate(segments[k]):
+            if s.basis.degree != degree[l]:
+                raise ValueError(
+                    'Splines at index ' + l + 'should have same degree.')
+            knots[l] = np.r_[
+                knots[l], s.basis.knots[degree[l]+1:]*segment_times[k] + knots[l][-1]]
+            coeffs[l] = np.r_[coeffs[l], s.coeffs]
+    bases = [BSplineBasis(knots[l], degree[l])
+             for l in range(len(segments[0]))]
+    return [BSpline(bases[l], coeffs[l]) for l in range(len(segments[0]))]
+
+
+def sample_splines(spline, time):
+    if isinstance(spline, list):
+        return [splev(time, (s.basis.knots, s.coeffs, s.basis.degree)) for s in spline]
+    else:
+        return splev(time, (spline.basis.knots, spline.coeffs, spline.basis.degree))
 
 
 def integral_sqbasis(basis):

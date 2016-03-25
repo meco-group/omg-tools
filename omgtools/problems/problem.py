@@ -1,36 +1,26 @@
-from optilayer import OptiFather, OptiChild
-from fleet import get_fleet_vehicles
-from plots import Plots
+# This file is part of OMG-tools.
+#
+# OMG-tools -- Optimal Motion Generation-tools
+# Copyright (C) 2016 Ruben Van Parys & Tim Mercy, KU Leuven.
+# All rights reserved.
+#
+# OMG-tools is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 3 of the License, or (at your option) any later version.
+# This software is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+
+from ..basics.optilayer import OptiFather, OptiChild
+from ..vehicles.fleet import get_fleet_vehicles
 import time
 import export
-
-
-class Simulator:
-
-    def __init__(self, problem):
-        self.problem = problem
-        self.environment = problem.environment
-        self.plot = Plots(problem.fleet, problem.environment)
-
-    def run(self):
-        current_time = 0.
-        self.problem.initialize()
-        stop = False
-        while not stop:
-            stop = self.update(current_time)
-            current_time += self.problem.options['update_time']
-        self.problem.final()
-
-    def update(self, current_time):
-        # solve problem
-        self.problem.solve(current_time)
-        # update vehicle(s) and environment
-        self.problem.update_vehicles(current_time, self.problem.options['update_time'])
-        self.environment.update(current_time, self.problem.options['update_time'])
-        self.plot.update()
-        # check termination criteria
-        stop = self.problem.stop_criterium()
-        return stop
 
 
 class Problem(OptiChild):
@@ -39,11 +29,9 @@ class Problem(OptiChild):
         OptiChild.__init__(self, label)
         self.fleet, self.vehicles = get_fleet_vehicles(fleet)
         self.environment = environment
-        self.environment.add_vehicle(self.vehicles)
         self.set_default_options()
         self.set_options(options)
         self.iteration = 0
-        self.current_time = 0.0
         self.update_times = []
 
     # ========================================================================
@@ -73,14 +61,15 @@ class Problem(OptiChild):
 
     def init(self):
         children = [vehicle for vehicle in self.vehicles]
-        children.extend([self.environment, self])
+        children += [obstacle for obstacle in self.environment.obstacles]
+        children += [self, self.environment]
         self.father = OptiFather(children)
-        self.problem, compile_time = self.father.construct_problem(self.options)
+        self.problem, compile_time = self.father.construct_problem(
+            self.options)
         self.father.init_transformations(self.init_primal_transform,
                                          self.init_dual_transform)
 
     def solve(self, current_time):
-        self.current_time = current_time
         self.init_step(current_time)
         # set initial guess, parameters, lb & ub
         var = self.father.get_variables()
@@ -106,17 +95,11 @@ class Problem(OptiChild):
         self.update_times.append(t_upd)
 
     # ========================================================================
-    # Methods encouraged to override (very basic implementation)
+    # Methods encouraged to override
     # ========================================================================
 
     def init_step(self, current_time):
         pass
-
-    def init_variables(self):
-        return {}
-
-    def set_parameters(self, time):
-        return {}
 
     def final(self):
         pass
@@ -130,11 +113,14 @@ class Problem(OptiChild):
     def init_dual_transform(self, basis):
         return None
 
+    def set_parameters(self, time):
+        return {}
+
     # ========================================================================
-    # Methods required to override (no general implementation possible)
+    # Methods required to override
     # ========================================================================
 
-    def update_vehicles(self, current_time, update_time):
+    def update(self, current_time):
         raise NotImplementedError('Please implement this method!')
 
     def stop_criterium(self):
