@@ -159,7 +159,10 @@ class Plots:
         vehicles = plot['vehicles']
         figure = plt.figure()
         axis = figure.add_subplot(111)
-        canvas_lim = self.environment.get_canvas_limits()
+        if 'limits' in plot['kwargs']:
+            canvas_lim = plot['kwargs']['limits']
+        else:
+            canvas_lim = self.environment.get_canvas_limits()
         plt.xlim(canvas_lim[0][0], canvas_lim[0][1])
         plt.ylim(canvas_lim[1][0], canvas_lim[1][1])
         plt_2d = {}
@@ -177,7 +180,10 @@ class Plots:
         vehicles = plot['vehicles']
         figure = plt.figure()
         axis = figure.add_subplot(111, projection='3d')
-        canvas_lim = self.environment.get_canvas_limits()
+        if 'limits' in plot['kwargs']:
+            canvas_lim = plot['kwargs']['limits']
+        else:
+            canvas_lim = self.environment.get_canvas_limits()
         axis.set_xlim(canvas_lim[0][0], canvas_lim[0][1])
         axis.set_ylim(canvas_lim[1][0], canvas_lim[1][1])
         axis.set_zlim(canvas_lim[2][0], canvas_lim[2][1])
