@@ -62,7 +62,7 @@ class Vehicle(OptiChild):
                         'sample_time': 0.01, 'knot_intervals': 10,
                         'ideal_prediction': False, 'ideal_update': False,
                         '1storder_delay': False, 'time_constant': 0.1,
-                        'input_disturbance': None}
+                        'input_disturbance': None, 'room_constraint': 'simple'}
 
     def set_options(self, options):
         self.options.update(options)
@@ -110,12 +110,13 @@ class Vehicle(OptiChild):
                         con += (-b+rad[l]+safety_distance-eps)*(1+tg_ha**2)
                         self.define_constraint(con, -inf, 0)
             # room constraints
-            for chck in checkpoints:
-                for k in range(2):
-                    self.define_constraint(-
-                                           (chck[k]+position[k]) + room_lim[k][0], -inf, 0.)
-                    self.define_constraint(
-                        (chck[k]+position[k]) - room_lim[k][1], -inf, 0.)
+            if self.options['room_constraint'] == 'simple':
+                for chck in checkpoints:
+                    for k in range(2):
+                        self.define_constraint(-
+                                               (chck[k]+position[k]) + room_lim[k][0], -inf, 0.)
+                        self.define_constraint(
+                            (chck[k]+position[k]) - room_lim[k][1], -inf, 0.)
 
     def define_collision_constraints_3d(self, hyperplanes, room_lim, position):
         # orientation for 3d not yet implemented!
@@ -146,12 +147,13 @@ class Vehicle(OptiChild):
                         self.define_constraint(
                             sum([a[k]*(chck[k]+position[k]) for k in range(3)])-b+rad[l], -inf, 0)
             # room constraints
-            for chck in checkpoints:
-                for k in range(3):
-                    self.define_constraint(-
-                                           (chck[k]+position[k]) + room_lim[k][0], -inf, 0.)
-                    self.define_constraint(
-                        (chck[k]+position[k]) - room_lim[k][1], -inf, 0.)
+            if self.options['room_constraint'] == 'simple':
+                for chck in checkpoints:
+                    for k in range(3):
+                        self.define_constraint(-
+                                               (chck[k]+position[k]) + room_lim[k][0], -inf, 0.)
+                        self.define_constraint(
+                            (chck[k]+position[k]) - room_lim[k][1], -inf, 0.)
 
     # ========================================================================
     # Simulation and prediction related functions
