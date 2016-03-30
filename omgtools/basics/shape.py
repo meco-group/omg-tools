@@ -79,6 +79,8 @@ class Polyhedron(Shape2D):
         self.orientation = orientation
         self.plt_co = self.rotate(orientation, self.plt_co)
         self.vertices = self.rotate(orientation, self.vertices)
+        # give small radius to account for anti-collision between two polyhedra
+        self.radius = 1e-3
 
     def _prepare_draw(self):
         self.plt_co = np.hstack(
@@ -90,8 +92,7 @@ class Polyhedron(Shape2D):
     def get_checkpoints(self):
         chck = [[self.vertices[0, l], self.vertices[1, l]]
                 for l in range(self.n_vert)]
-        # give small radius to account for anti-collision between two polyhedra
-        rad = [1e-3 for l in range(self.n_vert)]
+        rad = [self.radius for l in range(self.n_vert)]
         return chck, rad
 
     def get_canvas_limits(self):
@@ -197,13 +198,13 @@ class Polyhedron3D(Shape3D):
     def __init__(self, vertices):
         self.vertices = vertices
         self.n_vert = vertices.shape[1]
+        self.radius = 1e-3
         Shape3D.__init__(self)
 
     def get_checkpoints(self):
         chck = [[self.vertices[0, l], self.vertices[1, l], self.vertices[2, l]]
                 for l in range(self.n_vert)]
-        # give small radius to account for anti-collision between two polyhedra
-        rad = [1e-3 for l in range(self.n_vert)]
+        rad = [self.radius for l in range(self.n_vert)]
         return chck, rad
 
     def get_canvas_limits(self):
