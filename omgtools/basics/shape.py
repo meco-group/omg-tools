@@ -252,10 +252,10 @@ class RegularPrisma(Polyhedron3D):
 
 class Cuboid(Polyhedron3D):
 
-    def __init__(self, width, height, depth):
+    def __init__(self, width, depth, height):
         self.width = width
-        self.height = height
         self.depth = depth
+        self.height = height
         Polyhedron3D.__init__(self, self.getVertices())
 
     def _prepare_draw(self):

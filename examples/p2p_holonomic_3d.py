@@ -19,7 +19,7 @@
 from omgtools import *
 
 # create vehicle
-vehicle = Holonomic3D(Cuboid(width=0.5, height=0.2, depth=1.))
+vehicle = Holonomic3D(Cuboid(width=0.5, depth=1., height=0.2))
 
 vehicle.set_initial_conditions([-2., -2., -2])
 vehicle.set_terminal_conditions([2., 2., -2])
