@@ -100,8 +100,7 @@ class Environment(OptiChild):
 
     def update(self, update_time):
         for obstacle in self.obstacles:
-            # obstacle.update(update_time, self.sample_time)
-            obstacle.update(update_time, 0.01)
+            obstacle.update(update_time, self.sample_time)
 
     def draw(self, t=-1):
         draw = []
@@ -193,7 +192,7 @@ class Obstacle(OptiChild):
                     if np.round(time - self.traj_times[key][self.index[key]], 3) >= 0:
                         t = self.traj_times[key][self.index[key]]
                         increment[key] = self.trajectories[key][t]
-                        t1[key] = t - time + update_time
+                        t1[key] = sample_time - (time - t)
                         t2[key] = time - t
                         self.index[key] += 1
             pos0 = self.signals['position'][:, -1]
