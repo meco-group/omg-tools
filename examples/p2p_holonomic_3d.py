@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
-
 from omgtools import *
 
 # create vehicle
@@ -41,7 +40,7 @@ problem.init()
 # create simulator
 simulator = Simulator(problem)
 simulator.plot.set_options({'knots': True, 'prediction': False})
-simulator.plot.show('scene')
+simulator.plot.show('scene', view=[45, -45]) # elevation and azimuth of cam
 simulator.plot.show('state')
 simulator.plot.show('input')
 

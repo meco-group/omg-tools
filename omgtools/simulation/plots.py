@@ -181,6 +181,9 @@ class Plots:
         axis.set_xlim(canvas_lim[0][0], canvas_lim[0][1])
         axis.set_ylim(canvas_lim[1][0], canvas_lim[1][1])
         axis.set_zlim(canvas_lim[2][0], canvas_lim[2][1])
+        if 'view' in plot['kwargs']:
+            elevation, azimuth = plot['kwargs']['view']
+            axis.view_init(elev = elevation, azim = azimuth)
         plt_3d = {}
         plt_3d['environment'] = [[axis.plot(
             [], [], [], 'k-')[0] for line in obst.draw()] for obst in self.environment.obstacles]

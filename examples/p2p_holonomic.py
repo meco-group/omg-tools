@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
-
 from omgtools import *
 
 # create vehicle
@@ -50,9 +49,8 @@ simulator.plot.show('input')
 
 # run it!
 simulator.run()
-# simulator.plot.show('a', time=4)
 
-# # show/save some results
+# show/save some results
 simulator.plot.show_movie('scene', repeat=True)
 # simulator.plot.save_movie('input', number_of_frames=4)
 # simulator.plot.save('a', time=3)
