@@ -124,9 +124,13 @@ class FixedTPoint2point(Point2pointProblem):
     #     T = shiftoverknot_T(basis)
     #     return B.dot(T).dot(Binv)
 
-    def update(self, current_time):
+    def update(self, current_time, full_update=False):
         self.compute_partial_objective(current_time)
-        update_time = self.options['update_time']
+        horizon_time = self.options['horizon_time']
+        if full_update:
+            update_time = horizon_time
+        else:
+            update_time = self.options['update_time']
         # update vehicles
         for vehicle in self.vehicles:
             # y_coeffs represents coefficients of a spline, for which a part of
@@ -135,7 +139,6 @@ class FixedTPoint2point(Point2pointProblem):
             # way, only the future, relevant, part will be saved/plotted.
             rel_current_time = np.round(current_time, 6) % self.knot_time
             sample_time = vehicle.options['sample_time']
-            horizon_time = self.options['horizon_time']
             n_samp = int(
                 round((horizon_time-rel_current_time)/sample_time, 3)) + 1
             time_axis = np.linspace(rel_current_time, horizon_time, n_samp)
@@ -197,12 +200,15 @@ class FreeTPoint2point(Point2pointProblem):
         parameters['t'] = 0
         return parameters
 
-    def update(self, current_time):
+    def update(self, current_time, full_update=False):
         self.compute_partial_objective(current_time)
-        update_time = self.options['update_time']
+        horizon_time = self.get_variable('T', solution=True)[0][0]
+        if full_update:
+            update_time = horizon_time
+        else:
+            update_time = self.options['update_time']
         # update vehicles
         for vehicle in self.vehicles:
-            horizon_time = self.get_variable('T', solution=True)[0][0]
             if horizon_time < update_time:
                 update_time = horizon_time
             vehicle.update(current_time, update_time, horizon_time)
