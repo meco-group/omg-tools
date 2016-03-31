@@ -77,7 +77,7 @@ class Circle(Shape2D):
 
 class Polyhedron(Shape2D):
 
-    def __init__(self, vertices, orientation=0.):
+    def __init__(self, vertices, orientation=0., radius=1e-3):
         self.vertices = vertices
         self.n_vert = vertices.shape[1]
         Shape2D.__init__(self)
@@ -85,8 +85,9 @@ class Polyhedron(Shape2D):
         self.plt_lines = [self.rotate(orientation, line)
                           for line in self.plt_lines]
         self.vertices = self.rotate(orientation, self.vertices)
-        # give small radius to account for anti-collision between two polyhedra
-        self.radius = 1e-3
+        # radius should be greater than zero for obstacle avoidance between
+        # 2 polyhedra
+        self.radius = radius
 
     def _prepare_draw(self):
         self.plt_lines = self.get_sides(self.vertices)
@@ -113,9 +114,9 @@ class RegularPolyhedron(Polyhedron):
         # radius of outer circle (the one through the vertices)
         self.radius = radius
         self.n_vert = n_vert
-        Polyhedron.__init__(self, self.getVertices(), orientation)
+        Polyhedron.__init__(self, self.get_vertices(), orientation)
 
-    def getVertices(self):
+    def get_vertices(self):
         A = np.zeros((self.n_vert, 2))
         B = np.zeros((self.n_vert, 1))
         dth = (2*np.pi)/self.n_vert
@@ -141,9 +142,9 @@ class Rectangle(Polyhedron):
     def __init__(self, width, height, orientation=0.):
         self.width = width
         self.height = height
-        Polyhedron.__init__(self, self.getVertices(), orientation)
+        Polyhedron.__init__(self, self.get_vertices(), orientation)
 
-    def getVertices(self):
+    def get_vertices(self):
         A = np.zeros((4, 2))
         B = np.zeros((4, 1))
         radius = [0.5*self.height, 0.5*self.width,
@@ -202,10 +203,10 @@ class Shape3D(Shape):
 
 class Polyhedron3D(Shape3D):
 
-    def __init__(self, vertices):
+    def __init__(self, vertices, radius=1e-3):
         self.vertices = vertices
         self.n_vert = vertices.shape[1]
-        self.radius = 1e-3
+        self.radius = radius
         Shape3D.__init__(self)
 
     def get_checkpoints(self):
@@ -228,7 +229,7 @@ class RegularPrisma(Polyhedron3D):
         # radius of outer circle of surface (the one through the vertices)
         self.radius = radius
         self.n_faces = n_faces
-        Polyhedron3D.__init__(self, self.getVertices())
+        Polyhedron3D.__init__(self, self.get_vertices())
 
     def get_sides(self, vertices):
         sides = []
@@ -244,7 +245,7 @@ class RegularPrisma(Polyhedron3D):
     def _prepare_draw(self):
         self.plt_lines = self.get_sides(self.vertices)
 
-    def getVertices(self):
+    def get_vertices(self):
         A = np.zeros((self.n_faces, 2))
         B = np.zeros((self.n_faces, 1))
         dth = (2*np.pi)/self.n_faces
@@ -268,7 +269,7 @@ class Cuboid(Polyhedron3D):
         self.width = width
         self.depth = depth
         self.height = height
-        Polyhedron3D.__init__(self, self.getVertices())
+        Polyhedron3D.__init__(self, self.get_vertices())
 
     def get_sides(self, vertices):
         sides = []
@@ -281,7 +282,7 @@ class Cuboid(Polyhedron3D):
     def _prepare_draw(self):
         self.plt_lines = self.get_sides(self.vertices)
 
-    def getVertices(self):
+    def get_vertices(self):
         A = np.zeros((4, 2))
         B = np.zeros((4, 1))
         radius = [0.5*self.depth, 0.5*self.width,
@@ -305,3 +306,18 @@ class Cube(Cuboid):
 
     def __init__(self, side):
         Cuboid.__init__(self, side, side, side)
+
+
+class Plate(Polyhedron3D):
+
+    def __init__(self, shape2d, height):
+        self.shape2d = shape2d
+        vertices = np.r_[shape2d.vertices, np.zeros((1, shape2d.vertices.shape[1]))]
+        Polyhedron3D.__init__(self, vertices, 0.5*height)
+
+    def _prepare_draw(self):
+        lines2d = self.shape2d.plt_lines
+        self.plt_lines = [np.r_[l, np.zeros((1, 2))] for l in lines2d]
+
+    def draw(self, pose=np.zeros(6)):
+        return [np.c_[pose[:3]] + line for line in self.plt_lines]
