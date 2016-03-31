@@ -155,6 +155,27 @@ class Plots:
         return {'figure': figure, 'axis': axis, 'plt_traj': plt_traj,
                 'plt_sign': plt_sign, 'plt_varia': plt_varia, 'size': size}
 
+    # def _init_2d_plot(self, plot):
+    #     vehicles = plot['vehicles']
+    #     figure = plt.figure()
+    #     axis = figure.add_subplot(111)
+    #     if 'limits' in plot['kwargs']:
+    #         canvas_lim = plot['kwargs']['limits']
+    #     else:
+    #         canvas_lim = self.environment.get_canvas_limits()
+    #     plt.xlim(canvas_lim[0][0], canvas_lim[0][1])
+    #     plt.ylim(canvas_lim[1][0], canvas_lim[1][1])
+    #     plt_2d = {}
+    #     plt_2d['environment'] = [
+    #         axis.plot([], [], 'k-')[0] for l in range(self.environment.n_obs)]
+    #     plt_2d['pos_traj'] = [axis.plot(
+    #         [], [], '-', color=self.col_w[veh])[0] for veh in vehicles]
+    #     plt_2d['pos_sign'] = [axis.plot(
+    #         [], [], '-', color=self.col[veh])[0] for veh in vehicles]
+    #     plt_2d['vehicle'] = [[axis.plot(
+    #         [], [], '-', color=self.col[veh])[0] for shape in range(len(veh.draw()))] for veh in vehicles]
+    #     return {'figure': figure, 'axis': axis, 'plt_2d': plt_2d}
+
     def _init_2d_plot(self, plot):
         vehicles = plot['vehicles']
         figure = plt.figure()
@@ -166,14 +187,14 @@ class Plots:
         plt.xlim(canvas_lim[0][0], canvas_lim[0][1])
         plt.ylim(canvas_lim[1][0], canvas_lim[1][1])
         plt_2d = {}
-        plt_2d['environment'] = [
-            axis.plot([], [], 'k-')[0] for l in range(self.environment.n_obs)]
+        plt_2d['environment'] = [[axis.plot(
+            [], [], 'k-')[0] for line in obst.draw()] for obst in self.environment.obstacles]
         plt_2d['pos_traj'] = [axis.plot(
             [], [], '-', color=self.col_w[veh])[0] for veh in vehicles]
         plt_2d['pos_sign'] = [axis.plot(
             [], [], '-', color=self.col[veh])[0] for veh in vehicles]
-        plt_2d['vehicle'] = [[axis.plot(
-            [], [], '-', color=self.col[veh])[0] for shape in range(len(veh.draw()))] for veh in vehicles]
+        plt_2d['vehicle'] = [[[axis.plot([], [], '-', color=self.col[veh])[0]
+                               for line in shape] for shape in veh.draw()] for veh in vehicles]
         return {'figure': figure, 'axis': axis, 'plt_2d': plt_2d}
 
     def _init_3d_plot(self, plot):
@@ -258,26 +279,50 @@ class Plots:
                 ax[i, j].autoscale_view(True, True, True)
         fig.canvas.draw()
 
+    # def _update_2d_plot(self, plot, t=-1):
+    #     plt_2d, vehicles = plot['plt_2d'], plot['vehicles']
+    #     environment = self.environment.draw(t)
+    #     for l, env in enumerate(environment):
+    #         plt_2d['environment'][l].set_data(
+    #             env[0, :].ravel(), env[1, :].ravel())
+    #     for l, veh in enumerate(vehicles):
+    #         if t == -1:
+    #             pos_sign = veh.signals['pose'][:, :]
+    #         else:
+    #             pos_sign = veh.signals['pose'][:, :t+1]
+    #         pos_traj = veh.traj_storage['pose'][t]
+    #         plt_2d['pos_traj'][l].set_data(pos_traj[0, :].ravel(),
+    #                                        pos_traj[1, :].ravel())
+    #         plt_2d['pos_sign'][l].set_data(pos_sign[0, :].ravel(),
+    #                                        pos_sign[1, :].ravel())
+    #         veh_cnt = veh.draw(t)
+    #         for k, cnt in enumerate(veh_cnt):
+    #             plt_2d['vehicle'][l][k].set_data(
+    #                 cnt[0].ravel(), cnt[1].ravel())
+    #     plot['figure'].canvas.draw()
+
     def _update_2d_plot(self, plot, t=-1):
         plt_2d, vehicles = plot['plt_2d'], plot['vehicles']
         environment = self.environment.draw(t)
-        for l, env in enumerate(environment):
-            plt_2d['environment'][l].set_data(
-                env[0, :].ravel(), env[1, :].ravel())
-        for l, veh in enumerate(vehicles):
+        for e, env in enumerate(environment):
+            for l, line in enumerate(env):
+                plt_2d['environment'][e][l].set_data(
+                    line[0, :].ravel(), line[1, :].ravel())
+        for v, veh in enumerate(vehicles):
             if t == -1:
                 pos_sign = veh.signals['pose'][:, :]
             else:
                 pos_sign = veh.signals['pose'][:, :t+1]
             pos_traj = veh.traj_storage['pose'][t]
-            plt_2d['pos_traj'][l].set_data(pos_traj[0, :].ravel(),
+            plt_2d['pos_traj'][v].set_data(pos_traj[0, :].ravel(),
                                            pos_traj[1, :].ravel())
-            plt_2d['pos_sign'][l].set_data(pos_sign[0, :].ravel(),
+            plt_2d['pos_sign'][v].set_data(pos_sign[0, :].ravel(),
                                            pos_sign[1, :].ravel())
             veh_cnt = veh.draw(t)
-            for k, cnt in enumerate(veh_cnt):
-                plt_2d['vehicle'][l][k].set_data(
-                    cnt[0].ravel(), cnt[1].ravel())
+            for s, shape in enumerate(veh_cnt):
+                for l, line in enumerate(shape):
+                    plt_2d['vehicle'][v][s][l].set_data(
+                        line[0, :].ravel(), line[1, :].ravel())
         plot['figure'].canvas.draw()
 
     def _update_3d_plot(self, plot, t=-1):

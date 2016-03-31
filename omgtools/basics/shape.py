@@ -47,7 +47,11 @@ class Shape2D(Shape):
         return rot.dot(coordinate)
 
     def draw(self, pose=np.zeros(2)):
-        return np.c_[pose[:2]] + self.plt_co
+        return [np.c_[pose[:2]] + line for line in self.plt_lines]
+
+    def get_sides(self, vertices):
+        n_vert = vertices.shape[1]
+        return [np.c_[vertices[:, l], vertices[:, (l+1) % n_vert]] for l in range(n_vert)]
 
 
 class Circle(Shape2D):
@@ -59,8 +63,9 @@ class Circle(Shape2D):
 
     def _prepare_draw(self):
         s = np.linspace(0, 1, 50)
-        self.plt_co = np.vstack(
+        points = np.vstack(
             (self.radius*np.cos(s*2*np.pi), self.radius*np.sin(s*2*np.pi)))
+        self.plt_lines = self.get_sides(points)
 
     def get_checkpoints(self):
         return [[0., 0.]], [self.radius]
@@ -77,17 +82,17 @@ class Polyhedron(Shape2D):
         self.n_vert = vertices.shape[1]
         Shape2D.__init__(self)
         self.orientation = orientation
-        self.plt_co = self.rotate(orientation, self.plt_co)
+        self.plt_lines = [self.rotate(orientation, line)
+                          for line in self.plt_lines]
         self.vertices = self.rotate(orientation, self.vertices)
         # give small radius to account for anti-collision between two polyhedra
         self.radius = 1e-3
 
     def _prepare_draw(self):
-        self.plt_co = np.hstack(
-            (self.vertices, np.vstack(self.vertices[:, 0])))
+        self.plt_lines = self.get_sides(self.vertices)
 
     def draw(self, pose=np.zeros(3)):
-        return np.c_[pose[:2]] + self.rotate(pose[2], self.plt_co)
+        return [np.c_[pose[:2]] + self.rotate(pose[2], line) for line in self.plt_lines]
 
     def get_checkpoints(self):
         chck = [[self.vertices[0, l], self.vertices[1, l]]
@@ -164,9 +169,10 @@ class Rocket(Rectangle):
         w = self.width
         h = self.height
         plt_x = [-0.5*w, -0.25*w, 0.25*w, 0.5*w,
-                 0.5*w, 0.25*w, -0.25*w, -0.5*w]
-        plt_y = [0., 0.25*h, 0.25*h, 0.5*h, -0.5*h, -0.25*h, -0.25*h, 0.]
-        self.plt_co = np.vstack((plt_x, plt_y))
+                 0.5*w, 0.25*w, -0.25*w]
+        plt_y = [0., 0.25*h, 0.25*h, 0.5*h, -0.5*h, -0.25*h, -0.25*h]
+        points = np.vstack((plt_x, plt_y))
+        self.plt_lines = self.get_sides(points)
 
 
 class UFO(Rectangle):
@@ -178,10 +184,11 @@ class UFO(Rectangle):
         w = self.width
         h = self.height
         plt_x = [-0.5*w, -0.2*w, 0.2*w, 0.5*w,
-                 0.2*w, 0.15*w, -0.15*w, -0.2*w, -0.5*w]
+                 0.2*w, 0.15*w, -0.15*w, -0.2*w]
         plt_y = [-0.15*h, -0.5*h, -0.5*h, -0.15*h,
-                 0.2*h, 0.5*h, 0.5*h, 0.2*h, -0.15*h]
-        self.plt_co = np.vstack((plt_x, plt_y))
+                 0.2*h, 0.5*h, 0.5*h, 0.2*h]
+        points = np.vstack((plt_x, plt_y))
+        self.plt_lines = self.get_sides(points)
 
 
 class Shape3D(Shape):
@@ -190,7 +197,7 @@ class Shape3D(Shape):
         Shape.__init__(self, 3)
 
     def draw(self, pose=np.zeros(6)):
-        return [np.c_[pose[:3]] + p for p in self.plt_co]
+        return [np.c_[pose[:3]] + line for line in self.plt_lines]
 
 
 class Polyhedron3D(Shape3D):
@@ -223,15 +230,19 @@ class RegularPrisma(Polyhedron3D):
         self.n_faces = n_faces
         Polyhedron3D.__init__(self, self.getVertices())
 
+    def get_sides(self, vertices):
+        sides = []
+        for l in range(self.n_faces):
+            sides.append(
+                np.c_[vertices[:, l], vertices[:, (l+1) % self.n_faces]])
+            sides.append(np.c_[
+                         vertices[:, l+self.n_faces], vertices[:, (l+1) % self.n_faces + self.n_faces]])
+            sides.append(
+                np.c_[vertices[:, l], self.vertices[:, l + self.n_faces]])
+        return sides
+
     def _prepare_draw(self):
-        self.plt_co = []
-        for l in range(4):
-            self.plt_co.append(
-                np.c_[self.vertices[:, l], self.vertics[:, (l+1) % self.n_faces]])
-            self.plt_co.append(np.c_[self.vertices[
-                               :, l+self.n_faces], self.vertics[:, (l+1) % self.n_faces + self.n_faces]])
-            self.plt_co.append(
-                np.c_[self.vertices[:, l], self.vertics[:, (l+self.n_faces)]])
+        self.plt_lines = self.get_sides(self.vertices)
 
     def getVertices(self):
         A = np.zeros((self.n_faces, 2))
@@ -259,15 +270,16 @@ class Cuboid(Polyhedron3D):
         self.height = height
         Polyhedron3D.__init__(self, self.getVertices())
 
-    def _prepare_draw(self):
-        self.plt_co = []
+    def get_sides(self, vertices):
+        sides = []
         for l in range(4):
-            self.plt_co.append(
-                np.c_[self.vertices[:, l], self.vertices[:, (l+1) % 4]])
-            self.plt_co.append(
-                np.c_[self.vertices[:, l+4], self.vertices[:, (l+1) % 4 + 4]])
-            self.plt_co.append(
-                np.c_[self.vertices[:, l], self.vertices[:, (l+4)]])
+            sides.append(np.c_[vertices[:, l], vertices[:, (l+1) % 4]])
+            sides.append(np.c_[vertices[:, l+4], vertices[:, (l+1) % 4 + 4]])
+            sides.append(np.c_[vertices[:, l], self.vertices[:, l + 4]])
+        return sides
+
+    def _prepare_draw(self):
+        self.plt_lines = self.get_sides(self.vertices)
 
     def getVertices(self):
         A = np.zeros((4, 2))
