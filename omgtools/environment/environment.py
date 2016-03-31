@@ -115,12 +115,20 @@ class Environment(OptiChild):
 
 class Obstacle(OptiChild):
 
-    def __init__(self, initial, shape, trajectories={}):
+    def __init__(self, initial, shape, trajectories={}, **kwargs):
         OptiChild.__init__(self, 'obstacle')
         self.shape = shape
         self.n_dim = shape.n_dim
         self.basis = BSplineBasis([0, 0, 0, 1, 1, 1], 2)
         self.initial = initial
+        if 'draw' in kwargs:
+            self.draw_obstacle = kwargs['draw']
+        else:
+            self.draw_obstacle = True
+        if 'avoid' in kwargs:
+            self.avoid_obstacle = kwargs['avoid']
+        else:
+            self.avoid_obstacle = True
 
         # initialize trajectories
         self.trajectories = trajectories
@@ -218,6 +226,8 @@ class Obstacle(OptiChild):
                 self.signals['acceleration'], acceleration]
 
     def draw(self, t=-1):
+        if not self.draw_obstacle:
+            return []
         pose = np.zeros(2*self.n_dim)
         pose[:self.n_dim] = self.signals['position'][:, t]
         return self.shape.draw(pose)
