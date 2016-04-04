@@ -39,7 +39,7 @@ class Vehicle{
         std::vector<double> predicted_input;
         std::vector<std::vector<double>> state_trajectory;
         std::vector<std::vector<double>> input_trajectory;
-        std::vector<std::vector<double>>* derivative_T;
+        std::vector<std::vector<std::vector<double>>> derivative_T;
 
         void integrate(std::vector<double>& state0, std::vector<std::vector<double>>& input, std::vector<double>& stateT, double sample_time, int steps);
         double evalSpline(double x, std::vector<double>& knots, std::vector<double>& coeffs, int degree);
@@ -62,7 +62,6 @@ class Vehicle{
 
         Vehicle(int n_st, int n_in, int n_spl, int degree, int knot_intervals);
         Vehicle(int n_st, int n_in, int n_spl, int degree);
-        ~Vehicle();
 
         void predict(std::vector<double>& state0, std::vector<std::vector<double>>& state_trajectory, std::vector<std::vector<double>>& input_trajectory, double predict_time, double sample_time, int predict_shift);
         void setKnotHorizon(double horizon_time);

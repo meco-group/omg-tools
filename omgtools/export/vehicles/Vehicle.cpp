@@ -24,32 +24,28 @@ using namespace std;
 namespace omg{
 
 Vehicle::Vehicle(int n_st, int n_in, int n_spl, int degree, int knot_intervals):
-ideal_prediction(false), predicted_state(n_st), predicted_input(n_in),
-derivative_T(new vector<vector<double>>[degree+1]){
+ideal_prediction(false), predicted_state(n_st), predicted_input(n_in){
     this->n_st = n_st;
     this->n_in = n_in;
     this->n_spl = n_spl;
     this->degree = degree;
-    this->len_basis = this->knots.size() - this->degree - 1;
-    this->knot_intervals = knot_intervals;
     vector<double> knots(knot_intervals + 1 + 2*degree);
+    this->knot_intervals = knot_intervals;
+    this->len_basis = knots.size() - this->degree - 1;
     for (int d=0; d<degree; d++){
         knots[d] = 0.0;
         knots[d+knot_intervals+degree+1] = 1.0;
     }
     for (int j=0; j<knot_intervals+1; j++){
-        knots[degree+j] = j/knot_intervals;
+        knots[degree+j] = double(j)/knot_intervals;
     }
     this->knots = knots;
+    this->derivative_T.resize(degree+1);
     createDerivativeMatrices();
 }
 
 Vehicle::Vehicle(int n_st, int n_in, int n_spl, int degree):Vehicle(n_st, n_in, n_spl, degree, 10){
 
-}
-
-Vehicle::~Vehicle(){
-    delete[] derivative_T;
 }
 
 void Vehicle::getPrediction(vector<double>& state, vector<double>& input){
@@ -130,33 +126,30 @@ void Vehicle::sampleSplines(vector<vector<double>>& spline_coeffs, vector<double
 }
 
 void Vehicle::createDerivativeMatrices(){
-    // NEED CHECK?DEBUG
-    vector<vector<double>> derT(len_basis);
+    vector<vector<double>> derT(len_basis, vector<double>(len_basis));
     for (int j=0; j<len_basis; j++){
         derT[j][j] = 1.;
     }
     derivative_T[0] = derT;
-    vector<double> knots(this->knots.size()-2);
     double delta_knots;
-    for (int j=0; j<knots.size(); j++){
-        knots[j] = this->knots[j+1];
-    }
-    for (int i=1; i<degree+1; i++){
-        derT.resize(len_basis-1-i, vector<double>(len_basis-i));
+    for (int i=0; i<degree; i++){
+        vector<double> knots(this->knots.begin()+i+1, this->knots.end()-i-1);
+        derT.clear();
+        derT.resize(len_basis-1-i, vector<double>(len_basis));
         vector<vector<double>> T(len_basis-1-i, vector<double>(len_basis-i));
         for (int j=0; j<len_basis-1-i; j++){
-            delta_knots = knots[degree-i+j] - knots[j];
+            delta_knots = knots[degree - i + j] - knots[j];
             T[j][j] = -1./delta_knots;
             T[j][j+1] = 1./delta_knots;
         }
         for (int l=0; l<len_basis-1-i; l++){
-            for (int m=0; m<len_basis-i; m++){
+            for (int m=0; m<len_basis; m++){
                 for (int k=0; k<len_basis-i; k++){
-                    derT[l][m] += (degree-i)*T[l][k]*derivative_T[i-1][k][m];
+                    derT[l][m] += (degree-i)*T[l][k]*derivative_T[i][k][m];
                 }
             }
         }
-        derivative_T[i] = derT;
+        derivative_T[i+1] = derT;
     }
 }
 
