@@ -41,7 +41,7 @@ problem.init()
 # create simulator
 simulator = Simulator(problem)
 simulator.plot.set_options({'knots': True, 'prediction': False})
-simulator.plot.show('scene', view=[45, -45]) # elevation and azimuth of cam
+simulator.plot.show('scene', view=[45, -45])  # elevation and azimuth of cam
 simulator.plot.show('state')
 simulator.plot.show('input')
 
