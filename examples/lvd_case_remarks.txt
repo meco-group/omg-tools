@@ -1,0 +1,27 @@
+LVD case
+Ruben Van Parys
+------------------
+
+Questions:
+    * pillar position same as leg? changed ypos of pilar from -1700 to -2150
+    * the cover comes very close to the plate's end position (it shares a side)
+
+* Plate:
+    - dimensions (m): 3.0x1.5x0.01
+    - modelled plate as convex hull of 4 corner balls with radius 0.005m
+    - start position mid-point (m): [8.5, -0.75, 0.405]
+    - end position mid-point (m): [1.5, -0.55, 1.015]
+
+* Environment:
+    - constraints on position mid-point plate (m):
+        * y: [-0.95, -0.55]
+        * z: [0.405, /]
+      these limits will avoid collisions with the beam, pillar and cover
+
+    - obstacles:
+        * cuboid (collision avoidance with measure, leg and table):
+            - dimensions (m): 6.95x1.7x1.0
+            - position mid-point (m): [3.475, -0.65, 0.5]
+        * frame (collision avoidance with frame)
+            - dimensions (m): 0.33x3.0x0.9
+            - position mid-point (m): [0.165, 0.0, 1.85]
