@@ -43,3 +43,16 @@ class Simulator:
         # check termination criteria
         stop = self.problem.stop_criterium()
         return stop, current_time
+
+    def run_once(self):
+        # solve problem
+        self.problem.solve(0.)
+        # update everything
+        self.problem.update(0., full_update=True)
+        self.plot.update()
+        self.problem.final()
+        # return trajectories
+        trajectories = {}
+        for vehicle in self.problem.vehicles:
+            trajectories[str(vehicle)] = vehicle.trajectories
+        return trajectories

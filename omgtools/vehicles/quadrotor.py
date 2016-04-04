@@ -66,7 +66,11 @@ class Quadrotor(Vehicle):
     def get_terminal_constraints(self, splines):
         position = self.define_parameter('positionT', 2)
         x, y = splines
-        return [(x, position[0]), (y, position[1])]
+        term_con = [(x, position[0]), (y, position[1])]
+        term_con_der = []
+        for d in range(1, self.degree+1):
+            term_con_der.extend([(x.derivative(d), 0.), (y.derivative(d), 0.)])
+        return [term_con, term_con_der]
 
     def set_initial_conditions(self, position):
         self.prediction['state'] = np.r_[position, np.zeros(3)].T
@@ -140,4 +144,8 @@ class Quadrotor(Vehicle):
         h, rw = 0.2*r, (1./3.)*r
         plt_x = [r, r-2*rw, r-rw, r-rw, -r+rw, -r+rw, -r, -r+2*rw]
         plt_y = [h, h, h, 0, 0, h, h, h]
-        return [np.c_[self.signals['pose'][:2, t]] + rot.dot(np.vstack((plt_x, plt_y)))]
+        points = np.vstack((plt_x, plt_y))
+        n_points = points.shape[1]
+        lines = [np.c_[points[:, l], points[:, l+1]]
+                 for l in range(n_points-1)]
+        return [[np.c_[self.signals['pose'][:2, t]] + rot.dot(line) for line in lines]]

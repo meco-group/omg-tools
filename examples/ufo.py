@@ -35,10 +35,12 @@ fleet.set_terminal_conditions(terminal_positions.tolist())
 # create environment
 environment = Environment(room={'shape': Square(14.), 'position': [5., 5.]})
 trajectory = {'velocity': {1.: [-9, 0.]}}
-environment.add_obstacle(Obstacle({'position': [13, 4.]}, UFO(1.5, 0.6), trajectory))
+environment.add_obstacle(
+    Obstacle({'position': [13, 4.]}, UFO(1.5, 0.6), trajectory))
 
 # create a formation point-to-point problem
-options = {'horizon_time': 5., 'codegen': {'jit': False}, 'admm': {'rho': 0.07}}
+options = {'horizon_time': 5., 'codegen': {
+    'jit': False}, 'admm': {'rho': 0.07}}
 problem = FormationPoint2point(fleet, environment, options=options)
 problem.set_options({'solver': {'linear_solver': 'ma57'}})
 problem.init()
