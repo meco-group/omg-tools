@@ -52,7 +52,11 @@ class Platform(Vehicle):
     def get_terminal_constraints(self, splines):
         position = self.define_parameter('positionT')
         x = splines[0]
-        return [(x, position[0])]
+        term_con = [(x, position[0])]
+        term_con_der = []
+        for d in range(1, self.degree+1):
+            term_con_der.extend([(x.derivative(d), 0.)])
+        return [term_con, term_con_der]
 
     def set_initial_conditions(self, position, input=0.):
         self.prediction['state'] = position

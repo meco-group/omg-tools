@@ -66,7 +66,11 @@ class Quadrotor(Vehicle):
     def get_terminal_constraints(self, splines):
         position = self.define_parameter('positionT', 2)
         x, y = splines
-        return [(x, position[0]), (y, position[1])]
+        term_con = [(x, position[0]), (y, position[1])]
+        term_con_der = []
+        for d in range(1, self.degree+1):
+            term_con_der.extend([(x.derivative(d), 0.), (y.derivative(d), 0.)])
+        return [term_con, term_con_der]
 
     def set_initial_conditions(self, position):
         self.prediction['state'] = np.r_[position, np.zeros(3)].T
