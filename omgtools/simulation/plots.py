@@ -21,6 +21,7 @@ import os
 import matplotlib
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+import warnings
 import numpy as np
 matplotlib.use('TKAgg')
 
@@ -155,31 +156,11 @@ class Plots:
         return {'figure': figure, 'axis': axis, 'plt_traj': plt_traj,
                 'plt_sign': plt_sign, 'plt_varia': plt_varia, 'size': size}
 
-    # def _init_2d_plot(self, plot):
-    #     vehicles = plot['vehicles']
-    #     figure = plt.figure()
-    #     axis = figure.add_subplot(111)
-    #     if 'limits' in plot['kwargs']:
-    #         canvas_lim = plot['kwargs']['limits']
-    #     else:
-    #         canvas_lim = self.environment.get_canvas_limits()
-    #     plt.xlim(canvas_lim[0][0], canvas_lim[0][1])
-    #     plt.ylim(canvas_lim[1][0], canvas_lim[1][1])
-    #     plt_2d = {}
-    #     plt_2d['environment'] = [
-    #         axis.plot([], [], 'k-')[0] for l in range(self.environment.n_obs)]
-    #     plt_2d['pos_traj'] = [axis.plot(
-    #         [], [], '-', color=self.col_w[veh])[0] for veh in vehicles]
-    #     plt_2d['pos_sign'] = [axis.plot(
-    #         [], [], '-', color=self.col[veh])[0] for veh in vehicles]
-    #     plt_2d['vehicle'] = [[axis.plot(
-    #         [], [], '-', color=self.col[veh])[0] for shape in range(len(veh.draw()))] for veh in vehicles]
-    #     return {'figure': figure, 'axis': axis, 'plt_2d': plt_2d}
-
     def _init_2d_plot(self, plot):
         vehicles = plot['vehicles']
         figure = plt.figure()
         axis = figure.add_subplot(111)
+        # axis.set_aspect('equal')
         if 'limits' in plot['kwargs']:
             canvas_lim = plot['kwargs']['limits']
         else:
@@ -201,6 +182,7 @@ class Plots:
         vehicles = plot['vehicles']
         figure = plt.figure()
         axis = figure.add_subplot(111, projection='3d')
+        axis.set_aspect('equal', adjustable='box')
         if 'limits' in plot['kwargs']:
             canvas_lim = plot['kwargs']['limits']
         else:
@@ -210,7 +192,7 @@ class Plots:
         axis.set_zlim(canvas_lim[2][0], canvas_lim[2][1])
         if 'view' in plot['kwargs']:
             elevation, azimuth = plot['kwargs']['view']
-            axis.view_init(elev = elevation, azim = azimuth)
+            axis.view_init(elev=elevation, azim=azimuth)
         plt_3d = {}
         plt_3d['environment'] = [[axis.plot(
             [], [], [], 'k-')[0] for line in obst.draw()] for obst in self.environment.obstacles]
@@ -278,28 +260,6 @@ class Plots:
                 ax[i, j].relim()
                 ax[i, j].autoscale_view(True, True, True)
         fig.canvas.draw()
-
-    # def _update_2d_plot(self, plot, t=-1):
-    #     plt_2d, vehicles = plot['plt_2d'], plot['vehicles']
-    #     environment = self.environment.draw(t)
-    #     for l, env in enumerate(environment):
-    #         plt_2d['environment'][l].set_data(
-    #             env[0, :].ravel(), env[1, :].ravel())
-    #     for l, veh in enumerate(vehicles):
-    #         if t == -1:
-    #             pos_sign = veh.signals['pose'][:, :]
-    #         else:
-    #             pos_sign = veh.signals['pose'][:, :t+1]
-    #         pos_traj = veh.traj_storage['pose'][t]
-    #         plt_2d['pos_traj'][l].set_data(pos_traj[0, :].ravel(),
-    #                                        pos_traj[1, :].ravel())
-    #         plt_2d['pos_sign'][l].set_data(pos_sign[0, :].ravel(),
-    #                                        pos_sign[1, :].ravel())
-    #         veh_cnt = veh.draw(t)
-    #         for k, cnt in enumerate(veh_cnt):
-    #             plt_2d['vehicle'][l][k].set_data(
-    #                 cnt[0].ravel(), cnt[1].ravel())
-    #     plot['figure'].canvas.draw()
 
     def _update_2d_plot(self, plot, t=-1):
         plt_2d, vehicles = plot['plt_2d'], plot['vehicles']
@@ -372,14 +332,26 @@ class Plots:
         directory = path
         if not os.path.isdir(directory):
             os.makedirs(directory)
-        self.show(signal, **kwargs)
+        plot = self.show(signal, **kwargs)[0]
         if signal == 'scene':
             plt.axis('off')
-        figurewidth = kwargs[
-            'figurewidth'] if 'figurewidth' in kwargs else '8cm'
-        path = directory+'/'+name+'.tikz'
-        tikz_save(path, figurewidth=figurewidth)
-        self._remove_rubbish(path)
+        if plot['type'] == '3d':
+            warnings.warn('3D plotting is not supported by matplotlib2tikz. ' +
+                          'Saving to pdf instead.')
+            path = directory+'/'+name+'.pdf'
+            plt.savefig(path, bbox_inches=0)
+        else:
+            figurewidth = kwargs[
+                'figurewidth'] if 'figurewidth' in kwargs else '8cm'
+            figureheight = kwargs[
+                'figureheight'] if 'figureheight' in kwargs else None
+            path = directory+'/'+name+'.tikz'
+            if figureheight is None:
+                tikz_save(path, figurewidth=figurewidth)
+            else:
+                tikz_save(
+                    path, figurewidth=figurewidth, figureheight=figureheight)
+            self._cleanup_rubbish(path)
 
     def show_movie(self, signal, repeat=False, **kwargs):
         t = self.vehicles[0].signals['time']
@@ -409,22 +381,34 @@ class Plots:
         else:
             number_of_frames = t.shape[1]-1
         root = kwargs['root'] if 'root' in kwargs else None
-        figurewidth = kwargs['figurewidth'] if 'figurewidth' in kwargs else '8cm'
-        figureheight = kwargs['figureheight'] if 'figureheight' in kwargs else None
         subsample = (t.shape[1]-2)/(number_of_frames-1)
         kwargs['no_update'] = True
-        plot = self.show(signal, **kwargs)
+        plots = self.show(signal, **kwargs)
+        if plots[0]['type'] == '3d':
+            print 'ho'
+            warnings.warn('3D plotting is not supported by matplotlib2tikz. ' +
+                          'Saving to pdf instead.')
+        else:
+            figurewidth = kwargs[
+                'figurewidth'] if 'figurewidth' in kwargs else '8cm'
+            figureheight = kwargs[
+                'figureheight'] if 'figureheight' in kwargs else None
         cnt = 0
         for k in range(0, t.shape[1]-1, subsample):
-            self.update(k, plots=plot)
+            self.update(k, plots=plots)
             if signal == 'scene':
                 plt.axis('off')
-            path = directory+'/'+name+'_'+str(cnt)+'.tikz'
-            if figureheight is None:
-                tikz_save(path, figurewidth=figurewidth)
+            if plots[0]['type'] == '3d':
+                path = directory+'/'+name+'_'+str(cnt)+'.pdf'
+                plt.savefig(path, bbox_inches=0)
             else:
-                tikz_save(path, figurewidth=figurewidth, figureheight=figureheight)
-            self._cleanup_rubbish(path, root)
+                path = directory+'/'+name+'_'+str(cnt)+'.tikz'
+                if figureheight is None:
+                    tikz_save(path, figurewidth=figurewidth)
+                else:
+                    tikz_save(
+                        path, figurewidth=figurewidth, figureheight=figureheight)
+                self._cleanup_rubbish(path, root)
             cnt += 1
 
     def _cleanup_rubbish(self, path, root=None):
