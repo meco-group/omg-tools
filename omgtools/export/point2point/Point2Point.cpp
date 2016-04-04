@@ -201,8 +201,8 @@ void Point2Point::setParameters(vector<obstacle_t>& obstacles){
     vehicle->setParameters(par_dict_veh);
     par_dict["vehicle0"] = par_dict_veh;
     if (!freeT){
-        par_dict["p2p0"]["t"] = {current_time};
-        par_dict["p2p0"]["T"] = {fmod(round(current_time*1000.)/1000., horizon_time/(vehicle->getKnotIntervals()))};
+        par_dict["p2p0"]["t"] = {fmod(round(current_time*1000.)/1000., horizon_time/(vehicle->getKnotIntervals()))};
+        par_dict["p2p0"]["T"] = {horizon_time};
     } else{
         par_dict["p2p0"]["t"] = {0.0};
     }
@@ -249,15 +249,15 @@ void Point2Point::retrieveTrajectories(){
 }
 
 
-void Point2Point::getParameterVector(vector<double> par_vect, map<string, map<string, vector<double>>> par_dict){
+void Point2Point::getParameterVector(vector<double>& par_vect, map<string, map<string, vector<double>>>& par_dict){
 @getParameterVector@
 }
 
-void Point2Point::getVariableVector(vector<double> var_vect, map<string, map<string, vector<double>>> var_dict){
+void Point2Point::getVariableVector(vector<double>& var_vect, map<string, map<string, vector<double>>>& var_dict){
 @getVariableVector@
 }
 
-void Point2Point::getVariableDict(vector<double> var_vect, map<string, map<string, vector<double>>> var_dict){
+void Point2Point::getVariableDict(vector<double>& var_vect, map<string, map<string, vector<double>>>& var_dict){
 @getVariableDict@
 }
 

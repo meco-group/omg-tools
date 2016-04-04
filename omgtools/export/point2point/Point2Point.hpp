@@ -70,9 +70,9 @@ class Point2Point{
         void initVariables();
         void updateBounds(double);
         void retrieveTrajectories();
-        void getParameterVector(std::vector<double>, std::map<std::string, std::map<std::string, std::vector<double>>>);
-        void getVariableVector(std::vector<double>, std::map<std::string, std::map<std::string, std::vector<double>>>);
-        void getVariableDict(std::vector<double>, std::map<std::string, std::map<std::string, std::vector<double>>>);
+        void getParameterVector(std::vector<double>&, std::map<std::string, std::map<std::string, std::vector<double>>>&);
+        void getVariableVector(std::vector<double>&, std::map<std::string, std::map<std::string, std::vector<double>>>&);
+        void getVariableDict(std::vector<double>&, std::map<std::string, std::map<std::string, std::vector<double>>>&);
         void transformSplines(double);
 
     public:

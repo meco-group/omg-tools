@@ -30,6 +30,8 @@ int main()
     double update_time = 0.1;
     int trajectory_length = 20;
     omg::Holonomic* vehicle = new omg::Holonomic();
+    // ideal update: prediction of initial state based on spline extrapolation
+    // non-ideal update: prediction based on current state0 and model integration
     vehicle->setIdealPrediction(true);
     omg::Point2Point p2p(vehicle, update_time, sample_time, horizon_time, trajectory_length);
 
@@ -47,22 +49,19 @@ int main()
 
     // obstacles
     vector<omg::obstacle_t> obstacles(p2p.n_obs);
-    obstacles[0].position[0] = 0.5;
-    obstacles[0].position[1] = 2.0;
-    obstacles[0].velocity[0] = 0.0;
-    obstacles[0].velocity[1] = 0.0;
-    obstacles[0].acceleration[0] = 0.0;
-    obstacles[0].acceleration[1] = 0.0;
+    // obstacles[0].position[0] = 0.5;
+    // obstacles[0].position[1] = 2.0;
+    // obstacles[0].velocity[0] = 0.0;
+    // obstacles[0].velocity[1] = 0.0;
+    // obstacles[0].acceleration[0] = 0.0;
+    // obstacles[0].acceleration[1] = 0.0;
 
-    obstacles[1].position[0] = 4.2;
-    obstacles[1].position[1] = 2.0;
-    obstacles[1].velocity[0] = 0.0;
-    obstacles[1].velocity[1] = 0.0;
-    obstacles[1].acceleration[0] = 0.0;
-    obstacles[1].acceleration[1] = 0.0;
-
-    // ideal update: prediction of initial state based on spline extrapolation
-    // non-ideal update: prediction based on current state0 and model integration
+    // obstacles[1].position[0] = 4.2;
+    // obstacles[1].position[1] = 2.0;
+    // obstacles[1].velocity[0] = 0.0;
+    // obstacles[1].velocity[1] = 0.0;
+    // obstacles[1].acceleration[0] = 0.0;
+    // obstacles[1].acceleration[1] = 0.0;
 
     double time;
     for (int i=0; i<4; i++){
