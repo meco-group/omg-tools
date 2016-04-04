@@ -307,7 +307,10 @@ class Vehicle(OptiChild):
             memory[key].extend([dictionary[key] for k in range(repeat)])
 
     def draw(self, t=-1):
-        return [shape.draw(self.signals['pose'][:, t]) for shape in self.shapes]
+        ret = []
+        for shape in self.shapes:
+            ret += shape.draw(self.signals['pose'][:, t])
+        return ret
 
     # ========================================================================
     # Methods required to override
