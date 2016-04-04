@@ -9,3 +9,4 @@ jit_tmp.c
 build/*
 dist/*
 omg_tools.egg-info/*
+OMG_tools.egg-info/*
