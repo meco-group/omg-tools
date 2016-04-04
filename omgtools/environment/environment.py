@@ -72,23 +72,25 @@ class Environment(OptiChild):
         for k, shape in enumerate(vehicle.shapes):
             hyp_veh[shape] = []
             for l, obstacle in enumerate(self.obstacles):
-                if obstacle not in hyp_obs:
-                    hyp_obs[obstacle] = []
-                degree = 1
-                knots = np.r_[np.zeros(degree),
-                              vehicle.knots[vehicle.degree:-vehicle.degree],
-                              np.ones(degree)]
-                basis = BSplineBasis(knots, degree)
-                a = self.define_spline_variable(
-                    'a'+str(k)+str(l), self.n_dim, basis=basis)
-                b = self.define_spline_variable(
-                    'b'+str(k)+str(l), 1, basis=basis)[0]
-                self.define_constraint(
-                    sum([a[p]*a[p] for p in range(self.n_dim)])-1, -inf, 0.)
-                hyp_veh[shape].append({'a': a, 'b': b})
-                hyp_obs[obstacle].append({'a': a, 'b': b})
+                if obstacle.avoid_obstacle:
+                    if obstacle not in hyp_obs:
+                        hyp_obs[obstacle] = []
+                    degree = 1
+                    knots = np.r_[np.zeros(degree),
+                                  vehicle.knots[vehicle.degree:-vehicle.degree],
+                                  np.ones(degree)]
+                    basis = BSplineBasis(knots, degree)
+                    a = self.define_spline_variable(
+                        'a'+str(k)+str(l), self.n_dim, basis=basis)
+                    b = self.define_spline_variable(
+                        'b'+str(k)+str(l), 1, basis=basis)[0]
+                    self.define_constraint(
+                        sum([a[p]*a[p] for p in range(self.n_dim)])-1, -inf, 0.)
+                    hyp_veh[shape].append({'a': a, 'b': b})
+                    hyp_obs[obstacle].append({'a': a, 'b': b})
         for obstacle in self.obstacles:
-            obstacle.define_collision_constraints(hyp_obs[obstacle])
+            if obstacle.avoid_obstacle:
+                obstacle.define_collision_constraints(hyp_obs[obstacle])
         limits = self.get_canvas_limits()
         for spline in vehicle.splines:
             vehicle.define_collision_constraints(hyp_veh, limits, spline)
@@ -100,8 +102,7 @@ class Environment(OptiChild):
 
     def update(self, update_time):
         for obstacle in self.obstacles:
-            # obstacle.update(update_time, self.sample_time)
-            obstacle.update(update_time, 0.01)
+            obstacle.update(update_time, self.sample_time)
 
     def draw(self, t=-1):
         draw = []
@@ -116,12 +117,20 @@ class Environment(OptiChild):
 
 class Obstacle(OptiChild):
 
-    def __init__(self, initial, shape, trajectories={}):
+    def __init__(self, initial, shape, trajectories={}, **kwargs):
         OptiChild.__init__(self, 'obstacle')
         self.shape = shape
         self.n_dim = shape.n_dim
         self.basis = BSplineBasis([0, 0, 0, 1, 1, 1], 2)
         self.initial = initial
+        if 'draw' in kwargs:
+            self.draw_obstacle = kwargs['draw']
+        else:
+            self.draw_obstacle = True
+        if 'avoid' in kwargs:
+            self.avoid_obstacle = kwargs['avoid']
+        else:
+            self.avoid_obstacle = True
 
         # initialize trajectories
         self.trajectories = trajectories
@@ -193,7 +202,7 @@ class Obstacle(OptiChild):
                     if np.round(time - self.traj_times[key][self.index[key]], 3) >= 0:
                         t = self.traj_times[key][self.index[key]]
                         increment[key] = self.trajectories[key][t]
-                        t1[key] = t - time + update_time
+                        t1[key] = sample_time - (time - t)
                         t2[key] = time - t
                         self.index[key] += 1
             pos0 = self.signals['position'][:, -1]
@@ -219,6 +228,8 @@ class Obstacle(OptiChild):
                 self.signals['acceleration'], acceleration]
 
     def draw(self, t=-1):
+        if not self.draw_obstacle:
+            return []
         pose = np.zeros(2*self.n_dim)
         pose[:self.n_dim] = self.signals['position'][:, t]
         return self.shape.draw(pose)
