@@ -174,8 +174,8 @@ class Plots:
             [], [], '-', color=self.col_w[veh])[0] for veh in vehicles]
         plt_2d['pos_sign'] = [axis.plot(
             [], [], '-', color=self.col[veh])[0] for veh in vehicles]
-        plt_2d['vehicle'] = [[[axis.plot([], [], '-', color=self.col[veh])[0]
-                               for line in shape] for shape in veh.draw()] for veh in vehicles]
+        plt_2d['vehicle'] = [[axis.plot([], [], '-', color=self.col[veh])[0]
+                              for line in veh.draw()] for veh in vehicles]
         return {'figure': figure, 'axis': axis, 'plt_2d': plt_2d}
 
     def _init_3d_plot(self, plot):
@@ -200,8 +200,8 @@ class Plots:
             [], [], [], '-', color=self.col_w[veh])[0] for veh in vehicles]
         plt_3d['pos_sign'] = [axis.plot(
             [], [], [], '-', color=self.col[veh])[0] for veh in vehicles]
-        plt_3d['vehicle'] = [[[axis.plot([], [], [], '-', color=self.col[veh])[0]
-                               for line in shape] for shape in veh.draw()] for veh in vehicles]
+        plt_3d['vehicle'] = [[axis.plot([], [], [], '-', color=self.col[veh])[0]
+                              for line in veh.draw()] for veh in vehicles]
         return {'figure': figure, 'axis': axis, 'plt_3d': plt_3d}
 
     def _sort_vehicles(self, vehicles):
@@ -279,10 +279,9 @@ class Plots:
             plt_2d['pos_sign'][v].set_data(pos_sign[0, :].ravel(),
                                            pos_sign[1, :].ravel())
             veh_cnt = veh.draw(t)
-            for s, shape in enumerate(veh_cnt):
-                for l, line in enumerate(shape):
-                    plt_2d['vehicle'][v][s][l].set_data(
-                        line[0, :].ravel(), line[1, :].ravel())
+            for l, line in enumerate(veh_cnt):
+                plt_2d['vehicle'][v][l].set_data(
+                    line[0, :].ravel(), line[1, :].ravel())
         plot['figure'].canvas.draw()
 
     def _update_3d_plot(self, plot, t=-1):
@@ -307,12 +306,10 @@ class Plots:
                                            pos_sign[1, :].ravel())
             plt_3d['pos_sign'][v].set_3d_properties(pos_sign[2, :].ravel())
             veh_cnt = veh.draw(t)
-            for s, shape in enumerate(veh_cnt):
-                for l, line in enumerate(shape):
-                    plt_3d['vehicle'][v][s][l].set_data(
-                        line[0, :].ravel(), line[1, :].ravel())
-                    plt_3d['vehicle'][v][s][
-                        l].set_3d_properties(line[2, :].ravel())
+            for l, line in enumerate(veh_cnt):
+                plt_3d['vehicle'][v][l].set_data(
+                    line[0, :].ravel(), line[1, :].ravel())
+                plt_3d['vehicle'][v][l].set_3d_properties(line[2, :].ravel())
         plot['figure'].canvas.draw()
 
     # ========================================================================

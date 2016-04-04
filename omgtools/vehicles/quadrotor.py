@@ -148,4 +148,4 @@ class Quadrotor(Vehicle):
         n_points = points.shape[1]
         lines = [np.c_[points[:, l], points[:, l+1]]
                  for l in range(n_points-1)]
-        return [[np.c_[self.signals['pose'][:2, t]] + rot.dot(line) for line in lines]]
+        return [np.c_[self.signals['pose'][:2, t]] + rot.dot(line) for line in lines]
