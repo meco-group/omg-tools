@@ -27,7 +27,7 @@ Build instructions
             * MPLIB: path to directory containing libmp.so
         then you can build your application (suppose application.cpp) with our
         toolbox as follows (eg. with g++):
-            g++ -I$(MPINCL) -std=c++11  -o application -L$(MPLIB) -Wl,-rpath=$(MPLIB) application.cpp
+            g++ -I$(MPINCL) -std=c++11  -o application -L$(MPLIB) -Wl,-rpath=$(MPLIB) -lomg -lcasadi application.cpp
     * You istalled the casadi binary:
         You need to tell the compiler where he can find the header files
         and the libcasadi.so library. These are located respectively in the
@@ -37,7 +37,7 @@ Build instructions
             * CASADILIB: path to casadi casadi/ subfolder
         then you can build your application (suppose application.cpp) with our
         toolbox as follows (eg. with g++):
-            g++ -I$(CASADIINCL) -I$(MPINCL) -std=c++11  -o application -L$(CASADILIB) -L$(MPLIB) -Wl,-rpath=$(MPLIB) application.cpp
+            g++ -I$(CASADIINCL) -I$(MPINCL) -std=c++11  -o application -L$(CASADILIB) -L$(MPLIB) -Wl,-rpath=$(MPLIB) -lomg -lcasadi application.cpp
 
 Example code
 ------------

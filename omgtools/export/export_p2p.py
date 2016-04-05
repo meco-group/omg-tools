@@ -62,9 +62,11 @@ class ExportP2P:
             subdir_files = os.listdir(dir_path)
             for f in subdir_files:
                 if f in no_src:
-                    files[os.path.join(dir_path, f)] = os.path.join(self.options['directory'], f)
+                    files[os.path.join(dir_path, f)] = os.path.join(
+                        self.options['directory'], f)
                 else:
-                    files[os.path.join(dir_path, f)] = os.path.join(self.options['directory'], 'src/', f)
+                    files[os.path.join(dir_path, f)] = os.path.join(
+                        self.options['directory'], 'src/', f)
         self.copy_files(files)
         # create data to fill in in c++ template
         data = {}

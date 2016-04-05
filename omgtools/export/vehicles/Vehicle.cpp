@@ -106,22 +106,22 @@ void Vehicle::integrate(vector<double>& state0, vector<vector<double>>& input, v
     }
 }
 
-void Vehicle::sampleSplines(vector<vector<double>>& spline_coeffs, vector<double> time, int derivative, vector<vector<double>> spline_sampled){
+void Vehicle::sampleSplines(vector<vector<double>>& spline_coeffs, vector<double> time, int derivative, vector<vector<double>>& spline_sampled){
     vector<double> knots(this->knots.begin()+derivative, this->knots.end()-derivative);
     for (int k=0; k<time.size(); k++){
         for (int i=0; i<n_spl; i++){
             vector<double> coeffs(len_basis-derivative);
             for (int l=0; l<len_basis-derivative; l++){
                 for (int m=0; m<len_basis; m++){
-                    coeffs[l] += this->derivative_T[derivative][l][m]*spline_coeffs[i][m];
+                    coeffs[l] += (1.0/pow(horizon_time, derivative))*this->derivative_T[derivative][l][m]*spline_coeffs[i][m];
                 }
             }
-            spline_sampled[k][i] = evalSpline(time[k], knots, coeffs, this->degree - derivative);
+            spline_sampled[k][i] = evalSpline(time[k]/horizon_time, knots, coeffs, this->degree - derivative);
         }
     }
 }
 
-void Vehicle::sampleSplines(vector<vector<double>>& spline_coeffs, vector<double> time, vector<vector<double>> spline_samples){
+void Vehicle::sampleSplines(vector<vector<double>>& spline_coeffs, vector<double> time, vector<vector<double>>& spline_samples){
     sampleSplines(spline_coeffs, time, 0, spline_samples);
 }
 
@@ -187,9 +187,7 @@ double Vehicle::evalSpline(double x, vector<double>& knots, vector<double>& coef
 }
 
 void Vehicle::setKnotHorizon(double horizon_time){
-    for (int i=0; i<knots.size(); i++){
-        knots[i] *= (horizon_time/knots[knots.size()-1]);
-    }
+    this->horizon_time = horizon_time;
 }
 
 void Vehicle::setIdealPrediction(bool ideal_prediction){

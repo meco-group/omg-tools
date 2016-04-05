@@ -81,6 +81,7 @@ class Point2Point{
 
         Point2Point(Vehicle* vehicle, double update_time, double sample_time, double horizon_time);
         Point2Point(Vehicle* vehicle, double update_time, double sample_time, double horizon_time, int trajectory_length);
+        void reset();
         bool update(std::vector<double>&, std::vector<double>&, std::vector<std::vector<double>>&, std::vector<std::vector<double>>&, std::vector<obstacle_t>&);
         bool update(std::vector<double>&, std::vector<double>&, std::vector<std::vector<double>>&, std::vector<std::vector<double>>&, std::vector<obstacle_t>&, int);
     };

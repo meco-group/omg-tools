@@ -86,6 +86,14 @@ void Point2Point::initSplines(){
 @initSplines@
 }
 
+void Point2Point::reset(){
+    for (int k=0; k<input_trajectory.size(); k++){
+        for (int j=0; j<input_trajectory[0].size(); j++){
+            input_trajectory[k][j] = 0.0;
+        }
+    }
+}
+
 bool Point2Point::update(vector<double>& condition0, vector<double>& conditionT, vector<vector<double>>& state_trajectory, vector<vector<double>>& input_trajectory, vector<obstacle_t>& obstacles){
     update(condition0, conditionT, state_trajectory, input_trajectory, obstacles, 0);
 }
@@ -106,14 +114,24 @@ bool Point2Point::update(vector<double>& state0, vector<double>& conditionT, vec
     tmeas = double(end-begin)/CLOCKS_PER_SEC;
     cout << "time in transformSplines: " << tmeas << "s" << endl;
     #endif
-    // predict initial y for problem
+    // set target condition
+    #ifdef DEBUG
+    begin = clock();
+    #endif
+    vehicle->setTerminalConditions(conditionT);
+    #ifdef DEBUG
+    end = clock();
+    tmeas = double(end-begin)/CLOCKS_PER_SEC;
+    cout << "time in setTerminalConditions: " << tmeas << "s" << endl;
+    #endif
+    // predict initial state and input for problem
     #ifdef DEBUG
     begin = clock();
     #endif
     if (fabs(current_time)<=1.e-6){
         vehicle->setInitialConditions(state0);
     } else{
-        vehicle->predict(state0, state_trajectory, input_trajectory, update_time, sample_time, predict_shift);
+        vehicle->predict(state0, this->state_trajectory, this->input_trajectory, update_time, sample_time, predict_shift);
     }
     #ifdef DEBUG
     end = clock();
@@ -225,7 +243,7 @@ void Point2Point::setParameters(vector<obstacle_t>& obstacles){
 void Point2Point::retrieveTrajectories(){
     map<string, map<string, vector<double>>> var_dict;
     getVariableDict(variables, var_dict);
-    vector<double> spline_coeffs_vec(var_dict["vehicle0"]["splines"]);
+    vector<double> spline_coeffs_vec(var_dict["vehicle0"]["splines0"]);
     if (freeT){
         horizon_time = var_dict["p2p0"]["T"][0];
     }
@@ -238,8 +256,8 @@ void Point2Point::retrieveTrajectories(){
             spline_coeffs[k][j] = spline_coeffs_vec[k*len_basis+j];
         }
     }
+    vector<double> time(this->time);
     if (!freeT){
-        vector<double> time(this->time);
         for (int k=0; k<time.size(); k++){
             time[k] += fmod(round(current_time*1000.)/1000., horizon_time/vehicle->getKnotIntervals());
         }

@@ -20,6 +20,7 @@
 #ifndef VEHICLE
 #define VEHICLE
 
+#include <math.h>
 #include <vector>
 #include <map>
 
@@ -34,6 +35,7 @@ class Vehicle{
         int len_basis;
         int knot_intervals;
         bool ideal_prediction;
+        double horizon_time;
         std::vector<double> knots;
         std::vector<double> predicted_state;
         std::vector<double> predicted_input;
@@ -46,8 +48,8 @@ class Vehicle{
         void createDerivativeMatrices();
 
     protected:
-        void sampleSplines(std::vector<std::vector<double>>& spline_coeffs, std::vector<double> time, int derivative, std::vector<std::vector<double>> spline_sampled);
-        void sampleSplines(std::vector<std::vector<double>>& spline_coeffs, std::vector<double> time, std::vector<std::vector<double>> spline_sampled);
+        void sampleSplines(std::vector<std::vector<double>>& spline_coeffs, std::vector<double> time, int derivative, std::vector<std::vector<double>>& spline_sampled);
+        void sampleSplines(std::vector<std::vector<double>>& spline_coeffs, std::vector<double> time, std::vector<std::vector<double>>& spline_sampled);
         void getPrediction(std::vector<double>& state, std::vector<double>& input);
         void setPrediction(std::vector<double>& state, std::vector<double>& input);
 
