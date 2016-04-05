@@ -1,0 +1,22 @@
+env:
+  global:
+    - CASADIVERSION=2.4.3
+
+before_script:
+  - set -e
+  - set -o pipefail  # otherwise, piping with grep discards exit statuses
+
+script:
+  - cd examples && python ufo.py
+
+install:
+  - python setup.py install
+
+before_install:
+  - wget http://sourceforge.net/projects/casadi/files/CasADi/$CASADIVERSION/linux/casadi-py27-np1.9.1-v$CASADIVERSION.tar.gz/download -O casadi-py27-np1.9.1-v$CASADIVERSION.tar.gz
+  - mkdir $HOME/casadi-py27-np1.9.1-v$CASADIVERSION
+  - tar -zxf casadi-py27-np1.9.1-v$CASADIVERSION.tar.gz -C $HOME/casadi-py27-np1.9.1-v$CASADIVERSION
+  - export PYTHONPATH=$PYTHONPATH:$HOME/casadi-py27-np1.9.1-v$CASADIVERSION
+  - sudo apt-get install -y python-numpy python-scipy python-matplotlib
+
+language: python
