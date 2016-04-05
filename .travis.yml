@@ -1,7 +1,10 @@
 env:
   global:
     - CASADIVERSION=2.4.3
-    - MPLBACKEND=Agg # Matplotlib backend; must be headless to run on travis
+    
+# works from matplotlib 1.5 onwards
+#    - MPLBACKEND=Agg # Matplotlib backend; must be headless to run on travis
+  
 
 sudo: required
 dist: trusty
@@ -12,7 +15,8 @@ before_script:
   - set -o pipefail  # otherwise, piping with grep discards exit statuses
 
 script:
-  - cd examples && python ufo.py
+  - cd examples
+  - python tutorial_example.py
 
 install:
   - sudo python setup.py install
@@ -22,5 +26,7 @@ before_install:
   - mkdir $HOME/casadi-py27-np1.9.1-v$CASADIVERSION
   - tar -zxf casadi-py27-np1.9.1-v$CASADIVERSION.tar.gz -C $HOME/casadi-py27-np1.9.1-v$CASADIVERSION
   - sudo apt-get install -y python-numpy python-scipy python-matplotlib
+  - mkdir -p $HOME/.matplotlib/
+  - "echo 'backend : Agg' > $HOME/.matplotlib/matplotlibrc"
   - export PYTHONPATH=$PYTHONPATH:$HOME/casadi-py27-np1.9.1-v$CASADIVERSION
 
