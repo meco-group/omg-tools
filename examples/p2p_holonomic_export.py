@@ -16,27 +16,22 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
-
-import sys
-sys.path.insert(0, '/home/ruben/Documents/Work/Programs/motionplanningtoolbox')
 from omgtools import *
+import os
 
 # create vehicle
-vehicle = Holonomic()
-vehicle.set_options({'safety_distance': 0.1})
+options = {'room_constraint': None}
+vehicle = Holonomic(shapes=Circle(0.1), options=options)
 
-vehicle.set_initial_conditions([-1.5, -1.5])
-vehicle.set_terminal_conditions([2., 2.])
+vehicle.set_initial_conditions([0.0, 0.0])
+vehicle.set_terminal_conditions([4.0, 4.0])
 
 # create environment
 environment = Environment(room={'shape': Square(6.)})
 rectangle = Rectangle(width=3., height=0.2)
 
-# environment.add_obstacle(Obstacle({'position': [-2.1, -0.5]}, shape=rectangle))
-# environment.add_obstacle(Obstacle({'position': [1.7, -0.5]}, shape=rectangle))
-# trajectories = {'velocity': {3: [-0.15, 0.0], 4: [0., 0.15]}}
-# environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
-#                                   trajectories=trajectories))
+environment.add_obstacle(Obstacle({'position': [0.5, 2.0]}, shape=rectangle))
+environment.add_obstacle(Obstacle({'position': [4.2, 2.0]}, shape=rectangle))
 
 # create a point-to-point problem
 problem = Point2point(vehicle, environment, freeT=False)
@@ -44,8 +39,17 @@ problem.set_options({'solver': {'linear_solver': 'ma57'}})
 problem.init()
 
 options = {}
-options['casadiobj'] = '/home/ruben/programs/motionplanningtoolbox/examples/export/bin/'
-options['casadiinc'] = '/home/ruben/Documents/Work/Repositories/casadi_binary/include/'
-options['casadilib'] = '/home/ruben/Documents/Work/Repositories/casadi_binary/casadi/'
-options['sourcefiles'] = 'example.cpp Holonomic.cpp'
+casadi_path = '/home/ruben/Documents/Work/Repositories/casadi_binary'
+options['directory'] = os.path.join(os.getcwd(), 'export/')
+# path to object files of your exported optimization problem
+options['casadiobj'] = os.path.join(options['directory'], 'bin/')
+# your casadi include path
+options['casadiinc'] = os.path.join(casadi_path, 'include/')
+# your casadi library path
+options['casadilib'] = os.path.join(casadi_path, 'casadi/')
+
+# export the problem
 problem.export(options)
+
+# note: you need to implement your vehicle type in c++. Take a look at
+# Holonomic.cpp and Holonomic.hpp which are also exported as an example.

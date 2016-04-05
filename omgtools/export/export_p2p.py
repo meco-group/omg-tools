@@ -42,7 +42,7 @@ class ExportP2P:
         self.options['casadilib'] = '/usr/local/lib/'
         self.options['casadiinc'] = '/usr/local/include/casadi/'
         self.options['casadiobj'] = '.'
-        self.options['sourcefiles'] = ''
+        self.options['sourcefiles'] = 'example.cpp Holonomic.cpp'
         self.options['executable'] = 'Point2Point'
 
     def set_options(self, options):
