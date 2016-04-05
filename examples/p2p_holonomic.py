@@ -16,7 +16,8 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
-
+import sys
+sys.path.insert(0, '/home/ruben/Documents/Work/Programs/motionplanningtoolbox/')
 from omgtools import *
 
 # create vehicle
@@ -40,7 +41,7 @@ environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
 
 # create a point-to-point problem
 problem = Point2point(vehicle, environment, freeT=False)
-problem.set_options({'solver': {'linear_solver': 'ma57'}})
+problem.set_options({'solver': {'ipopt.linear_solver': 'ma57'}})
 problem.init()
 
 # create simulator

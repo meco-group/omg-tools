@@ -16,7 +16,8 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
-
+import sys
+sys.path.insert(0, '/home/ruben/Documents/Work/Programs/motionplanningtoolbox/')
 from omgtools import *
 
 # create fleet
@@ -42,7 +43,7 @@ environment.add_obstacle(
 options = {'horizon_time': 5., 'codegen': {
     'jit': False}, 'admm': {'rho': 0.07}}
 problem = FormationPoint2point(fleet, environment, options=options)
-problem.set_options({'solver': {'linear_solver': 'ma57'}})
+problem.set_options({'solver': {'ipopt.linear_solver': 'ma57'}})
 problem.init()
 
 # create simulator

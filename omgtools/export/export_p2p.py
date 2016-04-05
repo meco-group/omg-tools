@@ -19,7 +19,7 @@
 
 import os
 import shutil
-from casadi import SXFunction, MXFunction, NlpSolver, nlpIn, nlpOut
+from casadi import Function, nlpsol
 
 
 class ExportP2P:
@@ -115,14 +115,14 @@ class ExportP2P:
         var = self.father.problem_description['var']
         par = self.father.problem_description['par']
         opt = self.father.problem_description['opt']
-        nlp = MXFunction('nlp', nlpIn(x=var, p=par), nlpOut(f=obj, g=con))
-        solver = NlpSolver('solver', 'ipopt', nlp, opt['solver'])
+        nlp = {'x': var, 'p': par, 'f': obj, 'g': con}
+        solver = nlpsol('solver', 'ipopt', nlp, opt['solver'])
         grad_f, jac_g = nlp.gradient('x', 'f'), nlp.jacobian('x', 'g')
         hess_lag = solver.hessLag()
         functions = {'nlp': nlp, 'grad_f': grad_f,
                      'jac_g': jac_g, 'hess_lag': hess_lag}
         # sx cast for much faster execution
-        functions = {name: SXFunction(fun) for name, fun in functions.items()}
+        functions = {name: Function(fun) for name, fun in functions.items()}
         cwd = os.getcwd()
         src_files = ''
         for name, fun in functions.items():

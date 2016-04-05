@@ -39,9 +39,11 @@ class Problem(OptiChild):
 
     def set_default_options(self):
         self.options = {'verbose': 2, 'update_time': 0.1}
-        self.options['solver'] = {'tol': 1e-3, 'linear_solver': 'mumps',
-                                  'warm_start_init_point': 'yes',
-                                  'print_level': 0, 'print_time': 0}
+        self.options['solver'] = {'ipopt.tol': 1e-3,
+                                  'ipopt.linear_solver': 'mumps',
+                                  'ipopt.warm_start_init_point': 'yes',
+                                  'ipopt.print_level': 0,
+                                  'print_time': 0, 'expand': True}
         self.options['codegen'] = {
             'jit': False, 'jit_options': {'flags': ['-O0']}}
 
@@ -76,13 +78,13 @@ class Problem(OptiChild):
         lb, ub = self.father.update_bounds(current_time)
         # solve!
         t0 = time.time()
-        self.problem({'x0': var, 'p': par, 'lbg': lb, 'ubg': ub})
+        result = self.problem(x0=var, p=par, lbg=lb, ubg=ub)
         t1 = time.time()
         t_upd = t1-t0
-        self.father.set_variables(self.problem.getOutput('x'))
-        stats = self.problem.getStats()
-        if stats.get("return_status") != "Solve_Succeeded":
-            print stats.get("return_status")
+        self.father.set_variables(result['x'])
+        stats = self.problem.stats()
+        if stats['return_status'] != 'Solve_Succeeded':
+            print stats['return_status']
         # print
         if self.options['verbose'] >= 1:
             self.iteration += 1

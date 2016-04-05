@@ -17,19 +17,14 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-from casadi import MX, inf, MXFunction, nlpIn, nlpOut, NlpSolver, SX
-from casadi import symvar, substitute, SXFunction
+from casadi import MX, inf, Function, nlpsol, SX
+from casadi import symvar, substitute
 from casadi.tools import struct, struct_MX, struct_symMX, entry, struct_symSX
 from spline import BSpline
 from itertools import groupby
 import time
 import numpy as np
 import copy
-
-
-def evalf(fun, x):
-    x = x if isinstance(x, list) else [x]
-    return fun(x)
 
 
 class OptiFather:
@@ -48,7 +43,7 @@ class OptiFather:
 
     def add_to_dict(self, symbol, child, name):
         for sym in symvar(symbol):
-            self.symbol_dict[sym.getName()] = [child, name]
+            self.symbol_dict[sym.name()] = [child, name]
 
     # ========================================================================
     # Problem composition
@@ -149,7 +144,7 @@ class OptiFather:
         if isinstance(expr, (int, float)):
             return expr
         for sym in symvar(expr):
-            [child, name] = self.symbol_dict[sym.getName()]
+            [child, name] = self.symbol_dict[sym.name()]
             if name in child._variables:
                 expr = substitute(expr, sym, variables[child.label, name])
             elif name in child._parameters:
@@ -158,11 +153,11 @@ class OptiFather:
 
     def _evaluate_symbols(self, expression, variables, parameters):
         symbols = symvar(expression)
-        f = MXFunction(symbols, [expression])
+        f = Function(symbols, [expression])
         f.init()
         f_in = []
         for sym in symbols:
-            [child, name] = self.symbol_dict[sym.getName()]
+            [child, name] = self.symbol_dict[sym.name()]
             if name in child._variables:
                 f_in.append(variables[child.label, name])
             elif name in child._parameters:
@@ -181,20 +176,21 @@ class OptiFather:
                 print('[jit compilation with flags %s]' %
                       (','.join(jit['jit_options']['flags']))),
         t0 = time.time()
-        nlp = MXFunction('nlp', nlpIn(x=var, p=par), nlpOut(f=obj, g=con))
-        solver = NlpSolver('solver', 'ipopt', nlp, options['solver'])
-        grad_f, jac_g = nlp.gradient('x', 'f'), nlp.jacobian('x', 'g')
-        hess_lag = solver.hessLag()
-        var, par = struct_symSX(var), struct_symSX(par)
-        nlp = SXFunction('nlp', [var, par], nlp([var, par]), jit)
-        grad_f = SXFunction('grad_f', [var, par], grad_f([var, par]), jit)
-        jac_g = SXFunction('jac_g', [var, par], jac_g([var, par]), jit)
-        lam_f, lam_g = SX.sym('lam_f'), SX.sym('lam_g', con.size)
-        hess_lag = SXFunction('hess_lag', [var, par, lam_f, lam_g],
-                              hess_lag([var, par, lam_f, lam_g]), jit)
-        options['solver'].update({'grad_f': grad_f, 'jac_g': jac_g,
-                                  'hess_lag': hess_lag})
-        problem = NlpSolver('solver', 'ipopt', nlp, options['solver'])
+        nlp = {'x': var, 'p': par, 'f': obj, 'g': con}
+        solver = nlpsol('solver', 'ipopt', nlp, options['solver'])
+        problem = solver
+        # grad_f, jac_g = nlp.gradient('x', 'f'), nlp.jacobian('x', 'g')
+        # hess_lag = solver.hessLag()
+        # var, par = struct_symSX(var), struct_symSX(par)
+        # nlp = Function('nlp', [var, par], nlp([var, par]), jit)
+        # grad_f = Function('grad_f', [var, par], grad_f([var, par]), jit)
+        # jac_g = Function('jac_g', [var, par], jac_g([var, par]), jit)
+        # lam_f, lam_g = SX.sym('lam_f'), SX.sym('lam_g', con.size)
+        # hess_lag = Function('hess_lag', [var, par, lam_f, lam_g],
+        #                       hess_lag([var, par, lam_f, lam_g]), jit)
+        # solver_opt.update({'grad_f': grad_f, 'jac_g': jac_g,
+        #                    'hess_lag': hess_lag})
+        # problem = nlpsol('solver', 'ipopt', nlp, solver_opt)
         t1 = time.time()
         if options['verbose'] >= 2:
             print 'in %5f s' % (t1-t0)
@@ -208,7 +204,7 @@ class OptiFather:
                 print('[jit compilation with flags %s]' %
                       (','.join(jit['jit_options']['flags']))),
         t0 = time.time()
-        fun = SXFunction(name, inp, out, jit)
+        fun = Function(name, inp, out, jit).expand()
         t1 = time.time()
         if options['verbose'] >= 2:
             print 'in %5f s' % (t1-t0)
@@ -259,7 +255,7 @@ class OptiFather:
         elif name is None:
             return self._var_result.prefix(label)
         else:
-            return self._var_result[label, name].toArray()
+            return np.array(self._var_result[label, name])
 
     def get_parameters(self, label=None, name=None):
         if label is None:
@@ -267,7 +263,7 @@ class OptiFather:
         elif name is None:
             return self._par_result.prefix(label)
         else:
-            return self._par_result[label, name].toArray()
+            return np.array(self._par_result[label, name])
 
     def get_constraint(self, label, name):
         return self._evaluate_symbols(self.children[label]._constraints[name][0],
@@ -352,7 +348,7 @@ class OptiChild:
         for sym in symvar(symbol):
             if sym in self.symbol_dict:
                 raise ValueError('Symbol already added for %s' % self.label)
-            self.symbol_dict[sym.getName()] = [self, name]
+            self.symbol_dict[sym.name()] = [self, name]
 
     def _add_label(self, name):
         return name + '_' + self.label

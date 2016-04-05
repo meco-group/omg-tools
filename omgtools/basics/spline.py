@@ -91,8 +91,8 @@ class csr_matrix_alt(csr_matrix):
 
     def dot(self, other):
         if isinstance(other, (cas.MX, cas.SX)):
-            # compatible with casadi 2.4 -- added by ruben
-            return cas.mul(cas.DMatrix(csr_matrix(self)), other)
+            # compatible with casadi 3.0 -- added by ruben
+            return cas.mtimes(cas.DM(csr_matrix(self)), other)
             # NOT COMPATIBLE WITH CASADI 2.4
             # return cas.DMatrix(csr_matrix(self)).mul(other)
         elif get_module(other) in ['cvxpy', 'cvxopt']:

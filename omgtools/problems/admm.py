@@ -21,7 +21,7 @@ from ..basics.optilayer import OptiFather
 from ..basics.spline_extra import shift_knot1_fwd, shift_knot1_bwd, shift_over_knot
 from problem import Problem
 from distributedproblem import DistributedProblem
-from casadi import symvar, mul, SX, MX, DMatrix, MXFunction, reshape
+from casadi import symvar, mtimes, SX, MX, DM, Function, reshape
 from casadi import vertcat, horzcat, jacobian, solve, substitute
 from casadi.tools import struct, struct_symMX, struct_symSX, entry, structure
 import numpy as np
@@ -116,11 +116,11 @@ class ADMM(Problem):
                 x = x_i[child.label][name]
                 z = z_i[child.label, name]
                 l = l_i[child.label, name]
-                obj += mul(l.T, x-z) + 0.5*rho*mul((x-z).T, (x-z))
+                obj += mtimes(l.T, x-z) + 0.5*rho*mtimes((x-z).T, (x-z))
                 for nghb in self.q_ji.keys():
                     z = z_ji[str(nghb), child.label, name]
                     l = l_ji[str(nghb), child.label, name]
-                    obj += mul(l.T, x-z) + 0.5*rho*mul((x-z).T, (x-z))
+                    obj += mtimes(l.T, x-z) + 0.5*rho*mtimes((x-z).T, (x-z))
         self.define_objective(obj)
         # construct problem
         self.father = OptiFather(self.group.values())
@@ -135,17 +135,17 @@ class ADMM(Problem):
         self._lineq_updz, A, b = self._check_for_lineq()
         if not self._lineq_updz:
             self._construct_upd_z_nlp()
-        x_i = struct_symSX(self.q_i_struct)
-        x_j = struct_symSX(self.q_ij_struct)
-        l_i = struct_symSX(self.q_i_struct)
-        l_ij = struct_symSX(self.q_ij_struct)
-        t = SX.sym('t')
-        T = SX.sym('T')
-        rho = SX.sym('rho')
-        par = struct_symSX(self.par_struct)
+        x_i = struct_symMX(self.q_i_struct)
+        x_j = struct_symMX(self.q_ij_struct)
+        l_i = struct_symMX(self.q_i_struct)
+        l_ij = struct_symMX(self.q_ij_struct)
+        t = MX.sym('t')
+        T = MX.sym('T')
+        rho = MX.sym('rho')
+        par = struct_symMX(self.par_struct)
         inp = [x_i.cat, l_i.cat, l_ij.cat, x_j.cat, t, T, rho, par.cat]
         t0 = t/T
-        # put symbols in SX structs (necessary for transformation)
+        # put symbols in MX structs (necessary for transformation)
         x_i = self.q_i_struct(x_i)
         x_j = self.q_ij_struct(x_j)
         l_i = self.q_i_struct(l_i)
@@ -155,15 +155,15 @@ class ADMM(Problem):
         self._transform_spline([x_i, l_i], tf, self.q_i)
         self._transform_spline([x_j, l_ij], tf, self.q_ij)
         # fill in parameters
-        A = A([par])[0]
-        b = b([par])[0]
+        A = A(par.cat)
+        b = b(par.cat)
         # build KKT system
-        E = rho*SX.eye(A.shape[1])
-        l, x = vertcat([l_i.cat, l_ij.cat]), vertcat([x_i.cat, x_j.cat])
+        E = mtimes(rho, MX.eye(A.shape[1]))
+        l, x = vertcat(l_i.cat, l_ij.cat), vertcat(x_i.cat, x_j.cat)
         f = -(l + rho*x)
-        G = vertcat([horzcat([E, A.T]),
-                     horzcat([A, SX.zeros(A.shape[0], A.shape[0])])])
-        h = vertcat([-f, b])
+        G = vertcat(horzcat(E, A.T),
+                    horzcat(A, MX.zeros(A.shape[0], A.shape[0])))
+        h = vertcat(-f, b)
         z = solve(G, h)
         l_qi = self.q_i_struct.shape[0]
         l_qij = self.q_ij_struct.shape[0]
@@ -208,8 +208,8 @@ class ADMM(Problem):
             c = con[0]
             for sym in symvar(c):
                 for label, child in self.group.items():
-                    if sym.getName() in child.symbol_dict:
-                        name = child.symbol_dict[sym.getName()][1]
+                    if sym.name() in child.symbol_dict:
+                        name = child.symbol_dict[sym.name()][1]
                         v = z_i[label, name]
                         ind = self.q_i[child][name]
                         sym2 = MX.zeros(sym.size())
@@ -219,8 +219,8 @@ class ADMM(Problem):
                         break
                 for nghb in self.q_ij.keys():
                     for label, child in nghb.group.items():
-                        if sym.getName() in child.symbol_dict:
-                            name = child.symbol_dict[sym.getName()][1]
+                        if sym.name() in child.symbol_dict:
+                            name = child.symbol_dict[sym.name()][1]
                             v = z_ij[nghb.label, label, name]
                             ind = self.q_ij[nghb][child][name]
                             sym2 = MX.zeros(sym.size())
@@ -229,7 +229,7 @@ class ADMM(Problem):
                             c = substitute(c, sym, sym2)
                             break
                 for name, s in self.par_i.items():
-                    if s.getName() == sym.getName():
+                    if s.name() == sym.name():
                         c = substitute(c, sym, par['par', name])
             constraints.append(c)
             lb.append(con[1])
@@ -242,14 +242,14 @@ class ADMM(Problem):
                 x = x_i[child.label, name]
                 z = z_i[child.label, name]
                 l = l_i[child.label, name]
-                obj += mul(l.T, x-z) + 0.5*rho*mul((x-z).T, (x-z))
+                obj += mtimes(l.T, x-z) + 0.5*rho*mtimes((x-z).T, (x-z))
         for nghb in self.q_ij.keys():
             for child, q_ij in self.q_ij[nghb].items():
                 for name in q_ij.keys():
                     x = x_j[str(nghb), child.label, name]
                     z = z_ij[str(nghb), child.label, name]
                     l = l_ij[str(nghb), child.label, name]
-                    obj += mul(l.T, x-z) + 0.5*rho*mul((x-z).T, (x-z))
+                    obj += mtimes(l.T, x-z) + 0.5*rho*mtimes((x-z).T, (x-z))
         # construct problem
         prob, compile_time = self.father.create_nlp(var, par, obj,
                                                     constraints, self.options)
@@ -257,18 +257,18 @@ class ADMM(Problem):
 
     def construct_upd_l(self):
         # create parameters
-        x_i = struct_symSX(self.q_i_struct)
-        z_i = struct_symSX(self.q_i_struct)
-        z_ij = struct_symSX(self.q_ij_struct)
-        l_i = struct_symSX(self.q_i_struct)
-        l_ij = struct_symSX(self.q_ij_struct)
-        x_j = struct_symSX(self.q_ij_struct)
-        t = SX.sym('t')
-        T = SX.sym('T')
-        rho = SX.sym('rho')
+        x_i = struct_symMX(self.q_i_struct)
+        z_i = struct_symMX(self.q_i_struct)
+        z_ij = struct_symMX(self.q_ij_struct)
+        l_i = struct_symMX(self.q_i_struct)
+        l_ij = struct_symMX(self.q_ij_struct)
+        x_j = struct_symMX(self.q_ij_struct)
+        t = MX.sym('t')
+        T = MX.sym('T')
+        rho = MX.sym('rho')
         t0 = t/T
         inp = [x_i, z_i, z_ij, l_i, l_ij, x_j, t, T, rho]
-        # put symbols in SX structs (necessary for transformation)
+        # put symbols in MX structs (necessary for transformation)
         x_i = self.q_i_struct(x_i)
         z_i = self.q_i_struct(z_i)
         z_ij = self.q_ij_struct(z_ij)
@@ -325,7 +325,7 @@ class ADMM(Problem):
                 ret = structure.SXStruct(stru)
             elif isinstance(chck, MX):
                 ret = structure.MXStruct(stru)
-            elif isinstance(chck, DMatrix):
+            elif isinstance(chck, DM):
                 ret = stru(0)
             for nghb in var.keys():
                 for child, q in var[nghb].items():
@@ -338,7 +338,7 @@ class ADMM(Problem):
                 ret = structure.SXStruct(stru)
             elif isinstance(chck, MX):
                 ret = structure.MXStruct(stru)
-            elif isinstance(chck, DMatrix):
+            elif isinstance(chck, DM):
                 ret = stru(0)
             for child, q in var.items():
                 for name in q.keys():
@@ -391,7 +391,7 @@ class ADMM(Problem):
         g = []
         for con in self.constraints:
             lb, ub = con[1], con[2]
-            g = vertcat([g, con[0] - lb])
+            g = vertcat(g, con[0] - lb)
             if not isinstance(lb, np.ndarray):
                 lb, ub = [lb], [ub]
             for k in range(len(lb)):
@@ -402,14 +402,14 @@ class ADMM(Problem):
             for name, ind in q_i.items():
                 var = child.get_variable(name, spline=False)
                 jj = jacobian(g, var)
-                jac = horzcat([jac, jj[:, ind]])
+                jac = horzcat(jac, jj[:, ind])
                 sym.append(var)
         for nghb in self.q_ij.keys():
             for child, q_ij in self.q_ij[nghb].items():
                 for name, ind in q_ij.items():
                     var = child.get_variable(name, spline=False)
                     jj = jacobian(g, var)
-                    jac = horzcat([jac, jj[:, ind]])
+                    jac = horzcat(jac, jj[:, ind])
                     sym.append(var)
         for sym in symvar(jac):
             if sym not in self.par_i.values():
@@ -419,15 +419,15 @@ class ADMM(Problem):
         for s in sym:
             A = substitute(A, s, np.zeros(s.shape))
             b = substitute(b, s, np.zeros(s.shape))
-        dep_b = [s.getName() for s in symvar(b)]
-        dep_A = [s.getName() for s in symvar(b)]
+        dep_b = [s.name() for s in symvar(b)]
+        dep_A = [s.name() for s in symvar(b)]
         for name, sym in self.par_i.items():
-            if sym.getName() in dep_b:
+            if sym.name() in dep_b:
                 b = substitute(b, sym, par[name])
-            if sym.getName() in dep_A:
+            if sym.name() in dep_A:
                 A = substitute(A, sym, par[name])
-        A = MXFunction('A', [par], [A]).expand()
-        b = MXFunction('b', [par], [b]).expand()
+        A = Function('A', [par], [A]).expand()
+        b = Function('b', [par], [b]).expand()
         return True, A, b
 
     # ========================================================================
@@ -463,14 +463,14 @@ class ADMM(Problem):
         lb, ub = self.father.update_bounds(current_time)
         # solve!
         t0 = time.time()
-        self.problem_upd_x({'x0': var, 'p': par, 'lbg': lb, 'ubg': ub})
+        result = self.problem_upd_x(x0=var, p=par, lbg=lb, ubg=ub)
         t1 = time.time()
         t_upd = t1-t0
-        self.father.set_variables(self.problem_upd_x.getOutput('x'))
+        self.father.set_variables(result['x'])
         self.var_admm['x_i'] = self._get_x_variables(solution=True)
-        stats = self.problem_upd_x.getStats()
-        if (stats.get('return_status') != 'Solve_Succeeded'):
-            print 'upd_x %d: %s' % (self._index, stats.get('return_status'))
+        stats = self.problem_upd_x.stats()
+        if (stats['return_status'] != 'Solve_Succeeded'):
+            print 'upd_x %d: %s' % (self._index, stats['return_status'])
         return t_upd
 
     def set_parameters_upd_z(self, current_time):
@@ -497,8 +497,7 @@ class ADMM(Problem):
             t = current_time
             T = horizon_time
             par = self.set_parameters_upd_z(current_time)
-            inp = [x_i, l_i, l_ij, x_j, t, T, rho, par]
-            out = self.problem_upd_z(inp)
+            out = self.problem_upd_z(x_i, l_i, l_ij, x_j, t, T, rho, par)
             z_i, z_ij = out[0], out[1]
         else:
             # set parameters
@@ -512,8 +511,8 @@ class ADMM(Problem):
             par['rho'] = rho
             par['par'] = self.set_parameters_upd_z(current_time)
             lb, ub = self.lb_updz, self.ub_updz
-            self.problem_upd_z({'p': par, 'lbg': lb, 'ubg': ub})
-            out = self.problem_upd_z.getOutput('x')
+            result = self.problem_upd_z(p=par, lbg=lb, ubg=ub)
+            out = result['x']
             out = self._var_struct_updz(out)
             z_i, z_ij = out['z_i'], out['z_ij']
         self.var_admm['z_i'] = self.q_i_struct(z_i)
@@ -533,8 +532,7 @@ class ADMM(Problem):
         t = np.round(current_time, 6) % self.problem.knot_time
         T = self.problem.options['horizon_time']
         rho = self.options['admm']['rho']
-        inp = [x_i, z_i, z_ij, l_i, l_ij, x_j, t, T, rho]
-        out = self.problem_upd_l(inp)
+        out = self.problem_upd_l(x_i, z_i, z_ij, l_i, l_ij, x_j, t, T, rho)
         self.var_admm['l_i'] = self.q_i_struct(out[0])
         self.var_admm['l_ij'] = self.q_ij_struct(out[1])
         t1 = time.time()

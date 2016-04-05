@@ -77,7 +77,8 @@ class Environment(OptiChild):
                         hyp_obs[obstacle] = []
                     degree = 1
                     knots = np.r_[np.zeros(degree),
-                                  vehicle.knots[vehicle.degree:-vehicle.degree],
+                                  vehicle.knots[
+                                      vehicle.degree:-vehicle.degree],
                                   np.ones(degree)]
                     basis = BSplineBasis(knots, degree)
                     a = self.define_spline_variable(
@@ -159,10 +160,8 @@ class Obstacle(OptiChild):
         x0 = x - self.t*v0 - 0.5*(self.t**2)*a
         a0 = a
         # pos spline over time horizon
-        self.pos_spline = [BSpline(self.basis, vertcat(
-            [x0[k], 0.5*v0[k]*self.T + x0[k],
-             x0[k] + v0[k]*self.T + 0.5*a0[k]*(self.T**2)]))
-            for k in range(self.n_dim)]
+        self.pos_spline = [BSpline(self.basis, vertcat(x0[k], 0.5*v0[k]*self.T + x0[k], x0[k] + v0[k]*self.T + 0.5*a0[k]*(self.T**2)))
+                           for k in range(self.n_dim)]
 
     # ========================================================================
     # Optimization modelling related functions
