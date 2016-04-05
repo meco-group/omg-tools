@@ -19,6 +19,12 @@
 from omgtools import *
 import os
 
+"""
+This file demonstrates how to export a point2point problem to c++. It generates
+some source and header files which can be compiled with your own source code or
+which can be compiled to a shared library and included in your own project.
+"""
+
 # create vehicle
 options = {'room_constraint': None}
 vehicle = Holonomic(shapes=Circle(0.1), options=options)
