@@ -1,6 +1,7 @@
 # Implementation of pick and place case of LVD
 # questions: ruben.vanparys@kuleuven.be
-
+import sys, os
+sys.path.insert(0, os.getcwd()+'/../')
 import matplotlib
 from omgtools import *
 from omgtools.vehicles.lvd_machine import LVD
@@ -46,7 +47,7 @@ environment.add_obstacle([table, cover, beam, leg, pilar, measure])
 
 # create a point-to-point problem
 problem = Point2point(plate, environment, freeT=True)
-problem.set_options({'solver': {'linear_solver': 'ma57'}, 'horizon_time': 12.})
+problem.set_options({'solver': {'ipopt.linear_solver': 'ma57'}, 'horizon_time': 12.})
 problem.init()
 
 # create simulator
@@ -56,7 +57,7 @@ simulator = Simulator(problem)
 trajectories = simulator.run_once()
 
 # show results
-# simulator.plot.show('state', label=['x (m)', 'y (m)', 'z (m)'])
+simulator.plot.show('state', label=['x (m)', 'y (m)', 'z (m)'])
 simulator.plot.show('velocity', label=['dx (m/s)', 'dy (m/s)', 'dz (m/s)'])
 simulator.plot.show(
     'acceleration', label=['ddx (m/s^2)', 'ddy (m/s^2)', 'ddz (m/s^2)'])
@@ -72,6 +73,6 @@ simulator.plot.show_movie(
 # simulator.plot.save('jerk', 'jerk', label=['dddx (m/s^3)', 'dddy (m/s^3)' ,'dddz (m/s^3)'], figurewidth='15cm', figureheight='4cm')
 # simulator.plot.save('scene')
 
-simulator.plot.show('scene', time=0, view=[30, 60], limits=[
-                    [0., 10.], [-4.65, 5.35], [-4.85, 6.15]])
+# simulator.plot.show('scene', time=0, view=[30, 60], limits=[
+#                     [0., 10.], [-4.65, 5.35], [-4.85, 6.15]])
 matplotlib.pyplot.show(block=True)

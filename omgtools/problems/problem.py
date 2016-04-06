@@ -43,8 +43,7 @@ class Problem(OptiChild):
                                   'ipopt.linear_solver': 'mumps',
                                   'ipopt.warm_start_init_point': 'yes',
                                   'ipopt.print_level': 0, 'print_time': 0}
-        self.options['codegen'] = {
-            'jit': False, 'jit_options': {'flags': ['-O0']}}
+        self.options['codegen'] = {'build': None, 'flags': '-O0'}
 
     def set_options(self, options):
         if 'solver' in options:
