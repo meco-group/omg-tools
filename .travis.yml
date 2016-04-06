@@ -17,6 +17,7 @@ before_script:
 script:
   - cd examples
   - python tutorial_example.py
+  - python p2p_holonomic.py
 
 install:
   - sudo python setup.py install
