@@ -16,7 +16,7 @@ before_script:
 
 script:
   - cd examples
-  - (for file in ./ ; do python "$file" ; done )
+  - (for file in *.py ; do python "$file" ; done )
   - python p2p_holonomic_export.py
   - cd export
   - make && cd bin
