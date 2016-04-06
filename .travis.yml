@@ -10,7 +10,8 @@ before_script:
   - set -o pipefail  # otherwise, piping with grep discards exit statuses
 
 script:
-  - cd examples && python ufo.py
+  - cd examples
+  - python tutorial_example.py
 
 install:
   - python setup.py install
