@@ -70,7 +70,7 @@ class ADMM(Problem):
     # Create problem
     # ========================================================================
 
-    def init(self, build=None):
+    def init(self):
         self.q_i_struct = _create_struct_from_dict(self.q_i)
         self.q_ij_struct = _create_struct_from_dict(self.q_ij)
         self.q_ji_struct = _create_struct_from_dict(self.q_ji)
@@ -83,11 +83,11 @@ class ADMM(Problem):
             self.var_admm[key] = self.q_ij_struct(0)
         for key in ['z_ji', 'l_ji']:
             self.var_admm[key] = self.q_ji_struct(0)
-        self.construct_upd_x(build)
+        self.construct_upd_x()
         self.construct_upd_z()
         self.construct_upd_l()
 
-    def construct_upd_x(self, build):
+    def construct_upd_x(self):
         # define parameters
         z_i = self.define_parameter('z_i', self.q_i_struct.shape[0])
         z_ji = self.define_parameter('z_ji', self.q_ji_struct.shape[0])
@@ -124,7 +124,7 @@ class ADMM(Problem):
         self.define_objective(obj)
         # construct problem
         self.father = OptiFather(self.group.values())
-        prob, compile_time = self.father.construct_problem(self.options, build)
+        prob, compile_time = self.father.construct_problem(self.options, str(self._index))
         self.problem_upd_x = prob
         self.father.init_transformations(self.problem.init_primal_transform,
                                          self.problem.init_dual_transform)
@@ -176,7 +176,7 @@ class ADMM(Problem):
         out = [z_i_new.cat, z_ij_new.cat]
         # create problem
         prob, compile_time = self.father.create_function(
-            'upd_z', inp, out, self.options)
+            'upd_z_'+str(self._index), inp, out, self.options)
         self.problem_upd_z = prob
 
     def _construct_upd_z_nlp(self):
@@ -252,7 +252,7 @@ class ADMM(Problem):
                     obj += mtimes(l.T, x-z) + 0.5*rho*mtimes((x-z).T, (x-z))
         # construct problem
         prob, compile_time = self.father.create_nlp(var, par, obj,
-                                                    constraints, self.options)
+                                                    constraints, self.options, str(self._index))
         self.problem_upd_z = prob
 
     def construct_upd_l(self):
@@ -288,7 +288,7 @@ class ADMM(Problem):
         out = [l_i_new, l_ij_new]
         # create problem
         prob, compile_time = self.father.create_function(
-            'upd_l', inp, out, self.options)
+            'upd_l_'+str(self._index), inp, out, self.options)
         self.problem_upd_l = prob
 
     # ========================================================================

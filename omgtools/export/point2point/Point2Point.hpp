@@ -46,8 +46,8 @@ class Point2Point{
         double update_time;
         double sample_time;
         int trajectory_length;
-        casadi::NlpSolver problem;
-        std::map<std::string, casadi::DMatrix> args, sol;
+        casadi::Function problem;
+        std::map<std::string, casadi::DM> args, sol;
         std::vector<double> parameters;
         std::vector<double> variables;
         std::vector<double> lbg;

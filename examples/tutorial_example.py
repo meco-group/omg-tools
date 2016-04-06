@@ -93,9 +93,11 @@ environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
 
 # Create a point-to-point problem
 options = {}
-# We can provide it with some options concerning the jit code compilation:
-options['codegen'] = {'jit': False}
-# options['codegen'] = {'jit': True, 'jit_options': {'flags': ['-O3']}}
+# We can provide it with some options concerning c code generation + compilation:
+options['codegen'] = {'build': None}
+# options['codegen'] = {'build': 'jit', 'flags': '-O2'} # just-in-time compilation
+# options['codegen'] = {'build': 'shared', 'flags': '-O2'} # compile to shared object
+# options['codegen'] = {'build': 'nlp.so'} # provide a shared object
 # Compilation of the code takes some time, while execution is slightly faster
 # There are other options, set on a default value. Check them out with
 # problem.options

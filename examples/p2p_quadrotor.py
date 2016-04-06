@@ -32,7 +32,7 @@ environment.add_obstacle(Obstacle({'position': [-0.6, -5.4]},
 
 # create a point-to-point problem
 problem = Point2point(vehicle, environment, {'horizon_time': 5})
-problem.set_options({'solver': {'ipopt.linear_solver': 'ma57'}})
+# problem.set_options({'solver': {'ipopt.linear_solver': 'ma57'}})
 problem.init()
 
 # create simulator
@@ -46,4 +46,4 @@ simulator.plot.show('input', label=['Thrust force (N/kg)',
 simulator.run()
 
 # show/save some results
-simulator.plot.show_movie('scene', repeat=True)
+simulator.plot.show_movie('scene', repeat=False)

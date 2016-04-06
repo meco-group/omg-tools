@@ -5,7 +5,9 @@ examples/images/*
 examples/export/*
 .*
 !.gitignore
-jit_tmp.c
+*.c
+*.so
+todo*
 build/*
 dist/*
 omg_tools.egg-info/*
