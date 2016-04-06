@@ -25,6 +25,7 @@ from itertools import groupby
 import time
 import numpy as np
 import copy
+import os
 
 
 def evalf(fun, x):
@@ -174,45 +175,40 @@ class OptiFather:
     # ========================================================================
 
     def create_nlp(self, var, par, obj, con, options):
-        jit = options['codegen']
+        codegen = options['codegen']
         if options['verbose'] >= 2:
             print 'Building nlp ... ',
-            if jit['jit']:
-                print('[jit compilation with flags %s]' %
-                      (','.join(jit['jit_options']['flags']))),
         t0 = time.time()
         nlp = {'x': var, 'p': par, 'f': obj, 'g': con}
         opt = {}
-        for key, value in options['solver']:
+        for key, value in options['solver'].items():
             opt[key] = value
         opt.update({'expand': True})
-
         solver = nlpsol('solver', 'ipopt', nlp, opt)
-
-        # HERE
-
-        # solver.generate_dependencies('nlp.c')
-        # # solver = nlpsol('solver', 'ipopt', 'nlp.c', options['solver'])
-        # C = Compiler('nlp.c', 'clang')
-        # opt = {}
-        # for key, value in options['solver'].items():
-        #     if key != 'expand':
-        #         opt[key] = value
-
-        # solver = nlpsol('solver', 'ipopt', C, opt)
-        problem = solver
-        # grad_f, jac_g = nlp.gradient('x', 'f'), nlp.jacobian('x', 'g')
-        # hess_lag = solver.hessLag()
-        # var, par = struct_symSX(var), struct_symSX(par)
-        # nlp = Function('nlp', [var, par], nlp([var, par]), jit)
-        # grad_f = Function('grad_f', [var, par], grad_f([var, par]), jit)
-        # jac_g = Function('jac_g', [var, par], jac_g([var, par]), jit)
-        # lam_f, lam_g = SX.sym('lam_f'), SX.sym('lam_g', con.size)
-        # hess_lag = Function('hess_lag', [var, par, lam_f, lam_g],
-        #                       hess_lag([var, par, lam_f, lam_g]), jit)
-        # solver_opt.update({'grad_f': grad_f, 'jac_g': jac_g,
-        #                    'hess_lag': hess_lag})
-        # problem = nlpsol('solver', 'ipopt', nlp, solver_opt)
+        if codegen['build'] == 'jit':
+            if options['verbose'] >= 2:
+                print('[jit compilation with flags %s]' % (codegen['flags'])),
+            solver.generate_dependencies('nlp.c')
+            compiler = Compiler('nlp.c', 'clang', {'flags': codegen['flags']})
+            problem = nlpsol('solver', 'ipopt', compiler, options['solver'])
+            os.remove('nlp.c')
+        elif codegen['build'] == 'shared':
+            if options['verbose'] >= 2:
+                print('[compilation to .so with flags %s]' % (codegen['flags'])),
+            solver.generate_dependencies('nlp.c')
+            os.system('gcc -fPIC -shared %s nlp.c -o nlp.so' % codegen['flags'])
+            problem = nlpsol('solver', 'ipopt', 'nlp.so', options['solver'])
+            os.remove('nlp.c')
+        elif (isinstance(codegen['build'], basestring) and
+              codegen['build'][-3:] == '.so' and
+              os.path.isfile(codegen['build'])):
+            if options['verbose'] >= 2:
+                print('[using shared object %s]' % codegen['build']),
+            problem = nlpsol('solver', 'ipopt', codegen['build'], options['solver'])
+        elif codegen['build'] is None:
+            problem = solver
+        else:
+            raise ValueError('Invalid build option.')
         t1 = time.time()
         if options['verbose'] >= 2:
             print 'in %5f s' % (t1-t0)
