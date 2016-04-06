@@ -16,11 +16,10 @@ before_script:
 
 script:
   - cd examples
-  - python ufo.py
-  # - (for file in *.py ; do echo "$file" ; python "$file" ; done )
-  # - cd export
-  # - make && cd bin
-  # - ./Point2Point
+  - (for file in *.py ; do echo "$file" ; python "$file" ; done )
+  - cd export
+  - make && cd bin
+  - ./Point2Point
 
 install:
   - sudo python setup.py install
