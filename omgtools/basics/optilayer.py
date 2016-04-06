@@ -55,7 +55,7 @@ class OptiFather:
     # Problem composition
     # ========================================================================
 
-    def construct_problem(self, options, build=None):
+    def construct_problem(self, options, name=''):
         self.compose_dictionary()
         self.translate_symbols()
         variables = self.construct_variables()
@@ -65,12 +65,8 @@ class OptiFather:
         self.problem_description = {'var': variables, 'par': parameters,
                                     'obj': objective, 'con': constraints,
                                     'opt': options}
-        if build is None:
-            problem, buildtime = self.create_nlp(variables, parameters,
-                                            objective, constraints, options)
-        else:
-            problem = build
-            buildtime = 0.
+        problem, buildtime = self.create_nlp(variables, parameters, objective,
+                                             constraints, options, name)
         self.init_variables()
         return problem, buildtime
 
@@ -174,7 +170,7 @@ class OptiFather:
     # Methods related to c code generation
     # ========================================================================
 
-    def create_nlp(self, var, par, obj, con, options):
+    def create_nlp(self, var, par, obj, con, options, name=''):
         codegen = options['codegen']
         if options['verbose'] >= 2:
             print 'Building nlp ... ',
@@ -185,26 +181,29 @@ class OptiFather:
             opt[key] = value
         opt.update({'expand': True})
         solver = nlpsol('solver', 'ipopt', nlp, opt)
+        name = 'nlp_' + name
         if codegen['build'] == 'jit':
             if options['verbose'] >= 2:
                 print('[jit compilation with flags %s]' % (codegen['flags'])),
-            solver.generate_dependencies('nlp.c')
-            compiler = Compiler('nlp.c', 'clang', {'flags': codegen['flags']})
+            solver.generate_dependencies(name+'.c')
+            compiler = Compiler(name+'.c', 'clang', {'flags': codegen['flags']})
             problem = nlpsol('solver', 'ipopt', compiler, options['solver'])
-            os.remove('nlp.c')
+            os.remove(name+'.c')
         elif codegen['build'] == 'shared':
             if options['verbose'] >= 2:
-                print('[compilation to .so with flags %s]' % (codegen['flags'])),
-            solver.generate_dependencies('nlp.c')
-            os.system('gcc -fPIC -shared %s nlp.c -o nlp.so' % codegen['flags'])
-            problem = nlpsol('solver', 'ipopt', 'nlp.so', options['solver'])
-            os.remove('nlp.c')
-        elif (isinstance(codegen['build'], basestring) and
-              codegen['build'][-3:] == '.so' and
-              os.path.isfile(codegen['build'])):
+                print('[compile to .so with flags %s]' % (codegen['flags'])),
+            if os.path.isfile(name+'.so'):
+                os.remove(name+'.so')
+            solver.generate_dependencies(name+'.c')
+            os.system('gcc -fPIC -shared %s %s.c -o %s.so' % (codegen['flags'], name, name))
+            problem = nlpsol('solver', 'ipopt', name+'.so', options['solver'])
+            os.remove(name+'.c')
+        elif codegen['build'] == 'existing':
+            if not os.path.isfile(name+'.so'):
+                raise ValueError('%s.so does not exist!', name)
             if options['verbose'] >= 2:
-                print('[using shared object %s]' % codegen['build']),
-            problem = nlpsol('solver', 'ipopt', codegen['build'], options['solver'])
+                print('[using shared object %s.so]' % name),
+            problem = nlpsol('solver', 'ipopt', name+'.so', options['solver'])
         elif codegen['build'] is None:
             problem = solver
         else:
@@ -215,14 +214,37 @@ class OptiFather:
         return problem, (t1-t0)
 
     def create_function(self, name, inp, out, options):
-        jit = options['codegen']
+        codegen = options['codegen']
         if options['verbose'] >= 2:
             print 'Building function %s ... ' % name,
-            if jit['jit']:
-                print('[jit compilation with flags %s]' %
-                      (','.join(jit['jit_options']['flags']))),
         t0 = time.time()
-        fun = Function(name, inp, out, jit).expand()
+        fun = Function(name, inp, out).expand()
+        if codegen['build'] == 'jit':
+            if options['verbose'] >= 2:
+                print('[jit compilation with flags %s]' % (codegen['flags'])),
+            fun.generate(name)
+            compiler = Compiler(name+'.c', 'clang', {'flags': codegen['flags']})
+            fun = external(name, compiler)
+            os.remove(name+'.c')
+        elif codegen['build'] == 'shared':
+            if options['verbose'] >= 2:
+                print('[compile to .so with flags %s]' % (codegen['flags'])),
+            if os.path.isfile(name+'.so'):
+                os.remove(name+'.so')
+            fun.generate(name)
+            os.system('gcc -fPIC -shared %s %s.c -o %s.so' % (codegen['flags'], name, name))
+            fun = external(name, './'+name+'.so')
+            os.remove(name+'.c')
+        elif codegen['build'] == 'existing':
+            if not os.path.isfile(name+'.so'):
+                raise ValueError('%s.so does not exist!', name)
+            if options['verbose'] >= 2:
+                print('[using shared object %s.so]' % name),
+            fun = external(name, './'+name+'.so')
+        elif codegen['build'] is None:
+            fun = fun
+        else:
+            raise ValueError('Invalid build option.')
         t1 = time.time()
         if options['verbose'] >= 2:
             print 'in %5f s' % (t1-t0)
