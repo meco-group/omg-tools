@@ -1,6 +1,6 @@
 env:
   global:
-    - CASADIVERSION=3.0.0
+    - CASADIVERSION=2.4.3
 
 sudo: required
 dist: trusty
@@ -10,9 +10,7 @@ before_script:
   - set -o pipefail  # otherwise, piping with grep discards exit statuses
 
 script:
-  - cd examples
-  - python tutorial_example.py
-  - python ufo.py
+  - cd examples && python ufo.py
 
 install:
   - python setup.py install
