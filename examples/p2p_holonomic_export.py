@@ -46,7 +46,7 @@ problem.set_options({'solver': {'ipopt.linear_solver': 'ma57'}})
 problem.init()
 
 options = {}
-casadi_path = '/home/ruben/Documents/Work/Repositories/casadi_binary'
+casadi_path = os.path.join(os.getenv('HOME'), 'casadi-py27-np1.9.1-v3.0.0')
 options['directory'] = os.path.join(os.getcwd(), 'export/')
 # path to object files of your exported optimization problem
 options['casadiobj'] = os.path.join(options['directory'], 'bin/')
