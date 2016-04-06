@@ -1,6 +1,6 @@
 env:
   global:
-    - CASADIVERSION=2.4.3
+    - CASADIVERSION=3.0.0
 
 sudo: required
 dist: trusty
