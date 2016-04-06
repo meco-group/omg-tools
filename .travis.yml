@@ -16,12 +16,11 @@ before_script:
 
 script:
   - cd examples
+  - (for file in ./ ; do python "$file" ; done )
   - python p2p_holonomic_export.py
   - cd export
   - make && cd bin
   - ./Point2Point
-  # - python tutorial_example.py
-  # - python p2p_holonomic.py
 
 install:
   - sudo python setup.py install
