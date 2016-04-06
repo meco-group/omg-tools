@@ -35,7 +35,7 @@ LIBDIR = $(CASADILIB)
 CXXFLAGS = -I$(INCDIR) -DUSE_CXX11 -std=c++11 -fPIC -std=c++11 -DCASADIOBJ="\"$(CASADIOBJ)\""
 CFLAGS = -fPIC -shared -std=c99
 LDFLAGS = -L$(LIBDIR) -lcasadi -lstdc++ -lcasadi -Wl,-rpath $(LIBDIR)
-PROBSOURCES = nlp.c hess_lag.c grad_f.c jac_g.c
+PROBSOURCES = nlp.c
 PROBOBJECTS = $(PROBSOURCES:.c=.so)
 SOURCES = $(SOURCEFILES) Point2Point.cpp Vehicle.cpp
 OBJECTS = $(SOURCES:.cpp=.o)

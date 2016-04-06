@@ -55,31 +55,16 @@ Point2Point::Point2Point(Vehicle* vehicle, double update_time, double sample_tim
 }
 
 void Point2Point::generateProblem(){
-    // change pwd to CASADIOBJ
-    char cwd[1024];
-    getcwd(cwd, sizeof(cwd));
-    chdir(CASADIOBJ);
-    // load object files
-    ExternalFunction grad_f("grad_f");
-    ExternalFunction jac_g("jac_g");
-    ExternalFunction hess_lag("hess_lag");
-    ExternalFunction nlp("nlp");
-    // change back to original pwd
-    chdir(cwd);
+    string obj_path = CASADIOBJ;
     // set options
     Dict options;
-    options["grad_f"] = grad_f;
-    options["jac_g"] = jac_g;
-    options["jac_g"] = jac_g;
-    options["hess_lag"] = hess_lag;
-    options["print_level"] = 0;
+    options["ipopt.print_level"] = 0;
     options["print_time"] = 0;
-    options["tol"] = TOL;
-    options["linear_solver"] = LINEAR_SOLVER;
-    options["warm_start_init_point"] = "yes";
+    options["ipopt.tol"] = TOL;
+    options["ipopt.linear_solver"] = LINEAR_SOLVER;
+    options["ipopt.warm_start_init_point"] = "yes";
     // create nlp solver
-    NlpSolver problem("problem", "ipopt", nlp, options);
-    this->problem = problem;
+    this->problem = nlpsol("problem", "ipopt", obj_path+"/nlp.so", options);
 }
 
 void Point2Point::initSplines(){
@@ -184,7 +169,7 @@ bool Point2Point::solve(vector<obstacle_t>& obstacles){
     args["lbg"] = lbg;
     args["ubg"] = ubg;
     sol = problem(args);
-    solver_output = string(problem.getStats().at("return_status"));
+    solver_output = string(problem.stats().at("return_status"));
     vector<double> var(sol.at("x"));
     for (int k=0; k<n_var; k++){
         variables[k] = var[k];

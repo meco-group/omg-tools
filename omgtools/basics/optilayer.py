@@ -186,7 +186,8 @@ class OptiFather:
             if options['verbose'] >= 2:
                 print('[jit compilation with flags %s]' % (codegen['flags'])),
             solver.generate_dependencies(name+'.c')
-            compiler = Compiler(name+'.c', 'clang', {'flags': codegen['flags']})
+            compiler = Compiler(
+                name+'.c', 'clang', {'flags': codegen['flags']})
             problem = nlpsol('solver', 'ipopt', compiler, options['solver'])
             os.remove(name+'.c')
         elif codegen['build'] == 'shared':
@@ -195,7 +196,8 @@ class OptiFather:
             if os.path.isfile(name+'.so'):
                 os.remove(name+'.so')
             solver.generate_dependencies(name+'.c')
-            os.system('gcc -fPIC -shared %s %s.c -o %s.so' % (codegen['flags'], name, name))
+            os.system('gcc -fPIC -shared %s %s.c -o %s.so' %
+                      (codegen['flags'], name, name))
             problem = nlpsol('solver', 'ipopt', name+'.so', options['solver'])
             os.remove(name+'.c')
         elif codegen['build'] == 'existing':
@@ -223,7 +225,8 @@ class OptiFather:
             if options['verbose'] >= 2:
                 print('[jit compilation with flags %s]' % (codegen['flags'])),
             fun.generate(name)
-            compiler = Compiler(name+'.c', 'clang', {'flags': codegen['flags']})
+            compiler = Compiler(
+                name+'.c', 'clang', {'flags': codegen['flags']})
             fun = external(name, compiler)
             os.remove(name+'.c')
         elif codegen['build'] == 'shared':
@@ -232,7 +235,8 @@ class OptiFather:
             if os.path.isfile(name+'.so'):
                 os.remove(name+'.so')
             fun.generate(name)
-            os.system('gcc -fPIC -shared %s %s.c -o %s.so' % (codegen['flags'], name, name))
+            os.system('gcc -fPIC -shared %s %s.c -o %s.so' %
+                      (codegen['flags'], name, name))
             fun = external(name, './'+name+'.so')
             os.remove(name+'.c')
         elif codegen['build'] == 'existing':
@@ -456,7 +460,8 @@ class OptiChild:
                     for l in range(size1)]
         else:
 
-            coeffs = self._define_mx(name, len(basis), size0, dictionary, value)
+            coeffs = self._define_mx(
+                name, len(basis), size0, dictionary, value)
             self._splines_prim[name] = {'basis': basis}
             return [BSpline(basis, coeffs[:, k]) for k in range(size0)]
 

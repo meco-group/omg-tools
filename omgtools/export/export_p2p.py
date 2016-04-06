@@ -68,9 +68,10 @@ class ExportP2P:
                     files[os.path.join(dir_path, f)] = os.path.join(
                         self.options['directory'], 'src/', f)
         self.copy_files(files)
+        # export casadi nlp
+        self.create_nlp_src(self.options['directory'])
         # create data to fill in in c++ template
         data = {}
-        data.update(self.create_nlp_src(self.options['directory']))
         data.update(self.get_make_options())
         data.update(self.create_defines())
         data.update(self.create_types())
@@ -116,21 +117,14 @@ class ExportP2P:
         par = self.father.problem_description['par']
         opt = self.father.problem_description['opt']
         nlp = {'x': var, 'p': par, 'f': obj, 'g': con}
-        solver = nlpsol('solver', 'ipopt', nlp, opt['solver'])
-        grad_f, jac_g = nlp.gradient('x', 'f'), nlp.jacobian('x', 'g')
-        hess_lag = solver.hessLag()
-        functions = {'nlp': nlp, 'grad_f': grad_f,
-                     'jac_g': jac_g, 'hess_lag': hess_lag}
-        # sx cast for much faster execution
-        functions = {name: Function(fun) for name, fun in functions.items()}
+        options = {}
+        for key, value in opt['solver'].items():
+            options[key] = value
+        options.update({'expand': True})
+        solver = nlpsol('solver', 'ipopt', nlp, options)
+        solver.generate_dependencies('nlp.c')
         cwd = os.getcwd()
-        src_files = ''
-        for name, fun in functions.items():
-            fun.generate(name)
-            shutil.move(cwd+'/'+name+'.c',
-                        os.path.join(destination+'src/', name+'.c'))
-            src_files += name+'.c' + ' '
-        return {'casadi_src': src_files}
+        shutil.move(cwd+'/nlp.c', destination+'src/nlp.c')
 
     def create_defines(self):
         # create defines
@@ -138,9 +132,9 @@ class ExportP2P:
         defines['N_VAR'] = self.father._var_struct.size
         defines['N_PAR'] = self.father._par_struct.size
         defines['N_CON'] = self.father._con_struct.size
-        defines['TOL'] = self.problem.options['solver']['tol']
+        defines['TOL'] = self.problem.options['solver']['ipopt.tol']
         defines['LINEAR_SOLVER'] = '"' + \
-            self.problem.options['solver']['linear_solver']+'"'
+            self.problem.options['solver']['ipopt.linear_solver']+'"'
         defines['N_DIM'] = self.vehicle.n_dim
         defines['N_OBS'] = self.problem.environment.n_obs
         if self.problem.__class__.__name__ == 'FreeTPoint2point':
@@ -164,14 +158,14 @@ class ExportP2P:
         lb, ub, cnt = '{', '{', 0
         for label, child in self.father.children.items():
             for name, con in child._constraints.items():
-                if con[0].size() > 1:
-                    for l in range(con[0].size()):
+                if con[0].size(1) > 1:
+                    for l in range(con[0].size(1)):
                         lb += str(con[1][l])+','
                         ub += str(con[2][l])+','
                 else:
                     lb += str(con[1])+','
                     ub += str(con[2])+','
-                cnt += con[0].size()
+                cnt += con[0].size(1)
         lb = lb[:-1]+'}'
         ub = ub[:-1]+'}'
         defines.update({'LBG_DEF': lb, 'UBG_DEF': ub})
@@ -197,15 +191,15 @@ class ExportP2P:
         code, cnt = '', 0
         for label, child in self.father.children.items():
             for name, par in child._parameters.items():
-                if par.size() > 1:
-                    code += '\tfor (int i=0; i<'+str(par.size())+'; i++){\n'
+                if par.size(1) > 1:
+                    code += '\tfor (int i=0; i<'+str(par.size(1))+'; i++){\n'
                     code += ('\t\tpar_vect['+str(cnt) +
                              '+i] = par_dict["'+label+'"]["'+name+'"][i];\n')
                     code += '\t}\n'
                 else:
                     code += '\tpar_vect['+str(cnt) + \
                         '] = par_dict["'+label+'"]["'+name+'"][0];\n'
-                cnt += par.size()
+                cnt += par.size(1)
         return {'getParameterVector': code}
 
     def _create_getVariableVector(self):
@@ -215,9 +209,9 @@ class ExportP2P:
             for name, var in child._variables.items():
                 code += '\t\tif (var_dict["'+label+'"].find("' + \
                     name+'") != var_dict["'+label+'"].end()){\n'
-                if var.size() > 1:
+                if var.size(1) > 1:
                     code += '\t\t\tfor (int i=0; i<' + \
-                        str(var.size())+'; i++){\n'
+                        str(var.size(1))+'; i++){\n'
                     code += ('\t\t\t\tvar_vect['+str(cnt) +
                              '+i] = var_dict["'+label+'"]["'+name+'"][i];\n')
                     code += '\t\t\t}\n'
@@ -225,7 +219,7 @@ class ExportP2P:
                     code += '\t\t\tvar_vect[' + \
                         str(cnt)+'] = var_dict["'+label+'"]["'+name+'"][0];\n'
                 code += '\t\t}\n'
-                cnt += var.size()
+                cnt += var.size(1)
             code += '\t}\n'
         return {'getVariableVector': code}
 
@@ -234,16 +228,16 @@ class ExportP2P:
         code += '\tvector<double> vec;'
         for label, child in self.father.children.items():
             for name, var in child._variables.items():
-                if var.size() > 1:
-                    code += '\tvec.resize('+str(var.size())+');\n'
-                    code += '\tfor (int i=0; i<'+str(var.size())+'; i++){\n'
+                if var.size(1) > 1:
+                    code += '\tvec.resize('+str(var.size(1))+');\n'
+                    code += '\tfor (int i=0; i<'+str(var.size(1))+'; i++){\n'
                     code += '\t\tvec[i] = var_vect['+str(cnt)+'+i];\n'
                     code += '\t}\n'
                     code += '\tvar_dict["'+label+'"]["'+name+'"] = vec;\n'
                 else:
                     code += '\tvar_dict["'+label+'"]["' + \
                         name+'"] = var_vect['+str(cnt)+'];\n'
-                cnt += var.size()
+                cnt += var.size(1)
         return {'getVariableDict': code}
 
     def _create_updateBounds(self):
@@ -256,17 +250,17 @@ class ExportP2P:
                         child._add_label(name)]
                     cond = shutdown.replace('t', 'current_time')
                     code += '\tif(' + cond + '){\n'
-                    for i in range(con[0].size()):
+                    for i in range(con[0].size(1)):
                         code += '\t\tlbg['+str(cnt+i)+'] = -INF;\n'
                         code += '\t\tubg['+str(cnt+i)+'] = +INF;\n'
                     code += '\t}else{\n'
-                    for i in range(con[0].size()):
+                    for i in range(con[0].size(1)):
                         code += ('\t\tlbg['+str(cnt+i)+'] = ' +
                                  str(_lbg[cnt+i]) + ';\n')
                         code += ('\t\tubg['+str(cnt+i)+'] = ' +
                                  str(_ubg[cnt+i]) + ';\n')
                     code += '\t}\n'
-                cnt += con[0].size()
+                cnt += con[0].size(1)
         return {'updateBounds': code}
 
     def _create_initSplines(self):
@@ -307,7 +301,7 @@ class ExportP2P:
                                  str(var.shape[0])+'+i] = spline_tf[i];\n')
                         code += '\t\t\t}\n'
                         code += '\t\t}\n'
-                    cnt += var.size()
+                    cnt += var.size(1)
             code += '\t}'
         elif self.problem.__class__.__name__ == 'FreeTPoint2point':
             raise Warning('Initialization for free time problem ' +
