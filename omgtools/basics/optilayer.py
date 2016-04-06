@@ -17,7 +17,7 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-from casadi import MX, inf, Function, nlpsol, SX
+from casadi import MX, inf, Function, nlpsol, SX, Compiler, external
 from casadi import symvar, substitute
 from casadi.tools import struct, struct_MX, struct_symMX, entry, struct_symSX
 from spline import BSpline
@@ -25,6 +25,11 @@ from itertools import groupby
 import time
 import numpy as np
 import copy
+
+
+def evalf(fun, x):
+    x = x if isinstance(x, list) else [x]
+    return fun.call(x)
 
 
 class OptiFather:
@@ -162,7 +167,7 @@ class OptiFather:
                 f_in.append(variables[child.label, name])
             elif name in child._parameters:
                 f_in.append(parameters[child.label, name])
-        return evalf(f, f_in)[0]
+        return evalf(f, f_in)
 
     # ========================================================================
     # Methods related to c code generation
@@ -177,7 +182,24 @@ class OptiFather:
                       (','.join(jit['jit_options']['flags']))),
         t0 = time.time()
         nlp = {'x': var, 'p': par, 'f': obj, 'g': con}
-        solver = nlpsol('solver', 'ipopt', nlp, options['solver'])
+        opt = {}
+        for key, value in options['solver']:
+            opt[key] = value
+        opt.update({'expand': True})
+
+        solver = nlpsol('solver', 'ipopt', nlp, opt)
+
+        # HERE
+
+        # solver.generate_dependencies('nlp.c')
+        # # solver = nlpsol('solver', 'ipopt', 'nlp.c', options['solver'])
+        # C = Compiler('nlp.c', 'clang')
+        # opt = {}
+        # for key, value in options['solver'].items():
+        #     if key != 'expand':
+        #         opt[key] = value
+
+        # solver = nlpsol('solver', 'ipopt', C, opt)
         problem = solver
         # grad_f, jac_g = nlp.gradient('x', 'f'), nlp.jacobian('x', 'g')
         # hess_lag = solver.hessLag()

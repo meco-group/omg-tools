@@ -42,8 +42,7 @@ class Problem(OptiChild):
         self.options['solver'] = {'ipopt.tol': 1e-3,
                                   'ipopt.linear_solver': 'mumps',
                                   'ipopt.warm_start_init_point': 'yes',
-                                  'ipopt.print_level': 0,
-                                  'print_time': 0, 'expand': True}
+                                  'ipopt.print_level': 0, 'print_time': 0}
         self.options['codegen'] = {
             'jit': False, 'jit_options': {'flags': ['-O0']}}
 
