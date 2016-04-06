@@ -29,8 +29,9 @@ vehicle.set_initial_conditions([-1.5, -1.5])
 vehicle.set_terminal_conditions([2., 2.])
 
 # create environment
-environment = Environment(room={'shape': Square(5.)})
+environment = Environment(room={'shape': Square(6.)})
 rectangle = Rectangle(width=3., height=0.2)
+
 environment.add_obstacle(Obstacle({'position': [-2.1, -0.5]}, shape=rectangle))
 environment.add_obstacle(Obstacle({'position': [1.7, -0.5]}, shape=rectangle))
 trajectories = {'velocity': {3: [-0.15, 0.0], 4: [0., 0.15]}}
@@ -39,7 +40,7 @@ environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
 
 # create a point-to-point problem
 problem = Point2point(vehicle, environment, freeT=False)
-problem.set_options({'solver': {'linear_solver': 'ma57'}})
+problem.set_options({'solver': {'ipopt.linear_solver': 'ma57'}})
 problem.init()
 
 # create simulator

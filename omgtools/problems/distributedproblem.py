@@ -18,16 +18,16 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from problem import Problem
-from casadi import symvar, MXFunction, sumRows
+from casadi import symvar, Function, sum1
 
 
 def get_dependency(expression):
     sym = symvar(expression)
-    f = MXFunction('f', sym, [expression])
+    f = Function('f', sym, [expression])
     dep = {}
     for index, sym in enumerate(sym):
-        J = f.jacSparsity(index, 0)
-        dep[sym] = sorted(sumRows(J).find())
+        J = f.sparsity_jac(index, 0)
+        dep[sym] = sorted(sum1(J).find())
     return dep
 
 
@@ -66,9 +66,9 @@ class DistributedProblem(Problem):
             dep = {}
             par = {}
             for sym, indices in get_dependency(constraint[0]).items():
-                symname = sym.getName()
+                symname = sym.name()
                 if symname in symbol_dict:
-                    child, name = symbol_dict[sym.getName()]
+                    child, name = symbol_dict[sym.name()]
                     if child not in dep:
                         dep[child] = {}
                     dep[child][name] = indices

@@ -1,11 +1,12 @@
 *.pyc
 *~
-*/movies/*
-*/images/*
-*/export/*
+examples/movies/*
+examples/images/*
+examples/export/*
 .*
 !.gitignore
 jit_tmp.c
 build/*
 dist/*
 omg_tools.egg-info/*
+OMG_tools.egg-info/*

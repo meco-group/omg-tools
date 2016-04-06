@@ -20,6 +20,7 @@
 from problem import Problem
 from ..basics.spline_extra import definite_integral
 from ..basics.spline_extra import shiftoverknot_T, shift_spline, evalspline
+from ..export.export_p2p import ExportP2P
 from casadi import inf
 import numpy as np
 
@@ -61,6 +62,11 @@ class Point2pointProblem(Problem):
 
     def compute_objective(self):
         raise NotImplementedError('Please implement this method!')
+
+    def export(self, options={}):
+        if not hasattr(self, 'father'):
+            self.init()
+        ExportP2P(self, options)
 
 
 class FixedTPoint2point(Point2pointProblem):

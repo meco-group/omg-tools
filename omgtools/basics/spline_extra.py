@@ -18,7 +18,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from spline import BSpline, BSplineBasis
-from casadi import SX, MX, mul, SXFunction, MXFunction
+from casadi import SX, MX, mtimes, Function
 from scipy.interpolate import splev
 import numpy as np
 
@@ -49,7 +49,7 @@ def evalspline(s, x):
             basis[-1].append(b)
     result = 0.
     for l in range(len(Bl)):
-        result += mul(coeffs[l], basis[-1][l])
+        result += mtimes(coeffs[l], basis[-1][l])
     return result
 
 
@@ -191,9 +191,9 @@ def shift_knot1_fwd(cfs, basis, t_shift):
         cfs_sym = MX.sym('cfs', cfs.shape)
         t_shift_sym = MX.sym('t_shift')
         T = shiftfirstknot_T(basis, t_shift_sym)
-        cfs2_sym = mul(T, cfs_sym)
-        fun = MXFunction('fun', [cfs_sym, t_shift_sym], [cfs2_sym])
-        return fun([cfs, t_shift])[0]
+        cfs2_sym = mtimes(T, cfs_sym)
+        fun = Function('fun', [cfs_sym, t_shift_sym], [cfs2_sym]).expand()
+        return fun(cfs, t_shift)
     else:
         T = shiftfirstknot_T(basis, t_shift)
         return T.dot(cfs)
@@ -204,9 +204,9 @@ def shift_knot1_bwd(cfs, basis, t_shift):
         cfs_sym = SX.sym('cfs', cfs.shape)
         t_shift_sym = SX.sym('t_shift')
         T, Tinv = shiftfirstknot_T(basis, t_shift_sym, inverse=True)
-        cfs2_sym = mul(Tinv, cfs_sym)
-        fun = SXFunction('fun', [cfs_sym, t_shift_sym], [cfs2_sym])
-        return fun([cfs, t_shift])[0]
+        cfs2_sym = mtimes(Tinv, cfs_sym)
+        fun = Function('fun', [cfs_sym, t_shift_sym], [cfs2_sym]).expand()
+        return fun(cfs, t_shift)
     else:
         T, Tinv = shiftfirstknot_T(basis, t_shift, inverse=True)
         return Tinv.dot(cfs)
@@ -235,7 +235,7 @@ def shiftfirstknot_T(basis, t_shift, inverse=False):
             else:
                 _t[j, j-1] = (knots[j+deg-k]-t_shift)/(knots[j+deg-k]-knots[j])
                 _t[j, j] = (t_shift-knots[j])/(knots[j+deg-k]-knots[j])
-        _T = mul(_t, _T) if sym else _t.dot(_T)
+        _T = mtimes(_t, _T) if sym else _t.dot(_T)
     T = typ.eye(N)
     T[:deg+1, :deg+1] = _T[deg+1:, :]
     if inverse:  # T is upper triangular: easy inverse
