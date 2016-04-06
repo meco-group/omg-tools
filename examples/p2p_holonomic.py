@@ -53,6 +53,6 @@ simulator.plot.show('input')
 simulator.run()
 
 # show/save some results
-simulator.plot.show_movie('scene', repeat=True)
+simulator.plot.show_movie('scene', repeat=False)
 # simulator.plot.save_movie('input', number_of_frames=4)
 # simulator.plot.save('a', time=3)

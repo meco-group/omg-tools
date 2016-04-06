@@ -53,4 +53,4 @@ simulator.plot.show('input', label=['Thrust force (N/kg)',
 simulator.run()
 
 # show/save some results
-simulator.plot.show_movie('scene', repeat=True)
+simulator.plot.show_movie('scene', repeat=False)
