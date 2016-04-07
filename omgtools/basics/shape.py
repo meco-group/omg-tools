@@ -222,6 +222,14 @@ class Polyhedron3D(Shape3D):
                 np.array([min_xyz[1], max_xyz[1]]),
                 np.array([min_xyz[2], max_xyz[2]])]
 
+    def get_sides(self, vertices):
+        n_vert = vertices.shape[1]
+        return [np.c_[vertices[:, l], vertices[:, (l+1) % n_vert]] for l in range(n_vert)]
+
+    def _prepare_draw(self):
+        # stupid implementation, hard to do this in general
+        self.plt_lines = self.get_sides(self.vertices)
+
 
 class RegularPrisma(Polyhedron3D):
 
@@ -312,7 +320,8 @@ class Plate(Polyhedron3D):
 
     def __init__(self, shape2d, height):
         self.shape2d = shape2d
-        vertices = np.r_[shape2d.vertices, np.zeros((1, shape2d.vertices.shape[1]))]
+        vertices = np.r_[
+            shape2d.vertices, np.zeros((1, shape2d.vertices.shape[1]))]
         Polyhedron3D.__init__(self, vertices, 0.5*height)
 
     def _prepare_draw(self):
