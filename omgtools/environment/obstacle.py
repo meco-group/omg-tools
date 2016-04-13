@@ -228,7 +228,6 @@ class Obstacle2D(ObstaclexD):
                     chck[0]*self.cos - chck[1]*self.sin
                 ypos = self.x0[1]*self.gon_weight + \
                     chck[0]*self.sin + chck[1]*self.cos
-                # print '('+str(xpos)+','+str(ypos)+')'
                 self.define_constraint(-(a[0]*xpos + a[1] *
                                          ypos) + self.gon_weight*(b+rad[l]), -inf, 0.)
 
