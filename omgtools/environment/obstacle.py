@@ -50,25 +50,7 @@ class ObstaclexD(OptiChild):
             self.avoid_obstacle = kwargs['avoid']
         else:
             self.avoid_obstacle = True
-        # initialize trajectories
-        self.trajectories = trajectories
-        self.traj_times, self.index = {}, {}
-        for key in trajectories:
-            self.traj_times[key] = sorted(trajectories[key])
-            self.index[key] = 0
-        # initialize signals
-        self.signals = {}
-        self.signals['time'] = np.c_[0.]
-        for key in ['position', 'velocity', 'acceleration']:
-            if key in initial:
-                self.signals[key] = np.c_[initial[key]]
-            else:
-                self.signals[key] = np.zeros((self.n_dim, 1))
-        for key in ['orientation', 'angular_velocity']:
-            if key in initial:
-                self.signals[key] = np.c_[initial[key]]
-            else:
-                self.signals[key] = np.zeros((1, 1))
+        self.init_signals(initial, trajectories)
         self.create_splines()
 
     # ========================================================================
@@ -105,6 +87,22 @@ class ObstaclexD(OptiChild):
     # ========================================================================
     # Simulation related functions
     # ========================================================================
+
+    def init_signals(self, initial, trajectories):
+        # initialize trajectories
+        self.trajectories = trajectories
+        self.traj_times, self.index = {}, {}
+        for key in trajectories:
+            self.traj_times[key] = sorted(trajectories[key])
+            self.index[key] = 0
+        # initialize signals
+        self.signals = {}
+        self.signals['time'] = np.c_[0.]
+        for key in ['position', 'velocity', 'acceleration']:
+            if key in initial:
+                self.signals[key] = np.c_[initial[key]]
+            else:
+                self.signals[key] = np.zeros((self.n_dim, 1))
 
     def update(self, update_time, sample_time):
         n_samp = int(update_time/sample_time)
@@ -163,12 +161,6 @@ class Obstacle2D(ObstaclexD):
         else:
             self.horizon_time = None
         ObstaclexD.__init__(self, initial, shape, trajectories, **kwargs)
-        # initialize signals
-        for key in ['orientation', 'angular_velocity']:
-            if key in initial:
-                self.signals[key] = np.c_[initial[key]]
-            else:
-                self.signals[key] = np.zeros((1, 1))
 
     # ========================================================================
     # Optimization modelling related functions
@@ -187,8 +179,8 @@ class Obstacle2D(ObstaclexD):
         # theta, omega at time zero of time horizon
         theta0 = theta - self.t*omega
         # cos, sin, weight spline over time horizon
-        omega = self.signals['angular_velocity'][:, -1]
-        Ts = 2*np.pi/abs(omega)
+        omega = self.signals['angular_velocity'][:, -1][0]
+        Ts = 2.*np.pi/abs(omega)
         if self.horizon_time is None:
             raise ValueError(
                 'You need to provide a horizon time when using rotating obstacles!')
@@ -209,7 +201,7 @@ class Obstacle2D(ObstaclexD):
         cos_cfs = Tf.dot(np.array([cos_cfs[k % 8] for k in range(len(basis))]))
         sin_cfs = Tf.dot(np.array([sin_cfs[k % 8] for k in range(len(basis))]))
         weight_cfs = Tf.dot(
-            np.hstack([weight_cfs[k % 8] for k in range(len(basis))]))
+            np.array([weight_cfs[k % 8] for k in range(len(basis))]))
 
         cos_wt = BSpline(basis, cos_cfs)
         sin_wt = BSpline(basis, sin_cfs)*np.sign(omega)
@@ -235,18 +227,28 @@ class Obstacle2D(ObstaclexD):
         parameters = ObstaclexD.set_parameters(self, current_time)
         parameters['theta'] = self.signals['orientation'][:, -1]
         parameters['omega'] = self.signals['angular_velocity'][:, -1]
+        # print parameters['theta'] - parameters['omega']*current_time
         return parameters
 
     # ========================================================================
     # Simulation related functions
     # ========================================================================
 
+    def init_signals(self, initial, trajectories):
+        ObstaclexD.init_signals(self, initial, trajectories)
+        # initialize signals
+        for key in ['orientation', 'angular_velocity']:
+            if key in initial:
+                self.signals[key] = np.c_[initial[key]]
+            else:
+                self.signals[key] = np.zeros((1, 1))
+
     def update(self, update_time, sample_time):
         ObstaclexD.update(self, update_time, sample_time)
         n_samp = int(update_time/sample_time)
         for k in range(n_samp):
-            theta0 = self.signals['orientation'][:, -1]
-            omega0 = self.signals['angular_velocity'][:, -1]
+            theta0 = self.signals['orientation'][:, -1][0]
+            omega0 = self.signals['angular_velocity'][:, -1][0]
             theta = theta0 + sample_time*omega0
             omega = omega0
             self.signals['orientation'] = np.c_[
