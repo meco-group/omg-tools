@@ -160,7 +160,7 @@ class Plots:
         vehicles = plot['vehicles']
         figure = plt.figure()
         axis = figure.add_subplot(111)
-        # axis.set_aspect('equal')
+        axis.set_aspect('equal')
         if 'limits' in plot['kwargs']:
             canvas_lim = plot['kwargs']['limits']
         else:
