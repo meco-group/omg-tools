@@ -70,7 +70,7 @@ class HolonomicOrient(Vehicle):
         self.define_constraint(2*dtg_ha - (1+tg_ha**2)*self.T*np.radians(self.wmax), -inf, 0.)
         self.define_constraint(-2*dtg_ha + (1+tg_ha**2)*self.T*np.radians(self.wmin), -inf, 0.)
         # add regularization on dtg_ha
-        if self.options['reg_type'] is 'norm_1':
+        if (self.options['reg_type'] is 'norm_1' and self.options['reg_weight'] != 0.0):
             dtg_ha = tg_ha.derivative()
             g_reg = self.define_spline_variable(
                         'g_reg', 1, basis=dtg_ha.basis)[0]
@@ -78,7 +78,7 @@ class HolonomicOrient(Vehicle):
             self.define_constraint(dtg_ha - g_reg, -inf, 0.)
             self.define_constraint(-dtg_ha - g_reg, -inf, 0.)
             self.define_objective(self.options['reg_weight']*objective)
-        if self.options['reg_type'] is 'norm_2':
+        if (self.options['reg_type'] is 'norm_2'and self.options['reg_weight'] != 0.0):
             dtg_ha = tg_ha.derivative()
             objective = definite_integral(dtg_ha**2, self.t/self.T, 1.)
             self.define_objective(self.options['reg_weight']*objective)
