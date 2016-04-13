@@ -250,6 +250,43 @@ def shiftfirstknot_T(basis, t_shift, inverse=False):
         return T
 
 
+def knot_insertion_T(basis, knots_to_insert):
+    N = len(basis)
+    knots = basis.knots.tolist()
+    degree = basis.degree
+    T = np.eye(N)
+    for knot in knots_to_insert:
+        _T = np.zeros((N+1, N))
+        for j in range(N+1):
+            if knot <= knots[j]:
+                w = 0.
+            elif knots[j] < knot and knot < knots[j+degree+1-1]:
+                w = (knot - knots[j])/(knots[j+degree+1-1] - knots[j])
+            else:
+                w = 1.
+            if j!=0:
+                _T[j, j-1] = (1.-w)
+            if j!=N:
+                _T[j, j] = w
+        T = _T.dot(T)
+        N += 1
+        knots = sorted(knots + [knot])
+    return T, knots
+
+
+def get_interval_T(basis, min_value, max_value):
+    knots = basis.knots
+    degree = basis.degree
+    n_min = len(np.where(knots == min_value)[0])
+    n_max = len(np.where(knots == max_value)[0])
+    min_knots = [min_value]*(degree + 1 - n_min)
+    max_knots = [max_value]*(degree + 1 - n_max)
+    T, knots2 = knot_insertion_T(basis, min_knots+max_knots)
+    jmin = np.searchsorted(knots2, min_value, side='left')
+    jmax = np.searchsorted(knots2, max_value, side='right')
+    return T[jmin:jmax-degree-1, :], knots2[jmin:jmax]
+
+
 def concat_splines(segments, segment_times):
     spl0 = segments[0]
     knots = [s.basis.knots*segment_times[0] for s in spl0]
