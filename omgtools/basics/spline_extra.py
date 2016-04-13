@@ -213,7 +213,7 @@ def shift_knot1_bwd(cfs, basis, t_shift):
 
 
 def shiftfirstknot_T(basis, t_shift, inverse=False):
-    # Create transformation matrix that shift the first (degree+1) knots over
+    # Create transformation matrix that shifts the first (degree+1) knots over
     # t_shift. With inverse = True, the inverse transformation is also
     # computed.
     knots, deg = basis.knots, basis.degree
@@ -251,6 +251,7 @@ def shiftfirstknot_T(basis, t_shift, inverse=False):
 
 
 def knot_insertion_T(basis, knots_to_insert):
+    # Create transformation matrix that transforms spline after inserting knots
     N = len(basis)
     knots = basis.knots.tolist()
     degree = basis.degree
@@ -264,9 +265,9 @@ def knot_insertion_T(basis, knots_to_insert):
                 w = (knot - knots[j])/(knots[j+degree+1-1] - knots[j])
             else:
                 w = 1.
-            if j!=0:
+            if j != 0:
                 _T[j, j-1] = (1.-w)
-            if j!=N:
+            if j != N:
                 _T[j, j] = w
         T = _T.dot(T)
         N += 1
@@ -275,6 +276,8 @@ def knot_insertion_T(basis, knots_to_insert):
 
 
 def get_interval_T(basis, min_value, max_value):
+    # Create transformation matrix that extract piece of spline from min_value
+    # to max_value
     knots = basis.knots
     degree = basis.degree
     n_min = len(np.where(knots == min_value)[0])
