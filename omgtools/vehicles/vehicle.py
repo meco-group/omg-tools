@@ -47,10 +47,8 @@ class Vehicle(OptiChild):
         self.set_default_options()
         self.set_options(options)
 
-        # create spline basis
-        self.knots = np.r_[np.zeros(self.degree), np.linspace(
-            0., 1., self.options['knot_intervals']+1), np.ones(self.degree)]
-        self.basis = BSplineBasis(self.knots, self.degree)
+        # create default spline basis
+        self.define_knots(knot_intervals=10)
         self.n_spl = n_spl
 
     # ========================================================================
@@ -59,13 +57,22 @@ class Vehicle(OptiChild):
 
     def set_default_options(self):
         self.options = {'safety_distance': 0., 'safety_weight': 10.,
-                        'sample_time': 0.01, 'knot_intervals': 10,
+                        'sample_time': 0.01,
                         'ideal_prediction': False, 'ideal_update': False,
                         '1storder_delay': False, 'time_constant': 0.1,
                         'input_disturbance': None, 'room_constraint': 'simple'}
 
     def set_options(self, options):
         self.options.update(options)
+
+    def define_knots(self, **kwargs):
+        if 'knot_intervals' in kwargs:
+            self.knot_intervals = kwargs['knot_intervals']
+            self.knots = np.r_[np.zeros(self.degree), np.linspace(
+                0., 1., self.knot_intervals+1), np.ones(self.degree)]
+        if 'knots' in kwargs:
+            self.knots = kwargs['knots']
+        self.basis = BSplineBasis(self.knots, self.degree)
 
     # ========================================================================
     # Optimization modelling related functions

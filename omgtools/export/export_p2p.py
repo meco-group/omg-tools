@@ -276,7 +276,7 @@ class ExportP2P:
             code += ('\tif(((current_time > 0) and ' +
                      'fabs(fmod(round(current_time*1000.)/1000., ' +
                      'horizon_time/' +
-                     str(self.vehicle.options['knot_intervals'])+')) <1.e-6)){\n')
+                     str(self.vehicle.knot_intervals)+')) <1.e-6)){\n')
             code += ('\t\tvector<double> spline_tf(' +
                      str(len(self.vehicle.basis))+');\n')
             for label, child in self.father.children.items():
