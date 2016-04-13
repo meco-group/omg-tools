@@ -89,12 +89,14 @@ class Vehicle(OptiChild):
             self.splines.append(spline)
         return self.splines
 
-    def define_collision_constraints_2d(self, hyperplanes, environment, position, tg_ha=0):
+    def define_collision_constraints_2d(self, hyperplanes, environment, positions, tg_ha=0):
         t = self.define_symbol('t')
         T = self.define_symbol('T')
         safety_distance = self.options['safety_distance']
         safety_weight = self.options['safety_weight']
-        for shape in self.shapes:
+        positions = [positions] if not isinstance(positions[0], list) else positions
+        for s, shape in enumerate(self.shapes):
+            position = positions[s]
             checkpoints, rad = shape.get_checkpoints()
             # obstacle avoidance
             if shape in hyperplanes:
@@ -117,7 +119,7 @@ class Vehicle(OptiChild):
                         con += (-b+rad[l]+safety_distance-eps)*(1+tg_ha**2)
                         self.define_constraint(con, -inf, 0)
             # room constraints
-            if (isinstance(environment.room['shape'], (Rectangle, Square)) and 
+            if (isinstance(environment.room['shape'], (Rectangle, Square)) and
                 environment.room['shape'].orientation == 0.0):
                 room_limits = environment.get_canvas_limits()
                 for chck in checkpoints:
@@ -135,13 +137,15 @@ class Vehicle(OptiChild):
                         con += (-hpp['b']+rad[l])*(1+tg_ha**2)
                         self.define_constraint(con, -inf, 0)
 
-    def define_collision_constraints_3d(self, hyperplanes, environment, position):
+    def define_collision_constraints_3d(self, hyperplanes, environment, positions):
         # orientation for 3d not yet implemented!
         t = self.define_symbol('t')
         T = self.define_symbol('T')
         safety_distance = self.options['safety_distance']
         safety_weight = self.options['safety_weight']
-        for shape in self.shapes:
+        positions = [positions] if not isinstance(positions[0], list) else positions
+        for s, shape in enumerate(self.shapes):
+            position = positions[s]
             checkpoints, rad = shape.get_checkpoints()
             # obstacle avoidance
             if shape in hyperplanes:
