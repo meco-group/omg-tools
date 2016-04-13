@@ -108,6 +108,24 @@ class Polyhedron(Shape2D):
                 np.array([min_xy[1], max_xy[1]])]
 
 
+class Beam(Polyhedron):
+
+    def __init__(self, width, height, orientation=0.):
+        self.width = width
+        self.height = height
+        Polyhedron.__init__(self, np.c_[[0.5*width, 0.], [-0.5*width, 0.]],
+                            orientation=orientation, radius=0.5*height)
+
+    def _prepare_draw(self):
+        s = np.linspace(0, 1, 25)
+        a = [0.5*self.width+0.5*self.height*np.cos(s*np.pi - 0.5*np.pi),
+             0.5*self.height*np.sin(s*np.pi - 0.5*np.pi)]
+        b = [-0.5*self.width+0.5*self.height*np.cos(s*np.pi + 0.5*np.pi),
+             0.5*self.height*np.sin(s*np.pi + 0.5*np.pi)]
+        points = np.c_[a, b]
+        self.plt_lines = self.get_sides(points)
+
+
 class RegularPolyhedron(Polyhedron):
 
     def __init__(self, radius, n_vert, orientation=0.):
