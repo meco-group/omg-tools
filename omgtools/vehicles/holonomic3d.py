@@ -117,9 +117,9 @@ class Holonomic3D(Vehicle):
         parameters['positionT'] = self.positionT
         return parameters
 
-    def define_collision_constraints(self, hyperplanes, room_lim, splines):
+    def define_collision_constraints(self, hyperplanes, environment, splines):
         x, y, z = splines[0], splines[1], splines[2]
-        self.define_collision_constraints_3d(hyperplanes, room_lim, [x, y, z])
+        self.define_collision_constraints_3d(hyperplanes, environment, [x, y, z])
 
     def splines2signals(self, splines, time):
         signals = {}

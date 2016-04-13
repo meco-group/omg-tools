@@ -86,7 +86,7 @@ class Platform(Vehicle):
         parameters['positionT'] = self.positionT
         return parameters
 
-    def define_collision_constraints(self, hyperplanes, room_lim, splines):
+    def define_collision_constraints(self, hyperplanes, environment, splines):
         pass
 
     def splines2signals(self, splines, time):
