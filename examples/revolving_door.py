@@ -21,24 +21,23 @@ from omgtools import *
 import numpy as np
 
 # create vehicle
-vehicle = Holonomic(shapes=Circle(0.1))
-
+vehicle = Holonomic()
 vehicle.set_initial_conditions([0., -2.0])
 vehicle.set_terminal_conditions([0., 2.0])
 
 # create environment
 environment = Environment(room={'shape': Square(5.)})
-rectangle = Rectangle(width=2.4, height=0.2)
-environment.add_obstacle(Obstacle({'position': [-2., 0.]}, shape=rectangle))
-environment.add_obstacle(Obstacle({'position': [2., 0.]}, shape=rectangle))
+beam1 = Beam(width=2.2, height=0.2)
+environment.add_obstacle(Obstacle({'position': [-2., 0.]}, shape=beam1))
+environment.add_obstacle(Obstacle({'position': [2., 0.]}, shape=beam1))
 
-beam = Beam(width=1.4, height=0.2)
+beam2 = Beam(width=1.4, height=0.2)
 horizon_time = 10.
 omega = 1.5*(2*np.pi/horizon_time)
 environment.add_obstacle(Obstacle({'position': [0., 0.], 'angular_velocity': omega},
-                                  shape=beam, horizon_time=horizon_time))
+                                  shape=beam2, horizon_time=horizon_time))
 environment.add_obstacle(Obstacle({'position': [0., 0.], 'orientation': 0.5*np.pi, 'angular_velocity': omega},
-                                  shape=beam, horizon_time=horizon_time))
+                                  shape=beam2, horizon_time=horizon_time))
 
 # create a point-to-point problem
 problem = Point2point(
