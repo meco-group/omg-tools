@@ -107,6 +107,21 @@ class Polyhedron(Shape2D):
         return [np.array([min_xy[0], max_xy[0]]),
                 np.array([min_xy[1], max_xy[1]])]
 
+    def get_hyperplanes(self, **kwargs):
+        pos = [0, 0]  # default
+        if 'position' in kwargs:  # overwrite default
+            pos = kwargs['position']
+        vertices = np.hstack(
+            (self.vertices, np.vstack(self.vertices[:, 0])))  # gives e.g. a (2, 4)
+        hyperplanes = {}
+        for k in range(vertices.shape[1]-1):
+            vector = [vertices[0][k+1]-vertices[0][k],
+                      vertices[1][k+1]-vertices[1][k]]
+            normal = [-vector[1], vector[0]]/np.sqrt(vector[0]**2+vector[1]**2)
+            b = normal[0]*(vertices[0][k+1]+pos[0]) + normal[1]*(vertices[1][k+1]+pos[1])
+            hyperplanes[k] = {'a': normal, 'b': b}
+        return hyperplanes
+
 
 class Beam(Polyhedron):
 

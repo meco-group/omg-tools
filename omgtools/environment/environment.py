@@ -93,9 +93,8 @@ class Environment(OptiChild):
         for obstacle in self.obstacles:
             if obstacle.avoid_obstacle:
                 obstacle.define_collision_constraints(hyp_obs[obstacle])
-        limits = self.get_canvas_limits()
         for spline in vehicle.splines:
-            vehicle.define_collision_constraints(hyp_veh, limits, spline)
+            vehicle.define_collision_constraints(hyp_veh, self, spline)
         self.sample_time = vehicle.options['sample_time']
 
     # ========================================================================
