@@ -4,8 +4,8 @@
 Optimal Motion Generation-tools is a software toolbox that facilitates the modeling, simulation and embedding of motion planning problems. Its main goal is to bring several research topics concerning (spline-based) motion planning together into a user-friendly package in order to enlarge its visibility towards the scientific and industrial world.
 
 Motion planning approaches implemented in OMG-tools are described in the following publications:
-* T. Mercy, W. Van Loock and G. Pipeleers. "Real-time motion planning in the presence of moving obstacles", accepted for the European Control Conference (ECC), 2016.
-* R. Van Parys and G. Pipeleers. "Online distributed motion-planning for multi-vehicle systems", accepted for the European Control Conference (ECC), 2016.
+* T. Mercy, W. Van Loock and G. Pipeleers. "Real-time motion planning in the presence of moving obstacles", accepted for the European Control Conference (ECC), 2016. ([pdf](https://lirias.kuleuven.be/bitstream/123456789/538718/1/TimMercy_2016_ECC.pdf))
+* R. Van Parys and G. Pipeleers. "Online distributed motion-planning for multi-vehicle systems", accepted for the European Control Conference (ECC), 2016. ([pdf](https://lirias.kuleuven.be/bitstream/123456789/526758/3/RubenVanParys_2016_ECC.pdf))
 
 If these approaches help you with your research, please cite us!
 
