@@ -46,7 +46,7 @@ class Shape2D(Shape):
         rot = np.array([[cth, -sth], [sth, cth]])
         return rot.dot(coordinate)
 
-    def draw(self, pose=np.zeros(2)):
+    def draw(self, pose=np.zeros(3)):
         return [np.c_[pose[:2]] + line for line in self.plt_lines]
 
     def get_sides(self, vertices):
