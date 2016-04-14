@@ -79,7 +79,7 @@ class LVD(Vehicle):
         init_value = np.zeros((len(self.basis), 3))
         pos0 = self.prediction['state']
         posT = self.positionT
-        breakpoint = self.options['knot_intervals']/3 + 1
+        breakpoint = self.knot_intervals/3 + 1
         end_cont = 2
         init_value[:, 0] = np.r_[pos0[0]*np.ones(2+breakpoint), np.linspace(
             pos0[0], posT[0], len(self.basis) - end_cont - 2 - breakpoint), posT[0]*np.ones(end_cont)]

@@ -8,16 +8,17 @@ import matplotlib
 from omgtools import *
 from omgtools.vehicles.lvd_machine import LVD
 
-save = True
+save = False
 
 # create plate
 # limits on position mid-point plate
 bounds = {'smin': [None, -0.95, 0.405], 'smax': [None, -0.55, 1.5]}
 # shutdown room constraints (we use constraints on position)
-options = {'room_constraint': None, 'knot_intervals': 11}
+options = {'room_constraints': False}
 # shape of plate
 shape = Plate(Rectangle(3., 1.5), 0.01)
 plate = LVD(shape, options=options, bounds=bounds)
+plate.define_knots(knot_intervals=11)
 
 plate.set_initial_conditions([8.5, -0.75, 0.405])
 plate.set_terminal_conditions([1.5, -0.55, 1.015])
@@ -41,25 +42,25 @@ else:
                       [0.425, -1.5, -0.5], [0.425, -1.5, 0.5]]
     shape2 = Polyhedron3D(vertices2, 0.001)
 
-obstacle1 = Obstacle({'position': [3.475, -0.65, 0.5]}, shape1, draw=False)
-obstacle2 = Obstacle({'position': [0.425, 0.0, 1.6]}, shape2, draw=False)
+obstacle1 = Obstacle({'position': [3.475, -0.65, 0.5]}, shape1, {}, {'draw': False})
+obstacle2 = Obstacle({'position': [0.425, 0.0, 1.6]}, shape2, {}, {'draw': False})
 environment.add_obstacle([obstacle1, obstacle2])
 
 # obstacles just for drawing
 frame = Obstacle(
-    {'position': [0.165, 0.0, 1.85]}, Cuboid(0.33, 3.0, 0.9), avoid=False)
+    {'position': [0.165, 0.0, 1.85]}, Cuboid(0.33, 3.0, 0.9), {}, {'avoid': False})
 table = Obstacle(
-    {'position': [1.5, 0.0, 0.5]}, Cuboid(3., 3., 1.), avoid=False)
+    {'position': [1.5, 0.0, 0.5]}, Cuboid(3., 3., 1.), {}, {'avoid': False})
 cover = Obstacle(
-    {'position': [0.455, 0.7, 1.475]}, Cuboid(0.25, 1., 0.75), avoid=False)
+    {'position': [0.455, 0.7, 1.475]}, Cuboid(0.25, 1., 0.75), {}, {'avoid': False})
 beam = Obstacle(
-    {'position': [1.35, -1.95, 1.2]}, Cuboid(2.7, 0.5, 0.4), avoid=False)
+    {'position': [1.35, -1.95, 1.2]}, Cuboid(2.7, 0.5, 0.4), {}, {'avoid': False})
 leg = Obstacle(
-    {'position': [3.2, -0.9, 0.35]}, Cuboid(0.3, 1.6, 0.7), avoid=False)
+    {'position': [3.2, -0.9, 0.35]}, Cuboid(0.3, 1.6, 0.7), {}, {'avoid': False})
 pilar = Obstacle(
-    {'position': [3.2, -1.925, 0.75]}, Cuboid(0.3, 0.45, 1.5), avoid=False)
+    {'position': [3.2, -1.925, 0.75]}, Cuboid(0.3, 0.45, 1.5), {}, {'avoid': False})
 measure = Obstacle(
-    {'position': [6.875, -1.325, 0.4]}, Cuboid(0.15, 0.15, 0.8), avoid=False)
+    {'position': [6.875, -1.325, 0.4]}, Cuboid(0.15, 0.15, 0.8), {}, {'avoid': False})
 environment.add_obstacle([frame, table, cover, beam, leg, pilar, measure])
 
 # create a point-to-point problem
