@@ -31,8 +31,10 @@ class Environment(OptiChild):
 
         # create room and define dimension of the space
         self.room, self.n_dim = room, room['shape'].n_dim
-        if not ('position' in room):
+        if 'position' not in room:
             self.room['position'] = [0. for k in range(self.n_dim)]
+        if 'draw' not in room:
+            self.room['draw'] = False
 
         # add obstacles
         self.obstacles, self.n_obs = [], 0
@@ -108,8 +110,9 @@ class Environment(OptiChild):
     def draw(self, t=-1):
         draw = []
         for obstacle in self.obstacles:
-            draw.append(obstacle.draw(t))
-        draw.append(self.room['shape'].draw())
+            draw.extend(obstacle.draw(t))
+        if self.room['draw']:
+            draw.extend(self.room['shape'].draw())
         return draw
 
     def get_canvas_limits(self):

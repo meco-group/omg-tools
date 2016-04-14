@@ -29,7 +29,7 @@ vehicle.set_initial_conditions([-1.5, -1.5])
 vehicle.set_terminal_conditions([1.0, 1.5])
 
 # create environment
-environment = Environment(room={'shape': RegularPolyhedron(2.5, 8)})
+environment = Environment(room={'shape': RegularPolyhedron(2.5, 8), 'draw': True})
 rectangle = Rectangle(width=3., height=0.2)
 
 environment.add_obstacle(Obstacle({'position': [-2.1, -0.5]}, shape=rectangle))
