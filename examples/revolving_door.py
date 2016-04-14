@@ -59,4 +59,4 @@ simulator.plot.show('input')
 simulator.run()
 
 # show/save some results
-simulator.plot.show_movie('scene', repeat=True, number_of_frames=80)
+simulator.plot.show_movie('scene', repeat=False, number_of_frames=80)
