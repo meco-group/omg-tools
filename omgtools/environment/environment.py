@@ -73,7 +73,7 @@ class Environment(OptiChild):
         for k, shape in enumerate(vehicle.shapes):
             hyp_veh[shape] = []
             for l, obstacle in enumerate(self.obstacles):
-                if obstacle.avoid_obstacle:
+                if obstacle.options['avoid']:
                     if obstacle not in hyp_obs:
                         hyp_obs[obstacle] = []
                     degree = 1
@@ -91,7 +91,7 @@ class Environment(OptiChild):
                     hyp_veh[shape].append({'a': a, 'b': b})
                     hyp_obs[obstacle].append({'a': a, 'b': b})
         for obstacle in self.obstacles:
-            if obstacle.avoid_obstacle:
+            if obstacle.options['avoid']:
                 obstacle.define_collision_constraints(hyp_obs[obstacle])
         for spline in vehicle.splines:
             vehicle.define_collision_constraints(hyp_veh, self, spline)
