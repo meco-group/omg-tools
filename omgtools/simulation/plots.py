@@ -198,6 +198,8 @@ class Plots:
         plt_3d = {}
         plt_3d['environment'] = [[axis.plot(
             [], [], [], 'k-')[0] for line in obst.draw()] for obst in self.environment.obstacles]
+        plt_3d['environment'].append([axis.plot(
+            [], [], 'k-')[0] for line in self.environment.room['shape'].draw()])  # plot room shape
         plt_3d['pos_traj'] = [axis.plot(
             [], [], [], '-', color=self.col_w[veh])[0] for veh in vehicles]
         plt_3d['pos_sign'] = [axis.plot(
