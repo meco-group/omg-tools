@@ -46,7 +46,7 @@ class Shape2D(Shape):
         rot = np.array([[cth, -sth], [sth, cth]])
         return rot.dot(coordinate)
 
-    def draw(self, pose=np.zeros(2)):
+    def draw(self, pose=np.zeros(3)):
         return [np.c_[pose[:2]] + line for line in self.plt_lines]
 
     def get_sides(self, vertices):
@@ -106,6 +106,39 @@ class Polyhedron(Shape2D):
         min_xy = np.amin(self.vertices, axis=1)
         return [np.array([min_xy[0], max_xy[0]]),
                 np.array([min_xy[1], max_xy[1]])]
+
+    def get_hyperplanes(self, **kwargs):
+        pos = [0, 0]  # default
+        if 'position' in kwargs:  # overwrite default
+            pos = kwargs['position']
+        vertices = np.hstack(
+            (self.vertices, np.vstack(self.vertices[:, 0])))  # gives e.g. a (2, 4)
+        hyperplanes = {}
+        for k in range(vertices.shape[1]-1):
+            vector = [vertices[0][k+1]-vertices[0][k],
+                      vertices[1][k+1]-vertices[1][k]]
+            normal = [-vector[1], vector[0]]/np.sqrt(vector[0]**2+vector[1]**2)
+            b = normal[0]*(vertices[0][k+1]+pos[0]) + normal[1]*(vertices[1][k+1]+pos[1])
+            hyperplanes[k] = {'a': normal, 'b': b}
+        return hyperplanes
+
+
+class Beam(Polyhedron):
+
+    def __init__(self, width, height, orientation=0.):
+        self.width = width
+        self.height = height
+        Polyhedron.__init__(self, np.c_[[0.5*width, 0.], [-0.5*width, 0.]],
+                            orientation=orientation, radius=0.5*height)
+
+    def _prepare_draw(self):
+        s = np.linspace(0, 1, 25)
+        a = [0.5*self.width+0.5*self.height*np.cos(s*np.pi - 0.5*np.pi),
+             0.5*self.height*np.sin(s*np.pi - 0.5*np.pi)]
+        b = [-0.5*self.width+0.5*self.height*np.cos(s*np.pi + 0.5*np.pi),
+             0.5*self.height*np.sin(s*np.pi + 0.5*np.pi)]
+        points = np.c_[a, b]
+        self.plt_lines = self.get_sides(points)
 
 
 class RegularPolyhedron(Polyhedron):

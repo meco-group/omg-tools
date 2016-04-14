@@ -83,13 +83,26 @@ rectangle = Rectangle(width=3., height=0.2)
 environment.add_obstacle(Obstacle({'position': [-2.1, -0.5]}, shape=rectangle))
 environment.add_obstacle(Obstacle({'position': [1.7, -0.5]}, shape=rectangle))
 # Let's also add a circular obstacle which will suddenly start to move.
-# Therefore we define an 'increment' trajectory in velocity:
-trajectory = {'velocity': {3.: [-0.15, 0.0], 4.: [0., 0.15]}}
-# This means: at t = 3s it will add velocity [-0.15, 0] to its current velocity
-#             at t = 4s it will add velocity [0,  0.15] to its current velocity
-# You could also change position and acceleration in discrete steps
+# Therefore we define a trajectory in velocity:
+trajectory = {'velocity': {'time': [3., 4.],
+                           'values': [[-0.15, 0.0], [0., 0.15]]}}
+# Here we defined the time-axis and the corresponding values for velocity.
+# Note that these values should be interpreted relatively: eg. at time 3, we
+# _add_ an extra velocity of [-0.15, 0.0].
+# You could also change position and acceleration in a similar way.
+
+# trajectories are put in a simulation dictionary
+simulation = {'trajectories': trajectory}
+# here we can give a different simulation model, by providing an A and B matrix
+# simulation['model'] = {'A': A, 'B': B}
+# The behaviour of an obstacle is expressed by x_dot = A*x + B*u
+# The state x is composed of [position, velocity, acceleration]
+# The input can be provided via a trajectory (is by default 0)
+# simulation['trajectories']['input'] = {'time': time, 'values': values}
+# Here the values should be interpreted as absolute.
+
 environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
-                                  trajectories=trajectory))
+                                  simulation=simulation))
 
 # Create a point-to-point problem
 options = {}

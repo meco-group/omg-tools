@@ -19,41 +19,41 @@
 
 from omgtools import *
 
-# create fleet
-N = 3
-vehicles = [Quadrotor(0.2) for l in range(N)]
+# create vehicle
+vehicle = Holonomic()
+vehicle.set_options({'safety_distance': 0.1})
+# vehicle.set_options({'1storder_delay': True, 'time_constant': 0.1})
+# vehicle.set_options({'input_disturbance': {'fc':0.01, 'stdev':0.05*np.ones(2)}})
 
-fleet = Fleet(vehicles)
-configuration = RegularPolyhedron(0.4, N).vertices.T
-init_positions = [-4., -4.] + configuration
-terminal_positions = [4., 4.] + configuration
-
-fleet.set_configuration(configuration.tolist())
-fleet.set_initial_conditions(init_positions.tolist())
-fleet.set_terminal_conditions(terminal_positions.tolist())
+vehicle.set_initial_conditions([-1.5, -1.5])
+vehicle.set_terminal_conditions([1.0, 1.5])
 
 # create environment
-environment = Environment(room={'shape': Square(10.)})
-environment.add_obstacle(Obstacle({'position': [-0.6, 3.7]},
-                                  shape=Rectangle(width=0.2, height=3.)))
-environment.add_obstacle(Obstacle({'position': [-0.6, -5.4]},
-                                  shape=Rectangle(width=0.2, height=10.)))
+environment = Environment(room={'shape': RegularPolyhedron(2.5, 8), 'draw': True})
+rectangle = Rectangle(width=3., height=0.2)
 
-# create a formation point-to-point problem
-options = {'horizon_time': 5., 'admm': {'rho': 0.1}}
-problem = FormationPoint2point(fleet, environment, options=options)
+environment.add_obstacle(Obstacle({'position': [-2.1, -0.5]}, shape=rectangle))
+environment.add_obstacle(Obstacle({'position': [1.7, -0.5]}, shape=rectangle))
+trajectories = {'velocity': {'time': [3., 4.],
+                             'values': [[-0.15, 0.0], [0., 0.15]]}}
+environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
+                                  simulation={'trajectories': trajectories}))
+
+# create a point-to-point problem
+problem = Point2point(vehicle, environment, freeT=False)
 # problem.set_options({'solver': {'ipopt.linear_solver': 'ma57'}})
 problem.init()
 
 # create simulator
 simulator = Simulator(problem)
-simulator.plot.set_options({'knots': True})
+simulator.plot.set_options({'knots': True, 'prediction': False})
 simulator.plot.show('scene')
-simulator.plot.show('input', label=['Thrust force (N/kg)',
-                                    'Pitch rate (rad/s)'])
+simulator.plot.show('input')
 
 # run it!
 simulator.run()
 
 # show/save some results
 simulator.plot.show_movie('scene', repeat=False)
+# simulator.plot.save_movie('input', number_of_frames=4)
+# simulator.plot.save('a', time=3)
