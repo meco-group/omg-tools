@@ -168,18 +168,17 @@ class Obstacle2D(ObstaclexD):
 
     def create_splines(self):
         ObstaclexD.create_splines(self)
-        theta = self.define_parameter('theta', 1)
         if self.signals['angular_velocity'][:, -1] == 0.:
-            self.cos = cos(theta)
-            self.sin = sin(theta)
+            self.cos = cos(self.signals['orientation'][:, -1][0])
+            self.sin = sin(self.signals['orientation'][:, -1][0])
             self.gon_weight = 1.
             return
         # theta, omega
-        omega = self.define_parameter('omega', 1)
+        theta = self.define_parameter('theta', 1)
+        omega = self.signals['angular_velocity'][:, -1][0]
         # theta, omega at time zero of time horizon
         theta0 = theta - self.t*omega
         # cos, sin, weight spline over time horizon
-        omega = self.signals['angular_velocity'][:, -1][0]
         Ts = 2.*np.pi/abs(omega)
         if self.horizon_time is None:
             raise ValueError(
@@ -214,20 +213,16 @@ class Obstacle2D(ObstaclexD):
             a, b = hyperplane['a'], hyperplane['b']
             checkpoints, rad = self.shape.get_checkpoints()
             for l, chck in enumerate(checkpoints):
-                # xpos = self.pos_spline[0]*self.gon_weight + chck[0]*self.cos - chck[1]*self.sin
-                # ypos = self.pos_spline[1]*self.gon_weight + chck[0]*self.sin + chck[1]*self.cos
-                xpos = self.x0[0]*self.gon_weight + \
-                    chck[0]*self.cos - chck[1]*self.sin
-                ypos = self.x0[1]*self.gon_weight + \
-                    chck[0]*self.sin + chck[1]*self.cos
+                xpos = self.pos_spline[
+                    0]*self.gon_weight + chck[0]*self.cos - chck[1]*self.sin
+                ypos = self.pos_spline[
+                    1]*self.gon_weight + chck[0]*self.sin + chck[1]*self.cos
                 self.define_constraint(-(a[0]*xpos + a[1] *
                                          ypos) + self.gon_weight*(b+rad[l]), -inf, 0.)
 
     def set_parameters(self, current_time):
         parameters = ObstaclexD.set_parameters(self, current_time)
         parameters['theta'] = self.signals['orientation'][:, -1]
-        parameters['omega'] = self.signals['angular_velocity'][:, -1]
-        # print parameters['theta'] - parameters['omega']*current_time
         return parameters
 
     # ========================================================================

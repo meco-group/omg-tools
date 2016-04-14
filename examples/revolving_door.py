@@ -17,6 +17,8 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
+import sys,os
+sys.path.insert(0, os.getcwd()+'/..')
 from omgtools import *
 import numpy as np
 
@@ -34,15 +36,19 @@ environment.add_obstacle(Obstacle({'position': [2., 0.]}, shape=beam1))
 beam2 = Beam(width=1.4, height=0.2)
 horizon_time = 10.
 omega = 1.5*(2*np.pi/horizon_time)
-environment.add_obstacle(Obstacle({'position': [0., 0.], 'angular_velocity': omega},
+velocity = [0., 0.]
+# velocity = [0., -0.2] # crazy revolving door
+environment.add_obstacle(Obstacle({'position': [0., 0.], 'velocity': velocity,
+                                   'angular_velocity': omega},
                                   shape=beam2, horizon_time=horizon_time))
-environment.add_obstacle(Obstacle({'position': [0., 0.], 'orientation': 0.5*np.pi, 'angular_velocity': omega},
+environment.add_obstacle(Obstacle({'position': [0., 0.], 'velocity': velocity,
+                                   'orientation': 0.5*np.pi, 'angular_velocity': omega},
                                   shape=beam2, horizon_time=horizon_time))
 
 # create a point-to-point problem
 problem = Point2point(
     vehicle, environment, freeT=False, options={'horizon_time': horizon_time})
-# problem.set_options({'solver': {'ipopt.linear_solver': 'ma57'}})
+problem.set_options({'solver': {'ipopt.linear_solver': 'ma57'}})
 problem.init()
 
 # create simulator
