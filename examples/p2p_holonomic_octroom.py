@@ -34,9 +34,10 @@ rectangle = Rectangle(width=3., height=0.2)
 
 environment.add_obstacle(Obstacle({'position': [-2.1, -0.5]}, shape=rectangle))
 environment.add_obstacle(Obstacle({'position': [1.7, -0.5]}, shape=rectangle))
-trajectories = {'velocity': {2: [-0.15, 0.0], 4: [0., 0.15]}}
+trajectories = {'velocity': {'time': [3., 4.],
+                             'values': [[-0.15, 0.0], [0., 0.15]]}}
 environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
-                                  trajectories=trajectories))
+                                  simulation={'trajectories': trajectories}))
 
 # create a point-to-point problem
 problem = Point2point(vehicle, environment, freeT=False)
