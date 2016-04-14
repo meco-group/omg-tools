@@ -109,6 +109,7 @@ class Environment(OptiChild):
         draw = []
         for obstacle in self.obstacles:
             draw.append(obstacle.draw(t))
+        draw.append(self.room['shape'].draw())
         return draw
 
     def get_canvas_limits(self):
