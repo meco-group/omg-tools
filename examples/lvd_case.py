@@ -30,7 +30,7 @@ knots = np.r_[np.zeros(plate.degree), s, np.ones(plate.degree)]
 for k in range(plate.degree+2, plate.degree+4):
     knots = np.insert(knots, k, 0.5*(knots[k-1]+knots[k]))
 
-# strange behaviour???
+# strange behaviour??? better also recheck limits
 plate.define_knots(knots = knots)
 
 
