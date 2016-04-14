@@ -29,9 +29,10 @@ vehicle.set_terminal_conditions([2., 2., -2])
 environment = Environment(room={'shape': Cube(5.)})
 environment.add_obstacle(Obstacle(
     {'position': [0., 0., -1.5]}, shape=Cuboid(width=0.5, depth=4., height=2.)))
-trajectories = {'velocity': {4: [0.0, 0.0, 1.]}}
+trajectories = {'velocity': {'time': [4.], 'values': [[0.0, 0.0, 1.]]}}
 environment.add_obstacle(Obstacle(
-    {'position': [1., 1., -2.25]}, shape=Cube(0.25), trajectories=trajectories))
+    {'position': [1., 1., -2.25]}, shape=Cube(0.25),
+    simulation={'trajectories': trajectories}))
 
 # create a point-to-point problem
 problem = Point2point(vehicle, environment, freeT=False)

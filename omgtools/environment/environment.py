@@ -44,7 +44,7 @@ class Environment(OptiChild):
     # ========================================================================
 
     def copy(self):
-        obstacles = [Obstacle(o.initial, o.shape, o.trajectories)
+        obstacles = [Obstacle(o.initial, o.shape, o.simulation, o.options)
                      for o in self.obstacles]
         return Environment(self.room, obstacles)
 

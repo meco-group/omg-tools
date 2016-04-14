@@ -31,15 +31,16 @@ class Obstacle(object):
 
     def __new__(cls, initial, shape, simulation={}, options={}):
         if shape.n_dim == 2:
-            return Obstacle2D(initial, shape, simulation, options={})
+            return Obstacle2D(initial, shape, simulation, options)
         if shape.n_dim == 3:
-            return Obstacle3D(initial, shape, simulation, options={})
+            return Obstacle3D(initial, shape, simulation, options)
 
 
 class ObstaclexD(OptiChild):
 
-    def __init__(self, initial, shape, simulation, options={}):
+    def __init__(self, initial, shape, simulation, options):
         OptiChild.__init__(self, 'obstacle')
+        self.simulation = simulation
         self.set_default_options()
         self.set_options(options)
         self.shape = shape
@@ -226,7 +227,7 @@ class ObstaclexD(OptiChild):
                 self.signals['acceleration'], acceleration]
 
     def draw(self, t=-1):
-        if not self.draw_obstacle:
+        if not self.options['draw']:
             return []
         pose = np.zeros(2*self.n_dim)
         pose[:self.n_dim] = self.signals['position'][:, t]
@@ -235,13 +236,17 @@ class ObstaclexD(OptiChild):
 
 class Obstacle2D(ObstaclexD):
 
-    def __init__(self, initial, shape, trajectories={}, **kwargs):
+    def __init__(self, initial, shape, simulation, options):
+        ObstaclexD.__init__(self, initial, shape, simulation, options)
+
+    # ========================================================================
+    # Obstacle options
+    # ========================================================================
+
+    def set_default_options(self):
+        ObstaclexD.set_default_options(self)
         # horizon time (for nurbs representation of cos & sin)
-        if 'horizon_time' in kwargs:
-            self.horizon_time = kwargs['horizon_time']
-        else:
-            self.horizon_time = None
-        ObstaclexD.__init__(self, initial, shape, trajectories, **kwargs)
+        self.options['horizon_time'] = None
 
     # ========================================================================
     # Optimization modelling related functions
@@ -261,11 +266,11 @@ class Obstacle2D(ObstaclexD):
         theta0 = theta - self.t*omega
         # cos, sin, weight spline over time horizon
         Ts = 2.*np.pi/abs(omega)
-        if self.horizon_time is None:
+        if self.options['horizon_time'] is None:
             raise ValueError(
                 'You need to provide a horizon time when using rotating obstacles!')
         else:
-            T = self.horizon_time
+            T = self.options['horizon_time']
         n_quarters = int(np.ceil(4*T/Ts))
         knots_theta = np.r_[np.zeros(3), np.hstack(
             [0.25*k*np.ones(2) for k in range(1, n_quarters+1)]), 0.25*n_quarters]*(Ts/T)
@@ -343,8 +348,8 @@ class Obstacle2D(ObstaclexD):
 
 class Obstacle3D(ObstaclexD):
 
-    def __init__(self, initial, shape, trajectories, **kwargs):
-        ObstaclexD.__init__(self, initial, shape, trajectories, **kwargs)
+    def __init__(self, initial, shape, simulation, options):
+        ObstaclexD.__init__(self, initial, shape, simulation, options)
 
     # ========================================================================
     # Optimization modelling related functions
