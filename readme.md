@@ -1,4 +1,4 @@
-Important note: this repository is depreciated! Current developments can be followed on our [github repository](https://github/meco-group/omg-tools).
+Important note: this repository is depreciated! Current developments can be followed on our [github repository](https://github.com/meco-group/omg-tools).
 
 # OMG-tools
 Optimal Motion Generation-tools is a software toolbox that facilitates the modeling, simulation and embedding of motion planning problems. Its main goal is to bring several research topics concerning (spline-based) motion planning together into a user-friendly package in order to enlarge its visibility towards the scientific and industrial world.
