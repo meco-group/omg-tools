@@ -17,8 +17,6 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-import sys,os
-sys.path.insert(0, os.getcwd()+'/..')
 from omgtools import *
 import numpy as np
 
@@ -48,7 +46,7 @@ environment.add_obstacle(Obstacle({'position': [0., 0.], 'velocity': velocity,
 # create a point-to-point problem
 problem = Point2point(
     vehicle, environment, freeT=False, options={'horizon_time': horizon_time})
-problem.set_options({'solver': {'ipopt.linear_solver': 'ma57'}})
+# problem.set_options({'solver': {'ipopt.linear_solver': 'ma57'}})
 problem.init()
 
 # create simulator
