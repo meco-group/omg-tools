@@ -13,12 +13,26 @@ save = False
 # create plate
 # limits on position mid-point plate
 bounds = {'smin': [None, -0.95, 0.405], 'smax': [None, -0.55, 1.5]}
+# bounds = {'smin': [1.4, -0.85, 0.405], 'smax': [8.6, -0.55, 1.155]}
 # shutdown room constraints (we use constraints on position)
 options = {'room_constraints': False}
 # shape of plate
 shape = Plate(Rectangle(3., 1.5), 0.01)
 plate = LVD(shape, options=options, bounds=bounds)
-plate.define_knots(knot_intervals=11)
+# plate.define_knots(knot_intervals=11)
+
+knot_intervals = 10
+s = np.linspace(0., 0.5*np.pi, knot_intervals+1)
+# s = np.linspace(0., 1., knot_intervals+1)
+knots = np.r_[np.zeros(plate.degree), 1.-np.cos(s), np.ones(plate.degree)]
+knots = np.r_[np.zeros(plate.degree), s, np.ones(plate.degree)]
+# knots = np.insert(knots, plate.degree+2, 0.5*(knots[plate.degree+1]+knots[plate.degree+2]))
+for k in range(plate.degree+2, plate.degree+4):
+    knots = np.insert(knots, k, 0.5*(knots[k-1]+knots[k]))
+
+# strange behaviour???
+plate.define_knots(knots = knots)
+
 
 plate.set_initial_conditions([8.5, -0.75, 0.405])
 plate.set_terminal_conditions([1.5, -0.55, 1.015])
@@ -76,14 +90,15 @@ simulator = Simulator(problem)
 trajectories = simulator.run_once()
 
 # show results
+simulator.plot.set_options({'knots': True})
 simulator.plot.show('state', label=['x (m)', 'y (m)', 'z (m)'])
-simulator.plot.show('velocity', label=['dx (m/s)', 'dy (m/s)', 'dz (m/s)'])
-simulator.plot.show(
-    'acceleration', label=['ddx (m/s^2)', 'ddy (m/s^2)', 'ddz (m/s^2)'])
-simulator.plot.show(
-    'jerk', label=['dddx (m/s^3)', 'dddy (m/s^3)', 'dddz (m/s^3)'])
+# simulator.plot.show('velocity', label=['dx (m/s)', 'dy (m/s)', 'dz (m/s)'])
+# simulator.plot.show(
+#     'acceleration', label=['ddx (m/s^2)', 'ddy (m/s^2)', 'ddz (m/s^2)'])
+# simulator.plot.show(
+#     'jerk', label=['dddx (m/s^3)', 'dddy (m/s^3)', 'dddz (m/s^3)'])
 simulator.plot.show_movie(
-    'scene', number_of_frames=40, repeat=True, view=[60, 45])
+    'scene', number_of_frames=40, repeat=False, view=[60, 45])
 simulator.plot.show_movie(
     'scene', number_of_frames=40, repeat=True, view=[0, 90])
 
