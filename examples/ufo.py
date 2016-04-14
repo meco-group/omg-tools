@@ -34,9 +34,9 @@ fleet.set_terminal_conditions(terminal_positions.tolist())
 
 # create environment
 environment = Environment(room={'shape': Square(14.), 'position': [5., 5.]})
-trajectory = {'velocity': {1.: [-9, 0.]}}
+trajectory = {'velocity': {'time': [0.99], 'values': [[-9., 0.]]}}
 environment.add_obstacle(
-    Obstacle({'position': [13, 4.]}, UFO(1.5, 0.6), trajectory))
+    Obstacle({'position': [13, 4.]}, UFO(1.5, 0.6), {'trajectories': trajectory}))
 
 # create a formation point-to-point problem
 options = {'horizon_time': 5., 'codegen': {
