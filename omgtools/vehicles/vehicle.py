@@ -18,7 +18,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from ..basics.optilayer import OptiChild
-from ..basics.spline import BSplineBasis
+from ..basics.spline import BSpline, BSplineBasis
 from ..basics.spline_extra import concat_splines, definite_integral, sample_splines
 from ..basics.shape import Rectangle, Square
 from casadi import inf
@@ -111,7 +111,7 @@ class Vehicle(OptiChild):
                         self.define_constraint(con, -inf, 0)
             # room constraints
             if (isinstance(environment.room['shape'], (Rectangle, Square)) and 
-                environment.room['shape'].orientation == 0.0):
+                environment.room['shape'].orientation == 0.0 and not isinstance(tg_ha, BSpline)):
                 room_limits = environment.get_canvas_limits()
                 for chck in checkpoints:
                     for k in range(2):
