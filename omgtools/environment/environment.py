@@ -32,6 +32,14 @@ class Environment(OptiChild):
         self.room, self.n_dim = room, room['shape'].n_dim
         if not ('position' in room):
             self.room['position'] = [0. for k in range(self.n_dim)]
+        if not ('orientation' in room):
+            if self.n_dim == 2:
+                self.room['orientation'] = 0.
+            elif self.n_dim == 3:
+                self.room['orientation'] = [0., 0., 0.]  # Euler angles
+            else:
+                raise ValueError('You defined a shape with dimension ' 
+                                 + str(self.n_dim) + ', which is invalid.')
 
         # add obstacles
         self.obstacles, self.n_obs = [], 0
@@ -108,7 +116,9 @@ class Environment(OptiChild):
         draw = []
         for obstacle in self.obstacles:
             draw.append(obstacle.draw(t))
-        draw.append(self.room['shape'].draw())
+        pose = self.room['position']
+        pose.append(self.room['orientation'])
+        draw.append(self.room['shape'].draw(pose=pose))
         return draw
 
     def get_canvas_limits(self):
