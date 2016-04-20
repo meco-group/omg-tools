@@ -74,8 +74,11 @@ class FixedTPoint2point(Point2pointProblem):
     def __init__(self, fleet, environment, options={}):
         Point2pointProblem.__init__(self, fleet, environment, options)
         self.objective = 0.
+        if self.vehicles[0].knot_intervals is None:
+            raise ValueError('A constant knot interval should be used for ' +
+                             'a fixed T point2point problem.')
         self.knot_time = (int(self.options['horizon_time']*1000.) /
-                          self.vehicles[0].options['knot_intervals']) / 1000.
+                          self.vehicles[0].knot_intervals) / 1000.
         T, t = self.define_parameter('T'), self.define_parameter('t')
         self.t0 = t/T
         self.define_init_constraints()

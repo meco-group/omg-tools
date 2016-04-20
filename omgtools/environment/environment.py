@@ -18,8 +18,9 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from ..basics.optilayer import OptiChild
-from ..basics.spline import BSplineBasis, BSpline
-from casadi import inf, vertcat
+from ..basics.spline import BSplineBasis
+from obstacle import Obstacle
+from casadi import inf
 import numpy as np
 
 
@@ -116,129 +117,9 @@ class Environment(OptiChild):
         draw = []
         for obstacle in self.obstacles:
             draw.append(obstacle.draw(t))
-        pose = self.room['position']
-        pose.append(self.room['orientation'])
-        draw.append(self.room['shape'].draw(pose=pose))
+        draw.append(self.room['shape'].draw())
         return draw
 
     def get_canvas_limits(self):
         limits = self.room['shape'].get_canvas_limits()
         return [limits[k]+self.room['position'][k] for k in range(self.n_dim)]
-
-
-class Obstacle(OptiChild):
-
-    def __init__(self, initial, shape, trajectories={}, **kwargs):
-        OptiChild.__init__(self, 'obstacle')
-        self.shape = shape
-        self.n_dim = shape.n_dim
-        self.basis = BSplineBasis([0, 0, 0, 1, 1, 1], 2)
-        self.initial = initial
-        if 'draw' in kwargs:
-            self.draw_obstacle = kwargs['draw']
-        else:
-            self.draw_obstacle = True
-        if 'avoid' in kwargs:
-            self.avoid_obstacle = kwargs['avoid']
-        else:
-            self.avoid_obstacle = True
-
-        # initialize trajectories
-        self.trajectories = trajectories
-        self.traj_times, self.index = {}, {}
-        for key in trajectories:
-            self.traj_times[key] = sorted(trajectories[key])
-            self.index[key] = 0
-
-        # initialize signals
-        self.signals = {}
-        self.signals['time'] = np.c_[0.]
-        for key in ['position', 'velocity', 'acceleration']:
-            if key in initial:
-                self.signals[key] = np.c_[initial[key]]
-            else:
-                self.signals[key] = np.zeros((self.n_dim, 1))
-
-        # pos, vel, acc
-        x = self.define_parameter('x', self.n_dim)
-        v = self.define_parameter('v', self.n_dim)
-        a = self.define_parameter('a', self.n_dim)
-        # pos, vel, acc at time zero of time horizon
-        self.t = self.define_symbol('t')
-        self.T = self.define_symbol('T')
-        v0 = v - self.t*a
-        x0 = x - self.t*v0 - 0.5*(self.t**2)*a
-        a0 = a
-        # pos spline over time horizon
-        self.pos_spline = [BSpline(self.basis, vertcat(x0[k], 0.5*v0[k]*self.T + x0[k], x0[k] + v0[k]*self.T + 0.5*a0[k]*(self.T**2)))
-                           for k in range(self.n_dim)]
-
-    # ========================================================================
-    # Optimization modelling related functions
-    # ========================================================================
-
-    def define_collision_constraints(self, hyperplanes):
-        for hyperplane in hyperplanes:
-            a, b = hyperplane['a'], hyperplane['b']
-            checkpoints, rad = self.shape.get_checkpoints()
-            for l, chck in enumerate(checkpoints):
-                self.define_constraint(-sum([a[k]*(chck[k]+self.pos_spline[k])
-                                             for k in range(self.n_dim)]) + b + rad[l], -inf, 0.)
-
-    def set_parameters(self, current_time):
-        parameters = {}
-        parameters['x'] = self.signals['position'][:, -1]
-        parameters['v'] = self.signals['velocity'][:, -1]
-        parameters['a'] = self.signals['acceleration'][:, -1]
-        return parameters
-
-    # ========================================================================
-    # Simulation related functions
-    # ========================================================================
-
-    def update(self, update_time, sample_time):
-        n_samp = int(update_time/sample_time)
-        for k in range(n_samp):
-            dpos, dvel, dacc = np.zeros(2), np.zeros(2), np.zeros(2)
-            t1_vel, t2_vel = sample_time, 0.
-            t1_acc, t2_acc = sample_time, 0.
-            time = self.signals['time'][:, -1] + sample_time
-            increment, t1, t2 = {}, {}, {}
-            for key in ['position', 'velocity', 'acceleration']:
-                increment[key] = np.zeros(self.n_dim)
-                t1[key], t2[key] = sample_time, 0.
-                if key in self.trajectories and self.index[key] < len(self.traj_times[key]):
-                    if np.round(time - self.traj_times[key][self.index[key]], 3) >= 0:
-                        t = self.traj_times[key][self.index[key]]
-                        increment[key] = self.trajectories[key][t]
-                        t1[key] = sample_time - (time - t)
-                        t2[key] = time - t
-                        self.index[key] += 1
-            pos0 = self.signals['position'][:, -1]
-            vel0 = self.signals['velocity'][:, -1]
-            acc0 = self.signals['acceleration'][:, -1]
-            dpos = increment['position']
-            dvel = increment['velocity']
-            dacc = increment['acceleration']
-            t1_vel, t2_vel = t1['velocity'], t2['velocity']
-            t1_acc, t2_acc = t1['acceleration'], t2['acceleration']
-
-            position = (pos0 + dpos + t1_vel*vel0 + t2_vel*(vel0 + dvel) +
-                        0.5*(t1_acc**2)*acc0 + 0.5*(t2_acc**2)*(acc0 + dacc))
-            velocity = (vel0 + dvel + t1_acc*acc0 + t2_acc*(acc0 + dacc))
-            acceleration = acc0 + dacc
-
-            self.signals['time'] = np.c_[self.signals['time'], time]
-            self.signals['position'] = np.c_[
-                self.signals['position'], position]
-            self.signals['velocity'] = np.c_[
-                self.signals['velocity'], velocity]
-            self.signals['acceleration'] = np.c_[
-                self.signals['acceleration'], acceleration]
-
-    def draw(self, t=-1):
-        if not self.draw_obstacle:
-            return []
-        pose = np.zeros(2*self.n_dim)
-        pose[:self.n_dim] = self.signals['position'][:, t]
-        return self.shape.draw(pose)

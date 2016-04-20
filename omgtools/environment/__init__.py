@@ -1,1 +1,2 @@
-from environment import Environment, Obstacle
+from environment import Environment
+from obstacle import Obstacle

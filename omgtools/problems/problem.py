@@ -127,18 +127,3 @@ class Problem(OptiChild):
 
     def export(self, options={}):
         raise NotImplementedError('Please implement this method!')
-
-    # ========================================================================
-    # Methods for exporting problem to C++ library
-    # ========================================================================
-
-
-    def export(self, language='c++', options={}):
-        if not hasattr(self, 'father'):
-            self.init()
-        if language == 'c++':
-            export.ExportCpp(self, 'point2point', options)
-        elif language == 'python':
-            raise ValueError('Python export not yet implemented. Ask Tim Mercy.')
-        else:
-            raise ValueError(language+' export is not implemented.')
