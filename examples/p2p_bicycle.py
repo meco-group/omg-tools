@@ -22,7 +22,7 @@ from omgtools import *
 # create vehicle
 vehicle = Bicycle(length=0.4,
 				  bounds={'vmax': 0.8, 'dmax': 30., 'dmin': -30., 'ddmax': 45, 'ddmin': -45},  # in deg
-                  options={'plot_type': 'car'})  # todo: remove this when merging branches, use define_knots()
+                  options={'plot_type': 'car'})
 vehicle.define_knots(knot_intervals=5)  # choose lower amount of knot intervals
 
 vehicle.set_initial_conditions([0., 0., 0.] , [0.])  # x, y, theta, delta
