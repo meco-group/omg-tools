@@ -22,36 +22,44 @@ from ..basics.optilayer import OptiChild
 from ..basics.spline_extra import get_interval_T
 from ..basics.spline import BSplineBasis, BSpline
 from casadi import inf, vertcat, cos, sin
+from scipy.interpolate import interp1d
+from scipy.integrate import odeint
 import numpy as np
 
 
 class Obstacle(object):
 
-    def __new__(cls, initial, shape, trajectories={}, **kwargs):
+    def __new__(cls, initial, shape, simulation={}, options={}):
         if shape.n_dim == 2:
-            return Obstacle2D(initial, shape, trajectories, **kwargs)
+            return Obstacle2D(initial, shape, simulation, options)
         if shape.n_dim == 3:
-            return Obstacle3D(initial, shape, trajectories, **kwargs)
+            return Obstacle3D(initial, shape, simulation, options)
 
 
 class ObstaclexD(OptiChild):
 
-    def __init__(self, initial, shape, trajectories={}, **kwargs):
+    def __init__(self, initial, shape, simulation, options):
         OptiChild.__init__(self, 'obstacle')
+        self.simulation = simulation
+        self.set_default_options()
+        self.set_options(options)
         self.shape = shape
         self.n_dim = shape.n_dim
         self.basis = BSplineBasis([0, 0, 0, 1, 1, 1], 2)
         self.initial = initial
-        if 'draw' in kwargs:
-            self.draw_obstacle = kwargs['draw']
-        else:
-            self.draw_obstacle = True
-        if 'avoid' in kwargs:
-            self.avoid_obstacle = kwargs['avoid']
-        else:
-            self.avoid_obstacle = True
-        self.init_signals(initial, trajectories)
+        self.prepare_simulation(initial, simulation)
+        self.A = np.array([[0., 1., 0.], [0., 0., 1.], [0., 0., 0.]])
         self.create_splines()
+
+    # ========================================================================
+    # Obstacle options
+    # ========================================================================
+
+    def set_default_options(self):
+        self.options = {'draw': True, 'avoid': True}
+
+    def set_options(self, options):
+        self.options.update(options)
 
     # ========================================================================
     # Optimization modelling related functions
@@ -68,8 +76,6 @@ class ObstaclexD(OptiChild):
         v0 = v - self.t*a
         x0 = x - self.t*v0 - 0.5*(self.t**2)*a
         a0 = a
-        # DEBUG!!!
-        self.x0 = x0
         # pos spline over time horizon
         self.pos_spline = [BSpline(self.basis, vertcat(x0[k], 0.5*v0[k]*self.T + x0[k], x0[k] + v0[k]*self.T + 0.5*a0[k]*(self.T**2)))
                            for k in range(self.n_dim)]
@@ -88,23 +94,99 @@ class ObstaclexD(OptiChild):
     # Simulation related functions
     # ========================================================================
 
-    def init_signals(self, initial, trajectories):
-        # initialize trajectories
-        self.trajectories = trajectories
-        self.traj_times, self.index = {}, {}
-        for key in trajectories:
-            self.traj_times[key] = sorted(trajectories[key])
-            self.index[key] = 0
+    def prepare_simulation(self, initial, simulation):
+        # simulation model
+        A = np.kron(
+            np.array([[0., 1., 0.], [0., 0., 1.], [0., 0., 0.]]), np.eye(self.n_dim))
+        B = np.zeros((3*self.n_dim, 1.))
+        self.simulation_model = {'A': A, 'B': B}
+        if 'model' in simulation:
+            if 'A' in simulation['model']:
+                self.simulation_model['A'] = simulation['model']['A']
+            if 'B' in simulation['model']:
+                self.simulation_model['B'] = simulation['model']['B']
+        # trajectories
+        trajectories = {}
+        trajectories['input'] = {'time': np.array([0., 1.]),
+                                 'values': np.zeros((self.simulation_model['B'].shape[1], 2))}
+        for key in ['position', 'velocity', 'acceleration']:
+            trajectories[key] = {'time': np.array([0., 1.]),
+                                 'values': np.zeros((self.n_dim, 2))}
+        if 'trajectories' in simulation:
+            for key, trajectory in simulation['trajectories'].items():
+                trajectories[key]['time'] = np.array(
+                    simulation['trajectories'][key]['time'])
+                trajectories[key]['values'] = np.vstack(
+                    simulation['trajectories'][key]['values']).T
+                if trajectories[key]['time'].size != trajectories[key]['values'].shape[1]:
+                    raise ValueError('Dimension mismatch between time array ' +
+                                     'and values for ' + key + ' trajectory.')
+        # create interpolation functions
+        self.input_interp = interp1d(trajectories['input']['time'],
+                                     trajectories['input']['values'],
+                                     kind='linear', bounds_error=False,
+                                     fill_value=trajectories['input']['values'][:, -1])
+        state = np.zeros((3*self.n_dim, 1.))
+        time_state = np.array([0.])
+        for l, key in enumerate(['position', 'velocity', 'acceleration']):
+            for k, time in enumerate(trajectories[key]['time']):
+                index = np.where(time_state == time)[0]
+                if index.size == 0:
+                    time_state = np.r_[time_state, time]
+                    state_k = np.zeros((3*self.n_dim))
+                    state_k[
+                        l*self.n_dim:(l+1)*self.n_dim] += trajectories[key]['values'][:, k]
+                    state = np.c_[state, state_k]
+                else:
+                    index = index[0]
+                    state[
+                        l*self.n_dim:(l+1)*self.n_dim, index] += trajectories[key]['values'][:, k]
+        ind_sorted = np.argsort(time_state)
+        state_incr = np.cumsum(state[:, ind_sorted], axis=1)
+        time_state = time_state[ind_sorted]
+        self.state_incr_interp = interp1d(time_state, state_incr, kind='zero',
+                                          bounds_error=False,
+                                          fill_value=state_incr[:, -1])
         # initialize signals
         self.signals = {}
-        self.signals['time'] = np.c_[0.]
+        self.signals['time'] = np.array([0.])
         for key in ['position', 'velocity', 'acceleration']:
             if key in initial:
                 self.signals[key] = np.c_[initial[key]]
             else:
                 self.signals[key] = np.zeros((self.n_dim, 1))
 
+    def _ode(self, state, time):
+        input = self.input_interp(time)
+        state_incr = self.state_incr_interp(time)
+        return self.ode(state, input) + np.r_[state_incr[self.n_dim:],
+                                              np.zeros(self.n_dim)]
+
+    def ode(self, state, input):
+        A = self.simulation_model['A']
+        B = self.simulation_model['B']
+        return A.dot(state) + B.dot(input)
+
     def update(self, update_time, sample_time):
+        n_samp = int(update_time/sample_time)+1
+        time0 = self.signals['time'][-1]
+        time_axis = np.linspace(time0, (n_samp-1)*sample_time+time0, n_samp)
+        state0 = np.r_[self.signals['position'][:, -1],
+                       self.signals['velocity'][:, -1],
+                       self.signals['acceleration'][:, -1]].T
+        state0 -= self.state_incr_interp(time0)
+        state = odeint(self._ode, state0, time_axis).T
+        state += self.state_incr_interp(time_axis)
+        self.signals['position'] = np.c_[self.signals['position'],
+                                         state[:self.n_dim, 1:n_samp+1]]
+        self.signals['velocity'] = np.c_[self.signals['velocity'],
+                                         state[self.n_dim:2*self.n_dim, 1:n_samp+1]]
+        self.signals['acceleration'] = np.c_[self.signals['acceleration'],
+                                             state[2*self.n_dim:3*self.n_dim, 1:n_samp+1]]
+        self.signals['time'] = np.r_[
+            self.signals['time'], time_axis[1:n_samp+1]]
+
+    def update2(self, update_time, sample_time):
         n_samp = int(update_time/sample_time)
         for k in range(n_samp):
             dpos, dvel, dacc = np.zeros(2), np.zeros(2), np.zeros(2)
@@ -145,7 +227,7 @@ class ObstaclexD(OptiChild):
                 self.signals['acceleration'], acceleration]
 
     def draw(self, t=-1):
-        if not self.draw_obstacle:
+        if not self.options['draw']:
             return []
         pose = np.zeros(2*self.n_dim)
         pose[:self.n_dim] = self.signals['position'][:, t]
@@ -154,13 +236,17 @@ class ObstaclexD(OptiChild):
 
 class Obstacle2D(ObstaclexD):
 
-    def __init__(self, initial, shape, trajectories={}, **kwargs):
+    def __init__(self, initial, shape, simulation, options):
+        ObstaclexD.__init__(self, initial, shape, simulation, options)
+
+    # ========================================================================
+    # Obstacle options
+    # ========================================================================
+
+    def set_default_options(self):
+        ObstaclexD.set_default_options(self)
         # horizon time (for nurbs representation of cos & sin)
-        if 'horizon_time' in kwargs:
-            self.horizon_time = kwargs['horizon_time']
-        else:
-            self.horizon_time = None
-        ObstaclexD.__init__(self, initial, shape, trajectories, **kwargs)
+        self.options['horizon_time'] = None
 
     # ========================================================================
     # Optimization modelling related functions
@@ -180,11 +266,11 @@ class Obstacle2D(ObstaclexD):
         theta0 = theta - self.t*omega
         # cos, sin, weight spline over time horizon
         Ts = 2.*np.pi/abs(omega)
-        if self.horizon_time is None:
+        if self.options['horizon_time'] is None:
             raise ValueError(
                 'You need to provide a horizon time when using rotating obstacles!')
         else:
-            T = self.horizon_time
+            T = self.options['horizon_time']
         n_quarters = int(np.ceil(4*T/Ts))
         knots_theta = np.r_[np.zeros(3), np.hstack(
             [0.25*k*np.ones(2) for k in range(1, n_quarters+1)]), 0.25*n_quarters]*(Ts/T)
@@ -229,8 +315,8 @@ class Obstacle2D(ObstaclexD):
     # Simulation related functions
     # ========================================================================
 
-    def init_signals(self, initial, trajectories):
-        ObstaclexD.init_signals(self, initial, trajectories)
+    def prepare_simulation(self, initial, simulation):
+        ObstaclexD.prepare_simulation(self, initial, simulation)
         # initialize signals
         for key in ['orientation', 'angular_velocity']:
             if key in initial:
@@ -252,7 +338,7 @@ class Obstacle2D(ObstaclexD):
                 self.signals['angular_velocity'], omega]
 
     def draw(self, t=-1):
-        if not self.draw_obstacle:
+        if not self.options['draw']:
             return []
         pose = np.zeros(2*self.n_dim)
         pose[:self.n_dim] = self.signals['position'][:, t]
@@ -262,8 +348,8 @@ class Obstacle2D(ObstaclexD):
 
 class Obstacle3D(ObstaclexD):
 
-    def __init__(self, initial, shape, trajectories, **kwargs):
-        ObstaclexD.__init__(self, initial, shape, trajectories, **kwargs)
+    def __init__(self, initial, shape, simulation, options):
+        ObstaclexD.__init__(self, initial, shape, simulation, options)
 
     # ========================================================================
     # Optimization modelling related functions

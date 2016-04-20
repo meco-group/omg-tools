@@ -21,11 +21,8 @@ from omgtools import *
 
 # create vehicle
 vehicle = Dubins(#shapes=Rectangle(width=0.4, height=0.1),
-				 bounds={'vmax': 0.7, 'wmax': 60., 'wmin': -60.},  # in deg
-                 options={'knot_intervals':5})
-# vehicle.set_options({'safety_distance': 0.1})
-# vehicle.set_options({'1storder_delay': True, 'time_constant': 0.1})
-# vehicle.set_options({'input_disturbance': {'fc':0.01, 'stdev':0.05*np.ones(2)}})
+				 bounds={'vmax': 0.7, 'wmax': 60., 'wmin': -60.})  # in deg
+vehicle.define_knots(knot_intervals=5)  # choose lower amount of knot intervals
 
 vehicle.set_initial_conditions([0., 0., 0.])  # input orientation in deg
 vehicle.set_terminal_conditions([3., 3., 0.])
@@ -33,9 +30,10 @@ vehicle.set_terminal_conditions([3., 3., 0.])
 # create environment
 environment = Environment(room={'shape': Square(5.), 'position': [1.5, 1.5]})
 
-trajectories = {'velocity': {0.5: [0.3, 0.0]}}
+trajectories = {'velocity': {'time': [0.5],
+                             'values': [[0.25, 0.0]]}}
 environment.add_obstacle(Obstacle({'position': [1., 1.]}, shape=Circle(0.5),
-                                  trajectories=trajectories))
+                                  simulation={'trajectories':trajectories}))
 
 # create a point-to-point problem
 problem = Point2point(vehicle, environment, freeT=True)

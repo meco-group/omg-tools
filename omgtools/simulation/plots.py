@@ -168,10 +168,8 @@ class Plots:
         plt.xlim(canvas_lim[0][0], canvas_lim[0][1])
         plt.ylim(canvas_lim[1][0], canvas_lim[1][1])
         plt_2d = {}
-        plt_2d['environment'] = [[axis.plot(
-            [], [], 'k-')[0] for line in obst.draw()] for obst in self.environment.obstacles]
-        plt_2d['environment'].append([axis.plot(
-            [], [], 'k-')[0] for line in self.environment.room['shape'].draw()])  # plot room shape
+        plt_2d['environment'] = [axis.plot(
+            [], [], 'k-')[0] for line in self.environment.draw()]
         plt_2d['pos_traj'] = [axis.plot(
             [], [], '-', color=self.col_w[veh])[0] for veh in vehicles]
         plt_2d['pos_sign'] = [axis.plot(
@@ -196,10 +194,8 @@ class Plots:
             elevation, azimuth = plot['kwargs']['view']
             axis.view_init(elev=elevation, azim=azimuth)
         plt_3d = {}
-        plt_3d['environment'] = [[axis.plot(
-            [], [], [], 'k-')[0] for line in obst.draw()] for obst in self.environment.obstacles]
-        plt_3d['environment'].append([axis.plot(
-            [], [], 'k-')[0] for line in self.environment.room['shape'].draw()])  # plot room shape
+        plt_3d['environment'] = [axis.plot(
+            [], [], 'k-')[0] for line in self.environment.draw()]
         plt_3d['pos_traj'] = [axis.plot(
             [], [], [], '-', color=self.col_w[veh])[0] for veh in vehicles]
         plt_3d['pos_sign'] = [axis.plot(
@@ -268,10 +264,8 @@ class Plots:
     def _update_2d_plot(self, plot, t=-1):
         plt_2d, vehicles = plot['plt_2d'], plot['vehicles']
         environment = self.environment.draw(t)
-        for e, env in enumerate(environment):
-            for l, line in enumerate(env):
-                plt_2d['environment'][e][l].set_data(
-                    line[0, :].ravel(), line[1, :].ravel())
+        for l, line in enumerate(environment):
+            plt_2d['environment'][l].set_data(line[0, :].ravel(), line[1, :].ravel())
         for v, veh in enumerate(vehicles):
             if t == -1:
                 pos_sign = veh.signals['pose'][:, :]
@@ -291,12 +285,9 @@ class Plots:
     def _update_3d_plot(self, plot, t=-1):
         plt_3d, vehicles = plot['plt_3d'], plot['vehicles']
         environment = self.environment.draw(t)
-        for e, env in enumerate(environment):
-            for l, line in enumerate(env):
-                plt_3d['environment'][e][l].set_data(
-                    line[0, :].ravel(), line[1, :].ravel())
-                plt_3d['environment'][e][
-                    l].set_3d_properties(line[2, :].ravel())
+        for l, line in enumerate(environment):
+            plt_3d['environment'][l].set_data(line[0, :].ravel(), line[1, :].ravel())
+            plt_3d['environment'][l].set_3d_properties(line[2, :].ravel())
         for v, veh in enumerate(vehicles):
             if t == -1:
                 pos_sign = veh.signals['pose'][:, :]

@@ -46,9 +46,10 @@ environment.add_obstacle(Obstacle({'position': [-2.1, -0.5]}, shape=rectangle))
 environment.add_obstacle(Obstacle({'position': [ 1.7, -0.5]}, shape=rectangle))
 
 # generate trajectory for moving obstacle
-traj = {'velocity': {3.: [-0.15, 0.0], 4.: [0., 0.15]}}
+traj = {'velocity': {'time': [3., 4.],
+                     'values': [[-0.15, 0.0], [0., 0.15]]}}
 # add moving obstacle to environment
-environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),trajectories=traj))
+environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),simulation={'trajectories': traj}))
 
 # give problem settings and create problem
 problem = Point2point(vehicle, environment)

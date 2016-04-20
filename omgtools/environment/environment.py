@@ -31,7 +31,7 @@ class Environment(OptiChild):
 
         # create room and define dimension of the space
         self.room, self.n_dim = room, room['shape'].n_dim
-        if not ('position' in room):
+        if 'position' not in room:
             self.room['position'] = [0. for k in range(self.n_dim)]
         if not ('orientation' in room):
             if self.n_dim == 2:
@@ -41,6 +41,8 @@ class Environment(OptiChild):
             else:
                 raise ValueError('You defined a shape with dimension ' 
                                  + str(self.n_dim) + ', which is invalid.')
+        if 'draw' not in room:
+            self.room['draw'] = False
 
         # add obstacles
         self.obstacles, self.n_obs = [], 0
@@ -52,7 +54,7 @@ class Environment(OptiChild):
     # ========================================================================
 
     def copy(self):
-        obstacles = [Obstacle(o.initial, o.shape, o.trajectories)
+        obstacles = [Obstacle(o.initial, o.shape, o.simulation, o.options)
                      for o in self.obstacles]
         return Environment(self.room, obstacles)
 
@@ -81,7 +83,7 @@ class Environment(OptiChild):
         for k, shape in enumerate(vehicle.shapes):
             hyp_veh[shape] = []
             for l, obstacle in enumerate(self.obstacles):
-                if obstacle.avoid_obstacle:
+                if obstacle.options['avoid']:
                     if obstacle not in hyp_obs:
                         hyp_obs[obstacle] = []
                     degree = 1
@@ -99,7 +101,7 @@ class Environment(OptiChild):
                     hyp_veh[shape].append({'a': a, 'b': b})
                     hyp_obs[obstacle].append({'a': a, 'b': b})
         for obstacle in self.obstacles:
-            if obstacle.avoid_obstacle:
+            if obstacle.options['avoid']:
                 obstacle.define_collision_constraints(hyp_obs[obstacle])
         for spline in vehicle.splines:
             vehicle.define_collision_constraints(hyp_veh, self, spline)
@@ -116,8 +118,9 @@ class Environment(OptiChild):
     def draw(self, t=-1):
         draw = []
         for obstacle in self.obstacles:
-            draw.append(obstacle.draw(t))
-        draw.append(self.room['shape'].draw())
+            draw.extend(obstacle.draw(t))
+        if self.room['draw']:
+            draw.extend(self.room['shape'].draw())
         return draw
 
     def get_canvas_limits(self):

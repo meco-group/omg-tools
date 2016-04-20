@@ -20,19 +20,20 @@
 from omgtools import *
 
 # create vehicle
-vehicle = Bicycle(shapes=Rectangle(width=0.4, height=0.1),
+vehicle = Bicycle(length=0.4,
 				  bounds={'vmax': 0.8, 'dmax': 30., 'dmin': -30., 'ddmax': 45, 'ddmin': -45},  # in deg
-                  options={'knot_intervals':5, 'plot_type': 'car'})  # todo: remove this when merging branches, use define_knots()
+                  options={'plot_type': 'car'})  # todo: remove this when merging branches, use define_knots()
+vehicle.define_knots(knot_intervals=5)  # choose lower amount of knot intervals
 
 vehicle.set_initial_conditions([0., 0., 0.] , [0.])  # x, y, theta, delta
 vehicle.set_terminal_conditions([3., 3., 0.])  # x, y, theta
 
 # create environment
 environment = Environment(room={'shape': Square(5.), 'position': [1.5, 1.5]})
-
-trajectories = {'velocity': {0.5: [0.3, 0.0]}}
+trajectories = {'velocity': {'time': [0.5],
+                             'values': [[0.3, 0.0]]}}
 environment.add_obstacle(Obstacle({'position': [1., 1.]}, shape=Circle(0.5),
-                                  trajectories=trajectories))
+                                  simulation={'trajectories':trajectories}))
 
 # create a point-to-point problem
 problem = Point2point(vehicle, environment, freeT=True)

@@ -20,7 +20,7 @@
 from ..basics.optilayer import OptiChild
 from ..basics.spline import BSpline, BSplineBasis
 from ..basics.spline_extra import concat_splines, definite_integral, sample_splines
-from ..basics.shape import Rectangle, Square
+from ..basics.shape import Rectangle, Square, Circle
 from casadi import inf
 from scipy.signal import filtfilt, butter
 from scipy.interpolate import interp1d
@@ -58,7 +58,7 @@ class Vehicle(OptiChild):
 
     def set_default_options(self):
         self.options = {'safety_distance': 0., 'safety_weight': 10.,
-                        'sample_time': 0.01,
+                        'sample_time': 0.01, 'room_constraints': True,
                         'ideal_prediction': False, 'ideal_update': False,
                         '1storder_delay': False, 'time_constant': 0.1,
                         'input_disturbance': None}
@@ -119,23 +119,29 @@ class Vehicle(OptiChild):
                         con += (-b+rad[l]+safety_distance-eps)*(1+tg_ha**2)
                         self.define_constraint(con, -inf, 0)
             # room constraints
-            if (isinstance(environment.room['shape'], (Rectangle, Square)) and 
-                environment.room['shape'].orientation == 0.0 and not isinstance(tg_ha, BSpline)):
-                room_limits = environment.get_canvas_limits()
-                for chck in checkpoints:
-                    for k in range(2):
-                        self.define_constraint(-(chck[k]+position[k]) + room_limits[k][0], -inf, 0.)
-                        self.define_constraint((chck[k]+position[k]) - room_limits[k][1], -inf, 0.)
-            else:
-                hyp_room = environment.room['shape'].get_hyperplanes(position = environment.room['position'])
-                for l, chck in enumerate(checkpoints):
-                    for hpp in hyp_room.itervalues():
-                        con = 0
-                        con += (hpp['a'][0]*chck[0] + hpp['a'][1]*chck[1])*(1.-tg_ha**2)
-                        con += (-hpp['a'][0]*chck[1] + hpp['a'][1]*chck[0])*(2*tg_ha)
-                        con += (hpp['a'][0]*position[0] + hpp['a'][1]*position[1])*(1+tg_ha**2)
-                        con += (-hpp['b']+rad[l])*(1+tg_ha**2)
-                        self.define_constraint(con, -inf, 0)
+            # check room shape and orientation, check vehicle shape and orientation
+            # then decide on type of constraints to use: room_limits or hyperplanes
+            if self.options['room_constraints']:
+                for shape in self.shapes:  # loop over vehicle shapes
+                    if ((isinstance(environment.room['shape'], (Rectangle, Square)) and
+                        environment.room['shape'].orientation == 0.0) and
+                        (isinstance(shape, Circle) or (isinstance(shape, (Rectangle, Square)) and
+                         shape.orientation == 0 and (isinstance(tg_ha, (int, float, long)) and tg_ha == 0.)))):
+                        room_limits = environment.get_canvas_limits()
+                        for chck in checkpoints:
+                            for k in range(2):
+                                self.define_constraint(-(chck[k]+position[k]) + room_limits[k][0], -inf, 0.)
+                                self.define_constraint((chck[k]+position[k]) - room_limits[k][1], -inf, 0.)
+                    else:
+                        hyp_room = environment.room['shape'].get_hyperplanes(position = environment.room['position'])
+                        for l, chck in enumerate(checkpoints):
+                            for hpp in hyp_room.itervalues():
+                                con = 0
+                                con += (hpp['a'][0]*chck[0] + hpp['a'][1]*chck[1])*(1.-tg_ha**2)
+                                con += (-hpp['a'][0]*chck[1] + hpp['a'][1]*chck[0])*(2*tg_ha)
+                                con += (hpp['a'][0]*position[0] + hpp['a'][1]*position[1])*(1+tg_ha**2)
+                                con += (-hpp['b']+rad[l])*(1+tg_ha**2)
+                                self.define_constraint(con, -inf, 0)
 
     def define_collision_constraints_3d(self, hyperplanes, environment, positions):
         # orientation for 3d not yet implemented!
@@ -168,13 +174,14 @@ class Vehicle(OptiChild):
                         self.define_constraint(
                             sum([a[k]*(chck[k]+position[k]) for k in range(3)])-b+rad[l], -inf, 0)
             # room constraints
-            room_lim = environment.get_canvas_limits()
-            for chck in checkpoints:
-                for k in range(3):
-                    self.define_constraint(-
-                                           (chck[k]+position[k]) + room_lim[k][0], -inf, 0.)
-                    self.define_constraint(
-                        (chck[k]+position[k]) - room_lim[k][1], -inf, 0.)
+            if self.options['room_constraints']:
+                room_lim = environment.get_canvas_limits()
+                for chck in checkpoints:
+                    for k in range(3):
+                        self.define_constraint(-
+                                               (chck[k]+position[k]) + room_lim[k][0], -inf, 0.)
+                        self.define_constraint(
+                            (chck[k]+position[k]) - room_lim[k][1], -inf, 0.)
 
     # ========================================================================
     # Simulation and prediction related functions
