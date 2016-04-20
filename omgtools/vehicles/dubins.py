@@ -47,6 +47,7 @@ class Dubins(Vehicle):
         Vehicle.__init__(
             self, n_spl=2, degree=2, shapes=shapes, options=options)
         self.vmax = bounds['vmax'] if 'vmax' in bounds else 0.5
+        self.amax = bounds['amax'] if 'amax' in bounds else 1.
         self.wmin = bounds['wmin'] if 'wmin' in bounds else -30.  # in deg/s
         self.wmax = bounds['wmax'] if 'wmax' in bounds else 30.
         # time horizon
@@ -59,11 +60,21 @@ class Dubins(Vehicle):
 
     def define_trajectory_constraints(self, splines):
         v_til, tg_ha = splines
-        dtg_ha = tg_ha.derivative()
-        dx = v_til*(1-tg_ha**2)
-        dy = v_til*(2*tg_ha)
+        dv_til, dtg_ha = v_til.derivative(), tg_ha.derivative()
         self.define_constraint(
-            (dx**2+dy**2) - (self.T**2)*self.vmax**2, -inf, 0.)
+            v_til*(1+tg_ha**2) - self.vmax, -inf, 0.)
+        # self.define_constraint(
+        #     dv_til*(1+tg_ha**2) + 2*v_til*tg_ha*dtg_ha - self.T*self.amax, -inf, 0.)
+
+        # Alternative:
+        # dx = v_til*(1-tg_ha**2)
+        # dy = v_til*(2*tg_ha)
+        # ddx, ddy = dx.derivative(), dy.derivative()
+        # self.define_constraint(
+        #     (dx**2+dy**2) - (self.T**2)*self.vmax**2, -inf, 0.)
+        # self.define_constraint(
+        #     (ddx**2+ddy**2) - (self.T**4)*self.amax**2, -inf, 0.)
+
         # add constraints on change in orientation
         self.define_constraint(2*dtg_ha - (1+tg_ha**2)*self.T*np.radians(self.wmax), -inf, 0.)
         self.define_constraint(-2*dtg_ha + (1+tg_ha**2)*self.T*np.radians(self.wmin), -inf, 0.)

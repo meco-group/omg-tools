@@ -16,12 +16,12 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
- 
+
 from omgtools import *
 
 # create vehicle
 vehicle = Dubins(#shapes=Rectangle(width=0.4, height=0.1),
-				 bounds={'vmax': 0.8, 'wmax': 60., 'wmin': -60.},  # in deg
+				 bounds={'vmax': 0.7, 'wmax': 60., 'wmin': -60.},  # in deg
                  options={'knot_intervals':5})
 # vehicle.set_options({'safety_distance': 0.1})
 # vehicle.set_options({'1storder_delay': True, 'time_constant': 0.1})
@@ -42,9 +42,9 @@ problem = Point2point(vehicle, environment, freeT=True)
 # extra solver settings which may improve performance
 # problem.set_options({'solver': {'ipopt.linear_solver': 'ma57'}})
 problem.set_options({'solver': {'ipopt.hessian_approximation': 'limited-memory'}})
-# problem.set_options({'solver': {'ipopt.warm_start_bound_push': 1e-6}})
-# problem.set_options({'solver': {'ipopt.warm_start_mult_bound_push': 1e-6}})
-# problem.set_options({'solver': {'ipopt.mu_init': 1e-5}})
+problem.set_options({'solver': {'ipopt.warm_start_bound_push': 1e-6}})
+problem.set_options({'solver': {'ipopt.warm_start_mult_bound_push': 1e-6}})
+problem.set_options({'solver': {'ipopt.mu_init': 1e-5}})
 problem.init()
 
 # create simulator
