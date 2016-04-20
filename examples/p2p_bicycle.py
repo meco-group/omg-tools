@@ -24,7 +24,7 @@ vehicle = Bicycle(shapes=Rectangle(width=0.4, height=0.1),
 				  bounds={'vmax': 0.8, 'dmax': 30., 'dmin': -30., 'ddmax': 45, 'ddmin': -45},  # in deg
                   options={'knot_intervals':5, 'plot_type': 'car'})  # todo: remove this when merging branches, use define_knots()
 
-vehicle.set_initial_conditions([0., 0., 0., 0.])  # x, y, theta, delta
+vehicle.set_initial_conditions([0., 0., 0.] , [0.])  # x, y, theta, delta
 vehicle.set_terminal_conditions([3., 3., 0.])  # x, y, theta
 
 # create environment

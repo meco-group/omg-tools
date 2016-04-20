@@ -158,12 +158,13 @@ class Bicycle(Vehicle):
                         (dv_til, dv_tilT), (ddtg_ha, self.T**2*ddtg_haT)]
         return [term_con, term_con_der]
 
-    def set_initial_conditions(self, pose, input=np.zeros(2)):
+    def set_initial_conditions(self, pose, delta, input=np.zeros(2)):
         # comes from the user so theta[deg]
         pose[2] = np.radians(pose[2])  # theta
-        pose[3] = np.radians(pose[3])  # delta
-        self.prediction['state'] = pose  # x, y, theta[rad], delta[rad]
+        delta = np.radians(delta)  # delta
+        self.prediction['state'] = np.r_[pose, delta]  # x, y, theta[rad], delta[rad]
         self.pose0 = pose # for use in first iteration of splines2signals()
+        self.delta0 = delta
         self.prediction['input'] = input  # V, ddelta
 
     def set_terminal_conditions(self, pose):
@@ -274,8 +275,8 @@ class Bicycle(Vehicle):
         signals['state'] = np.c_[sample_splines([x, y], time)]
         signals['state'] = np.r_[signals['state'], theta, delta]
         signals['input'] = input
-        signals['pose'] = signals['state']
-        signals['v_tot'] = input[0, :]
+        signals['pose'] = signals['state'][:3]
+        signals['delta'] = delta
         return signals
 
     def ode(self, state, input):
@@ -297,7 +298,7 @@ class Bicycle(Vehicle):
                                                              (shape.width/2.5)*np.sin(self.signals['pose'][2, t]+np.radians(25.))])
                 pos_front_r = self.signals['pose'][:2, t] + np.array([(shape.width/2.5)*np.cos(self.signals['pose'][2, t]-np.radians(25.)),
                                                              (shape.width/2.5)*np.sin(self.signals['pose'][2, t]-np.radians(25.))])
-                orient_front = self.signals['pose'][2, t] + self.signals['pose'][3, t]
+                orient_front = self.signals['pose'][2, t] + self.signals['delta'][0, t]
                 pos_back_l = self.signals['pose'][:2, t] - np.array([(shape.width/2.5)*np.cos(self.signals['pose'][2, t]+np.radians(25.)),
                                                              (shape.width/2.5)*np.sin(self.signals['pose'][2, t]+np.radians(25.))])
                 pos_back_r = self.signals['pose'][:2, t] - np.array([(shape.width/2.5)*np.cos(self.signals['pose'][2, t]-np.radians(25.)),
@@ -314,7 +315,7 @@ class Bicycle(Vehicle):
                 ret += shape.draw(self.signals['pose'][:3, t])  # vehicle
                 pos_front = self.signals['pose'][:2, t] + (shape.width/3)*np.array([np.cos(self.signals['pose'][2, t]),
                                                              np.sin(self.signals['pose'][2, t])])
-                orient_front = self.signals['pose'][2, t] + self.signals['pose'][3, t]
+                orient_front = self.signals['pose'][2, t] + self.signals['delta'][0, t]
                 pos_back = self.signals['pose'][:2, t] - (shape.width/3)*np.array([np.cos(self.signals['pose'][2, t]),
                                                              np.sin(self.signals['pose'][2, t])])
                 orient_back = self.signals['pose'][2, t]
