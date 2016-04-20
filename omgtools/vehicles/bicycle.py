@@ -127,6 +127,12 @@ class Bicycle(Vehicle):
         # will also be smooth. Furthermore the steering angle and its rate of change are limited by the 
         # extra constraints above. 
 
+        # Impose final steering angle
+        # tdeltaT = self.define_parameter('tdeltaT', 1)  # tan(delta)
+        # tg_haT = self.define_parameter('tg_haT', 1)
+        # self.define_constraint((2.*ddtg_ha(1.)*self.shapes[0].width
+        #                        -tdeltaT*(dv_til(1.)*(1.+tg_haT**2)**2)*self.T), 0., 0.)
+
         # Further initial constraints are not necessary, these 3 are sufficient to get continuity of the state
         return [(v_til, v_til0), (tg_ha, tg_ha0),
                 (dtg_ha, self.T*dtg_ha0)]
@@ -162,7 +168,8 @@ class Bicycle(Vehicle):
 
     def set_terminal_conditions(self, pose):
         # comes from the user so theta[deg]
-        pose[2] = np.radians(pose[2])
+        pose[2] = np.radians(pose[2])  # theta
+        # pose[3] = np.radians(pose[3])  # delta
         self.poseT = pose  # x, y, theta[rad]
 
     def get_init_spline_value(self):
@@ -195,6 +202,7 @@ class Bicycle(Vehicle):
         parameters['tg_haT'] = np.tan(self.poseT[2]/2)
         parameters['dtg_haT'] = 0.
         parameters['ddtg_haT'] = 0.
+        # parameters['tdeltaT'] = np.tan(self.poseT[3])
         if (parameters['v_til0'] <= 1e-4):  # use l'Hopital's rule
             parameters['hop0'] = 1.
             parameters['v_til0'] = 0.  # put exactly = 0.
@@ -263,11 +271,9 @@ class Bicycle(Vehicle):
             ddelta[0, -1] = ddelta[0, -2]
         input = np.c_[v_til*(1+tg_ha**2)]  # V
         input = np.r_[input, ddelta]
-        ders = np.r_[dv_til, ddtg_ha]
         signals['state'] = np.c_[sample_splines([x, y], time)]
         signals['state'] = np.r_[signals['state'], theta, delta]
         signals['input'] = input
-        signals['ders'] = ders
         signals['pose'] = signals['state']
         signals['v_tot'] = input[0, :]
         return signals
