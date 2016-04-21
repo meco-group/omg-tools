@@ -367,7 +367,7 @@ class OptiFather:
                         self._dual_var_result[label, name], basis)
 
 
-class OptiChild:
+class OptiChild(object):
     _labels = []
 
     def __init__(self, label):

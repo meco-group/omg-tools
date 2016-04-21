@@ -38,7 +38,7 @@ class Problem(OptiChild):
     # ========================================================================
 
     def set_default_options(self):
-        self.options = {'verbose': 2, 'update_time': 0.1}
+        self.options = {'verbose': 2}
         self.options['solver'] = {'ipopt.tol': 1e-3,
                                   'ipopt.linear_solver': 'mumps',
                                   'ipopt.warm_start_init_point': 'yes',
@@ -68,8 +68,8 @@ class Problem(OptiChild):
         self.father.init_transformations(self.init_primal_transform,
                                          self.init_dual_transform)
 
-    def solve(self, current_time):
-        self.init_step(current_time)
+    def solve(self, current_time, update_time):
+        self.init_step(current_time, update_time)
         # set initial guess, parameters, lb & ub
         var = self.father.get_variables()
         par = self.father.set_parameters(current_time)
@@ -119,7 +119,7 @@ class Problem(OptiChild):
     # Methods required to override
     # ========================================================================
 
-    def update(self, current_time):
+    def update(self, current_time, update_time, sample_time):
         raise NotImplementedError('Please implement this method!')
 
     def stop_criterium(self):

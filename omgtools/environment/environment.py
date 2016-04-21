@@ -97,15 +97,15 @@ class Environment(OptiChild):
                 obstacle.define_collision_constraints(hyp_obs[obstacle])
         for spline in vehicle.splines:
             vehicle.define_collision_constraints(hyp_veh, self, spline)
-        self.sample_time = vehicle.options['sample_time']
 
     # ========================================================================
     # Update environment
     # ========================================================================
 
-    def update(self, update_time):
+    def update(self, update_time, sample_time):
         for obstacle in self.obstacles:
-            obstacle.update(update_time, self.sample_time)
+            obstacle.update(update_time, sample_time)
+        self.update_plots()
 
     def draw(self, t=-1):
         draw = []
