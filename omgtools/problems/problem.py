@@ -101,9 +101,9 @@ class Problem(OptiChild, PlotLayer):
     # ========================================================================
 
     def init_plot(self, argument, **kwargs):
-        if not hasattr(self.vehicles[0], 'signals'):
-            return None
         if argument == 'scene':
+            if not hasattr(self.vehicles[0], 'signals'):
+                return None
             info = self.environment.init_plot(None, **kwargs)
             labels = kwargs['labels'] if 'labels' in kwargs else [
                 '' for k in range(self.environment.n_dim)]
@@ -125,9 +125,9 @@ class Problem(OptiChild, PlotLayer):
             return None
 
     def update_plot(self, argument, t, **kwargs):
-        if not hasattr(self.vehicles[0], 'signals'):
-            return None
         if argument == 'scene':
+            if not hasattr(self.vehicles[0], 'signals'):
+                return None
             data = self.environment.update_plot(None, t, **kwargs)
             for vehicle in self.vehicles:
                 data[0][0].append(
@@ -144,7 +144,7 @@ class Problem(OptiChild, PlotLayer):
                     data[0][0].append([l[k, :] for k in range(vehicle.n_dim)])
             return data
         else:
-            return False
+            return None
 
     # ========================================================================
     # Methods encouraged to override

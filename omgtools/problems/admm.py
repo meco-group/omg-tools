@@ -584,6 +584,7 @@ class ADMMProblem(DistributedProblem):
 
     def __init__(self, fleet, environment, problems, options):
         DistributedProblem.__init__(self, fleet, environment, problems, ADMM, options)
+        self.residuals = {'primal': [], 'dual': [], 'combined': []}
 
     # ========================================================================
     # ADMM options
@@ -645,4 +646,7 @@ class ADMMProblem(DistributedProblem):
                 print('%3d | %4.1f | %.2e | %.2e | %.2e | %.2e | %.2e | %.2e ' %
                       (self.iteration, current_time, p_res, d_res, t_upd_x,
                        t_upd_z, t_upd_l, t_res))
+            self.residuals['primal'] = np.r_[self.residuals['primal'], p_res]
+            self.residuals['dual'] = np.r_[self.residuals['dual'], d_res]
+            self.residuals['combined'] = np.r_[self.residuals['combined'], c_res]
             self.update_times.append(t_upd_x + t_upd_z + t_upd_l + t_res)
