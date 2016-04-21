@@ -575,8 +575,9 @@ class ADMM(Problem):
 
         pr = la.norm(x_i-z_i)**2 + la.norm(x_j-z_ij)**2
         dr = rho*(la.norm(z_i-z_i_p)**2 + la.norm(z_ij-z_ij_p)**2)
+        cr = (1./rho)*pr + dr
         t1 = time.time()
-        return t1-t0, pr, dr
+        return t1-t0, pr, dr, cr
 
 
 class ADMMProblem(DistributedProblem):
@@ -610,7 +611,7 @@ class ADMMProblem(DistributedProblem):
         it0 = self.iteration
         while (self.iteration - it0) < self.options['admm']['max_iter']:
             t_upd_x, t_upd_z, t_upd_l, t_res = 0., 0., 0., 0.
-            p_res, d_res = 0., 0.
+            p_res, d_res, c_res = 0., 0., 0.
             for updater in self.updaters:
                 updater.init_step(current_time, update_time)
             for updater in self.updaters:
@@ -621,13 +622,14 @@ class ADMMProblem(DistributedProblem):
             for updater in self.updaters:
                 t1 = updater.update_z(current_time)
                 t2 = updater.update_l(current_time)
-                t3, pr, dr = updater.get_residuals()
+                t3, pr, dr, cr = updater.get_residuals()
                 t_upd_z = max(t_upd_z, t1)
                 t_upd_l = max(t_upd_l, t2)
                 t_res = max(t_res, t3)
                 p_res += pr**2
                 d_res += dr**2
-            p_res, d_res = np.sqrt(p_res), np.sqrt(d_res)
+                c_res += cr**2
+            p_res, d_res, c_res = np.sqrt(p_res), np.sqrt(d_res), np.sqrt(c_res)
             for updater in self.updaters:
                 updater.communicate()
             if self.options['verbose'] >= 1:
