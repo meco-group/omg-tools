@@ -42,7 +42,7 @@ class HolonomicOrient(Vehicle):
     def set_default_options(self):
         Vehicle.set_default_options(self)
         self.options.update({'syslimit': 'norm_inf'})
-        self.options.update({'reg_type': 'none'})  # no reg by default
+        self.options.update({'reg_type': None})  # no reg by default
 
     def define_trajectory_constraints(self, splines):
         x, y, tg_ha = splines
@@ -70,7 +70,7 @@ class HolonomicOrient(Vehicle):
         self.define_constraint(2*dtg_ha - (1+tg_ha**2)*self.T*np.radians(self.wmax), -inf, 0.)
         self.define_constraint(-2*dtg_ha + (1+tg_ha**2)*self.T*np.radians(self.wmin), -inf, 0.)
         # add regularization on dtg_ha
-        if (self.options['reg_type'] is 'norm_1' and self.options['reg_weight'] != 0.0):
+        if (self.options['reg_type'] == 'norm_1' and self.options['reg_weight'] != 0.0):
             dtg_ha = tg_ha.derivative()
             g_reg = self.define_spline_variable(
                         'g_reg', 1, basis=dtg_ha.basis)[0]
@@ -78,7 +78,7 @@ class HolonomicOrient(Vehicle):
             self.define_constraint(dtg_ha - g_reg, -inf, 0.)
             self.define_constraint(-dtg_ha - g_reg, -inf, 0.)
             self.define_objective(self.options['reg_weight']*objective)
-        if (self.options['reg_type'] is 'norm_2'and self.options['reg_weight'] != 0.0):
+        if (self.options['reg_type'] == 'norm_2'and self.options['reg_weight'] != 0.0):
             dtg_ha = tg_ha.derivative()
             objective = definite_integral(dtg_ha**2, self.t/self.T, 1.)
             self.define_objective(self.options['reg_weight']*objective)
@@ -160,7 +160,7 @@ class HolonomicOrient(Vehicle):
         theta = 2*np.arctan2(sample_splines([tg_ha], time),1)
         dtheta = 2*np.array(sample_splines([dtg_ha],time))/(1+np.array(sample_splines([tg_ha], time))**2)
         ddx, ddy = x.derivative(2), y.derivative(2)
-        input = np.c_[sample_splines([dx, dy], time)] 
+        input = np.c_[sample_splines([dx, dy], time)]
         input = np.r_[input,dtheta]
         signals['state'] = np.c_[sample_splines([x, y], time)]
         signals['state'] = np.r_[signals['state'], theta]

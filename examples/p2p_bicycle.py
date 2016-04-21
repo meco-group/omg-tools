@@ -21,11 +21,12 @@ from omgtools import *
 
 # create vehicle
 vehicle = Bicycle(length=0.4,
-				  bounds={'vmax': 0.8, 'dmax': 30., 'dmin': -30., 'ddmax': 45, 'ddmin': -45},  # in deg
+                  bounds={'vmax': 0.8, 'dmax': 30., 'dmin': -30.,
+                          'ddmax': 45, 'ddmin': -45},  # in deg
                   options={'plot_type': 'car'})
 vehicle.define_knots(knot_intervals=5)  # choose lower amount of knot intervals
 
-vehicle.set_initial_conditions([0., 0., 0.] , [0.])  # x, y, theta, delta
+vehicle.set_initial_conditions([0., 0., 0.], [0.])  # x, y, theta, delta
 vehicle.set_terminal_conditions([3., 3., 0.])  # x, y, theta
 
 # create environment
@@ -33,27 +34,29 @@ environment = Environment(room={'shape': Square(5.), 'position': [1.5, 1.5]})
 trajectories = {'velocity': {'time': [0.5],
                              'values': [[0.3, 0.0]]}}
 environment.add_obstacle(Obstacle({'position': [1., 1.]}, shape=Circle(0.5),
-                                  simulation={'trajectories':trajectories}))
+                                  simulation={'trajectories': trajectories}))
 
 # create a point-to-point problem
 problem = Point2point(vehicle, environment, freeT=True)
 # extra solver settings which may improve performance
 problem.set_options({'solver': {'ipopt.linear_solver': 'ma57'}})
-problem.set_options({'solver': {'ipopt.hessian_approximation': 'limited-memory'}})
-problem.set_options({'solver': {'ipopt.warm_start_bound_push': 1e-6}})
-problem.set_options({'solver': {'ipopt.warm_start_mult_bound_push': 1e-6}})
-problem.set_options({'solver': {'ipopt.mu_init': 1e-5}})
+# problem.set_options(
+#     {'solver': {'ipopt.hessian_approximation': 'limited-memory'}})
+# problem.set_options({'solver': {'ipopt.warm_start_bound_push': 1e-6}})
+# problem.set_options({'solver': {'ipopt.warm_start_mult_bound_push': 1e-6}})
+# problem.set_options({'solver': {'ipopt.mu_init': 1e-5}})
 problem.init()
 
 # create simulator
 simulator = Simulator(problem)
-simulator.plot.set_options({'knots': True, 'prediction': False})
-simulator.plot.show('scene')
-simulator.plot.show('input')
-simulator.plot.show('state')
+
+problem.plot('scene')
+vehicle.plot('input', knots=True, labels=['v (m/s)', 'ddelta (rad/s)'])
+vehicle.plot('state', knots=True, labels=['x (m)', 'y (m)', 'theta (rad)', 'delta (rad)'])
 
 # run it!
 simulator.run()
 
-# show/save some results
-simulator.plot.show_movie('scene', repeat=False)
+# show some results
+problem.plot_movie('scene', repeat=False)
+
