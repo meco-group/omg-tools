@@ -60,11 +60,12 @@ class Simulator:
 
     def run_once(self):
         # solve problem
-        self.problem.solve(0.)
+        self.problem.solve(0., 0.)
         # update everything
-        self.problem.update(0., full_update=True)
-        self.plot.update()
+        self.problem.update(0., np.inf, self.sample_time)
         self.problem.final()
+        # determine timing
+        self.time = self.problem.vehicles[0].signals['time'].ravel()
         # return trajectories
         trajectories = {}
         for vehicle in self.problem.vehicles:
