@@ -77,9 +77,9 @@ class ADMM(Problem):
         self.par_struct = _create_struct_from_dict(self.par_i)
 
         self.var_admm = {}
-        for key in ['x_i', 'z_i', 'z_i_p', 'l_i']:
+        for key in ['x_i', 'z_i', 'z_i_p', 'l_i', 'l_i_p']:
             self.var_admm[key] = self.q_i_struct(0)
-        for key in ['x_j', 'z_ij', 'z_ij_p', 'l_ij']:
+        for key in ['x_j', 'z_ij', 'z_ij_p', 'l_ij', 'l_ij_p']:
             self.var_admm[key] = self.q_ij_struct(0)
         for key in ['z_ji', 'l_ji']:
             self.var_admm[key] = self.q_ji_struct(0)
@@ -521,7 +521,10 @@ class ADMM(Problem):
         return t1-t0
 
     def update_l(self, current_time):
+        # save previous result
         t0 = time.time()
+        self.var_admm['l_i_p'] = self.var_admm['l_i']
+        self.var_admm['l_ij_p'] = self.var_admm['l_ij']
         # set inputs
         x_i = self.var_admm['x_i']
         z_i = self.var_admm['z_i']
@@ -553,10 +556,10 @@ class ADMM(Problem):
         if ((current_time > 0. and
              np.round(current_time, 6) % self.problem.knot_time == 0)):
             tf = lambda cfs, basis: shift_over_knot(cfs, basis)
-            for key in ['x_i', 'z_i', 'z_i_p', 'l_i']:
+            for key in ['x_i', 'z_i', 'z_i_p', 'l_i', 'l_i_p']:
                 self.var_admm[key] = self._transform_spline(
                     self.var_admm[key], tf, self.q_i)
-            for key in ['x_j', 'z_ij', 'z_ij_p', 'l_ij']:
+            for key in ['x_j', 'z_ij', 'z_ij_p', 'l_ij', 'l_ij_p']:
                 self.var_admm[key] = self._transform_spline(
                     self.var_admm[key], tf, self.q_ij)
             for key in ['z_ji', 'l_ji']:
@@ -572,12 +575,46 @@ class ADMM(Problem):
         z_i_p = self.var_admm['z_i_p'].cat
         z_ij_p = self.var_admm['z_ij_p'].cat
         rho = self.options['admm']['rho']
-
         pr = la.norm(x_i-z_i)**2 + la.norm(x_j-z_ij)**2
         dr = rho*(la.norm(z_i-z_i_p)**2 + la.norm(z_ij-z_ij_p)**2)
         cr = (1./rho)*pr + dr
         t1 = time.time()
         return t1-t0, pr, dr, cr
+
+    def accelerate(self, c_res):
+        eta = self.options['admm']['eta']
+        if not hasattr(self, 'c_res_p'):
+            self.c_res_p = (1./eta)*c_res
+        if not hasattr(self, 'alpha'):
+            self.alpha = 1.
+        z_i = self.var_admm['z_i'].cat
+        z_ij = self.var_admm['z_ij'].cat
+        z_i_p = self.var_admm['z_i_p'].cat
+        z_ij_p = self.var_admm['z_ij_p'].cat
+        l_i = self.var_admm['l_i'].cat
+        l_ij = self.var_admm['l_ij'].cat
+        l_i_p = self.var_admm['l_i_p'].cat
+        l_ij_p = self.var_admm['l_ij_p'].cat
+        if c_res <= eta*self.c_res_p:
+            alpha_p = self.alpha
+            self.alpha = 0.5*(1. + np.sqrt(1 + 4.*alpha_p**2))
+            z_i = z_i + ((alpha_p - 1)/self.alpha)*(z_i - z_i_p)
+            z_ij = z_ij + ((alpha_p - 1)/self.alpha)*(z_ij - z_ij_p)
+            l_i = l_i + ((alpha_p - 1)/self.alpha)*(l_i - l_i_p)
+            l_ij = l_ij + ((alpha_p - 1)/self.alpha)*(l_ij - l_ij_p)
+            self.c_res_p = c_res
+        else:
+            print 'reset alpha'
+            self.alpha = 1.
+            z_i = z_i_p
+            z_ij = z_ij_p
+            l_i = l_i_p
+            l_ij = l_ij_p
+            self.c_res_p = (1./eta)*self.c_res_p
+        self.var_admm['z_i'] = self.q_i_struct(z_i)
+        self.var_admm['z_ij'] = self.q_ij_struct(z_ij)
+        self.var_admm['l_i'] = self.q_i_struct(l_i)
+        self.var_admm['l_ij'] = self.q_ij_struct(l_ij)
 
 
 class ADMMProblem(DistributedProblem):
@@ -592,7 +629,8 @@ class ADMMProblem(DistributedProblem):
 
     def set_default_options(self):
         Problem.set_default_options(self)
-        self.options['admm'] = {'max_iter': 1, 'rho': 2., 'init': 5}
+        self.options['admm'] = {'max_iter': 1, 'rho': 2., 'init': 5,
+                                'nesterov_acceleration': False, 'eta': 0.999}
 
     def set_options(self, options):
         if 'admm' in options:
@@ -631,6 +669,9 @@ class ADMMProblem(DistributedProblem):
                 d_res += dr**2
                 c_res += cr**2
             p_res, d_res, c_res = np.sqrt(p_res), np.sqrt(d_res), np.sqrt(c_res)
+            if self.options['admm']['nesterov_acceleration']:
+                for updater in self.updaters:
+                    updater.accelerate(c_res)
             for updater in self.updaters:
                 updater.communicate()
             if self.options['verbose'] >= 1:
