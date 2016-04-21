@@ -19,15 +19,17 @@
 
 from ..basics.optilayer import OptiChild
 from ..basics.spline import BSplineBasis
+from ..simulation.plotlayer import PlotLayer
 from obstacle import Obstacle
 from casadi import inf
 import numpy as np
 
 
-class Environment(OptiChild):
+class Environment(OptiChild, PlotLayer):
 
     def __init__(self, room, obstacles=[]):
         OptiChild.__init__(self, 'environment')
+        PlotLayer.__init__(self)
 
         # create room and define dimension of the space
         self.room, self.n_dim = room, room['shape'].n_dim
@@ -118,3 +120,27 @@ class Environment(OptiChild):
     def get_canvas_limits(self):
         limits = self.room['shape'].get_canvas_limits()
         return [limits[k]+self.room['position'][k] for k in range(self.n_dim)]
+
+    # ========================================================================
+    # Plot related functions
+    # ========================================================================
+
+    def init_plot(self, argument, **kwargs):
+        lines = []
+        for l in self.draw():
+            lines.append({'color': 'black'})
+        limits = self.get_canvas_limits()
+        labels = ['' for k in range(self.n_dim)]
+        if self.n_dim == 2:
+            return [[{'labels': labels, 'lines': lines, 'aspect_equal': True,
+                      'xlim': limits[0], 'ylim': limits[1]}]]
+        else:
+            return [[{'labels': labels, 'lines': lines, 'aspect_equal': True,
+                      'xlim': limits[0], 'ylim': limits[1], 'zlim': limits[2],
+                      'projection': '3d'}]]
+
+    def update_plot(self, argument, t, **kwargs):
+        lines = []
+        for l in self.draw(t):
+            lines.append([l[k, :] for k in range(self.n_dim)])
+        return [[lines]]
