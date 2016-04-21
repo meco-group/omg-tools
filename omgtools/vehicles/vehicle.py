@@ -125,26 +125,6 @@ class Vehicle(OptiChild, PlotLayer):
                         con += (-b+rad[l]+safety_distance-eps)*(1+tg_ha**2)
                         self.define_constraint(con, -inf, 0)
             # room constraints
-<<<<<<< HEAD
-            if self.options['room_constraints']:
-                if (isinstance(environment.room['shape'], (Rectangle, Square)) and
-                    environment.room['shape'].orientation == 0.0):
-                    room_limits = environment.get_canvas_limits()
-                    for chck in checkpoints:
-                        for k in range(2):
-                            self.define_constraint(-(chck[k]+position[k]) + room_limits[k][0], -inf, 0.)
-                            self.define_constraint((chck[k]+position[k]) - room_limits[k][1], -inf, 0.)
-                else:
-                    hyp_room = environment.room['shape'].get_hyperplanes(position = environment.room['position'])
-                    for l, chck in enumerate(checkpoints):
-                        for hpp in hyp_room.itervalues():
-                            con = 0
-                            con += (hpp['a'][0]*chck[0] + hpp['a'][1]*chck[1])*(1.-tg_ha**2)
-                            con += (-hpp['a'][0]*chck[1] + hpp['a'][1]*chck[0])*(2*tg_ha)
-                            con += (hpp['a'][0]*position[0] + hpp['a'][1]*position[1])*(1+tg_ha**2)
-                            con += (-hpp['b']+rad[l])*(1+tg_ha**2)
-                            self.define_constraint(con, -inf, 0)
-=======
             # check room shape and orientation, check vehicle shape and orientation
             # then decide on type of constraints to use: room_limits or hyperplanes
             if self.options['room_constraints']:
@@ -168,7 +148,6 @@ class Vehicle(OptiChild, PlotLayer):
                                 con += (hpp['a'][0]*position[0] + hpp['a'][1]*position[1])*(1+tg_ha**2)
                                 con += (-hpp['b']+rad[l])*(1+tg_ha**2)
                                 self.define_constraint(con, -inf, 0)
->>>>>>> develop
 
     def define_collision_constraints_3d(self, hyperplanes, environment, positions):
         # orientation for 3d not yet implemented!

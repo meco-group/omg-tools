@@ -8,7 +8,7 @@ import matplotlib
 from omgtools import *
 from omgtools.vehicles.lvd_machine import LVD
 
-save = False
+save = True
 
 # create plate
 # limits on position mid-point plate
@@ -43,8 +43,10 @@ else:
                       [0.425, -1.5, -0.5], [0.425, -1.5, 0.5]]
     shape2 = Polyhedron3D(vertices2, 0.001)
 
-obstacle1 = Obstacle({'position': [3.475, -0.65, 0.5]}, shape1, {}, {'draw': False})
-obstacle2 = Obstacle({'position': [0.425, 0.0, 1.6]}, shape2, {}, {'draw': False})
+obstacle1 = Obstacle(
+    {'position': [3.475, -0.65, 0.5]}, shape1, {}, {'draw': False})
+obstacle2 = Obstacle(
+    {'position': [0.425, 0.0, 1.6]}, shape2, {}, {'draw': False})
 environment.add_obstacle([obstacle1, obstacle2])
 
 # obstacles just for drawing
@@ -77,31 +79,28 @@ simulator = Simulator(problem)
 trajectories = simulator.run_once()
 
 # show results
-simulator.plot.set_options({'knots': False})
-# simulator.plot.show('state', label=['x (m)', 'y (m)', 'z (m)'])
-# simulator.plot.show('velocity', label=['dx (m/s)', 'dy (m/s)', 'dz (m/s)'])
-# simulator.plot.show(
-#     'acceleration', label=['ddx (m/s^2)', 'ddy (m/s^2)', 'ddz (m/s^2)'])
-# simulator.plot.show(
-#     'jerk', label=['dddx (m/s^3)', 'dddy (m/s^3)', 'dddz (m/s^3)'])
-# simulator.plot.show_movie(
-#     'scene', number_of_frames=40, repeat=False, view=[60, 45])
-# simulator.plot.show_movie(
-#     'scene', number_of_frames=40, repeat=False, view=[0, 90])
+plate.plot('state', labels=['x (m)', 'y (m)', 'z (m)'])
+plate.plot('velocity', labels=['dx (m/s)', 'dy (m/s)', 'dz (m/s)'])
+plate.plot(
+    'acceleration', labels=['ddx (m/s^2)', 'ddy (m/s^2)', 'ddz (m/s^2)'])
+plate.plot(
+    'jerk', labels=['dddx (m/s^3)', 'dddy (m/s^3)', 'dddz (m/s^3)'])
+problem.plot_movie(
+    'scene', number_of_frames=40, repeat=False, view=[60, 45])
+problem.plot_movie(
+    'scene', number_of_frames=40, repeat=False, view=[0, 90])
 
 # save results
 if save:
-    simulator.plot.save('state', 'position', label=[
-                        'x (m)', 'y (m)', 'z (m)'], figurewidth='15cm', figureheight='4cm')
-    simulator.plot.save('velocity', 'velocity', label=[
-                        'dx (m/s)', 'dy (m/s)', 'dz (m/s)'], figurewidth='15cm', figureheight='4cm')
-    simulator.plot.save('acceleration', 'acceleration', label=[
-                        'ddx (m/s^2)', 'ddy (m/s^2)', 'ddz (m/s^2)'], figurewidth='15cm', figureheight='4cm')
-    simulator.plot.save('jerk', 'jerk', label=[
-                        'dddx (m/s^3)', 'dddy (m/s^3)', 'dddz (m/s^3)'], figurewidth='15cm', figureheight='4cm')
+    plate.save_plot('state', 'position', labels=[
+        'x (m)', 'y (m)', 'z (m)'], figurewidth='15cm', figureheight='4cm')
+    plate.save_plot('velocity', 'velocity', labels=[
+        'dx (m/s)', 'dy (m/s)', 'dz (m/s)'], figurewidth='15cm', figureheight='4cm')
+    plate.save_plot('acceleration', 'acceleration', label=[
+        'ddx (m/s^2)', 'ddy (m/s^2)', 'ddz (m/s^2)'], figurewidth='15cm', figureheight='4cm')
+    plate.save_plot('jerk', 'jerk', labels=[
+        'dddx (m/s^3)', 'dddy (m/s^3)', 'dddz (m/s^3)'], figurewidth='15cm', figureheight='4cm')
 
-    simulator.plot.save_movie('scene', 'scene1', number_of_frames=40, view=[30, 60], limits=[
-        [0., 10.], [-4.65, 5.35], [-4.85, 6.15]])
-    simulator.plot.save_movie('scene', 'scene2', number_of_frames=40, view=[0, 90], limits=[
-        [0., 10.], [-4.65, 5.35], [-4.85, 6.15]])
+    problem.save_movie('scene', 'scene1', number_of_frames=40, view=[30, 60])
+    problem.save_movie('scene', 'scene2', number_of_frames=40, view=[0, 90])
 matplotlib.pyplot.show(block=True)
