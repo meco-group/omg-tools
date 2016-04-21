@@ -35,7 +35,8 @@ class Simulator:
         stop = False
         while not stop:
             stop = self.update()
-            self.update_timing()
+            if not stop:
+                self.update_timing()
         self.problem.final()
 
     def reset_timing(self):

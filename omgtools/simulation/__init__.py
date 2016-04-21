@@ -1,2 +1,2 @@
 from simulator import Simulator
-from plots import Plots
+from plotlayer import PlotLayer
