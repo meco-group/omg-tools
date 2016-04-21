@@ -30,10 +30,9 @@ class RendezVous(ADMMProblem):
             free_ind = fleet.configuration[veh].keys()
             problems.append(
                 FreeEndPoint2point(veh, environment.copy(), options, {veh: free_ind}))
-        ADMMProblem.__init__(self, problems, options)
+        ADMMProblem.__init__(self, fleet, environment, problems, options)
         problems_dic = {veh: problems[l]
                         for l, veh in enumerate(fleet.vehicles)}
-        self.fleet = fleet
 
         # define parameters
         rel_conT = {veh: self.define_parameter('rcT'+str(l), len(self.fleet.configuration[
@@ -64,7 +63,7 @@ class RendezVous(ADMMProblem):
             parameters['rcT'+str(l)] = np.hstack(rcT_)
         return parameters
 
-    def stop_criterium(self):
+    def stop_criterium(self, current_time, update_time):
         res = 0.
         for veh in self.vehicles:
             ind_veh = sorted(self.fleet.configuration[veh].keys())

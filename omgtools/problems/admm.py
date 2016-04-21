@@ -547,8 +547,8 @@ class ADMM(Problem):
             self.var_admm['l_ji'][str(nghb)] = l_ji
             self.var_admm['x_j'][str(nghb)] = x_j
 
-    def init_step(self, current_time):
-        self.problem.init_step(current_time)
+    def init_step(self, current_time, update_time):
+        self.problem.init_step(current_time, update_time)
         # transform spline variables
         if ((current_time > 0. and
              np.round(current_time, 6) % self.problem.knot_time == 0)):
@@ -581,8 +581,8 @@ class ADMM(Problem):
 
 class ADMMProblem(DistributedProblem):
 
-    def __init__(self, problems, options):
-        DistributedProblem.__init__(self, problems, ADMM, options)
+    def __init__(self, fleet, environment, problems, options):
+        DistributedProblem.__init__(self, fleet, environment, problems, ADMM, options)
 
     # ========================================================================
     # ADMM options
@@ -603,16 +603,16 @@ class ADMMProblem(DistributedProblem):
 
     def initialize(self):
         for k in range(self.options['admm']['init']):
-            self.solve(0.0)
+            self.solve(0.0, 0.0)
 
-    def solve(self, current_time):
+    def solve(self, current_time, update_time):
         self.current_time = current_time
         it0 = self.iteration
         while (self.iteration - it0) < self.options['admm']['max_iter']:
             t_upd_x, t_upd_z, t_upd_l, t_res = 0., 0., 0., 0.
             p_res, d_res = 0., 0.
             for updater in self.updaters:
-                updater.init_step(current_time)
+                updater.init_step(current_time, update_time)
             for updater in self.updaters:
                 t = updater.update_x(current_time)
                 t_upd_x = max(t_upd_x, t)

@@ -57,10 +57,10 @@ problem.init()
 
 # simulate, plot some signals and save a movie
 simulator = Simulator(problem)
-simulator.plot.show('input', label=['x-velocity(m/s)', 'y-velocity(m/s)'])
-simulator.plot.show('scene')
+vehicle.plot('input', labels=['v_x (m/s)', 'v_y (m/s)'])
+problem.plot('scene')
 simulator.run()
-simulator.plot.save_movie('scene')
+problem.save_movie('scene')
 ```
 
 ### More examples

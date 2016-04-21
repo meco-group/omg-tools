@@ -19,13 +19,16 @@
 
 from ..basics.optilayer import OptiFather, OptiChild
 from ..vehicles.fleet import get_fleet_vehicles
+from ..simulation.plotlayer import PlotLayer
+from itertools import groupby
 import time
 
 
-class Problem(OptiChild):
+class Problem(OptiChild, PlotLayer):
 
     def __init__(self, fleet, environment, options={}, label='problem'):
         OptiChild.__init__(self, label)
+        PlotLayer.__init__(self)
         self.fleet, self.vehicles = get_fleet_vehicles(fleet)
         self.environment = environment
         self.set_default_options()
@@ -38,7 +41,7 @@ class Problem(OptiChild):
     # ========================================================================
 
     def set_default_options(self):
-        self.options = {'verbose': 2, 'update_time': 0.1}
+        self.options = {'verbose': 2}
         self.options['solver'] = {'ipopt.tol': 1e-3,
                                   'ipopt.linear_solver': 'mumps',
                                   'ipopt.warm_start_init_point': 'yes',
@@ -68,8 +71,8 @@ class Problem(OptiChild):
         self.father.init_transformations(self.init_primal_transform,
                                          self.init_dual_transform)
 
-    def solve(self, current_time):
-        self.init_step(current_time)
+    def solve(self, current_time, update_time):
+        self.init_step(current_time, update_time)
         # set initial guess, parameters, lb & ub
         var = self.father.get_variables()
         par = self.father.set_parameters(current_time)
@@ -92,6 +95,56 @@ class Problem(OptiChild):
                 print "----|------------|------------"
             print "%3d | %.4e | %.4e " % (self.iteration, t_upd, current_time)
         self.update_times.append(t_upd)
+
+    # ========================================================================
+    # Plot related functions
+    # ========================================================================
+
+    def init_plot(self, argument, **kwargs):
+        if not hasattr(self.vehicles[0], 'signals'):
+            return None
+        if argument == 'scene':
+            info = self.environment.init_plot(None, **kwargs)
+            labels = kwargs['labels'] if 'labels' in kwargs else [
+                '' for k in range(self.environment.n_dim)]
+            n_colors = len(self.colors)
+            indices = [int([''.join(g) for _, g in groupby(
+                v.label, str.isalpha)][-1]) % n_colors for v in self.vehicles]
+            for v in range(len(self.vehicles)):
+                info[0][0]['lines'].append(
+                    {'color': self.colors_w[indices[v]]})
+            for v in range(len(self.vehicles)):
+                info[0][0]['lines'].append({'color': self.colors[indices[v]]})
+            for v, vehicle in enumerate(self.vehicles):
+                for l in vehicle.draw():
+                    info[0][0]['lines'].append(
+                        {'color': self.colors[indices[v]]})
+            info[0][0]['labels'] = labels
+            return info
+        else:
+            return None
+
+    def update_plot(self, argument, t, **kwargs):
+        if not hasattr(self.vehicles[0], 'signals'):
+            return None
+        if argument == 'scene':
+            data = self.environment.update_plot(None, t, **kwargs)
+            for vehicle in self.vehicles:
+                data[0][0].append(
+                    [vehicle.traj_storage['pose'][t][k, :] for k in range(vehicle.n_dim)])
+            for vehicle in self.vehicles:
+                if t == -1:
+                    data[0][0].append(
+                        [vehicle.signals['pose'][k, :] for k in range(vehicle.n_dim)])
+                else:
+                    data[0][0].append(
+                        [vehicle.signals['pose'][k, :t+1] for k in range(vehicle.n_dim)])
+            for vehicle in self.vehicles:
+                for l in vehicle.draw(t):
+                    data[0][0].append([l[k, :] for k in range(vehicle.n_dim)])
+            return data
+        else:
+            return False
 
     # ========================================================================
     # Methods encouraged to override
@@ -119,7 +172,7 @@ class Problem(OptiChild):
     # Methods required to override
     # ========================================================================
 
-    def update(self, current_time):
+    def update(self, current_time, update_time, sample_time):
         raise NotImplementedError('Please implement this method!')
 
     def stop_criterium(self):

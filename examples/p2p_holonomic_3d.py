@@ -41,13 +41,12 @@ problem.init()
 
 # create simulator
 simulator = Simulator(problem)
-simulator.plot.set_options({'knots': True, 'prediction': False})
-simulator.plot.show('scene', view=[45, -45])  # elevation and azimuth of cam
-simulator.plot.show('state')
-simulator.plot.show('input')
+problem.plot('scene', view=[45, -45])  # elevation and azimuth of cam
+vehicle.plot('state', knots=True, labels=['x (m)', 'y (m)', 'z (m)'])
+vehicle.plot('input', knots=True, labels=['v_x (m/s)', 'v_y (m/s)', 'v_z (m/s)'])
 
 # run it!
 simulator.run()
 
 # # show/save some results
-simulator.plot.show_movie('scene', repeat=False)
+problem.plot_movie('scene', repeat=False)
