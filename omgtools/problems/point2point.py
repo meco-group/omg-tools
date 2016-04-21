@@ -229,7 +229,7 @@ class FreeTPoint2point(Point2pointProblem):
         T = self.get_variable('T', solution=True)[0][0]
         if T < update_time:
             return True
-        return Point2pointProblem.stop_criterium(self)
+        return Point2pointProblem.stop_criterium(self, current_time, update_time)
 
     def init_step(self, current_time, update_time):
         T = self.get_variable('T', solution=True)[0][0]
