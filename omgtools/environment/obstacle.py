@@ -174,7 +174,8 @@ class ObstaclexD(OptiChild):
         state0 = np.r_[self.signals['position'][:, -1],
                        self.signals['velocity'][:, -1],
                        self.signals['acceleration'][:, -1]].T
-        state0 -= self.state_incr_interp(time0)
+        if time0 != 0.0:
+            state0 -= self.state_incr_interp(time0)
         state = odeint(self._ode, state0, time_axis).T
         state += self.state_incr_interp(time_axis)
         self.signals['position'] = np.c_[self.signals['position'],
