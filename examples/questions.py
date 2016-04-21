@@ -44,13 +44,12 @@ problem.init()
 
 # create simulator
 simulator = Simulator(problem)
-simulator.plot.set_options({'knots': True})
-simulator.plot.show('scene')
-simulator.plot.show('input', label=['Thrust force (N/kg)',
-                                    'Pitch rate (rad/s)'])
+problem.plot('scene')
+fleet.plot('input', labels=['Thrust force (N/kg)',
+                            'Pitch rate (rad/s)'])
 
 # run it!
 simulator.run()
 
 # show/save some results
-simulator.plot.show_movie('scene', repeat=False)
+problem.plot_movie('scene', repeat=False)

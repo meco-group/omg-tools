@@ -18,6 +18,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from vehicle import Vehicle
+from ..simulation.plotlayer import PlotLayer
 
 
 def get_fleet_vehicles(var):
@@ -32,9 +33,10 @@ def get_fleet_vehicles(var):
         return Fleet(var), [var]
 
 
-class Fleet:
+class Fleet(PlotLayer):
 
     def __init__(self, vehicles=[], interconnection='circular'):
+        PlotLayer.__init__(self)
         self.vehicles = vehicles if isinstance(vehicles, list) else [vehicles]
         self.interconnection = interconnection
         self.set_neighbors()
@@ -96,3 +98,53 @@ class Fleet:
     def set_terminal_conditions(self, conditions):
         for l, vehicle in enumerate(self.vehicles):
             vehicle.set_terminal_conditions(conditions[l])
+
+    # ========================================================================
+    # Plot related functions
+    # ========================================================================
+
+    def init_plot(self, signal, **kwargs):
+        if self.vehicles[0].init_plot(signal, **kwargs) is None:
+            return None
+        vehicle_types = self.sort_vehicles()
+        info = []
+        for veh_type, vehicles in vehicle_types.items():
+            infos = [v.init_plot(signal, **kwargs) for v in vehicles]
+            for k in range(len(infos[0])):
+                inf = []
+                for l in range(len(infos[0][0])):
+                    labels = [
+                        veh_type + ' ' + lbl for lbl in infos[0][k][l]['labels']]
+                    lines = []
+                    for v in range(len(vehicles)):
+                        lines += infos[v][k][l]['lines']
+                    inf.append({'labels': labels, 'lines': lines})
+                info.append(inf)
+        return info
+
+    def update_plot(self, signal, t, **kwargs):
+        if self.vehicles[0].update_plot(signal, t, **kwargs) is None:
+            return None
+        vehicle_types = self.sort_vehicles()
+        data = []
+        for vehicles in vehicle_types.values():
+            datas = [v.update_plot(signal, t, **kwargs) for v in vehicles]
+            for k in range(len(datas[0])):
+                dat = []
+                for l in range(len(datas[0][0])):
+                    lines = []
+                    for v in range(len(vehicles)):
+                        lines += datas[v][k][l]
+                    dat.append(lines)
+                data.append(dat)
+        return data
+
+    def sort_vehicles(self):
+        vehicle_types = {}
+        for vehicle in self.vehicles:
+            veh_type = vehicle.__class__.__name__
+            if veh_type in vehicle_types:
+                vehicle_types[veh_type].append(vehicle)
+            else:
+                vehicle_types[veh_type] = [vehicle]
+        return vehicle_types

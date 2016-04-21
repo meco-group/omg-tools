@@ -18,21 +18,25 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from ..basics.optilayer import OptiChild
-from ..basics.spline import BSplineBasis
+from ..basics.spline import BSpline, BSplineBasis
 from ..basics.spline_extra import concat_splines, definite_integral, sample_splines
-from ..basics.shape import Rectangle, Square
+from ..basics.shape import Rectangle, Square, Circle
+from ..simulation.plotlayer import PlotLayer
 from casadi import inf
 from scipy.signal import filtfilt, butter
 from scipy.interpolate import interp1d
 from scipy.integrate import odeint
 from numpy.random import normal
+from itertools import groupby
+import matplotlib.pyplot as plt
 import numpy as np
 
 
-class Vehicle(OptiChild):
+class Vehicle(OptiChild, PlotLayer):
 
     def __init__(self, n_spl, degree, shapes, options):
         OptiChild.__init__(self, 'vehicle')
+        PlotLayer.__init__(self)
         self.shapes = shapes if isinstance(shapes, list) else [shapes]
         self.n_dim = self.shapes[0].n_dim
         for shape in self.shapes:
@@ -58,7 +62,7 @@ class Vehicle(OptiChild):
 
     def set_default_options(self):
         self.options = {'safety_distance': 0., 'safety_weight': 10.,
-                        'sample_time': 0.01, 'room_constraints': True,
+                        'room_constraints': True,
                         'ideal_prediction': False, 'ideal_update': False,
                         '1storder_delay': False, 'time_constant': 0.1,
                         'input_disturbance': None}
@@ -94,7 +98,8 @@ class Vehicle(OptiChild):
         T = self.define_symbol('T')
         safety_distance = self.options['safety_distance']
         safety_weight = self.options['safety_weight']
-        positions = [positions] if not isinstance(positions[0], list) else positions
+        positions = [positions] if not isinstance(
+            positions[0], list) else positions
         for s, shape in enumerate(self.shapes):
             position = positions[s]
             checkpoints, rad = shape.get_checkpoints()
@@ -115,10 +120,12 @@ class Vehicle(OptiChild):
                         con = 0
                         con += (a[0]*chck[0] + a[1]*chck[1])*(1.-tg_ha**2)
                         con += (-a[0]*chck[1] + a[1]*chck[0])*(2*tg_ha)
-                        con += (a[0]*position[0] + a[1]*position[1])*(1+tg_ha**2)
+                        con += (a[0]*position[0] + a[1]*position[1]) * \
+                            (1+tg_ha**2)
                         con += (-b+rad[l]+safety_distance-eps)*(1+tg_ha**2)
                         self.define_constraint(con, -inf, 0)
             # room constraints
+<<<<<<< HEAD
             if self.options['room_constraints']:
                 if (isinstance(environment.room['shape'], (Rectangle, Square)) and
                     environment.room['shape'].orientation == 0.0):
@@ -137,6 +144,31 @@ class Vehicle(OptiChild):
                             con += (hpp['a'][0]*position[0] + hpp['a'][1]*position[1])*(1+tg_ha**2)
                             con += (-hpp['b']+rad[l])*(1+tg_ha**2)
                             self.define_constraint(con, -inf, 0)
+=======
+            # check room shape and orientation, check vehicle shape and orientation
+            # then decide on type of constraints to use: room_limits or hyperplanes
+            if self.options['room_constraints']:
+                for shape in self.shapes:  # loop over vehicle shapes
+                    if ((isinstance(environment.room['shape'], (Rectangle, Square)) and
+                        environment.room['shape'].orientation == 0.0) and
+                        (isinstance(shape, Circle) or (isinstance(shape, (Rectangle, Square)) and
+                         shape.orientation == 0 and (isinstance(tg_ha, (int, float, long)) and tg_ha == 0.)))):
+                        room_limits = environment.get_canvas_limits()
+                        for chck in checkpoints:
+                            for k in range(2):
+                                self.define_constraint(-(chck[k]+position[k]) + room_limits[k][0], -inf, 0.)
+                                self.define_constraint((chck[k]+position[k]) - room_limits[k][1], -inf, 0.)
+                    else:
+                        hyp_room = environment.room['shape'].get_hyperplanes(position = environment.room['position'])
+                        for l, chck in enumerate(checkpoints):
+                            for hpp in hyp_room.itervalues():
+                                con = 0
+                                con += (hpp['a'][0]*chck[0] + hpp['a'][1]*chck[1])*(1.-tg_ha**2)
+                                con += (-hpp['a'][0]*chck[1] + hpp['a'][1]*chck[0])*(2*tg_ha)
+                                con += (hpp['a'][0]*position[0] + hpp['a'][1]*position[1])*(1+tg_ha**2)
+                                con += (-hpp['b']+rad[l])*(1+tg_ha**2)
+                                self.define_constraint(con, -inf, 0)
+>>>>>>> develop
 
     def define_collision_constraints_3d(self, hyperplanes, environment, positions):
         # orientation for 3d not yet implemented!
@@ -144,7 +176,8 @@ class Vehicle(OptiChild):
         T = self.define_symbol('T')
         safety_distance = self.options['safety_distance']
         safety_weight = self.options['safety_weight']
-        positions = [positions] if not isinstance(positions[0], list) else positions
+        positions = [positions] if not isinstance(
+            positions[0], list) else positions
         for s, shape in enumerate(self.shapes):
             position = positions[s]
             checkpoints, rad = shape.get_checkpoints()
@@ -182,7 +215,7 @@ class Vehicle(OptiChild):
     # Simulation and prediction related functions
     # ========================================================================
 
-    def update(self, current_time, update_time, segment_times, time_axis=None):
+    def update(self, current_time, update_time, sample_time, segment_times, time_axis=None):
         if not isinstance(segment_times, list):
             segment_times = [segment_times]
         spline_segments = [self.get_variable('splines'+str(k), solution=True)
@@ -191,14 +224,15 @@ class Vehicle(OptiChild):
         horizon_time = sum(segment_times)
         if time_axis is None:
             n_samp = int(
-                round(horizon_time/self.options['sample_time'], 3)) + 1
+                round(horizon_time/sample_time, 3)) + 1
             time_axis = np.linspace(0., horizon_time, n_samp)
         self.get_trajectories(splines, time_axis, current_time)
         if not hasattr(self, 'signals'):
             self.init_signals()
-        self.predict(update_time)
-        self.simulate(update_time)
-        self.store(update_time)
+        self.predict(update_time, sample_time)
+        self.simulate(update_time, sample_time)
+        self.store(update_time, sample_time)
+        self.update_plots()
 
     def get_trajectories(self, splines, time_axis, current_time):
         self.trajectories = self.splines2signals(splines, time_axis)
@@ -227,8 +261,8 @@ class Vehicle(OptiChild):
                 self.trajectories_kn[key] = self.trajectories_kn[
                     key].reshape(1, shape[0])
 
-    def predict(self, predict_time):
-        n_samp = int(predict_time/self.options['sample_time'])
+    def predict(self, predict_time, sample_time):
+        n_samp = int(predict_time/sample_time)
         if self.options['ideal_prediction']:
             for key in self.trajectories:
                 self.prediction[key] = self.trajectories[key][:, n_samp]
@@ -238,12 +272,13 @@ class Vehicle(OptiChild):
                     self.prediction[key] = self.trajectories[key][:, n_samp]
             input = self.trajectories['input']
             state0 = self.signals['state'][:, -1]  # current state
-            state = self.integrate_ode(state0, input, predict_time)
+            state = self.integrate_ode(
+                state0, input, predict_time, sample_time)
             self.prediction['state'] = state[:, -1]
             self.prediction['input'] = self.trajectories['input'][:, n_samp]
 
-    def simulate(self, simulation_time):
-        n_samp = int(simulation_time/self.options['sample_time'])
+    def simulate(self, simulation_time, sample_time):
+        n_samp = int(simulation_time/sample_time)
         if self.options['ideal_update']:
             for key in self.trajectories:
                 self.signals[key] = np.c_[
@@ -259,20 +294,21 @@ class Vehicle(OptiChild):
             if self.options['1storder_delay']:
                 input0 = self.signals['input'][:, -1]
                 input = self.integrate_ode(
-                    input0, input, simulation_time, self._ode_1storder)
+                    input0, input, simulation_time, sample_time, self._ode_1storder)
             state0 = self.signals['state'][:, -1]  # current state
-            state = self.integrate_ode(state0, input, simulation_time)
+            state = self.integrate_ode(
+                state0, input, simulation_time, sample_time)
             self.signals['input'] = np.c_[
                 self.signals['input'], input[:, 1:n_samp+1]]
             self.signals['state'] = np.c_[
                 self.signals['state'], state[:, 1:n_samp+1]]
 
-    def store(self, update_time):
+    def store(self, update_time, sample_time):
         if not hasattr(self, 'traj_storage'):
             self.traj_storage = {}
             self.traj_storage_kn = {}
             self.pred_storage = {}
-        repeat = int(update_time/self.options['sample_time'])
+        repeat = int(update_time/sample_time)
         self._add_to_memory(self.traj_storage, self.trajectories, repeat)
         self._add_to_memory(self.traj_storage_kn, self.trajectories_kn, repeat)
         self._add_to_memory(self.pred_storage, self.prediction, repeat)
@@ -282,10 +318,9 @@ class Vehicle(OptiChild):
         for key in self.trajectories:
             self.signals[key] = np.c_[self.trajectories[key][:, 0]]
 
-    def integrate_ode(self, state0, input, integration_time, ode=None):
+    def integrate_ode(self, state0, input, integration_time, sample_time, ode=None):
         if ode is None:
             ode = self._ode
-        sample_time = self.options['sample_time']
         n_samp = int(integration_time/sample_time)+1
         time_axis = np.linspace(0., (n_samp-1)*sample_time, n_samp)
         # make interpolation function which returns the input at a certain time
@@ -334,6 +369,72 @@ class Vehicle(OptiChild):
         for shape in self.shapes:
             ret += shape.draw(self.signals['pose'][:, t])
         return ret
+
+    # ========================================================================
+    # Plot related functions
+    # ========================================================================
+
+    def init_plot(self, signal, **kwargs):
+        if not hasattr(self, 'signals'):
+            return None
+        size = self.signals[signal].shape[0]
+        if 'labels' not in kwargs:
+            if size > 1:
+                labels = [signal+str(k) for k in range(size)]
+            else:
+                labels = [signal]
+        else:
+            labels = kwargs['labels']
+        ax_r, ax_c = size, 1
+        info = []
+        n_colors = len(self.colors)
+        index = int([''.join(g)
+                     for _, g in groupby(self.label, str.isalpha)][-1])
+        for k in range(ax_r):
+            inf = []
+            for l in range(ax_c):
+                lines = []
+                lines.append(
+                    {'linestyle': '-', 'color': self.colors_w[index % n_colors]})
+                lines.append(
+                    {'linestyle': '-', 'color': self.colors[index % n_colors]})
+                if 'knots' in kwargs and kwargs['knots']:
+                    lines.append(
+                        {'linestyle': 'None', 'marker': 'x', 'color': self.colors[index]})
+                if 'prediction' in kwargs and kwargs['prediction']:
+                    lines.append(
+                        {'linestyle': 'None', 'marker': 'o', 'color': self.colors[index]})
+                inf.append({'labels': ['t (s)', labels[k]], 'lines': lines})
+            info.append(inf)
+        return info
+
+    def update_plot(self, signal, t, **kwargs):
+        if not hasattr(self, 'signals'):
+            return None
+        size = self.signals[signal].shape[0]
+        ax_r, ax_c = size, 1
+        data = []
+        for k in range(ax_r):
+            dat = []
+            for l in range(ax_c):
+                lines = []
+                lines.append(
+                    [self.traj_storage['time'][t], self.traj_storage[signal][t][k, :]])
+                if t == -1:
+                    lines.append(
+                        [self.signals['time'], self.signals[signal][k, :]])
+                else:
+                    lines.append(
+                        [self.signals['time'][:, :t+1], self.signals[signal][k, :t+1]])
+                if 'knots' in kwargs and kwargs['knots']:
+                    lines.append(
+                        [self.traj_storage_kn['time'][t], self.traj_storage_kn[signal][t][k, :]])
+                if 'prediction' in kwargs and kwargs['prediction']:
+                    lines.append(
+                        [self.signals['time'][:, t], self.pred_storage[signal][t][k]])
+                dat.append(lines)
+            data.append(dat)
+        return data
 
     # ========================================================================
     # Methods required to override

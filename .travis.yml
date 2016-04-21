@@ -16,7 +16,7 @@ before_script:
 
 script:
   - cd examples
-  - (for file in *.py ; do echo "$file" ; python "$file" ; done )
+  - (for file in *.py ; do if [ "$file" != "p2p_bicycle.py" ]; then echo "$file" ; python "$file" ; fi; done )
   - cd export
   - make && cd bin
   - ./Point2Point

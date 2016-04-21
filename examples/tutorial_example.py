@@ -128,23 +128,22 @@ problem.init()
 
 # Create the simulator
 # This allows to simulate a motion planning algorithm and allows to plot
-# relevant signals.
+# relevant signals while simulating.
 simulator = Simulator(problem)
-simulator.plot.set_options({'knots': True})  # let's plot our spline knots
-simulator.plot.show('input', label=['x-velocity (m/s)', 'y-velocity (m/s)'])
-# You can also provide the name 'scene': this plots the vehicle moving in its
-# environment
-simulator.plot.show('scene')
+# We plot our input trajectory of our vehicle
+vehicle.plot('input', labels=['v_x (m/s)', 'v_y (m/s)'], knots=True)
+# And also the 'scene': this plots the vehicle moving in its environment
+problem.plot('scene')
 
 # Run the simulator!
 simulator.run()
 
-# Show 2d plot at some time (no time argument means 'at the end')
-simulator.plot.show('scene', time=2.)
-# Show movie of some signal
-simulator.plot.show_movie('scene', repeat=False)
+# Show scene plot at some time (no time argument means 'at the end')
+problem.plot('scene', time=2.)
+# Show movie (you can make a movie of all possible plot data)
+problem.plot_movie('scene', repeat=False)
 # Save a plot as Tikz: you need matplotlib2tikz for this!
-simulator.plot.save('state', name='state')
+vehicle.save_plot('state', name='state')
 # Save a movie as multiple Tikz: you need matplotlib2tikz for this!
-simulator.plot.save_movie('input', number_of_frames=4)
-simulator.plot.save_movie('scene', number_of_frames=4, name='holonomic')
+vehicle.save_movie('input', number_of_frames=4)
+problem.save_movie('scene', number_of_frames=4, name='holonomic', axis=False)

@@ -186,46 +186,6 @@ class ObstaclexD(OptiChild):
         self.signals['time'] = np.r_[
             self.signals['time'], time_axis[1:n_samp+1]]
 
-    def update2(self, update_time, sample_time):
-        n_samp = int(update_time/sample_time)
-        for k in range(n_samp):
-            dpos, dvel, dacc = np.zeros(2), np.zeros(2), np.zeros(2)
-            t1_vel, t2_vel = sample_time, 0.
-            t1_acc, t2_acc = sample_time, 0.
-            time = self.signals['time'][:, -1] + sample_time
-            increment, t1, t2 = {}, {}, {}
-            for key in ['position', 'velocity', 'acceleration']:
-                increment[key] = np.zeros(self.n_dim)
-                t1[key], t2[key] = sample_time, 0.
-                if key in self.trajectories and self.index[key] < len(self.traj_times[key]):
-                    if np.round(time - self.traj_times[key][self.index[key]], 3) >= 0:
-                        t = self.traj_times[key][self.index[key]]
-                        increment[key] = self.trajectories[key][t]
-                        t1[key] = sample_time - (time - t)
-                        t2[key] = time - t
-                        self.index[key] += 1
-            pos0 = self.signals['position'][:, -1]
-            vel0 = self.signals['velocity'][:, -1]
-            acc0 = self.signals['acceleration'][:, -1]
-            dpos = increment['position']
-            dvel = increment['velocity']
-            dacc = increment['acceleration']
-            t1_vel, t2_vel = t1['velocity'], t2['velocity']
-            t1_acc, t2_acc = t1['acceleration'], t2['acceleration']
-
-            position = (pos0 + dpos + t1_vel*vel0 + t2_vel*(vel0 + dvel) +
-                        0.5*(t1_acc**2)*acc0 + 0.5*(t2_acc**2)*(acc0 + dacc))
-            velocity = (vel0 + dvel + t1_acc*acc0 + t2_acc*(acc0 + dacc))
-            acceleration = acc0 + dacc
-
-            self.signals['time'] = np.c_[self.signals['time'], time]
-            self.signals['position'] = np.c_[
-                self.signals['position'], position]
-            self.signals['velocity'] = np.c_[
-                self.signals['velocity'], velocity]
-            self.signals['acceleration'] = np.c_[
-                self.signals['acceleration'], acceleration]
-
     def draw(self, t=-1):
         if not self.options['draw']:
             return []

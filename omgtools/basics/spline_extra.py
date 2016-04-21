@@ -18,7 +18,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from spline import BSpline, BSplineBasis
-from casadi import SX, MX, mtimes, Function
+from casadi import SX, MX, mtimes, Function, vertcat
 from scipy.interpolate import splev
 import numpy as np
 
@@ -65,8 +65,9 @@ def running_integral(spline):
     basis_int = BSplineBasis(knots_int, degree_int)
     coeffs_int = [0.]
     for i in range(len(basis_int)-1):
-        coeffs_int.append(coeffs_int[i]+(knots[degree+i+1]-knots[i])*coeffs[i])
-    coeffs_int = [(1./degree_int)*c for c in coeffs_int]
+        coeffs_int.append(coeffs_int[i]+(knots[degree+i+1]-knots[i])/float(degree_int)*coeffs[i])
+    if isinstance(coeffs,(MX, SX)):
+        coeffs_int = vertcat(*coeffs_int)
     spline_int = BSpline(basis_int, coeffs_int)
     return spline_int
 
