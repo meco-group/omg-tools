@@ -50,12 +50,11 @@ problem.init()
 
 # create simulator
 simulator = Simulator(problem)
-simulator.plot.set_options({'knots': True})
-simulator.plot.show('scene')
-simulator.plot.show('input')
+fleet.plot('input', knots=True, labels=['v_x (m/s)', 'v_y (m/s)'])
+problem.plot('scene')
 
 # run it!
 simulator.run()
 
 # show/save some results
-simulator.plot.show_movie('scene', repeat=False)
+problem.plot_movie('scene', repeat=False)
