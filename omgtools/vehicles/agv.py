@@ -50,8 +50,9 @@ import numpy as np
 class AGV(Vehicle):
 
     def __init__(self, length=0.4, options={}, bounds={}):
+        # shapes e.g. Rectangle(width=0.8, height=0.2) or Circle(length/2.)
         Vehicle.__init__(
-            self, n_spl=2, degree=2, shapes=Rectangle(width=0.8, height=0.2), options=options)
+            self, n_spl=2, degree=2, shapes=Circle(length/2.), options=options)
         self.vmax = bounds['vmax'] if 'vmax' in bounds else 0.5
         self.amax = bounds['amax'] if 'amax' in bounds else 1.
         self.dmin = bounds['dmin'] if 'dmin' in bounds else -30.  # steering angle [deg]
@@ -310,6 +311,7 @@ class AGV(Vehicle):
             ret += wheel.draw(np.r_[pos_back_r, orient_back])  # back wheel right
 
         if self.options['plot_type'] is 'agv':
+            # plot approximation of vehicle
             # real = Circle(self.length/2.)
             # ret += real.draw(self.signals['pose'][:2,t])
             car = Rectangle(width=self.length, height=self.length/4.)
