@@ -650,3 +650,49 @@ class ADMMProblem(DistributedProblem):
             self.residuals['dual'] = np.r_[self.residuals['dual'], d_res]
             self.residuals['combined'] = np.r_[self.residuals['combined'], c_res]
             self.update_times.append(t_upd_x + t_upd_z + t_upd_l + t_res)
+
+    # ========================================================================
+    # Plot related functions
+    # ========================================================================
+
+    def init_plot(self, argument, **kwargs):
+        if argument == 'residuals':
+            if len(self.residuals['primal']) == 0:
+                return None
+            ax_r, ax_c = 3, 1
+            labels = ['Primal residual (log10)', 'Dual residual (log10)', 'Combined residual (log10)']
+            info = []
+            for k in range(ax_r):
+                inf = []
+                for l in range(ax_c):
+                    lines = []
+                    lines.append({'linestyle': 'None', 'marker': '*', 'color': self.colors[k]})
+                    inf.append({'labels': ['Iteration', labels[k]], 'lines': lines})
+                info.append(inf)
+            return info
+        else:
+            return Problem.init_plot(self, argument, **kwargs)
+
+    def update_plot(self, argument, t, **kwargs):
+        if argument == 'residuals':
+            if len(self.residuals['primal']) == 0:
+                return None
+            data = []
+            for residual in self.residuals.values():
+                dat = []
+                for l in range(1):
+                    lines = []
+                    if t == -1:
+                        n_it = len(residual)
+                        iterations = np.linspace(1, n_it, n_it)
+                        lines.append([iterations, np.log10(residual)])
+                    else:
+                        ind = self.options['admm']['init'] + t*self.options['admm']['max_iter']
+                        n_it = ind + 1
+                        iterations = np.linspace(1, n_it, n_it)
+                        lines.append([iterations, np.log10(residual[:ind+1])])
+                    dat.append(lines)
+                data.append(dat)
+            return data
+        else:
+            return Problem.update_plot(self, argument, t, **kwargs)
