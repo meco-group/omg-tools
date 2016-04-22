@@ -125,7 +125,8 @@ class ADMM(Problem):
         self.define_objective(obj)
         # construct problem
         self.father = OptiFather(self.group.values())
-        prob, compile_time = self.father.construct_problem(self.options, str(self._index))
+        prob, compile_time = self.father.construct_problem(
+            self.options, str(self._index))
         self.problem_upd_x = prob
         self.father.init_transformations(self.problem.init_primal_transform,
                                          self.problem.init_dual_transform)
@@ -269,23 +270,9 @@ class ADMM(Problem):
         rho = MX.sym('rho')
         t0 = t/T
         inp = [x_i, z_i, z_ij, l_i, l_ij, x_j, t, T, rho]
-        # put symbols in MX structs (necessary for transformation)
-        x_i = self.q_i_struct(x_i)
-        z_i = self.q_i_struct(z_i)
-        z_ij = self.q_ij_struct(z_ij)
-        l_i = self.q_i_struct(l_i)
-        l_ij = self.q_ij_struct(l_ij)
-        x_j = self.q_ij_struct(x_j)
-        # transform spline variables: only consider future piece of spline
-        tf = lambda cfs, basis: shift_knot1_fwd(cfs, basis, t0)
-        self._transform_spline([x_i, z_i, l_i], tf, self.q_i)
-        self._transform_spline([x_j, z_ij, l_ij], tf, self.q_ij)
         # update lambda
         l_i_new = self.q_i_struct(l_i.cat + rho*(x_i.cat - z_i.cat))
         l_ij_new = self.q_ij_struct(l_ij.cat + rho*(x_j.cat - z_ij.cat))
-        tf = lambda cfs, basis: shift_knot1_bwd(cfs, basis, t0)
-        self._transform_spline(l_i_new, tf, self.q_i)
-        self._transform_spline(l_ij_new, tf, self.q_ij)
         out = [l_i_new, l_ij_new]
         # create problem
         prob, compile_time = self.father.create_function(
@@ -571,13 +558,16 @@ class ADMM(Problem):
         t0 = time.time()
         current_time = np.round(current_time, 6) % self.problem.knot_time
         horizon_time = self.problem.options['horizon_time']
-        tf = lambda cfs, basis: shift_knot1_fwd(cfs, basis, current_time/horizon_time)
+        tf = lambda cfs, basis: shift_knot1_fwd(
+            cfs, basis, current_time/horizon_time)
         x_i = self._transform_spline(self.var_admm['x_i'], tf, self.q_i).cat
         z_i = self._transform_spline(self.var_admm['z_i'], tf, self.q_i).cat
-        z_i_p = self._transform_spline(self.var_admm['z_i_p'], tf, self.q_i).cat
+        z_i_p = self._transform_spline(
+            self.var_admm['z_i_p'], tf, self.q_i).cat
         x_j = self._transform_spline(self.var_admm['x_j'], tf, self.q_ij).cat
         z_ij = self._transform_spline(self.var_admm['z_ij'], tf, self.q_ij).cat
-        z_ij_p = self._transform_spline(self.var_admm['z_ij_p'], tf, self.q_ij).cat
+        z_ij_p = self._transform_spline(
+            self.var_admm['z_ij_p'], tf, self.q_ij).cat
         rho = self.options['admm']['rho']
         pr = la.norm(x_i-z_i)**2 + la.norm(x_j-z_ij)**2
         dr = rho*(la.norm(z_i-z_i_p)**2 + la.norm(z_ij-z_ij_p)**2)
@@ -633,7 +623,8 @@ class ADMM(Problem):
 class ADMMProblem(DistributedProblem):
 
     def __init__(self, fleet, environment, problems, options):
-        DistributedProblem.__init__(self, fleet, environment, problems, ADMM, options)
+        DistributedProblem.__init__(
+            self, fleet, environment, problems, ADMM, options)
         self.residuals = {'primal': [], 'dual': [], 'combined': []}
 
     # ========================================================================
@@ -684,7 +675,8 @@ class ADMMProblem(DistributedProblem):
                 p_res += pr**2
                 d_res += dr**2
                 c_res += cr**2
-            p_res, d_res, c_res = np.sqrt(p_res), np.sqrt(d_res), np.sqrt(c_res)
+            p_res, d_res, c_res = np.sqrt(
+                p_res), np.sqrt(d_res), np.sqrt(c_res)
             if self.options['admm']['nesterov_acceleration']:
                 for updater in self.updaters:
                     updater.accelerate(c_res)
@@ -705,7 +697,8 @@ class ADMMProblem(DistributedProblem):
                        t_upd_z, t_upd_l, t_res))
             self.residuals['primal'] = np.r_[self.residuals['primal'], p_res]
             self.residuals['dual'] = np.r_[self.residuals['dual'], d_res]
-            self.residuals['combined'] = np.r_[self.residuals['combined'], c_res]
+            self.residuals['combined'] = np.r_[
+                self.residuals['combined'], c_res]
             self.update_times.append(t_upd_x + t_upd_z + t_upd_l + t_res)
 
     def stop_criterium(self, current_time, update_time):
@@ -718,7 +711,8 @@ class ADMMProblem(DistributedProblem):
     def final(self):
         DistributedProblem.final(self)
         if self.options['admm']['save_residuals']:
-            pickle.dump(self.residuals, open(self.options['admm']['save_residuals'], 'wb'))
+            pickle.dump(
+                self.residuals, open(self.options['admm']['save_residuals'], 'wb'))
 
     # ========================================================================
     # Plot related functions
@@ -730,16 +724,16 @@ class ADMMProblem(DistributedProblem):
                 return None
             ax_r, ax_c = 3, 1
             labels = ['Primal residual (log10)', 'Dual residual (log10)',
-                'Combined residual (log10)']
+                      'Combined residual (log10)']
             info = []
             for k in range(ax_r):
                 inf = []
                 for l in range(ax_c):
                     lines = []
                     lines.append({'linestyle': 'None', 'marker': '*',
-                        'color': self.colors[k]})
+                                  'color': self.colors[k]})
                     inf.append({'labels': ['Iteration', labels[k]],
-                        'lines': lines})
+                                'lines': lines})
                 info.append(inf)
             return info
         else:
@@ -760,7 +754,7 @@ class ADMMProblem(DistributedProblem):
                         lines.append([iterations, np.log10(residual)])
                     else:
                         ind = (self.options['admm']['init'] +
-                            t*self.options['admm']['max_iter_per_update'])
+                               t*self.options['admm']['max_iter_per_update'])
                         n_it = ind + 1
                         iterations = np.linspace(1, n_it, n_it)
                         lines.append([iterations, np.log10(residual[:ind+1])])
