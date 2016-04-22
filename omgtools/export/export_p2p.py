@@ -19,7 +19,7 @@
 
 import os
 import shutil
-from casadi import Function, nlpsol
+from casadi import nlpsol
 
 
 class ExportP2P:
@@ -137,6 +137,10 @@ class ExportP2P:
             self.problem.options['solver']['ipopt.linear_solver']+'"'
         defines['N_DIM'] = self.vehicle.n_dim
         defines['N_OBS'] = self.problem.environment.n_obs
+        defines['VEHICLELBL'] = '"' + self.vehicle.label + '"'
+        defines['PROBLEMLBL'] = '"' + self.problem.label + '"'
+        defines['OBSTACLELBLS'] = '{' + ','.join(['"' + o.label + '"'
+            for o in self.problem.environment.obstacles]) + '}'
         if self.problem.__class__.__name__ == 'FreeTPoint2point':
             defines['FREET'] = 'true'
         elif self.problem.__class__.__name__ == 'FixedTPoint2point':

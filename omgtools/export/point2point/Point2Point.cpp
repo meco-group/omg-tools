@@ -194,7 +194,7 @@ void Point2Point::initVariables(){
             init_var_veh_vec[k*len_basis+j] = init_var_veh[k][j];
         }
     }
-    var_dict["vehicle0"]["splines0"] = init_var_veh_vec;
+    var_dict[VEHICLELBL]["splines0"] = init_var_veh_vec;
     getVariableVector(variables, var_dict);
 }
 
@@ -202,12 +202,12 @@ void Point2Point::setParameters(vector<obstacle_t>& obstacles){
     map<string, map<string, vector<double>>> par_dict;
     map<string, vector<double>> par_dict_veh;
     vehicle->setParameters(par_dict_veh);
-    par_dict["vehicle0"] = par_dict_veh;
+    par_dict[VEHICLELBL] = par_dict_veh;
     if (!freeT){
-        par_dict["p2p0"]["t"] = {fmod(round(current_time*1000.)/1000., horizon_time/(vehicle->getKnotIntervals()))};
-        par_dict["p2p0"]["T"] = {horizon_time};
+        par_dict[PROBLEMLBL]["t"] = {fmod(round(current_time*1000.)/1000., horizon_time/(vehicle->getKnotIntervals()))};
+        par_dict[PROBLEMLBL]["T"] = {horizon_time};
     } else{
-        par_dict["p2p0"]["t"] = {0.0};
+        par_dict[PROBLEMLBL]["t"] = {0.0};
     }
     for (int k=0; k<n_obs; k++){
         vector<double> x_obs(n_dim);
@@ -218,9 +218,10 @@ void Point2Point::setParameters(vector<obstacle_t>& obstacles){
             v_obs[i] = obstacles[k].velocity[i];
             a_obs[i] = obstacles[k].acceleration[i];
         }
-        par_dict["obstacle"+to_string(k)]["x"] = x_obs;
-        par_dict["obstacle"+to_string(k)]["v"] = v_obs;
-        par_dict["obstacle"+to_string(k)]["a"] = a_obs;
+        string obstacles [N_OBS] = OBSTACLELBLS;
+        par_dict[obstacles[k]]["x"] = x_obs;
+        par_dict[obstacles[k]]["v"] = v_obs;
+        par_dict[obstacles[k]]["a"] = a_obs;
     }
     getParameterVector(parameters, par_dict);
 }
@@ -228,9 +229,9 @@ void Point2Point::setParameters(vector<obstacle_t>& obstacles){
 void Point2Point::retrieveTrajectories(){
     map<string, map<string, vector<double>>> var_dict;
     getVariableDict(variables, var_dict);
-    vector<double> spline_coeffs_vec(var_dict["vehicle0"]["splines0"]);
+    vector<double> spline_coeffs_vec(var_dict[VEHICLELBL]["splines0"]);
     if (freeT){
-        horizon_time = var_dict["p2p0"]["T"][0];
+        horizon_time = var_dict[PROBLEMLBL]["T"][0];
     }
     vehicle->setKnotHorizon(horizon_time);
     int n_spl = vehicle->getNSplines();
