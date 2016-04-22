@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/meco-group/omg-tools.svg?branch=master)](https://travis-ci.org/meco-group/omg-tools)
+[![Build Status](https://travis-ci.org/meco-group/omg-tools.svg?branch=develop)](https://travis-ci.org/meco-group/omg-tools) [![Coverage Status](https://coveralls.io/repos/github/meco-group/omg-tools/badge.svg?branch=develop)](https://coveralls.io/github/meco-group/omg-tools?branch=develop)
 
 # OMG-tools
 Optimal Motion Generation-tools is a software toolbox that facilitates the modeling, simulation and embedding of motion planning problems. Its main goal is to bring several research topics concerning (spline-based) motion planning together into a user-friendly package in order to enlarge its visibility towards the scientific and industrial world.
