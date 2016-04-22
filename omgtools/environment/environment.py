@@ -41,7 +41,7 @@ class Environment(OptiChild, PlotLayer):
             elif self.n_dim == 3:
                 self.room['orientation'] = [0., 0., 0.]  # Euler angles
             else:
-                raise ValueError('You defined a shape with dimension ' 
+                raise ValueError('You defined a shape with dimension '
                                  + str(self.n_dim) + ', which is invalid.')
         if 'draw' not in room:
             self.room['draw'] = False

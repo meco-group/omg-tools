@@ -137,10 +137,10 @@ class FixedTPoint2point(Point2pointProblem):
     #     return B.dot(T).dot(Binv)
 
     def update(self, current_time, update_time, sample_time):
-        self.compute_partial_objective(current_time, update_time)
         horizon_time = self.options['horizon_time']
         if horizon_time < update_time:
             update_time = horizon_time
+        self.compute_partial_objective(current_time, update_time)
         # update vehicles
         for vehicle in self.vehicles:
             # y_coeffs represents coefficients of a spline, for which a part of
