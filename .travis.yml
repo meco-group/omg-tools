@@ -19,7 +19,7 @@ script:
   - (for file in *.py ; do if [ "$file" != "p2p_bicycle.py" ]; then echo "$file" ; python "$file" ; fi; done )
   - cd export
   - make && cd bin
-  - ./Point2Point
+  - valgrind ./Point2Point
 
 install:
   - sudo python setup.py install
@@ -33,3 +33,4 @@ before_install:
   - "echo 'backend : Agg' > $HOME/.matplotlib/matplotlibrc"
   - sudo pip install matplotlib2tikz
   - export PYTHONPATH=$PYTHONPATH:$HOME/casadi-py27-np1.9.1-v$CASADIVERSION
+  - sudo apt-get install valgrind
