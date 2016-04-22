@@ -367,16 +367,15 @@ class Vehicle(OptiChild, PlotLayer):
         ax_r, ax_c = size, 1
         info = []
         n_colors = len(self.colors)
-        index = int([''.join(g)
-                     for _, g in groupby(self.label, str.isalpha)][-1])
+        index = int([''.join(g) for _, g in groupby(self.label, str.isalpha)][-1]) % n_colors
         for k in range(ax_r):
             inf = []
             for l in range(ax_c):
                 lines = []
                 lines.append(
-                    {'linestyle': '-', 'color': self.colors_w[index % n_colors]})
+                    {'linestyle': '-', 'color': self.colors_w[index]})
                 lines.append(
-                    {'linestyle': '-', 'color': self.colors[index % n_colors]})
+                    {'linestyle': '-', 'color': self.colors[index]})
                 if 'knots' in kwargs and kwargs['knots']:
                     lines.append(
                         {'linestyle': 'None', 'marker': 'x', 'color': self.colors[index]})

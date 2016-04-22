@@ -24,12 +24,6 @@ from mpl_toolkits.mplot3d import Axes3D
 import warnings
 matplotlib.use('TKAgg')
 
-# color definition (rgb)
-blue = [17., 110., 138.]
-red = [138.,  31.,  17.]
-green = [17., 138.,  19.]
-lightblue = [106., 194., 238.]
-
 
 def mix_with_white(color, perc_white=80.):
     r, g, b = color[0], color[1], color[2]
@@ -44,6 +38,10 @@ class PlotLayer(object):
 
     def __init__(self):
         # default colors
+        blue = [17., 110., 138.]
+        red = [138.,  31.,  17.]
+        green = [17., 138.,  19.]
+        lightblue = [106., 194., 238.]
         self.set_color_template([blue, red, green, lightblue])
         self.plots = []
         plt.ion()
