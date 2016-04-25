@@ -634,7 +634,7 @@ class ADMMProblem(DistributedProblem):
     def set_default_options(self):
         Problem.set_default_options(self)
         self.options['admm'] = {'max_iter': None, 'max_iter_per_update': 1,
-                                'rho': 2., 'init': 5,
+                                'rho': 2., 'init_iter': 5,
                                 'nesterov_acceleration': False, 'eta': 0.999,
                                 'nesterov_reset': False,
                                 'save_residuals': None}
@@ -649,7 +649,7 @@ class ADMMProblem(DistributedProblem):
     # ========================================================================
 
     def initialize(self):
-        for k in range(self.options['admm']['init']):
+        for k in range(self.options['admm']['init_iter']):
             self.solve(0.0, 0.0)
 
     def solve(self, current_time, update_time):
@@ -753,7 +753,7 @@ class ADMMProblem(DistributedProblem):
                         iterations = np.linspace(1, n_it, n_it)
                         lines.append([iterations, np.log10(residual)])
                     else:
-                        ind = (self.options['admm']['init'] +
+                        ind = (self.options['admm']['init_iter'] +
                                t*self.options['admm']['max_iter_per_update'])
                         n_it = ind + 1
                         iterations = np.linspace(1, n_it, n_it)
