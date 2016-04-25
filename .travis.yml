@@ -39,8 +39,5 @@ before_install:
   - "echo 'backend : Agg' > $HOME/.matplotlib/matplotlibrc"
   - sudo pip install matplotlib2tikz
   - export PYTHONPATH=$PYTHONPATH:$HOME/casadi-py27-np1.9.1-v$CASADIVERSION
-<<<<<<< HEAD
   - sudo pip install nosexcover coveralls
-=======
->>>>>>> admm_improved
   - sudo apt-get install valgrind
