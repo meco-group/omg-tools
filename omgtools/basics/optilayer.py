@@ -325,7 +325,7 @@ class OptiFather(object):
     def init_transformations(self, init_primal_transform, init_dual_transform):
         # primal
         _init_tf = {}
-        for label, child in self.children.items():
+        for child in self.children.values():
             for name, spl in child._splines_prim.items():
                 if name in child._variables:
                     basis = spl['basis']
@@ -334,7 +334,7 @@ class OptiFather(object):
                     child._splines_prim[name]['init'] = _init_tf[basis]
         # dual
         _init_tf = {}
-        for label, child in self.children.items():
+        for child in self.children.values():
             for name, spl in child._splines_dual.items():
                 basis = spl['basis']
                 if basis not in _init_tf:

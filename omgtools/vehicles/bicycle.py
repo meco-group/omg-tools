@@ -220,7 +220,6 @@ class Bicycle(Vehicle):
 
     def define_collision_constraints(self, hyperplanes, environment, splines):
         v_til, tg_ha = splines[0], splines[1]
-        dtg_ha = tg_ha.derivative(1)
         dx = v_til*(1-tg_ha**2)
         dy = v_til*(2*tg_ha)
         x_int, y_int = self.T*running_integral(dx), self.T*running_integral(dy)

@@ -145,7 +145,7 @@ class ExportP2P(object):
         else:
             raise ValueError('This type of point2point problem is not ' +
                              'supported for export')
-        for label, child in self.father.children.items():
+        for child in self.father.children.values():
             for name in child._splines_prim:
                 spl = child._splines_prim[name]
                 if spl['init'] is not None:
@@ -157,7 +157,7 @@ class ExportP2P(object):
                     defines.update({('%s_TF') % name.upper(): tf})
         # lbg & ubg
         lb, ub, cnt = '{', '{', 0
-        for label, child in self.father.children.items():
+        for child in self.father.children.values():
             for name, con in child._constraints.items():
                 if con[0].size(1) > 1:
                     for l in range(con[0].size(1)):

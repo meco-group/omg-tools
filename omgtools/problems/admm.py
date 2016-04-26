@@ -274,7 +274,7 @@ class ADMM(Problem):
         l_ij_new = self.q_ij_struct(l_ij.cat + rho*(x_j.cat - z_ij.cat))
         out = [l_i_new, l_ij_new]
         # create problem
-        prob, compile_time = self.father.create_function(
+        prob, _ = self.father.create_function(
             'upd_l_'+str(self._index), inp, out, self.options)
         self.problem_upd_l = prob
 
@@ -721,11 +721,10 @@ class ADMMProblem(DistributedProblem):
         if argument == 'residuals':
             if len(self.residuals['primal']) == 0:
                 return None
-            ax_r, ax_c = 3, 1
             labels = ['Primal residual (log10)', 'Dual residual (log10)',
                       'Combined residual (log10)']
             info = []
-            for k in range(ax_r):
+            for k in range(3):
                 lines = [{'linestyle': 'None', 'marker': '*',
                           'color': self.colors[k]}]
                 info.append([{'labels': ['Iteration', labels[k]],
