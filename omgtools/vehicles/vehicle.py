@@ -89,7 +89,7 @@ class Vehicle(OptiChild):
             self.splines.append(spline)
         return self.splines
 
-    def define_collision_constraints_2d(self, hyperplanes, environment, positions, tg_ha=0):
+    def define_collision_constraints_2d(self, hyperplanes, environment, positions, tg_ha=0, offset=0):
         t = self.define_symbol('t')
         T = self.define_symbol('T')
         safety_distance = self.options['safety_distance']
@@ -115,7 +115,10 @@ class Vehicle(OptiChild):
                         con = 0
                         con += (a[0]*chck[0] + a[1]*chck[1])*(1.-tg_ha**2)
                         con += (-a[0]*chck[1] + a[1]*chck[0])*(2*tg_ha)
-                        con += (a[0]*position[0] + a[1]*position[1])*(1+tg_ha**2)
+                        pos = [0, 0]  # next part gives an offset to input position e.g. for trailer position
+                        pos[0] = position[0]*(1+tg_ha**2) + offset*(1-tg_ha**2)  # = real_pos*(1+tg_ha**2)
+                        pos[1] = position[1]*(1+tg_ha**2) + offset*(2*tg_ha)  # = real_pos*(1+tg_ha**2)
+                        con += (a[0]*pos[0] + a[1]*pos[1])
                         con += (-b+rad[l]+safety_distance-eps)*(1+tg_ha**2)
                         self.define_constraint(con, -inf, 0)
             # room constraints
@@ -139,7 +142,10 @@ class Vehicle(OptiChild):
                                 con = 0
                                 con += (hpp['a'][0]*chck[0] + hpp['a'][1]*chck[1])*(1.-tg_ha**2)
                                 con += (-hpp['a'][0]*chck[1] + hpp['a'][1]*chck[0])*(2*tg_ha)
-                                con += (hpp['a'][0]*position[0] + hpp['a'][1]*position[1])*(1+tg_ha**2)
+                                pos = np.zeros(2)  # next part gives an offset to input position e.g. for trailer position
+                                pos[0] = position[0]*(1+tg_ha**2) + offset*(1-tg_ha**2)  # = real_pos*(1+tg_ha**2)
+                                pos[1] = position[1]*(1+tg_ha**2) + offset*(2*tg_ha)  # = real_pos*(1+tg_ha**2)
+                                con += (hpp['a'][0]*pos[0] + hpp['a'][1]*pos[1])
                                 con += (-hpp['b']+rad[l])*(1+tg_ha**2)
                                 self.define_constraint(con, -inf, 0)
 

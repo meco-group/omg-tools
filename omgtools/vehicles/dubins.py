@@ -157,7 +157,7 @@ class Dubins(Vehicle):
         dx = v_til*(1-tg_ha**2)
         dy = v_til*(2*tg_ha)
         x_int, y_int = self.T*running_integral(dx), self.T*running_integral(dy)
-        x = x_int-evalspline(x_int, self.t/self.T) + self.pos0[0]  # todo: or is it self.t?
+        x = x_int-evalspline(x_int, self.t/self.T) + self.pos0[0]
         y = y_int-evalspline(y_int, self.t/self.T) + self.pos0[1]
         self.define_collision_constraints_2d(hyperplanes, environment, [x, y], tg_ha)
 
@@ -219,3 +219,13 @@ class Dubins(Vehicle):
             else:
                 ret += shape.draw(self.signals['pose'][:, t])
         return ret
+
+    def get_pos_splines(self, splines):
+        v_til, tg_ha = splines
+        dtg_ha = tg_ha.derivative(1)
+        dx = v_til*(1-tg_ha**2)
+        dy = v_til*(2*tg_ha)
+        x_int, y_int = self.T*running_integral(dx), self.T*running_integral(dy)
+        x = x_int-evalspline(x_int, self.t/self.T) + self.pos0[0]  # self.pos0 was already defined in init
+        y = y_int-evalspline(y_int, self.t/self.T) + self.pos0[1]
+        return np.array([x, y])
