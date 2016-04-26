@@ -84,10 +84,10 @@ class Fleet(PlotLayer):
                     raise ValueError('All vehicles should have same number ' +
                                      'of variables for which the configuration ' +
                                      'is imposed.')
-                for k in range(len(ind_veh)):
+                for ind_v, ind_n in zip(ind_veh, ind_nghb):
                     self.rel_config[vehicle][nghb].append(
-                        self.configuration[vehicle][ind_veh[k]] -
-                        self.configuration[nghb][ind_nghb[k]])
+                        self.configuration[vehicle][ind_v] -
+                        self.configuration[nghb][ind_n])
 
     def get_rel_config(self, vehicle):
         return self.rel_config[vehicle]

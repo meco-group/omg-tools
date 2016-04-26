@@ -41,6 +41,7 @@ import numpy as np
 # dy = v_til*(2*tg_ha)
 # Spline variables of the problem: v_til and tg_ha
 
+
 class Dubins(Vehicle):
 
     def __init__(self, shapes=Circle(0.1), options=None, bounds=None):

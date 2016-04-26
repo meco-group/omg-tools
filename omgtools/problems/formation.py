@@ -45,9 +45,9 @@ class FormationPoint2point(ADMMProblem):
                     spl_veh = veh.get_variable('splines0')
                     spl_nghb = nghb.get_variable('splines0')
                     rel_spl = rs[:, l]
-                    for k in range(len(ind_veh)):
+                    for ind_v, ind_n, rel_spl in zip(ind_veh, ind_nghb, rs[:, l]):
                         self.define_constraint(
-                            spl_veh[ind_veh[k]] - spl_nghb[ind_nghb[k]] - rel_spl[k], 0., 0.)
+                            spl_veh[ind_v] - spl_nghb[ind_n] - rel_spl, 0., 0.)
 
         # terminal constraints (stability issue)
         for veh in self.vehicles:

@@ -33,7 +33,7 @@ def evalf(fun, x):
     return fun.call(x)
 
 
-class OptiFather:
+class OptiFather(object):
 
     def __init__(self, children=None):
         children = children or []

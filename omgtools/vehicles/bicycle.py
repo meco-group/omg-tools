@@ -47,6 +47,7 @@ import numpy as np
 # Spline variables of the problem: v_til and tg_ha
 # delta follows from v_til, tg_ha, dtg_ha
 
+
 class Bicycle(Vehicle):
 
     def __init__(self, length=0.4, options=None, bounds=None):

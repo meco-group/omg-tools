@@ -382,7 +382,7 @@ class ADMM(Problem):
             g = vertcat(g, con[0] - lb)
             if not isinstance(lb, np.ndarray):
                 lb, ub = [lb], [ub]
-            for k in range(len(lb)):
+            for k, _ in enumerate(lb):
                 if lb[k] != ub[k]:
                     return False, None, None
         sym, jac = [], []
@@ -543,7 +543,7 @@ class ADMM(Problem):
         # transform spline variables
         if ((current_time > 0. and
              np.round(current_time, 6) % self.problem.knot_time == 0)):
-            tf = lambda cfs, basis: shift_over_knot(cfs, basis)
+            tf = shift_over_knot
             for key in ['x_i', 'z_i', 'z_i_p', 'l_i', 'l_i_p']:
                 self.var_admm[key] = self._transform_spline(
                     self.var_admm[key], tf, self.q_i)

@@ -49,10 +49,9 @@ class RendezVous(ADMMProblem):
                     couples[veh].append(nghb)
                     conT_veh = problems_dic[veh].get_variable('conT0')
                     conT_nghb = problems_dic[nghb].get_variable('conT0')
-                    rcT_ = rcT[:, l]
-                    for k in range(len(ind_veh)):
+                    for ind_v, ind_n, rcT_k in zip(ind_veh, ind_nghb, rcT[:, l]):
                         self.define_constraint(
-                            conT_veh[ind_veh[k]] - conT_nghb[ind_nghb[k]] - rcT_[k], 0., 0.)
+                            conT_veh[ind_v] - conT_nghb[ind_n] - rcT_k, 0., 0.)
 
     def set_parameters(self, current_time):
         parameters = {}
