@@ -17,9 +17,9 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-from casadi import MX, inf, Function, nlpsol, SX, Compiler, external
+from casadi import MX, inf, Function, nlpsol, Compiler, external
 from casadi import symvar, substitute
-from casadi.tools import struct, struct_MX, struct_symMX, entry, struct_symSX
+from casadi.tools import struct, struct_MX, struct_symMX, entry
 from spline import BSpline
 from itertools import groupby
 import time
@@ -61,7 +61,7 @@ class OptiFather(object):
         self.translate_symbols()
         variables = self.construct_variables()
         parameters = self.construct_parameters()
-        constraints, lb, ub = self.construct_constraints(variables, parameters)
+        constraints, _, _ = self.construct_constraints(variables, parameters)
         objective = self.construct_objective(variables, parameters)
         self.problem_description = {'var': variables, 'par': parameters,
                                     'obj': objective, 'con': constraints,
@@ -72,14 +72,14 @@ class OptiFather(object):
         return problem, buildtime
 
     def compose_dictionary(self):
-        for label, child in self.children.items():
+        for child in self.children.values():
             self.symbol_dict.update(child.symbol_dict)
 
     def translate_symbols(self):
         for label, child in self.children.items():
             for name, symbol in child._symbols.items():
                 sym_def = []
-                for _label, _child in self.children.items():
+                for _, _child in self.children.items():
                     if (name in _child._variables or
                             name in _child._parameters):
                         sym_def.append(_child)

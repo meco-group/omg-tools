@@ -67,7 +67,7 @@ class Problem(OptiChild, PlotLayer):
         children += [obstacle for obstacle in self.environment.obstacles]
         children += [self, self.environment]
         self.father = OptiFather(children)
-        self.problem, compile_time = self.father.construct_problem(
+        self.problem, _ = self.father.construct_problem(
             self.options)
         self.father.init_transformations(self.init_primal_transform,
                                          self.init_dual_transform)
@@ -107,7 +107,7 @@ class Problem(OptiChild, PlotLayer):
                 return None
             info = self.environment.init_plot(None, **kwargs)
             labels = kwargs['labels'] if 'labels' in kwargs else [
-                '' for k in range(self.environment.n_dim)]
+                '' for _ in range(self.environment.n_dim)]
             n_colors = len(self.colors)
             indices = [int([''.join(g) for _, g in groupby(
                 v.label, str.isalpha)][-1]) % n_colors for v in self.vehicles]
@@ -117,7 +117,7 @@ class Problem(OptiChild, PlotLayer):
             for v in range(len(self.vehicles)):
                 info[0][0]['lines'].append({'color': self.colors[indices[v]]})
             for v, vehicle in enumerate(self.vehicles):
-                for l in vehicle.draw():
+                for _ in vehicle.draw():
                     info[0][0]['lines'].append(
                         {'color': self.colors[indices[v]]})
             info[0][0]['labels'] = labels

@@ -252,7 +252,6 @@ class Bicycle(Vehicle):
         dv_til = np.array(sample_splines([dv_til], time))
         ddtg_ha = np.array(sample_splines([ddtg_ha], time))
         theta = 2*np.arctan2(tg_ha, 1)
-        dtheta = 2*dtg_ha/(1+tg_ha**2)
         delta = np.arctan2(2*dtg_ha*self.length, v_til*(1+tg_ha**2)**2)
         ddelta = (2*ddtg_ha*self.length*(v_til*(1+tg_ha**2)**2)-2*dtg_ha*self.length*(dv_til*(1+tg_ha**2)**2 + v_til*(4*tg_ha+4*tg_ha**3)*dtg_ha))/(v_til**2*(1+tg_ha**2)**4+(2*dtg_ha*self.length)**2)
         # check if you needed to use l'Hopital's rule to find delta and ddelta above, if so adapt signals

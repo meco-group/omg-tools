@@ -23,7 +23,7 @@ from problem import Problem
 from distributedproblem import DistributedProblem
 from casadi import symvar, mtimes, SX, MX, DM, Function, reshape
 from casadi import vertcat, horzcat, jacobian, solve, substitute
-from casadi.tools import struct, struct_symMX, struct_symSX, entry, structure
+from casadi.tools import struct, struct_symMX, entry, structure
 import numpy as np
 import numpy.linalg as la
 import pickle
@@ -125,7 +125,7 @@ class ADMM(Problem):
         self.define_objective(obj)
         # construct problem
         self.father = OptiFather(self.group.values())
-        prob, compile_time = self.father.construct_problem(
+        prob, _ = self.father.construct_problem(
             self.options, str(self._index))
         self.problem_upd_x = prob
         self.father.init_transformations(self.problem.init_primal_transform,
@@ -177,7 +177,7 @@ class ADMM(Problem):
         self._transform_spline(z_ij_new, tf, self.q_ij)
         out = [z_i_new.cat, z_ij_new.cat]
         # create problem
-        prob, compile_time = self.father.create_function(
+        prob, _ = self.father.create_function(
             'upd_z_'+str(self._index), inp, out, self.options)
         self.problem_upd_z = prob
 
@@ -253,7 +253,7 @@ class ADMM(Problem):
                     l = l_ij[str(nghb), child.label, name]
                     obj += mtimes(l.T, x-z) + 0.5*rho*mtimes((x-z).T, (x-z))
         # construct problem
-        prob, compile_time = self.father.create_nlp(var, par, obj,
+        prob, _ = self.father.create_nlp(var, par, obj,
                                                     constraints, self.options, str(self._index))
         self.problem_upd_z = prob
 
@@ -268,7 +268,6 @@ class ADMM(Problem):
         t = MX.sym('t')
         T = MX.sym('T')
         rho = MX.sym('rho')
-        t0 = t/T
         inp = [x_i, z_i, z_ij, l_i, l_ij, x_j, t, T, rho]
         # update lambda
         l_i_new = self.q_i_struct(l_i.cat + rho*(x_i.cat - z_i.cat))
@@ -649,7 +648,7 @@ class ADMMProblem(DistributedProblem):
     # ========================================================================
 
     def initialize(self):
-        for k in range(self.options['admm']['init_iter']):
+        for _ in range(self.options['admm']['init_iter']):
             self.solve(0.0, 0.0)
 
     def solve(self, current_time, update_time):
@@ -727,14 +726,10 @@ class ADMMProblem(DistributedProblem):
                       'Combined residual (log10)']
             info = []
             for k in range(ax_r):
-                inf = []
-                for l in range(ax_c):
-                    lines = []
-                    lines.append({'linestyle': 'None', 'marker': '*',
-                                  'color': self.colors[k]})
-                    inf.append({'labels': ['Iteration', labels[k]],
-                                'lines': lines})
-                info.append(inf)
+                lines = [{'linestyle': 'None', 'marker': '*',
+                          'color': self.colors[k]}]
+                info.append([{'labels': ['Iteration', labels[k]],
+                              'lines': lines}])
             return info
         else:
             return Problem.init_plot(self, argument, **kwargs)
@@ -745,21 +740,18 @@ class ADMMProblem(DistributedProblem):
                 return None
             data = []
             for residual in self.residuals.values():
-                dat = []
-                for l in range(1):
-                    lines = []
-                    if t == -1:
-                        n_it = len(residual)
-                        iterations = np.linspace(1, n_it, n_it)
-                        lines.append([iterations, np.log10(residual)])
-                    else:
-                        ind = (self.options['admm']['init_iter'] +
-                               t*self.options['admm']['max_iter_per_update'])
-                        n_it = ind + 1
-                        iterations = np.linspace(1, n_it, n_it)
-                        lines.append([iterations, np.log10(residual[:ind+1])])
-                    dat.append(lines)
-                data.append(dat)
+                lines = []
+                if t == -1:
+                    n_it = len(residual)
+                    iterations = np.linspace(1, n_it, n_it)
+                    lines.append([iterations, np.log10(residual)])
+                else:
+                    ind = (self.options['admm']['init_iter'] +
+                           t*self.options['admm']['max_iter_per_update'])
+                    n_it = ind + 1
+                    iterations = np.linspace(1, n_it, n_it)
+                    lines.append([iterations, np.log10(residual[:ind+1])])
+                data.append([lines])
             return data
         else:
             return Problem.update_plot(self, argument, t, **kwargs)

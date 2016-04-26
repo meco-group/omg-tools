@@ -135,9 +135,7 @@ class Environment(OptiChild, PlotLayer):
     # ========================================================================
 
     def init_plot(self, argument, **kwargs):
-        lines = []
-        for l in self.draw():
-            lines.append({'color': 'black'})
+        lines = [{'color': 'black'} for _ in self.draw()]
         limits = self.get_canvas_limits()
         labels = ['' for k in range(self.n_dim)]
         if self.n_dim == 2:

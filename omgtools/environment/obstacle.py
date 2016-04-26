@@ -116,10 +116,8 @@ class ObstaclexD(OptiChild):
                                  'values': np.zeros((self.n_dim, 2))}
         if 'trajectories' in simulation:
             for key, trajectory in simulation['trajectories'].items():
-                trajectories[key]['time'] = np.array(
-                    simulation['trajectories'][key]['time'])
-                trajectories[key]['values'] = np.vstack(
-                    simulation['trajectories'][key]['values']).T
+                trajectories[key]['time'] = np.array(trajectory['time'])
+                trajectories[key]['values'] = np.vstack(trajectory['values']).T
                 if trajectories[key]['time'].size != trajectories[key]['values'].shape[1]:
                     raise ValueError('Dimension mismatch between time array ' +
                                      'and values for ' + key + ' trajectory.')
@@ -290,7 +288,7 @@ class Obstacle2D(ObstaclexD):
     def update(self, update_time, sample_time):
         ObstaclexD.update(self, update_time, sample_time)
         n_samp = int(update_time/sample_time)
-        for k in range(n_samp):
+        for _ in range(n_samp):
             theta0 = self.signals['orientation'][:, -1][0]
             omega0 = self.signals['angular_velocity'][:, -1][0]
             theta = theta0 + sample_time*omega0

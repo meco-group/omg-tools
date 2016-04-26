@@ -61,7 +61,7 @@ def _init_axis_3d(axis, info, view=None):
         axis.plot([], [], [], **line)
 
 
-def _update_axis_2d(self, axis, info, data):
+def _update_axis_2d(axis, info, data):
     for p, dat in enumerate(data):
         axis.lines[p].set_data(dat[0].ravel(), dat[1].ravel())
     axis.relim()
@@ -70,7 +70,7 @@ def _update_axis_2d(self, axis, info, data):
     axis.autoscale_view(True, scalex, scaley)
 
 
-def _update_axis_3d(self, axis, info, data):
+def _update_axis_3d(axis, info, data):
     for p, dat in enumerate(data):
         axis.lines[p].set_data(dat[0].ravel(), dat[1].ravel())
         axis.lines[p].set_3d_properties(dat[2].ravel())
@@ -81,7 +81,7 @@ def _update_axis_3d(self, axis, info, data):
     axis.autoscale_view(True, scalex, scaley, scalez)
 
 
-def _cleanup_rubbish(self, path, root=None):
+def _cleanup_rubbish(path, root=None):
     # cleanup rubbish due to bugs in matplotlib2tikz
     with open(path, 'r+') as f:
         body = f.read()

@@ -18,8 +18,8 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from vehicle import Vehicle
-from ..basics.shape import Square, Rectangle, Circle
-from ..basics.spline_extra import sample_splines, definite_integral
+from ..basics.shape import Square, Circle
+from ..basics.spline_extra import sample_splines
 from ..basics.spline_extra import evalspline, running_integral
 from casadi import inf
 import numpy as np
@@ -155,7 +155,6 @@ class Dubins(Vehicle):
 
     def define_collision_constraints(self, hyperplanes, environment, splines):
         v_til, tg_ha = splines[0], splines[1]
-        dtg_ha = tg_ha.derivative(1)
         dx = v_til*(1-tg_ha**2)
         dy = v_til*(2*tg_ha)
         x_int, y_int = self.T*running_integral(dx), self.T*running_integral(dy)

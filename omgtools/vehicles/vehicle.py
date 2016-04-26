@@ -18,7 +18,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from ..basics.optilayer import OptiChild
-from ..basics.spline import BSpline, BSplineBasis
+from ..basics.spline import BSplineBasis
 from ..basics.spline_extra import concat_splines, definite_integral, sample_splines
 from ..basics.shape import Rectangle, Square, Circle
 from ..simulation.plotlayer import PlotLayer
@@ -28,7 +28,6 @@ from scipy.interpolate import interp1d
 from scipy.integrate import odeint
 from numpy.random import normal
 from itertools import groupby
-import matplotlib.pyplot as plt
 import numpy as np
 
 
@@ -371,7 +370,7 @@ class Vehicle(OptiChild, PlotLayer):
         index = int([''.join(g) for _, g in groupby(self.label, str.isalpha)][-1]) % n_colors
         for k in range(ax_r):
             inf = []
-            for l in range(ax_c):
+            for _ in range(ax_c):
                 lines = []
                 lines.append(
                     {'linestyle': '-', 'color': self.colors_w[index]})
