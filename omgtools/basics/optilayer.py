@@ -35,7 +35,8 @@ def evalf(fun, x):
 
 class OptiFather:
 
-    def __init__(self, children=[]):
+    def __init__(self, children=None):
+        children = children or []
         self.children = {}
         self.symbol_dict = {}
         for child in children:
@@ -516,13 +517,13 @@ class OptiChild(object):
         else:
             return self._parameters[name]
 
-    def get_constraint(self, name, solution=None):
+    def get_constraint(self, name, solution=False):
         if solution:
             return self.father.get_constraint(self.label, name)
         else:
             return self._constraints[name][0]
 
-    def get_objective(self, solution=None):
+    def get_objective(self, solution=False):
         if solution:
             return self.father.get_objective(self.label)
         else:

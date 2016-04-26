@@ -35,7 +35,8 @@ def get_fleet_vehicles(var):
 
 class Fleet(PlotLayer):
 
-    def __init__(self, vehicles=[], interconnection='circular'):
+    def __init__(self, vehicles=None, interconnection='circular'):
+        vehicles = vehicles or []
         PlotLayer.__init__(self)
         self.vehicles = vehicles if isinstance(vehicles, list) else [vehicles]
         self.interconnection = interconnection

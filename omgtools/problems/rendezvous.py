@@ -24,7 +24,7 @@ import numpy as np
 
 class RendezVous(ADMMProblem):
 
-    def __init__(self, fleet, environment, options={}):
+    def __init__(self, fleet, environment, options=None):
         problems = []
         for veh in fleet.vehicles:
             free_ind = fleet.configuration[veh].keys()

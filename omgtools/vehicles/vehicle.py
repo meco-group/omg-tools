@@ -34,7 +34,8 @@ import numpy as np
 
 class Vehicle(OptiChild, PlotLayer):
 
-    def __init__(self, n_spl, degree, shapes, options):
+    def __init__(self, n_spl, degree, shapes, options=None):
+        options = options or {}
         OptiChild.__init__(self, 'vehicle')
         PlotLayer.__init__(self)
         self.shapes = shapes if isinstance(shapes, list) else [shapes]

@@ -26,7 +26,8 @@ import numpy as np
 
 class Quadrotor(Vehicle):
 
-    def __init__(self, radius=0.2, options={}, bounds={}):
+    def __init__(self, radius=0.2, options=None, bounds=None):
+        bounds = bounds or {}
         Vehicle.__init__(
             self, n_spl=2, degree=4, shapes=Circle(radius), options=options)
         self.radius = radius

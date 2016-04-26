@@ -26,7 +26,8 @@ import numpy as np
 
 class Platform(Vehicle):
 
-    def __init__(self, width=0.7, height=0.1, options={}, bounds={}):
+    def __init__(self, width=0.7, height=0.1, options=None, bounds=None):
+        bounds = bounds or {}
         Vehicle.__init__(self, n_spl=1, degree=3, shapes=Rectangle(width, height), options=options)
         self.vmin = bounds['vmin'] if 'vmin' in bounds else -0.8
         self.vmax = bounds['vmax'] if 'vmax' in bounds else 0.8

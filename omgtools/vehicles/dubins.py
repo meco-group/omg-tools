@@ -32,7 +32,7 @@ import numpy as np
 # Use tangent half angle substitution: tg_ha = tan(theta/2)
 # sin(theta) = (2*tg_ha)/(1+tg_ha**2)
 # cos(theta) = (1-tg_ha**2)/(1+tg_ha**2)
-# This gives: 
+# This gives:
 # dx = V/(1+tg_ha**2)*(1-tg_ha**2)
 # dy = V/(1+tg_ha**2)*(2*tg_ha)
 # Substitute: v_til = V/(1+tg_ha**2)
@@ -43,7 +43,8 @@ import numpy as np
 
 class Dubins(Vehicle):
 
-    def __init__(self, shapes=Circle(0.1), options={}, bounds={}):
+    def __init__(self, shapes=Circle(0.1), options=None, bounds=None):
+        bounds = bounds or {}
         Vehicle.__init__(
             self, n_spl=2, degree=2, shapes=shapes, options=options)
         self.vmax = bounds['vmax'] if 'vmax' in bounds else 0.5
@@ -95,7 +96,7 @@ class Dubins(Vehicle):
         posT = self.define_parameter('posT', 2)
         tg_haT = self.define_parameter('tg_haT', 1)
         v_tilT = self.define_parameter('v_tilT', 1)
-        dtg_haT = self.define_parameter('dtg_haT', 1)       
+        dtg_haT = self.define_parameter('dtg_haT', 1)
         self.define_parameter('pos0', 2)  # starting position for integration
         v_til, tg_ha = splines
         dtg_ha = tg_ha.derivative(1)
@@ -142,7 +143,7 @@ class Dubins(Vehicle):
         # convert theta to tg_ha here
         parameters = {}
         parameters['tg_ha0'] = np.tan(self.prediction['state'][2]/2)
-        parameters['v_til0'] = self.prediction['input'][0]/(1+parameters['tg_ha0']**2) 
+        parameters['v_til0'] = self.prediction['input'][0]/(1+parameters['tg_ha0']**2)
         parameters['dtg_ha0'] = 0.5*self.prediction['input'][1]*(1+parameters['tg_ha0']**2)  # dtg_ha
         parameters['pos0'] = self.prediction['state'][:2]
         parameters['posT'] = self.poseT[:2]  # x,y

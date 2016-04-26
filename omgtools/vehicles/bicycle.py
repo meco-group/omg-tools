@@ -32,7 +32,7 @@ import numpy as np
 # Use tangent half angle substitution: tg_ha = tan(theta/2)
 # sin(theta) = (2*tg_ha)/(1+tg_ha**2)
 # cos(theta) = (1-tg_ha**2)/(1+tg_ha**2)
-# This gives: 
+# This gives:
 # dx = V/(1+tg_ha**2)*(1-tg_ha**2)
 # dy = V/(1+tg_ha**2)*(2*tg_ha)
 # Substitute: v_til = V/(1+tg_ha**2)
@@ -49,7 +49,8 @@ import numpy as np
 
 class Bicycle(Vehicle):
 
-    def __init__(self, length=0.4, options={}, bounds={}):
+    def __init__(self, length=0.4, options=None, bounds=None):
+        bounds = bounds or {}
         Vehicle.__init__(
             self, n_spl=2, degree=2, shapes=Circle(length/2.), options=options)
         self.vmax = bounds['vmax'] if 'vmax' in bounds else 0.5
@@ -124,8 +125,8 @@ class Bicycle(Vehicle):
         # it contains evalspline(v_til, self.t/self.T)*... which is zero.
         # When v_til is not 0 the steering angle is implicitly imposed due to the fact that tan(delta)
         # is only a function of v_til, tg_ha, dtg_ha. If these variables are smooth the steering angle
-        # will also be smooth. Furthermore the steering angle and its rate of change are limited by the 
-        # extra constraints above. 
+        # will also be smooth. Furthermore the steering angle and its rate of change are limited by the
+        # extra constraints above.
 
         # Impose final steering angle
         # tdeltaT = self.define_parameter('tdeltaT', 1)  # tan(delta)
@@ -195,7 +196,7 @@ class Bicycle(Vehicle):
         # for the optimization problem
         parameters = {}
         parameters['tg_ha0'] = np.tan(self.prediction['state'][2]/2)
-        parameters['v_til0'] = self.prediction['input'][0]/(1+parameters['tg_ha0']**2) 
+        parameters['v_til0'] = self.prediction['input'][0]/(1+parameters['tg_ha0']**2)
         parameters['pos0'] = self.prediction['state'][:2]
         parameters['posT'] = self.poseT[:2]  # x, y
         parameters['v_tilT'] = 0.

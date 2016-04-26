@@ -24,7 +24,7 @@ import numpy as np
 
 class FormationPoint2point(ADMMProblem):
 
-    def __init__(self, fleet, environment, options={}):
+    def __init__(self, fleet, environment, options=None):
         problems = [Point2point(vehicle, environment.copy(), options)
                     for vehicle in fleet.vehicles]
         ADMMProblem.__init__(self, fleet, environment, problems, options)

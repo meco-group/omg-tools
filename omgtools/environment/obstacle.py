@@ -29,7 +29,9 @@ import numpy as np
 
 class Obstacle(object):
 
-    def __new__(cls, initial, shape, simulation={}, options={}):
+    def __new__(cls, initial, shape, simulation=None, options=None):
+        simulation = simulation or {}
+        options = options or {}
         if shape.n_dim == 2:
             return Obstacle2D(initial, shape, simulation, options)
         if shape.n_dim == 3:

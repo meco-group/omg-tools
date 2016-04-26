@@ -27,7 +27,8 @@ import numpy as np
 
 class Environment(OptiChild, PlotLayer):
 
-    def __init__(self, room, obstacles=[]):
+    def __init__(self, room, obstacles=None):
+        obstacles = obstacles or []
         OptiChild.__init__(self, 'environment')
         PlotLayer.__init__(self)
 

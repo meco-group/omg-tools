@@ -26,7 +26,8 @@ import time
 
 class Problem(OptiChild, PlotLayer):
 
-    def __init__(self, fleet, environment, options={}, label='problem'):
+    def __init__(self, fleet, environment, options=None, label='problem'):
+        options = options or {}
         OptiChild.__init__(self, label)
         PlotLayer.__init__(self)
         self.fleet, self.vehicles = get_fleet_vehicles(fleet)
@@ -150,7 +151,7 @@ class Problem(OptiChild, PlotLayer):
     # Methods encouraged to override
     # ========================================================================
 
-    def init_step(self, current_time):
+    def init_step(self, current_time, update_time):
         pass
 
     def final(self):
@@ -175,8 +176,8 @@ class Problem(OptiChild, PlotLayer):
     def update(self, current_time, update_time, sample_time):
         raise NotImplementedError('Please implement this method!')
 
-    def stop_criterium(self):
+    def stop_criterium(self, current_time, update_time):
         raise NotImplementedError('Please implement this method!')
 
-    def export(self, options={}):
+    def export(self, options=None):
         raise NotImplementedError('Please implement this method!')

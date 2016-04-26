@@ -48,7 +48,7 @@ def _create_struct_from_dict(dictionary):
 class ADMM(Problem):
 
     def __init__(self, index, vehicle, problem, environment, distr_problem,
-                 options={}):
+                 options=None):
         Problem.__init__(self, vehicle, environment, options, label='admm')
         self.problem = problem
         self.distr_problem = distr_problem

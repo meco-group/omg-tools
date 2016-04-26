@@ -123,7 +123,7 @@ class PlotLayer(object):
     # ========================================================================
 
     def update_plots(self, plots=None, t=-1):
-        plots = self.plots if (plots is None) else plots
+        plots = plots or self.plots
         plots = plots if isinstance(plots, list) else [plots]
         for plot in plots:
             if 'figure' not in plot:

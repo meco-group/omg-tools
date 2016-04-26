@@ -28,7 +28,7 @@ import numpy as np
 class Point2point(object):
     # this class selects between fixed T and free T problem
 
-    def __new__(cls, fleet, environment, options={}, freeT=False):
+    def __new__(cls, fleet, environment, options=None, freeT=False):
         if freeT:
             return FreeTPoint2point(fleet, environment, options)
         else:
@@ -37,7 +37,7 @@ class Point2point(object):
 
 class Point2pointProblem(Problem):
 
-    def __init__(self, fleet, environment, options={}):
+    def __init__(self, fleet, environment, options):
         Problem.__init__(self, fleet, environment, options, label='p2p')
         for vehicle in self.vehicles:
             splines = vehicle.define_splines(n_seg=1)[0]
@@ -63,7 +63,8 @@ class Point2pointProblem(Problem):
     def compute_objective(self):
         raise NotImplementedError('Please implement this method!')
 
-    def export(self, options={}):
+    def export(self, options=None):
+        options = options or {}
         if not hasattr(self, 'father'):
             self.init()
         ExportP2P(self, options)
@@ -71,7 +72,7 @@ class Point2pointProblem(Problem):
 
 class FixedTPoint2point(Point2pointProblem):
 
-    def __init__(self, fleet, environment, options={}):
+    def __init__(self, fleet, environment, options):
         Point2pointProblem.__init__(self, fleet, environment, options)
         self.objective = 0.
         if self.vehicles[0].knot_intervals is None:
@@ -178,7 +179,7 @@ class FixedTPoint2point(Point2pointProblem):
 
 class FreeTPoint2point(Point2pointProblem):
 
-    def __init__(self, fleet, environment, options={}):
+    def __init__(self, fleet, environment, options):
         Point2pointProblem.__init__(self, fleet, environment, options)
         self.objective = 0.
         T = self.define_variable('T', value=10)
