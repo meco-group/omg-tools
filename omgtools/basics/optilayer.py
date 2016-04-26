@@ -17,9 +17,9 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-from casadi import MX, inf, Function, nlpsol, SX, Compiler, external
+from casadi import MX, inf, Function, nlpsol, Compiler, external
 from casadi import symvar, substitute
-from casadi.tools import struct, struct_MX, struct_symMX, entry, struct_symSX
+from casadi.tools import struct, struct_MX, struct_symMX, entry
 from spline import BSpline
 from itertools import groupby
 import time
@@ -33,9 +33,10 @@ def evalf(fun, x):
     return fun.call(x)
 
 
-class OptiFather:
+class OptiFather(object):
 
-    def __init__(self, children=[]):
+    def __init__(self, children=None):
+        children = children or []
         self.children = {}
         self.symbol_dict = {}
         for child in children:
@@ -60,7 +61,7 @@ class OptiFather:
         self.translate_symbols()
         variables = self.construct_variables()
         parameters = self.construct_parameters()
-        constraints, lb, ub = self.construct_constraints(variables, parameters)
+        constraints, _, _ = self.construct_constraints(variables, parameters)
         objective = self.construct_objective(variables, parameters)
         self.problem_description = {'var': variables, 'par': parameters,
                                     'obj': objective, 'con': constraints,
@@ -71,14 +72,14 @@ class OptiFather:
         return problem, buildtime
 
     def compose_dictionary(self):
-        for label, child in self.children.items():
+        for child in self.children.values():
             self.symbol_dict.update(child.symbol_dict)
 
     def translate_symbols(self):
         for label, child in self.children.items():
             for name, symbol in child._symbols.items():
                 sym_def = []
-                for _label, _child in self.children.items():
+                for _, _child in self.children.items():
                     if (name in _child._variables or
                             name in _child._parameters):
                         sym_def.append(_child)
@@ -324,7 +325,7 @@ class OptiFather:
     def init_transformations(self, init_primal_transform, init_dual_transform):
         # primal
         _init_tf = {}
-        for label, child in self.children.items():
+        for child in self.children.values():
             for name, spl in child._splines_prim.items():
                 if name in child._variables:
                     basis = spl['basis']
@@ -333,7 +334,7 @@ class OptiFather:
                     child._splines_prim[name]['init'] = _init_tf[basis]
         # dual
         _init_tf = {}
-        for label, child in self.children.items():
+        for child in self.children.values():
             for name, spl in child._splines_dual.items():
                 basis = spl['basis']
                 if basis not in _init_tf:
@@ -516,13 +517,13 @@ class OptiChild(object):
         else:
             return self._parameters[name]
 
-    def get_constraint(self, name, solution=None):
+    def get_constraint(self, name, solution=False):
         if solution:
             return self.father.get_constraint(self.label, name)
         else:
             return self._constraints[name][0]
 
-    def get_objective(self, solution=None):
+    def get_objective(self, solution=False):
         if solution:
             return self.father.get_objective(self.label)
         else:

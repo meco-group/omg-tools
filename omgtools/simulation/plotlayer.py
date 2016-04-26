@@ -33,6 +33,67 @@ def mix_with_white(color, perc_white=80.):
     return [r_m, g_m, b_m]
 
 
+def _init_axis_2d(axis, info):
+    axis.set_xlabel(info['labels'][0])
+    axis.set_ylabel(info['labels'][1])
+    if 'xlim' in info and info['xlim'] is not None:
+        axis.set_xlim(info['xlim'][0], info['xlim'][1])
+    if 'ylim' in info and info['ylim'] is not None:
+        axis.set_ylim(info['ylim'][0], info['ylim'][1])
+    for line in info['lines']:
+        axis.plot([], [], **line)
+
+
+def _init_axis_3d(axis, info, view=None):
+    axis.set_xlabel(info['labels'][0])
+    axis.set_ylabel(info['labels'][1])
+    axis.set_zlabel(info['labels'][2])
+    if 'xlim' in info and info['xlim'] is not None:
+        axis.set_xlim(info['xlim'][0], info['xlim'][1])
+    if 'ylim' in info and info['ylim'] is not None:
+        axis.set_ylim(info['ylim'][0], info['ylim'][1])
+    if 'zlim' in info and info['zlim'] is not None:
+        axis.set_zlim(info['zlim'][0], info['zlim'][1])
+    if view is not None:
+        elevation, azimuth = view
+        axis.view_init(elev=elevation, azim=azimuth)
+    for line in info['lines']:
+        axis.plot([], [], [], **line)
+
+
+def _update_axis_2d(axis, info, data):
+    for p, dat in enumerate(data):
+        axis.lines[p].set_data(dat[0].ravel(), dat[1].ravel())
+    axis.relim()
+    scalex = ('xlim' not in info or info['xlim'] is None)
+    scaley = ('ylim' not in info or info['ylim'] is None)
+    axis.autoscale_view(True, scalex, scaley)
+
+
+def _update_axis_3d(axis, info, data):
+    for p, dat in enumerate(data):
+        axis.lines[p].set_data(dat[0].ravel(), dat[1].ravel())
+        axis.lines[p].set_3d_properties(dat[2].ravel())
+    axis.relim()
+    scalex = ('xlim' not in info or info['xlim'] is None)
+    scaley = ('ylim' not in info or info['ylim'] is None)
+    scalez = ('zlim' not in info or info['zlim'] is None)
+    axis.autoscale_view(True, scalex, scaley, scalez)
+
+
+def _cleanup_rubbish(path, root=None):
+    # cleanup rubbish due to bugs in matplotlib2tikz
+    with open(path, 'r+') as f:
+        body = f.read()
+        body = body.replace('fill opacity=0', 'opacity=0')
+        # add root at beginning of tikz file
+        if root is not None:
+            body = '%root=' + root + '\n' + body
+        f.seek(0)
+        f.truncate()
+        f.write(body)
+
+
 class PlotLayer(object):
     simulator = 0
 
@@ -84,46 +145,20 @@ class PlotLayer(object):
                         view = kwargs['view']
                     else:
                         view = None
-                    self._init_axis_3d(axis, info[k][l], view)
+                    _init_axis_3d(axis, info[k][l], view)
                 else:
                     axis = figure.add_subplot(ax_r, ax_c, k*ax_c+l+1)
-                    self._init_axis_2d(axis, info[k][l])
+                    _init_axis_2d(axis, info[k][l])
                 if 'aspect_equal' in info[k][l] and info[k][l]['aspect_equal']:
                     axis.set_aspect('equal')
         plot.update({'figure': figure, 'info': info})
-
-    def _init_axis_2d(self, axis, info):
-        axis.set_xlabel(info['labels'][0])
-        axis.set_ylabel(info['labels'][1])
-        if 'xlim' in info and info['xlim'] is not None:
-            axis.set_xlim(info['xlim'][0], info['xlim'][1])
-        if 'ylim' in info and info['ylim'] is not None:
-            axis.set_ylim(info['ylim'][0], info['ylim'][1])
-        for line in info['lines']:
-            axis.plot([], [], **line)
-
-    def _init_axis_3d(self, axis, info, view=None):
-        axis.set_xlabel(info['labels'][0])
-        axis.set_ylabel(info['labels'][1])
-        axis.set_zlabel(info['labels'][2])
-        if 'xlim' in info and info['xlim'] is not None:
-            axis.set_xlim(info['xlim'][0], info['xlim'][1])
-        if 'ylim' in info and info['ylim'] is not None:
-            axis.set_ylim(info['ylim'][0], info['ylim'][1])
-        if 'zlim' in info and info['zlim'] is not None:
-            axis.set_zlim(info['zlim'][0], info['zlim'][1])
-        if view is not None:
-            elevation, azimuth = view
-            axis.view_init(elev=elevation, azim=azimuth)
-        for line in info['lines']:
-            axis.plot([], [], [], **line)
 
     # ========================================================================
     # Plot update
     # ========================================================================
 
     def update_plots(self, plots=None, t=-1):
-        plots = self.plots if (plots is None) else plots
+        plots = plots or self.plots
         plots = plots if isinstance(plots, list) else [plots]
         for plot in plots:
             if 'figure' not in plot:
@@ -141,30 +176,12 @@ class PlotLayer(object):
             for l in range(ax_c):
                 axis = fig.axes[k*ax_c+l]
                 if 'projection' in info[k][l] and info[k][l]['projection'] == '3d':
-                    self._update_axis_3d(axis, info[k][l], data[k][l])
+                    _update_axis_3d(axis, info[k][l], data[k][l])
                 else:
-                    self._update_axis_2d(axis, info[k][l], data[k][l])
+                    _update_axis_2d(axis, info[k][l], data[k][l])
         if 'axis' in kwargs and not kwargs['axis']:
             plt.axis('off')
         fig.canvas.draw()
-
-    def _update_axis_2d(self, axis, info, data):
-        for p, dat in enumerate(data):
-            axis.lines[p].set_data(dat[0].ravel(), dat[1].ravel())
-        axis.relim()
-        scalex = ('xlim' not in info or info['xlim'] is None)
-        scaley = ('ylim' not in info or info['ylim'] is None)
-        axis.autoscale_view(True, scalex, scaley)
-
-    def _update_axis_3d(self, axis, info, data):
-        for p, dat in enumerate(data):
-            axis.lines[p].set_data(dat[0].ravel(), dat[1].ravel())
-            axis.lines[p].set_3d_properties(dat[2].ravel())
-        axis.relim()
-        scalex = ('xlim' not in info or info['xlim'] is None)
-        scaley = ('ylim' not in info or info['ylim'] is None)
-        scalez = ('zlim' not in info or info['zlim'] is None)
-        axis.autoscale_view(True, scalex, scaley, scalez)
 
     # ========================================================================
     # Post processing operations
@@ -178,8 +195,8 @@ class PlotLayer(object):
         plot = self.plot(argument, **kwargs)
         info = plot['info']
         proj_3d = False
-        for k in range(len(info)):
-            for l in range(len(info[0])):
+        for k, _ in enumerate(info):
+            for l, _ in enumerate(info[0]):
                 if 'projection' in info[k][l] and info[k][l]['projection'] == '3d':
                     proj_3d = True
         if proj_3d:
@@ -198,7 +215,7 @@ class PlotLayer(object):
             else:
                 tikz_save(
                     path, figurewidth=figurewidth, figureheight=figureheight)
-            self._cleanup_rubbish(path)
+            _cleanup_rubbish(path)
 
     def plot_movie(self, argument=None, repeat=False, **kwargs):
         t = self.__class__.simulator.time
@@ -256,17 +273,5 @@ class PlotLayer(object):
                 else:
                     tikz_save(
                         path, figurewidth=figurewidth, figureheight=figureheight)
-                self._cleanup_rubbish(path, root)
+                _cleanup_rubbish(path, root)
             cnt += 1
-
-    def _cleanup_rubbish(self, path, root=None):
-        # cleanup rubbish due to bugs in matplotlib2tikz
-        with open(path, 'r+') as f:
-            body = f.read()
-            body = body.replace('fill opacity=0', 'opacity=0')
-            # add root at beginning of tikz file
-            if root is not None:
-                body = '%root=' + root + '\n' + body
-            f.seek(0)
-            f.truncate()
-            f.write(body)
