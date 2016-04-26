@@ -124,8 +124,8 @@ class Dubins(Vehicle):
         # generate initial guess for spline variables
         init_value = np.zeros((len(self.basis), 2))
         v_til0 = np.zeros(len(self.basis))
-        tg_ha0 = np.tan(self.prediction['state'][2]/2)
-        tg_haT = np.tan(self.poseT[2]/2)
+        tg_ha0 = np.tan(self.prediction['state'][2]/2.)
+        tg_haT = np.tan(self.poseT[2]/2.)
         init_value[:, 0] = v_til0
         init_value[:, 1] = np.linspace(tg_ha0, tg_haT, len(self.basis))
         return init_value
@@ -141,12 +141,12 @@ class Dubins(Vehicle):
         # for the optimization problem
         # convert theta to tg_ha here
         parameters = {}
-        parameters['tg_ha0'] = np.tan(self.prediction['state'][2]/2)
+        parameters['tg_ha0'] = np.tan(self.prediction['state'][2]/2.)
         parameters['v_til0'] = self.prediction['input'][0]/(1+parameters['tg_ha0']**2) 
         parameters['dtg_ha0'] = 0.5*self.prediction['input'][1]*(1+parameters['tg_ha0']**2)  # dtg_ha
         parameters['pos0'] = self.prediction['state'][:2]
         parameters['posT'] = self.poseT[:2]  # x,y
-        parameters['tg_haT'] = np.tan(self.poseT[2]/2)
+        parameters['tg_haT'] = np.tan(self.poseT[2]/2.)
         parameters['dtg_haT'] = 0.
         parameters['v_tilT'] = 0.
         return parameters
@@ -178,7 +178,7 @@ class Dubins(Vehicle):
             x = dx_int - dx_int(time[0]) + self.signals['state'][0, -1]
             y = dy_int - dy_int(time[0]) + self.signals['state'][1, -1]
         theta = 2*np.arctan2(sample_splines([tg_ha], time),1)
-        dtheta = 2*np.array(sample_splines([dtg_ha],time))/(1+np.array(sample_splines([tg_ha], time))**2)
+        dtheta = 2*np.array(sample_splines([dtg_ha],time))/(1.+np.array(sample_splines([tg_ha], time))**2)
         input = np.c_[sample_splines([v_til*(1+tg_ha**2)], time)]
         input = np.r_[input, dtheta]
         signals['state'] = np.c_[sample_splines([x, y], time)]
@@ -201,16 +201,16 @@ class Dubins(Vehicle):
         ret = []
         for shape in self.shapes:
             if isinstance(shape, Circle):
-                wheel = Square(shape.radius/3)
-                front = Circle(shape.radius/8)
+                wheel = Square(shape.radius/3.)
+                front = Circle(shape.radius/8.)
                 ret += shape.draw(self.signals['pose'][:, t])
                 ret += wheel.draw(self.signals['pose'][:, t]+
-                                  (shape.radius/2)*np.array([np.cos(self.signals['pose'][2, t]-np.pi/2),
-                                                             np.sin(self.signals['pose'][2, t]-np.pi/2),
+                                  (shape.radius/2.)*np.array([np.cos(self.signals['pose'][2, t]-np.pi/2.),
+                                                             np.sin(self.signals['pose'][2, t]-np.pi/2.),
                                                              self.signals['pose'][2, t]]))
                 ret += wheel.draw(self.signals['pose'][:, t]+
-                                  (shape.radius/2)*np.array([np.cos(self.signals['pose'][2, t]+np.pi/2),
-                                                             np.sin(self.signals['pose'][2, t]+np.pi/2),
+                                  (shape.radius/2.)*np.array([np.cos(self.signals['pose'][2, t]+np.pi/2.),
+                                                             np.sin(self.signals['pose'][2, t]+np.pi/2.),
                                                              self.signals['pose'][2, t]]))
                 ret += front.draw(self.signals['pose'][:, t]+
                                   (shape.radius/1.5)*np.array([np.cos(self.signals['pose'][2, t]),

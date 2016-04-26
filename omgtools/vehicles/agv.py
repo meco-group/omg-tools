@@ -178,8 +178,8 @@ class AGV(Vehicle):
         # generate initial guess for spline variables
         init_value = np.zeros((len(self.basis), 2))
         v_til0 = np.zeros(len(self.basis))
-        tg_ha0 = np.tan(self.prediction['state'][2]/2)
-        tg_haT = np.tan(self.poseT[2]/2)
+        tg_ha0 = np.tan(self.prediction['state'][2]/2.)
+        tg_haT = np.tan(self.poseT[2]/2.)
         init_value[:, 0] = v_til0
         init_value[:, 1] = np.linspace(tg_ha0, tg_haT, len(self.basis))
         return init_value
@@ -195,13 +195,13 @@ class AGV(Vehicle):
     def set_parameters(self, current_time):
         # for the optimization problem
         parameters = {}
-        parameters['tg_ha0'] = np.tan(self.prediction['state'][2]/2)
+        parameters['tg_ha0'] = np.tan(self.prediction['state'][2]/2.)
         parameters['v_til0'] = self.prediction['input'][0]/(1+parameters['tg_ha0']**2) 
         parameters['pos0'] = self.prediction['state'][:2]
         parameters['posT'] = self.poseT[:2]  # x, y
         parameters['v_tilT'] = 0.
         parameters['dv_tilT'] = 0.
-        parameters['tg_haT'] = np.tan(self.poseT[2]/2)
+        parameters['tg_haT'] = np.tan(self.poseT[2]/2.)
         parameters['dtg_haT'] = 0.
         parameters['ddtg_haT'] = 0.
         # parameters['tdeltaT'] = np.tan(self.poseT[3])
@@ -213,7 +213,7 @@ class AGV(Vehicle):
         else:  # no need for l'Hopital's rule
             parameters['hop0'] = 0.
             parameters['dtg_ha0'] = -np.tan(self.prediction['state'][3])*parameters['v_til0']* \
-                                           (1+parameters['tg_ha0']**2)**2/(2*self.length)
+                                           (1+parameters['tg_ha0']**2)**2/(2.*self.length)
             # tdelta0 is only used when hop0 = 1, so no need to assign here
         return parameters
 
