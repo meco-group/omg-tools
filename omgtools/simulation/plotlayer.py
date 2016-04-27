@@ -256,9 +256,9 @@ class PlotLayer(object):
             self.update_plots(plot, k)
             if not proj_3d:
                 info = plot['info']
-                for k in range(len(info)):
-                    for l in range(len(info[0])):
-                        if 'projection' in info[k][l] and info[k][l]['projection'] == '3d':
+                for inf in range(info):
+                    for i in range(inf):
+                        if 'projection' in i and i['projection'] == '3d':
                             proj_3d = True
                 if proj_3d:
                     warnings.warn('3D plotting is not supported by matplotlib2tikz. ' +
