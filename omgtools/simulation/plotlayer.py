@@ -256,8 +256,8 @@ class PlotLayer(object):
             self.update_plots(plot, k)
             if not proj_3d:
                 info = plot['info']
-                for inf in range(info):
-                    for i in range(inf):
+                for inf in info:
+                    for i in inf:
                         if 'projection' in i and i['projection'] == '3d':
                             proj_3d = True
                 if proj_3d:
