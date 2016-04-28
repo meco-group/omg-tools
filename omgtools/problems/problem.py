@@ -33,6 +33,15 @@ class Problem(OptiChild):
         self.iteration = 0
         self.update_times = []
 
+        # first add children and construct father, this allows making a
+        # difference between the simulated and the processed vehicles,
+        # e.g. when passing on a trailer + leading vehicle to problem, but
+        # only the trailer to the simulator
+        children = [vehicle for vehicle in self.vehicles]
+        children += [obstacle for obstacle in self.environment.obstacles]
+        children += [self, self.environment]
+        self.father = OptiFather(children)
+
     # ========================================================================
     # Problem options
     # ========================================================================
@@ -59,10 +68,6 @@ class Problem(OptiChild):
     # ========================================================================
 
     def init(self):
-        children = [vehicle for vehicle in self.vehicles]
-        children += [obstacle for obstacle in self.environment.obstacles]
-        children += [self, self.environment]
-        self.father = OptiFather(children)
         self.problem, compile_time = self.father.construct_problem(
             self.options)
         self.father.init_transformations(self.init_primal_transform,

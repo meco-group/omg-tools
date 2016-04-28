@@ -142,7 +142,7 @@ class Vehicle(OptiChild):
                                 con = 0
                                 con += (hpp['a'][0]*chck[0] + hpp['a'][1]*chck[1])*(1.-tg_ha**2)
                                 con += (-hpp['a'][0]*chck[1] + hpp['a'][1]*chck[0])*(2*tg_ha)
-                                pos = np.zeros(2)  # next part gives an offset to input position e.g. for trailer position
+                                pos = [0, 0]  # next part gives an offset to input position e.g. for trailer position
                                 pos[0] = position[0]*(1+tg_ha**2) + offset*(1-tg_ha**2)  # = real_pos*(1+tg_ha**2)
                                 pos[1] = position[1]*(1+tg_ha**2) + offset*(2*tg_ha)  # = real_pos*(1+tg_ha**2)
                                 con += (hpp['a'][0]*pos[0] + hpp['a'][1]*pos[1])

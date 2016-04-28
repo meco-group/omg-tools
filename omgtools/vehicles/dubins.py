@@ -229,3 +229,12 @@ class Dubins(Vehicle):
         x = x_int-evalspline(x_int, self.t/self.T) + self.pos0[0]  # self.pos0 was already defined in init
         y = y_int-evalspline(y_int, self.t/self.T) + self.pos0[1]
         return np.array([x, y])
+
+    # Next two functions are required if vehicle is not passed to problem, but is still used in the optimization
+    # problem e.g. when considering a vehicle with a trailer. You manually have to update signals and prediction,
+    # here the inputs are coming from e.g. the trailer class.
+    def update_signals(self, signals):
+        self.signals = signals
+
+    def update_prediction(self, prediction):
+        self.prediction = prediction

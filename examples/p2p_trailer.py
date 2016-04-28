@@ -20,27 +20,31 @@
 from omgtools import *
 
 # create vehicle
-vehicle = Dubins(bounds={'vmax': 0.8, 'wmax': 60., 'wmin': -60.})  # in deg
-vehicle.define_knots(knot_intervals=5)  # choose lower amount of knot intervals
+vehicle = Dubins(shapes=Circle(0.2), bounds={'vmax': 0.8, 'wmax': 60., 'wmin': -60.})  # in deg
+vehicle.define_knots(knot_intervals=10)  # choose lower amount of knot intervals
 vehicle.set_initial_conditions([0., 0., 0.])  # input orientation in deg
-vehicle.set_terminal_conditions([3., 0., 0.])
+vehicle.set_terminal_conditions([3., 3., 0.])
 
 # create trailer
-trailer = Trailer(lead_veh=vehicle,  shapes=Circle(0.4), l_hitch = 0.2)
-trailer.define_knots(knot_intervals=5)
+trailer = Trailer(lead_veh=vehicle,  shapes=Rectangle(0.2, 0.2), l_hitch = 0.6,
+                  bounds={'tmax': 45., 'tmin': -45.})  # limit angle between vehicle and trailer
+# Note: the knot intervals of lead_veh and trailer should be the same
+trailer.define_knots(knot_intervals=10)  # choose lower amount of knot intervals
 trailer.set_initial_conditions([0.])  # input orientation in deg
-trailer.set_terminal_conditions([0.])  # todo: good idea?
+# trailer.set_terminal_conditions([0.])  # yes/no depends on the application e.g. driving vs parking
 
 # create environment
 environment = Environment(room={'shape': Square(5.), 'position': [1.5, 1.5]})
 
-trajectories = {'velocity': {'time': [0.5],
-                             'values': [[0.25, 0.0]]}}
-environment.add_obstacle(Obstacle({'position': [1., 1.]}, shape=Circle(0.5),
-                                  simulation={'trajectories':trajectories}))
+# trajectories = {'velocity': {'time': [0.5],
+#                              'values': [[0.25, 0.0]]}}
+# environment.add_obstacle(Obstacle({'position': [1., 1.]}, shape=Circle(0.5),
+#                                   simulation={'trajectories':trajectories}))
 
 # create a point-to-point problem
-problem = Point2point(trailer, environment, freeT=True)  # pass on vehicle and trailer
+problem = Point2point(trailer, environment, freeT=True)  # pass trailer to problem
+# todo: isn't there are a cleaner way? 
+problem.father.add(vehicle)  # add vehicle to optifather
 # extra solver settings which may improve performance
 problem.set_options({'solver': {'ipopt.linear_solver': 'ma57'}})
 problem.set_options({'solver': {'ipopt.hessian_approximation': 'limited-memory'}})
@@ -51,7 +55,7 @@ problem.init()
 
 # create simulator
 simulator = Simulator(problem)
-simulator.plot.set_options({'knots': True, 'prediction': False})
+simulator.plot.set_options({'knots': True, 'prediction': True})
 simulator.plot.show('scene')
 simulator.plot.show('input')
 simulator.plot.show('state')
