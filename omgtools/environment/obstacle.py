@@ -29,7 +29,9 @@ import numpy as np
 
 class Obstacle(object):
 
-    def __new__(cls, initial, shape, simulation={}, options={}):
+    def __new__(cls, initial, shape, simulation=None, options=None):
+        simulation = simulation or {}
+        options = options or {}
         if shape.n_dim == 2:
             return Obstacle2D(initial, shape, simulation, options)
         if shape.n_dim == 3:
@@ -114,10 +116,8 @@ class ObstaclexD(OptiChild):
                                  'values': np.zeros((self.n_dim, 2))}
         if 'trajectories' in simulation:
             for key, trajectory in simulation['trajectories'].items():
-                trajectories[key]['time'] = np.array(
-                    simulation['trajectories'][key]['time'])
-                trajectories[key]['values'] = np.vstack(
-                    simulation['trajectories'][key]['values']).T
+                trajectories[key]['time'] = np.array(trajectory['time'])
+                trajectories[key]['values'] = np.vstack(trajectory['values']).T
                 if trajectories[key]['time'].size != trajectories[key]['values'].shape[1]:
                     raise ValueError('Dimension mismatch between time array ' +
                                      'and values for ' + key + ' trajectory.')
@@ -174,7 +174,8 @@ class ObstaclexD(OptiChild):
         state0 = np.r_[self.signals['position'][:, -1],
                        self.signals['velocity'][:, -1],
                        self.signals['acceleration'][:, -1]].T
-        state0 -= self.state_incr_interp(time0)
+        if time0 != 0.0:
+            state0 -= self.state_incr_interp(time0)
         state = odeint(self._ode, state0, time_axis).T
         state += self.state_incr_interp(time_axis)
         self.signals['position'] = np.c_[self.signals['position'],
@@ -287,7 +288,7 @@ class Obstacle2D(ObstaclexD):
     def update(self, update_time, sample_time):
         ObstaclexD.update(self, update_time, sample_time)
         n_samp = int(update_time/sample_time)
-        for k in range(n_samp):
+        for _ in range(n_samp):
             theta0 = self.signals['orientation'][:, -1][0]
             omega0 = self.signals['angular_velocity'][:, -1][0]
             theta = theta0 + sample_time*omega0

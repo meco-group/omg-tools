@@ -56,5 +56,5 @@ simulator.run()
 problem.plot_movie('scene', repeat=False)
 vehicle.plot_movie('input', repeat=False, knots=True,
                    labels=['v_x (m/s)', 'v_y (m/s)'])
-problem.save_movie('scene', axis=False)
-vehicle.save_plot('input', time=3., knots=True)
+# problem.save_movie('scene', axis=False)
+# vehicle.save_plot('input', time=3., knots=True)

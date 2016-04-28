@@ -52,6 +52,7 @@ problem.init()
 simulator = Simulator(problem)
 fleet.plot('input', knots=True, labels=['v_x (m/s)', 'v_y (m/s)'])
 problem.plot('scene')
+problem.plot('residuals')
 
 # run it!
 simulator.run()

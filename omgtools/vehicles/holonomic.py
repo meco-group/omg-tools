@@ -26,7 +26,8 @@ import numpy as np
 
 class Holonomic(Vehicle):
 
-    def __init__(self, shapes=Circle(0.1), options={}, bounds={}):
+    def __init__(self, shapes=Circle(0.1), options=None, bounds=None):
+        bounds = bounds or {}
         Vehicle.__init__(
             self, n_spl=2, degree=3, shapes=shapes, options=options)
         self.vmin = bounds['vmin'] if 'vmin' in bounds else -0.5

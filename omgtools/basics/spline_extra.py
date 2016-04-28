@@ -204,12 +204,12 @@ def shift_knot1_bwd(cfs, basis, t_shift):
     if isinstance(cfs, (SX, MX)):
         cfs_sym = SX.sym('cfs', cfs.shape)
         t_shift_sym = SX.sym('t_shift')
-        T, Tinv = shiftfirstknot_T(basis, t_shift_sym, inverse=True)
+        _, Tinv = shiftfirstknot_T(basis, t_shift_sym, inverse=True)
         cfs2_sym = mtimes(Tinv, cfs_sym)
         fun = Function('fun', [cfs_sym, t_shift_sym], [cfs2_sym]).expand()
         return fun(cfs, t_shift)
     else:
-        T, Tinv = shiftfirstknot_T(basis, t_shift, inverse=True)
+        _, Tinv = shiftfirstknot_T(basis, t_shift, inverse=True)
         return Tinv.dot(cfs)
 
 
@@ -319,7 +319,7 @@ def sample_splines(spline, time):
 def integral_sqbasis(basis):
     # Compute integral of squared bases.
     basis_prod = basis*basis
-    pairs, S = basis.pairs(basis)
+    pairs, _ = basis.pairs(basis)
     b_self = basis(basis_prod._x)
     basis_product = b_self[:, pairs[0]].multiply(b_self[:, pairs[1]])
     T = basis_prod.transform(lambda y: basis_product.toarray()[y, :])

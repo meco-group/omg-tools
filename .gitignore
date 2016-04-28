@@ -3,6 +3,7 @@
 examples/movies/*
 examples/images/*
 examples/export/*
+examples/data/*
 .*
 !.gitignore
 *.c

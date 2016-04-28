@@ -18,7 +18,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from ..basics.optilayer import OptiChild
-from ..basics.spline import BSpline, BSplineBasis
+from ..basics.spline import BSplineBasis
 from ..basics.spline_extra import concat_splines, definite_integral, sample_splines
 from ..basics.shape import Rectangle, Square, Circle
 from ..simulation.plotlayer import PlotLayer
@@ -28,13 +28,13 @@ from scipy.interpolate import interp1d
 from scipy.integrate import odeint
 from numpy.random import normal
 from itertools import groupby
-import matplotlib.pyplot as plt
 import numpy as np
 
 
 class Vehicle(OptiChild, PlotLayer):
 
-    def __init__(self, n_spl, degree, shapes, options):
+    def __init__(self, n_spl, degree, shapes, options=None):
+        options = options or {}
         OptiChild.__init__(self, 'vehicle')
         PlotLayer.__init__(self)
         self.shapes = shapes if isinstance(shapes, list) else [shapes]
@@ -367,16 +367,15 @@ class Vehicle(OptiChild, PlotLayer):
         ax_r, ax_c = size, 1
         info = []
         n_colors = len(self.colors)
-        index = int([''.join(g)
-                     for _, g in groupby(self.label, str.isalpha)][-1])
+        index = int([''.join(g) for _, g in groupby(self.label, str.isalpha)][-1]) % n_colors
         for k in range(ax_r):
             inf = []
-            for l in range(ax_c):
+            for _ in range(ax_c):
                 lines = []
                 lines.append(
-                    {'linestyle': '-', 'color': self.colors_w[index % n_colors]})
+                    {'linestyle': '-', 'color': self.colors_w[index]})
                 lines.append(
-                    {'linestyle': '-', 'color': self.colors[index % n_colors]})
+                    {'linestyle': '-', 'color': self.colors[index]})
                 if 'knots' in kwargs and kwargs['knots']:
                     lines.append(
                         {'linestyle': 'None', 'marker': 'x', 'color': self.colors[index]})

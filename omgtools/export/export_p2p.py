@@ -19,10 +19,10 @@
 
 import os
 import shutil
-from casadi import Function, nlpsol
+from casadi import nlpsol
 
 
-class ExportP2P:
+class ExportP2P(object):
 
     def __init__(self, problem, options):
         self.set_default_options()
@@ -67,7 +67,11 @@ class ExportP2P:
                 else:
                     files[os.path.join(dir_path, f)] = os.path.join(
                         self.options['directory'], 'src/', f)
-        self.copy_files(files)
+        for src, des in files.items():
+            des_dir = os.path.dirname(des)
+            if not os.path.isdir(des_dir):
+                os.makedirs(des_dir)
+            shutil.copy(src, des)
         # export casadi nlp
         self.create_nlp_src(self.options['directory'])
         # create data to fill in in c++ template
@@ -81,18 +85,11 @@ class ExportP2P:
         print 'done.'
         print 'Check out instructions.txt for build and usage instructions.'
 
-    def copy_files(self, files):
-        for src, des in files.items():
-            des_dir = os.path.dirname(des)
-            if not os.path.isdir(des_dir):
-                os.makedirs(des_dir)
-            shutil.copy(src, des)
-
     def fill_template(self, data, files):
         if not isinstance(files, list):
             files = [files]
-        for file in files:
-            with open(file, 'r+') as f:
+        for fil in files:
+            with open(fil, 'r+') as f:
                 if f is not None:
                     body = f.read()
                     for key, item in data.items():
@@ -101,7 +98,7 @@ class ExportP2P:
                     f.truncate()
                     f.write(body)
                 else:
-                    raise ValueError('File '+os.path.join(self.src_dir, file) +
+                    raise ValueError('File '+os.path.join(self.src_dir, fil) +
                                      ' does not exist!')
 
     def get_make_options(self):
@@ -137,6 +134,10 @@ class ExportP2P:
             self.problem.options['solver']['ipopt.linear_solver']+'"'
         defines['N_DIM'] = self.vehicle.n_dim
         defines['N_OBS'] = self.problem.environment.n_obs
+        defines['VEHICLELBL'] = '"' + self.vehicle.label + '"'
+        defines['PROBLEMLBL'] = '"' + self.problem.label + '"'
+        defines['OBSTACLELBLS'] = '{' + ','.join(['"' + o.label + '"'
+            for o in self.problem.environment.obstacles]) + '}'
         if self.problem.__class__.__name__ == 'FreeTPoint2point':
             defines['FREET'] = 'true'
         elif self.problem.__class__.__name__ == 'FixedTPoint2point':
@@ -144,7 +145,7 @@ class ExportP2P:
         else:
             raise ValueError('This type of point2point problem is not ' +
                              'supported for export')
-        for label, child in self.father.children.items():
+        for child in self.father.children.values():
             for name in child._splines_prim:
                 spl = child._splines_prim[name]
                 if spl['init'] is not None:
@@ -156,7 +157,7 @@ class ExportP2P:
                     defines.update({('%s_TF') % name.upper(): tf})
         # lbg & ubg
         lb, ub, cnt = '{', '{', 0
-        for label, child in self.father.children.items():
+        for child in self.father.children.values():
             for name, con in child._constraints.items():
                 if con[0].size(1) > 1:
                     for l in range(con[0].size(1)):

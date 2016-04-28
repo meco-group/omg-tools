@@ -26,7 +26,8 @@ import time
 
 class Problem(OptiChild, PlotLayer):
 
-    def __init__(self, fleet, environment, options={}, label='problem'):
+    def __init__(self, fleet, environment, options=None, label='problem'):
+        options = options or {}
         OptiChild.__init__(self, label)
         PlotLayer.__init__(self)
         self.fleet, self.vehicles = get_fleet_vehicles(fleet)
@@ -66,7 +67,7 @@ class Problem(OptiChild, PlotLayer):
         children += [obstacle for obstacle in self.environment.obstacles]
         children += [self, self.environment]
         self.father = OptiFather(children)
-        self.problem, compile_time = self.father.construct_problem(
+        self.problem, _ = self.father.construct_problem(
             self.options)
         self.father.init_transformations(self.init_primal_transform,
                                          self.init_dual_transform)
@@ -101,12 +102,12 @@ class Problem(OptiChild, PlotLayer):
     # ========================================================================
 
     def init_plot(self, argument, **kwargs):
-        if not hasattr(self.vehicles[0], 'signals'):
-            return None
         if argument == 'scene':
+            if not hasattr(self.vehicles[0], 'signals'):
+                return None
             info = self.environment.init_plot(None, **kwargs)
             labels = kwargs['labels'] if 'labels' in kwargs else [
-                '' for k in range(self.environment.n_dim)]
+                '' for _ in range(self.environment.n_dim)]
             n_colors = len(self.colors)
             indices = [int([''.join(g) for _, g in groupby(
                 v.label, str.isalpha)][-1]) % n_colors for v in self.vehicles]
@@ -116,7 +117,7 @@ class Problem(OptiChild, PlotLayer):
             for v in range(len(self.vehicles)):
                 info[0][0]['lines'].append({'color': self.colors[indices[v]]})
             for v, vehicle in enumerate(self.vehicles):
-                for l in vehicle.draw():
+                for _ in vehicle.draw():
                     info[0][0]['lines'].append(
                         {'color': self.colors[indices[v]]})
             info[0][0]['labels'] = labels
@@ -125,9 +126,9 @@ class Problem(OptiChild, PlotLayer):
             return None
 
     def update_plot(self, argument, t, **kwargs):
-        if not hasattr(self.vehicles[0], 'signals'):
-            return None
         if argument == 'scene':
+            if not hasattr(self.vehicles[0], 'signals'):
+                return None
             data = self.environment.update_plot(None, t, **kwargs)
             for vehicle in self.vehicles:
                 data[0][0].append(
@@ -144,13 +145,13 @@ class Problem(OptiChild, PlotLayer):
                     data[0][0].append([l[k, :] for k in range(vehicle.n_dim)])
             return data
         else:
-            return False
+            return None
 
     # ========================================================================
     # Methods encouraged to override
     # ========================================================================
 
-    def init_step(self, current_time):
+    def init_step(self, current_time, update_time):
         pass
 
     def final(self):
@@ -175,8 +176,8 @@ class Problem(OptiChild, PlotLayer):
     def update(self, current_time, update_time, sample_time):
         raise NotImplementedError('Please implement this method!')
 
-    def stop_criterium(self):
+    def stop_criterium(self, current_time, update_time):
         raise NotImplementedError('Please implement this method!')
 
-    def export(self, options={}):
+    def export(self, options=None):
         raise NotImplementedError('Please implement this method!')

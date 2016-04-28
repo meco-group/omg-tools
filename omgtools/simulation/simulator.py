@@ -60,6 +60,8 @@ class Simulator:
         return stop
 
     def run_once(self):
+        # initialize problem
+        self.problem.initialize()
         # solve problem
         self.problem.solve(0., 0.)
         # update everything
