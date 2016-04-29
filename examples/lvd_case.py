@@ -8,15 +8,15 @@ import matplotlib
 from omgtools import *
 from omgtools.vehicles.lvd_machine import LVD
 
-save = True
+save = False
 
 # create plate
 # limits on position mid-point plate
 # bounds = {'smin': [None, -0.95, 0.405], 'smax': [None, -0.55, 1.5]}
-bounds = {'smin': [1.4, -0.85, 0.405], 'smax': [8.6, -0.55, 1.155]}
+bounds = {'smin': [1.4, -0.85, 0.405], 'smax': [8.6, -0.1, 1.155]}
 # shutdown room constraints (we use constraints on position)
 options = {'room_constraints': False}
-# shape of plate
+# create plate object
 shape = Plate(Rectangle(3., 1.5), 0.01)
 plate = LVD(shape, options=options, bounds=bounds)
 plate.define_knots(knot_intervals=11)
@@ -31,23 +31,40 @@ environment = Environment(
 # obstacles for collision avoidance
 cuboids = False  # False -> a bit faster
 if cuboids:
-    shape1 = Cuboid(6.950, 1.7, 1.0)
+    # table
+    shape1 = Cuboid(3.350, 1.7, 1.0)
     shape1.radius = 0.005  # for safety
-    shape2 = Cuboid(0.85, 3.0, 1.0)
+    position1 = [1.675, -0.65, 0.5]
+    # cover + frame
+    shape2 = Cuboid(0.58, 3.0, 1.0)
+    position2 = [0.29 + 0.1, 0.0, 1.6] # +0.1 for safety
+    # measure
+    shape3 = Cuboid(0.15, 0.15, 1.15)
+    position3 = [6.875, -1.325, 0.575]
 else:
-    vertices1 = np.c_[[3.475, -0.85, -0.5], [3.475, 0.85, -0.5],
-                      [3.475, -0.85,  0.5], [3.475, 0.85,  0.5],
-                      [-3.475, -0.85,  0.5], [-3.475, 0.85,  0.5]]
+    # table
+    vertices1 = np.c_[[1.675, -0.85, -0.5], [1.675, 0.85, -0.5],
+                      [1.675, -0.85,  0.5], [1.675, 0.85,  0.5],
+                      [-1.675, -0.85,  0.5], [-1.675, 0.85,  0.5]]
     shape1 = Polyhedron3D(vertices1, 0.005)
-    vertices2 = np.c_[[0.425, 1.5, -0.5], [0.425, 1.5, 0.5],
-                      [0.425, -1.5, -0.5], [0.425, -1.5, 0.5]]
+    position1 = [1.675, -0.65, 0.5]
+    # cover + frame
+    vertices2 = np.c_[[0.29, 1.5, -0.5], [0.29, 1.5, 0.5],
+                      [0.29, -1.5, -0.5], [0.29, -1.5, 0.5]]
     shape2 = Polyhedron3D(vertices2, 0.001)
+    position2 = [0.29 + 0.1, 0.0, 1.6] # +0.1 for safety
+    # measure
+    vertices3 = np.c_[[0.075, -0.075, -0.575], [0.075, 0.075, -0.575],
+                      [0.075, -0.075, 0.575], [0.075, 0.075, 0.575],
+                      [-0.075, -0.075, 0.575], [-0.075, 0.075, 0.575]]
+    shape3 = Polyhedron3D(vertices3, 0.001)
+    position3 = [6.875, -1.325, 0.575]
 
-obstacle1 = Obstacle(
-    {'position': [3.475, -0.65, 0.5]}, shape1, {}, {'draw': False})
-obstacle2 = Obstacle(
-    {'position': [0.425, 0.0, 1.6]}, shape2, {}, {'draw': False})
-environment.add_obstacle([obstacle1, obstacle2])
+obstacle1 = Obstacle({'position': position1}, shape1, {}, {'draw': False})
+obstacle2 = Obstacle({'position': position2}, shape2, {}, {'draw': False})
+obstacle3 = Obstacle({'position': position3}, shape3, {}, {'draw': False})
+
+environment.add_obstacle([obstacle1, obstacle2, obstacle3])
 
 # obstacles just for drawing
 frame = Obstacle(
@@ -63,7 +80,7 @@ leg = Obstacle(
 pilar = Obstacle(
     {'position': [3.2, -1.925, 0.75]}, Cuboid(0.3, 0.45, 1.5), {}, {'avoid': False})
 measure = Obstacle(
-    {'position': [6.875, -1.325, 0.4]}, Cuboid(0.15, 0.15, 0.8), {}, {'avoid': False})
+    {'position': [6.875, -1.325, 0.575]}, Cuboid(0.15, 0.15, 1.15), {}, {'avoid': False})
 environment.add_obstacle([frame, table, cover, beam, leg, pilar, measure])
 
 # create a point-to-point problem
@@ -79,16 +96,18 @@ simulator = Simulator(problem)
 trajectories = simulator.run_once()
 
 # show results
-plate.plot('state', labels=['x (m)', 'y (m)', 'z (m)'])
-plate.plot('velocity', labels=['dx (m/s)', 'dy (m/s)', 'dz (m/s)'])
-plate.plot(
-    'acceleration', labels=['ddx (m/s^2)', 'ddy (m/s^2)', 'ddz (m/s^2)'])
-plate.plot(
-    'jerk', labels=['dddx (m/s^3)', 'dddy (m/s^3)', 'dddz (m/s^3)'])
-problem.plot_movie(
-    'scene', number_of_frames=40, repeat=False, view=[60, 45])
-problem.plot_movie(
-    'scene', number_of_frames=40, repeat=False, view=[0, 90])
+# plate.plot('state', labels=['x (m)', 'y (m)', 'z (m)'])
+# plate.plot('velocity', labels=['dx (m/s)', 'dy (m/s)', 'dz (m/s)'])
+# plate.plot(
+#     'acceleration', labels=['ddx (m/s^2)', 'ddy (m/s^2)', 'ddz (m/s^2)'])
+# plate.plot(
+#     'jerk', labels=['dddx (m/s^3)', 'dddy (m/s^3)', 'dddz (m/s^3)'])
+# problem.plot_movie(
+#     'scene', number_of_frames=40, repeat=False, view=[60, 45])
+# problem.plot_movie(
+#     'scene', number_of_frames=40, repeat=False, view=[0, 90])
+# problem.plot_movie(
+#     'scene', number_of_frames=40, repeat=True, view=[90, 0])
 
 # save results
 if save:
@@ -96,11 +115,12 @@ if save:
         'x (m)', 'y (m)', 'z (m)'], figurewidth='15cm', figureheight='4cm')
     plate.save_plot('velocity', 'velocity', labels=[
         'dx (m/s)', 'dy (m/s)', 'dz (m/s)'], figurewidth='15cm', figureheight='4cm')
-    plate.save_plot('acceleration', 'acceleration', label=[
+    plate.save_plot('acceleration', 'acceleration', labels=[
         'ddx (m/s^2)', 'ddy (m/s^2)', 'ddz (m/s^2)'], figurewidth='15cm', figureheight='4cm')
     plate.save_plot('jerk', 'jerk', labels=[
         'dddx (m/s^3)', 'dddy (m/s^3)', 'dddz (m/s^3)'], figurewidth='15cm', figureheight='4cm')
 
-    problem.save_movie('scene', 'scene1', number_of_frames=40, view=[30, 60])
-    problem.save_movie('scene', 'scene2', number_of_frames=40, view=[0, 90])
+    problem.save_movie('scene', 'scene1', number_of_frames=40, view=[30, 60], axis=False)
+    problem.save_movie('scene', 'scene2', number_of_frames=40, view=[0, 90], axis=False)
+    problem.save_movie('scene', 'scene3', number_of_frames=40, view=[90, 0], axis=False)
 matplotlib.pyplot.show(block=True)
