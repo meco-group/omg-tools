@@ -5,4 +5,5 @@ from quadrotor import Quadrotor
 from dubins import Dubins
 from bicycle import Bicycle
 from platform import Platform
+from vehicle1d import Vehicle1D
 from fleet import Fleet
