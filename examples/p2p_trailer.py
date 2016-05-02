@@ -58,6 +58,4 @@ trailer.plot('r1', knots=True)
 # run it!
 simulator.run()
 
-trailer.plot_movie('input', knots=True, labels=['v (m/s)', 'ddelta (rad/s)'])
-trailer.plot_movie('state', knots=True, labels=['x_tr (m)', 'y_tr (m)', 'theta_tr (rad)', 'x_veh (m)', 'y_veh (m)', 'theta_veh (rad)'])
 problem.plot_movie('scene', repeat=False)
