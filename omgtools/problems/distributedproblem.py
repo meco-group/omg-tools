@@ -33,11 +33,10 @@ def get_dependency(expression):
 
 class DistributedProblem(Problem):
 
-    def __init__(self, problems, updater_type, options):
+    def __init__(self, fleet, environment, problems, updater_type, options):
         self.problems = problems
         self.updater_type = updater_type
-        vehicles = [p.vehicles[0] for p in problems]
-        Problem.__init__(self, vehicles, problems[0].environment, options)
+        Problem.__init__(self, fleet, environment, options)
 
     # ========================================================================
     # Create problem
@@ -127,15 +126,19 @@ class DistributedProblem(Problem):
     # Methods required for simulation
     # ========================================================================
 
-    def update(self, current_time):
+    def update(self, current_time, update_time, sample_time):
         for problem in self.problems:
-            problem.update(current_time)
-        return current_time + self.options['update_time']
+            problem.update(current_time, update_time, sample_time)
+        if self.options['horizon_time'] < update_time:
+            update_time = self.options['horizon_time']
+        self.environment.update(update_time, sample_time)
+        self.fleet.update_plots()
+        self.update_plots()
 
-    def stop_criterium(self):
+    def stop_criterium(self, current_time, update_time):
         stop = True
         for problem in self.problems:
-            stop *= problem.stop_criterium()
+            stop *= problem.stop_criterium(current_time, update_time)
         return stop
 
     def final(self):
@@ -158,5 +161,5 @@ class DistributedProblem(Problem):
     # Methods required to override (no general implementation possible)
     # ========================================================================
 
-    def solve(self, current_time):
+    def solve(self, current_time, update_time):
         raise NotImplementedError('Please implement this method!')

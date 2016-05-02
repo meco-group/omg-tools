@@ -32,7 +32,7 @@ import numpy as np
 # Use tangent half angle substitution: tg_ha = tan(theta/2)
 # sin(theta) = (2*tg_ha)/(1+tg_ha**2)
 # cos(theta) = (1-tg_ha**2)/(1+tg_ha**2)
-# This gives: 
+# This gives:
 # dx = V/(1+tg_ha**2)*(1-tg_ha**2)
 # dy = V/(1+tg_ha**2)*(2*tg_ha)
 # Substitute: v_til = V/(1+tg_ha**2)
@@ -47,9 +47,11 @@ import numpy as np
 # Spline variables of the problem: v_til and tg_ha
 # delta follows from v_til, tg_ha, dtg_ha
 
+
 class Bicycle(Vehicle):
 
-    def __init__(self, length=0.4, options={}, bounds={}):
+    def __init__(self, length=0.4, options=None, bounds=None):
+        bounds = bounds or {}
         Vehicle.__init__(
             self, n_spl=2, degree=2, shapes=Circle(length/2.), options=options)
         self.vmax = bounds['vmax'] if 'vmax' in bounds else 0.5
@@ -124,8 +126,8 @@ class Bicycle(Vehicle):
         # it contains evalspline(v_til, self.t/self.T)*... which is zero.
         # When v_til is not 0 the steering angle is implicitly imposed due to the fact that tan(delta)
         # is only a function of v_til, tg_ha, dtg_ha. If these variables are smooth the steering angle
-        # will also be smooth. Furthermore the steering angle and its rate of change are limited by the 
-        # extra constraints above. 
+        # will also be smooth. Furthermore the steering angle and its rate of change are limited by the
+        # extra constraints above.
 
         # Impose final steering angle
         # tdeltaT = self.define_parameter('tdeltaT', 1)  # tan(delta)
@@ -195,7 +197,7 @@ class Bicycle(Vehicle):
         # for the optimization problem
         parameters = {}
         parameters['tg_ha0'] = np.tan(self.prediction['state'][2]/2)
-        parameters['v_til0'] = self.prediction['input'][0]/(1+parameters['tg_ha0']**2) 
+        parameters['v_til0'] = self.prediction['input'][0]/(1+parameters['tg_ha0']**2)
         parameters['pos0'] = self.prediction['state'][:2]
         parameters['posT'] = self.poseT[:2]  # x, y
         parameters['v_tilT'] = 0.
@@ -218,7 +220,6 @@ class Bicycle(Vehicle):
 
     def define_collision_constraints(self, hyperplanes, environment, splines):
         v_til, tg_ha = splines[0], splines[1]
-        dtg_ha = tg_ha.derivative(1)
         dx = v_til*(1-tg_ha**2)
         dy = v_til*(2*tg_ha)
         x_int, y_int = self.T*running_integral(dx), self.T*running_integral(dy)
@@ -250,7 +251,6 @@ class Bicycle(Vehicle):
         dv_til = np.array(sample_splines([dv_til], time))
         ddtg_ha = np.array(sample_splines([ddtg_ha], time))
         theta = 2*np.arctan2(tg_ha, 1)
-        dtheta = 2*dtg_ha/(1+tg_ha**2)
         delta = np.arctan2(2*dtg_ha*self.length, v_til*(1+tg_ha**2)**2)
         ddelta = (2*ddtg_ha*self.length*(v_til*(1+tg_ha**2)**2)-2*dtg_ha*self.length*(dv_til*(1+tg_ha**2)**2 + v_til*(4*tg_ha+4*tg_ha**3)*dtg_ha))/(v_til**2*(1+tg_ha**2)**4+(2*dtg_ha*self.length)**2)
         # check if you needed to use l'Hopital's rule to find delta and ddelta above, if so adapt signals
@@ -275,9 +275,11 @@ class Bicycle(Vehicle):
         signals['state'] = np.c_[sample_splines([x, y], time)]
         signals['state'] = np.r_[signals['state'], theta, delta]
         signals['input'] = input
-        signals['pose'] = signals['state'][:3]
         signals['delta'] = delta
         return signals
+
+    def state2pose(self, state):
+        return state[:3]
 
     def ode(self, state, input):
         # state: x, y, theta, delta

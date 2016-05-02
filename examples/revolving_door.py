@@ -46,17 +46,16 @@ environment.add_obstacle(Obstacle({'position': [0., 0.], 'velocity': velocity,
 # create a point-to-point problem
 problem = Point2point(
     vehicle, environment, freeT=False, options={'horizon_time': horizon_time})
-# problem.set_options({'solver': {'ipopt.linear_solver': 'ma57'}})
+# problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem.init()
 
 # create simulator
 simulator = Simulator(problem)
-simulator.plot.set_options({'knots': True, 'prediction': False})
-simulator.plot.show('scene')
-simulator.plot.show('input')
+problem.plot('scene')
+vehicle.plot('input', knots=True, labels=['v_x (m/s)', 'v_y (m/s)'])
 
 # run it!
 simulator.run()
 
 # show/save some results
-simulator.plot.show_movie('scene', repeat=False, number_of_frames=80)
+problem.plot_movie('scene', repeat=False, number_of_frames=80)

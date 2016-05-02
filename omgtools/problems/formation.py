@@ -24,11 +24,10 @@ import numpy as np
 
 class FormationPoint2point(ADMMProblem):
 
-    def __init__(self, fleet, environment, options={}):
+    def __init__(self, fleet, environment, options=None):
         problems = [Point2point(vehicle, environment.copy(), options)
                     for vehicle in fleet.vehicles]
-        ADMMProblem.__init__(self, problems, options)
-        self.fleet = fleet
+        ADMMProblem.__init__(self, fleet, environment, problems, options)
 
         # define parameters
         rel_splines = {veh: self.define_parameter('rs'+str(l), len(self.fleet.configuration[
@@ -46,9 +45,9 @@ class FormationPoint2point(ADMMProblem):
                     spl_veh = veh.get_variable('splines0')
                     spl_nghb = nghb.get_variable('splines0')
                     rel_spl = rs[:, l]
-                    for k in range(len(ind_veh)):
+                    for ind_v, ind_n, rel_spl in zip(ind_veh, ind_nghb, rs[:, l]):
                         self.define_constraint(
-                            spl_veh[ind_veh[k]] - spl_nghb[ind_nghb[k]] - rel_spl[k], 0., 0.)
+                            spl_veh[ind_v] - spl_nghb[ind_n] - rel_spl, 0., 0.)
 
         # terminal constraints (stability issue)
         for veh in self.vehicles:
@@ -77,7 +76,7 @@ class FormationPoint2point(ADMMProblem):
             ind_veh = sorted(self.fleet.configuration[veh].keys())
             n_samp = veh.signals['time'].shape[1]
             end_time = veh.signals['time'][:, -1]
-            Ts = veh.options['sample_time']
+            Ts = veh.signals['time'][0, 1] - veh.signals['time'][0, 0]
             rs = self.fleet.get_rel_config(veh)
             spl_veh = veh.signals['splines']
             nghbs = self.fleet.get_neighbors(veh)

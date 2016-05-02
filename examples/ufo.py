@@ -42,16 +42,15 @@ environment.add_obstacle(
 options = {'horizon_time': 5., 'codegen': {
     'jit': False}, 'admm': {'rho': 0.07}}
 problem = FormationPoint2point(fleet, environment, options=options)
-# problem.set_options({'solver': {'ipopt.linear_solver': 'ma57'}})
+# problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem.init()
 
 # create simulator
 simulator = Simulator(problem)
-simulator.plot.set_options({'knots': True})
-simulator.plot.show('scene')
+problem.plot('scene')
 
 # run it!
 simulator.run()
 
 # show/save some results
-simulator.plot.show_movie('scene', repeat=False)
+problem.plot_movie('scene', repeat=False)

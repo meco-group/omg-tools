@@ -40,17 +40,16 @@ environment.add_obstacle(Obstacle({'position': [1., 1.5]},
 # create a formation point-to-point problem
 options = {'horizon_time': 5., 'codegen': {'jit': False}, 'admm': {'rho': 3.}}
 problem = RendezVous(fleet, environment, options=options)
-# problem.set_options({'solver': {'ipopt.linear_solver': 'ma57'}})
+# problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem.init()
 
 # create simulator
 simulator = Simulator(problem)
-simulator.plot.set_options({'knots': True})
-simulator.plot.show('scene')
-simulator.plot.show('input')
+problem.plot('scene')
+fleet.plot('input', knots=True)
 
 # run it!
 simulator.run()
 
 # show/save some results
-simulator.plot.show_movie('scene', repeat=False)
+problem.plot_movie('scene', repeat=False)

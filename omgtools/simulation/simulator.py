@@ -17,42 +17,67 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-from plots import Plots
+import numpy as np
+from plotlayer import PlotLayer
 
 
 class Simulator:
 
-    def __init__(self, problem):
+    def __init__(self, problem, update_time=0.1, sample_time=0.01):
         self.problem = problem
-        self.plot = Plots(problem)
+        self.update_time = update_time
+        self.sample_time = sample_time
+        PlotLayer.simulator = self
 
     def run(self):
-        current_time = 0.
+        self.reset_timing()
         self.problem.initialize()
         stop = False
         while not stop:
-            stop, current_time = self.update(current_time)
+            stop = self.update()
+            if not stop:
+                self.update_timing()
         self.problem.final()
 
-    def update(self, current_time):
+    def reset_timing(self):
+        self.current_time = 0.
+        self.time = np.r_[0.]
+
+    def update_timing(self):
+        self.current_time += self.update_time
+        n_samp = int(self.update_time/self.sample_time)
+        self.time = np.r_[self.time, np.linspace(
+            self.time[-1]+self.sample_time, self.time[-1]+n_samp*self.sample_time, n_samp)]
+
+    def update(self):
         # solve problem
-        self.problem.solve(current_time)
+        self.problem.solve(self.current_time, self.update_time)
         # update everything
-        current_time = self.problem.update(current_time)
-        self.plot.update()
+        self.problem.update(
+            self.current_time, self.update_time, self.sample_time)
         # check termination criteria
-        stop = self.problem.stop_criterium()
-        return stop, current_time
+        stop = self.problem.stop_criterium(self.current_time, self.update_time)
+        return stop
 
     def run_once(self):
+        # initialize problem
+        self.problem.initialize()
         # solve problem
-        self.problem.solve(0.)
+        self.problem.solve(0., 0.)
         # update everything
-        self.problem.update(0., full_update=True)
-        self.plot.update()
+        self.problem.update(0., np.inf, self.sample_time)
         self.problem.final()
+        # determine timing
+        self.time = self.problem.vehicles[0].signals['time'].ravel()
         # return trajectories
         trajectories = {}
         for vehicle in self.problem.vehicles:
             trajectories[str(vehicle)] = vehicle.trajectories
         return trajectories
+
+    def time2index(self, time):
+        Ts = self.sample_time
+        for k, t in enumerate(self.time):
+            t = np.round(t, 6)
+            if (t <= time) and (time < (t+Ts)) and ((time-t) <= (t+Ts-time)):
+                return k

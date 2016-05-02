@@ -26,7 +26,8 @@ import numpy as np
 
 class Holonomic(Vehicle):
 
-    def __init__(self, shapes=Circle(0.1), options={}, bounds={}):
+    def __init__(self, shapes=Circle(0.1), options=None, bounds=None):
+        bounds = bounds or {}
         Vehicle.__init__(
             self, n_spl=2, degree=3, shapes=shapes, options=options)
         self.vmin = bounds['vmin'] if 'vmin' in bounds else -0.5
@@ -123,10 +124,12 @@ class Holonomic(Vehicle):
         input = np.c_[sample_splines([dx, dy], time)]
         signals['state'] = np.c_[sample_splines([x, y], time)]
         signals['input'] = input
-        signals['pose'] = np.r_[signals['state'], np.zeros((1, len(time)))]
         signals['v_tot'] = np.sqrt(input[0, :]**2 + input[1, :]**2)
         signals['a'] = np.c_[sample_splines([ddx, ddy], time)]
         return signals
+
+    def state2pose(self, state):
+        return np.r_[state, 0.]
 
     def ode(self, state, input):
         return input

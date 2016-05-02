@@ -26,7 +26,8 @@ import numpy as np
 
 class Platform(Vehicle):
 
-    def __init__(self, width=0.7, height=0.1, options={}, bounds={}):
+    def __init__(self, width=0.7, height=0.1, options=None, bounds=None):
+        bounds = bounds or {}
         Vehicle.__init__(self, n_spl=1, degree=3, shapes=Rectangle(width, height), options=options)
         self.vmin = bounds['vmin'] if 'vmin' in bounds else -0.8
         self.vmax = bounds['vmax'] if 'vmax' in bounds else 0.8
@@ -95,9 +96,11 @@ class Platform(Vehicle):
         dx, ddx = x.derivative(), x.derivative(2)
         signals['state'] = np.c_[sample_splines(x, time)].T
         signals['input'] = np.c_[sample_splines(dx, time)].T
-        signals['pose'] = np.r_[signals['state'], np.zeros((2, len(time)))]
         signals['a'] = np.c_[sample_splines(ddx, time)].T
         return signals
+
+    def state2pose(self, state):
+        return np.r_[state, np.zeros(2)]
 
     def ode(self, state, input):
         return input

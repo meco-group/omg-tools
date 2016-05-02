@@ -39,18 +39,17 @@ environment = Environment(room={'shape': Square(10.)})
 # create a formation point-to-point problem
 options = {'horizon_time': 5, 'codegen': {'jit': False}, 'admm': {'rho': 3.}}
 problem = RendezVous(fleet, environment, options=options)
-# problem.set_options({'solver': {'ipopt.linear_solver': 'ma57'}})
+# problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem.init()
 
 # create simulator
 simulator = Simulator(problem)
-simulator.plot.set_options({'knots': True})
-simulator.plot.show('scene')
-simulator.plot.show('input', label=['Thrust force (N/kg)',
-                                    'Pitch rate (rad/s)'])
+problem.plot('scene')
+fleet.plot('input', labels=['Thrust force (N/kg)',
+                            'Pitch rate (rad/s)'])
 
 # run it!
 simulator.run()
 
 # show/save some results
-simulator.plot.show_movie('scene', repeat=False)
+problem.plot_movie('scene', repeat=False)

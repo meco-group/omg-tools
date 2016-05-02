@@ -25,9 +25,6 @@ vehicle = HolonomicOrient()
 # of the holonomic vehicle is free. The weight has to be tuned for the application.
 # By default no regularization is added.
 vehicle.set_options({'reg_type': 'norm_1', 'reg_weight': 10})
-# vehicle.set_options({'safety_distance': 0.1})
-# vehicle.set_options({'1storder_delay': True, 'time_constant': 0.1})
-# vehicle.set_options({'input_disturbance': {'fc':0.01, 'stdev':0.05*np.ones(2)}})
 
 vehicle.set_initial_conditions([-1.5, -1.5, 45.])  # input orientation in deg
 vehicle.set_terminal_conditions([2., 2., 90.])
@@ -41,24 +38,21 @@ environment.add_obstacle(Obstacle({'position': [1.7, -0.5]}, shape=rectangle))
 trajectories = {'velocity': {'time': [3., 4.],
                              'values': [[-0.15, 0.0], [0., 0.15]]}}
 environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
-                                  simulation={'trajectories':trajectories}))
+                                  simulation={'trajectories': trajectories}))
 
 # create a point-to-point problem
 problem = Point2point(vehicle, environment, freeT=True)
-# problem.set_options({'solver': {'ipopt.linear_solver': 'ma57'}})
+# problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem.init()
 
 # create simulator
 simulator = Simulator(problem)
-simulator.plot.set_options({'knots': True, 'prediction': False})
-simulator.plot.show('scene')
-simulator.plot.show('input')
-simulator.plot.show('state')
+problem.plot('scene')
+vehicle.plot('input', knots=True, labels=['v_x (m/s)', 'v_y (m/s)', 'w (rad/s)'])
+vehicle.plot('state', knots=True, labels=['x (m)', 'y (m)', 'theta (rad)'])
 
 # run it!
 simulator.run()
 
 # show/save some results
-simulator.plot.show_movie('scene', repeat=False)
-# simulator.plot.save_movie('input', number_of_frames=4)
-# simulator.plot.save('a', time=3)
+problem.plot_movie('scene', repeat=False)

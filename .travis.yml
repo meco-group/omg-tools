@@ -16,10 +16,16 @@ before_script:
 
 script:
   - cd examples
-  - (for file in *.py ; do echo "$file" ; python "$file" ; done )
-  - cd export
-  - make && cd bin
-  - ./Point2Point
+  - chmod 644 *.py # nose doesnt match executable files
+  - "nosetests -s --verbosity=4 -i '\\.py$' -e p2p_bicycle . --with-xcoverage --cover-package=omgtools --cover-tests 2> >(grep -v -P 'DEBUG: (?!wantFile)')"
+  - pushd export
+  - make && pushd bin
+#  - valgrind ./Point2Point
+  - popd
+  - popd
+
+after_success:
+  - coveralls
 
 install:
   - sudo python setup.py install
@@ -33,3 +39,5 @@ before_install:
   - "echo 'backend : Agg' > $HOME/.matplotlib/matplotlibrc"
   - sudo pip install matplotlib2tikz
   - export PYTHONPATH=$PYTHONPATH:$HOME/casadi-py27-np1.9.1-v$CASADIVERSION
+  - sudo pip install nosexcover coveralls
+  - sudo apt-get install valgrind

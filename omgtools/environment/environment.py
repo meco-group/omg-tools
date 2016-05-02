@@ -19,15 +19,18 @@
 
 from ..basics.optilayer import OptiChild
 from ..basics.spline import BSplineBasis
+from ..simulation.plotlayer import PlotLayer
 from obstacle import Obstacle
 from casadi import inf
 import numpy as np
 
 
-class Environment(OptiChild):
+class Environment(OptiChild, PlotLayer):
 
-    def __init__(self, room, obstacles=[]):
+    def __init__(self, room, obstacles=None):
+        obstacles = obstacles or []
         OptiChild.__init__(self, 'environment')
+        PlotLayer.__init__(self)
 
         # create room and define dimension of the space
         self.room, self.n_dim = room, room['shape'].n_dim
@@ -39,7 +42,7 @@ class Environment(OptiChild):
             elif self.n_dim == 3:
                 self.room['orientation'] = [0., 0., 0.]  # Euler angles
             else:
-                raise ValueError('You defined a shape with dimension ' 
+                raise ValueError('You defined a shape with dimension '
                                  + str(self.n_dim) + ', which is invalid.')
         if 'draw' not in room:
             self.room['draw'] = False
@@ -105,15 +108,15 @@ class Environment(OptiChild):
                 obstacle.define_collision_constraints(hyp_obs[obstacle])
         for spline in vehicle.splines:
             vehicle.define_collision_constraints(hyp_veh, self, spline)
-        self.sample_time = vehicle.options['sample_time']
 
     # ========================================================================
     # Update environment
     # ========================================================================
 
-    def update(self, update_time):
+    def update(self, update_time, sample_time):
         for obstacle in self.obstacles:
-            obstacle.update(update_time, self.sample_time)
+            obstacle.update(update_time, sample_time)
+        self.update_plots()
 
     def draw(self, t=-1):
         draw = []
@@ -126,3 +129,25 @@ class Environment(OptiChild):
     def get_canvas_limits(self):
         limits = self.room['shape'].get_canvas_limits()
         return [limits[k]+self.room['position'][k] for k in range(self.n_dim)]
+
+    # ========================================================================
+    # Plot related functions
+    # ========================================================================
+
+    def init_plot(self, argument, **kwargs):
+        lines = [{'color': 'black'} for _ in self.draw()]
+        limits = self.get_canvas_limits()
+        labels = ['' for k in range(self.n_dim)]
+        if self.n_dim == 2:
+            return [[{'labels': labels, 'lines': lines, 'aspect_equal': True,
+                      'xlim': limits[0], 'ylim': limits[1]}]]
+        else:
+            return [[{'labels': labels, 'lines': lines, 'aspect_equal': True,
+                      'xlim': limits[0], 'ylim': limits[1], 'zlim': limits[2],
+                      'projection': '3d'}]]
+
+    def update_plot(self, argument, t, **kwargs):
+        lines = []
+        for l in self.draw(t):
+            lines.append([l[k, :] for k in range(self.n_dim)])
+        return [[lines]]

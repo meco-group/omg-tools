@@ -28,7 +28,7 @@ import numpy as np
 class Point2point(object):
     # this class selects between fixed T and free T problem
 
-    def __new__(cls, fleet, environment, options={}, freeT=False):
+    def __new__(cls, fleet, environment, options=None, freeT=False):
         if freeT:
             return FreeTPoint2point(fleet, environment, options)
         else:
@@ -37,18 +37,18 @@ class Point2point(object):
 
 class Point2pointProblem(Problem):
 
-    def __init__(self, fleet, environment, options={}):
+    def __init__(self, fleet, environment, options):
         Problem.__init__(self, fleet, environment, options, label='p2p')
         for vehicle in self.vehicles:
             splines = vehicle.define_splines(n_seg=1)[0]
             vehicle.define_trajectory_constraints(splines)
             environment.define_collision_constraints(vehicle, splines)
 
-    def stop_criterium(self):
-        check = True
+    def stop_criterium(self, current_time, update_time):
+        stop = True
         for vehicle in self.vehicles:
-            check *= vehicle.check_terminal_conditions()
-        return check
+            stop *= vehicle.check_terminal_conditions()
+        return stop
 
     def final(self):
         obj = self.compute_objective()
@@ -63,7 +63,8 @@ class Point2pointProblem(Problem):
     def compute_objective(self):
         raise NotImplementedError('Please implement this method!')
 
-    def export(self, options={}):
+    def export(self, options=None):
+        options = options or {}
         if not hasattr(self, 'father'):
             self.init()
         ExportP2P(self, options)
@@ -71,7 +72,7 @@ class Point2pointProblem(Problem):
 
 class FixedTPoint2point(Point2pointProblem):
 
-    def __init__(self, fleet, environment, options={}):
+    def __init__(self, fleet, environment, options):
         Point2pointProblem.__init__(self, fleet, environment, options)
         self.objective = 0.
         if self.vehicles[0].knot_intervals is None:
@@ -119,7 +120,7 @@ class FixedTPoint2point(Point2pointProblem):
         parameters['T'] = self.options['horizon_time']
         return parameters
 
-    def init_step(self, current_time):
+    def init_step(self, current_time, update_time):
         # transform spline variables
         if (current_time > 0. and np.round(current_time, 6) % self.knot_time == 0):
             self.father.transform_primal_splines(lambda coeffs, basis, T:
@@ -136,13 +137,11 @@ class FixedTPoint2point(Point2pointProblem):
     #     T = shiftoverknot_T(basis)
     #     return B.dot(T).dot(Binv)
 
-    def update(self, current_time, full_update=False):
-        self.compute_partial_objective(current_time)
+    def update(self, current_time, update_time, sample_time):
         horizon_time = self.options['horizon_time']
-        if full_update:
+        if horizon_time < update_time:
             update_time = horizon_time
-        else:
-            update_time = self.options['update_time']
+        self.compute_partial_objective(current_time, update_time)
         # update vehicles
         for vehicle in self.vehicles:
             # y_coeffs represents coefficients of a spline, for which a part of
@@ -150,24 +149,24 @@ class FixedTPoint2point(Point2pointProblem):
             # current time relatively to the begin of this time horizon. In this
             # way, only the future, relevant, part will be saved/plotted.
             rel_current_time = np.round(current_time, 6) % self.knot_time
-            sample_time = vehicle.options['sample_time']
             n_samp = int(
                 round((horizon_time-rel_current_time)/sample_time, 3)) + 1
             time_axis = np.linspace(rel_current_time, horizon_time, n_samp)
-            vehicle.update(current_time, update_time, horizon_time, time_axis)
+            vehicle.update(
+                current_time, update_time, sample_time, horizon_time, time_axis)
         # update environment
-        self.environment.update(update_time)
-        return current_time + update_time
+        self.environment.update(update_time, sample_time)
+        # update plots
+        self.update_plots()
 
-    def compute_partial_objective(self, current_time):
+    def compute_partial_objective(self, current_time, update_time):
         rel_current_time = np.round(current_time, 6) % self.knot_time
-        update_time = self.options['update_time']
         horizon_time = self.options['horizon_time']
         t0 = rel_current_time/horizon_time
         t1 = t0 + update_time/horizon_time
         part_objective = 0.
         for vehicle in self.vehicles:
-            term_con, term_con_der = vehicle.get_terminal_constraints(
+            term_con, _ = vehicle.get_terminal_constraints(
                 vehicle.splines[0])
             for k in range(len(term_con)):
                 g = self.get_variable('g'+str(k), solution=True)[0]
@@ -180,7 +179,7 @@ class FixedTPoint2point(Point2pointProblem):
 
 class FreeTPoint2point(Point2pointProblem):
 
-    def __init__(self, fleet, environment, options={}):
+    def __init__(self, fleet, environment, options):
         Point2pointProblem.__init__(self, fleet, environment, options)
         self.objective = 0.
         T = self.define_variable('T', value=10)
@@ -212,36 +211,34 @@ class FreeTPoint2point(Point2pointProblem):
         parameters['t'] = 0
         return parameters
 
-    def update(self, current_time, full_update=False):
+    def update(self, current_time, update_time, sample_time):
+        self.update_time = update_time
         horizon_time = self.get_variable('T', solution=True)[0][0]
-        if full_update:
+        if horizon_time < update_time:
             update_time = horizon_time
-        else:
-            update_time = self.options['update_time']
         self.compute_partial_objective(current_time+update_time)
         # update vehicles
         for vehicle in self.vehicles:
-            if horizon_time < update_time:
-                update_time = horizon_time
-            vehicle.update(current_time, update_time, horizon_time)
+            vehicle.update(
+                current_time, update_time, sample_time, horizon_time)
         # update environment
-        self.environment.update(update_time)
-        return current_time + update_time
+        self.environment.update(update_time, sample_time)
+        # update plots
+        self.update_plots()
 
-    def stop_criterium(self):
+    def stop_criterium(self, current_time, update_time):
         T = self.get_variable('T', solution=True)[0][0]
-        if T < self.options['update_time']:
+        if T < update_time:
             return True
-        return Point2pointProblem.stop_criterium(self)
+        return Point2pointProblem.stop_criterium(self, current_time, update_time)
 
-    def init_step(self, current_time):
+    def init_step(self, current_time, update_time):
         T = self.get_variable('T', solution=True)[0][0]
         # check if almost arrived, if so lower the update time
-        if T < 2*self.options['update_time']:
-            update_time = T - self.options['update_time']
+        if T < 2*update_time:
+            update_time = T - update_time
             target_time = T
         else:
-            update_time = self.options['update_time']
             target_time = T - update_time
         # create spline which starts from the position at update_time and goes
         # to goal position at target_time. Approximate/Represent this spline in

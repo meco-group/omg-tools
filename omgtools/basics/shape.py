@@ -29,7 +29,7 @@ class Shape:
     def draw(self, pose):
         raise ValueError('Please implement this method.')
 
-    def _prepare_draw():
+    def _prepare_draw(self):
         raise ValueError('Please implement this method.')
 
 

@@ -18,8 +18,8 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from vehicle import Vehicle
-from ..basics.shape import Square, Rectangle, Circle
-from ..basics.spline_extra import sample_splines, definite_integral
+from ..basics.shape import Square, Circle
+from ..basics.spline_extra import sample_splines
 from ..basics.spline_extra import evalspline, running_integral
 from casadi import inf
 import numpy as np
@@ -32,7 +32,7 @@ import numpy as np
 # Use tangent half angle substitution: tg_ha = tan(theta/2)
 # sin(theta) = (2*tg_ha)/(1+tg_ha**2)
 # cos(theta) = (1-tg_ha**2)/(1+tg_ha**2)
-# This gives: 
+# This gives:
 # dx = V/(1+tg_ha**2)*(1-tg_ha**2)
 # dy = V/(1+tg_ha**2)*(2*tg_ha)
 # Substitute: v_til = V/(1+tg_ha**2)
@@ -41,9 +41,11 @@ import numpy as np
 # dy = v_til*(2*tg_ha)
 # Spline variables of the problem: v_til and tg_ha
 
+
 class Dubins(Vehicle):
 
-    def __init__(self, shapes=Circle(0.1), options={}, bounds={}):
+    def __init__(self, shapes=Circle(0.1), options=None, bounds=None):
+        bounds = bounds or {}
         Vehicle.__init__(
             self, n_spl=2, degree=3, shapes=shapes, options=options)
         self.vmax = bounds['vmax'] if 'vmax' in bounds else 0.5
@@ -95,7 +97,7 @@ class Dubins(Vehicle):
         posT = self.define_parameter('posT', 2)
         tg_haT = self.define_parameter('tg_haT', 1)
         v_tilT = self.define_parameter('v_tilT', 1)
-        dtg_haT = self.define_parameter('dtg_haT', 1)       
+        dtg_haT = self.define_parameter('dtg_haT', 1)
         self.define_parameter('pos0', 2)  # starting position for integration
         v_til, tg_ha = splines
         dtg_ha = tg_ha.derivative(1)
@@ -153,7 +155,6 @@ class Dubins(Vehicle):
 
     def define_collision_constraints(self, hyperplanes, environment, splines):
         v_til, tg_ha = splines[0], splines[1]
-        dtg_ha = tg_ha.derivative(1)
         dx = v_til*(1-tg_ha**2)
         dy = v_til*(2*tg_ha)
         x_int, y_int = self.T*running_integral(dx), self.T*running_integral(dy)
@@ -184,9 +185,11 @@ class Dubins(Vehicle):
         signals['state'] = np.c_[sample_splines([x, y], time)]
         signals['state'] = np.r_[signals['state'], theta]
         signals['input'] = input
-        signals['pose'] = signals['state']
         signals['v_tot'] = input[0, :]
         return signals
+
+    def state2pose(self, state):
+        return state
 
     def ode(self, state, input):
         # state: x, y, theta

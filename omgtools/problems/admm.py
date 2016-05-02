@@ -23,9 +23,10 @@ from problem import Problem
 from distributedproblem import DistributedProblem
 from casadi import symvar, mtimes, SX, MX, DM, Function, reshape
 from casadi import vertcat, horzcat, jacobian, solve, substitute
-from casadi.tools import struct, struct_symMX, struct_symSX, entry, structure
+from casadi.tools import struct, struct_symMX, entry, structure
 import numpy as np
 import numpy.linalg as la
+import pickle
 import time
 
 
@@ -47,7 +48,7 @@ def _create_struct_from_dict(dictionary):
 class ADMM(Problem):
 
     def __init__(self, index, vehicle, problem, environment, distr_problem,
-                 options={}):
+                 options=None):
         Problem.__init__(self, vehicle, environment, options, label='admm')
         self.problem = problem
         self.distr_problem = distr_problem
@@ -77,9 +78,9 @@ class ADMM(Problem):
         self.par_struct = _create_struct_from_dict(self.par_i)
 
         self.var_admm = {}
-        for key in ['x_i', 'z_i', 'z_i_p', 'l_i']:
+        for key in ['x_i', 'z_i', 'z_i_p', 'l_i', 'l_i_p']:
             self.var_admm[key] = self.q_i_struct(0)
-        for key in ['x_j', 'z_ij', 'z_ij_p', 'l_ij']:
+        for key in ['x_j', 'z_ij', 'z_ij_p', 'l_ij', 'l_ij_p']:
             self.var_admm[key] = self.q_ij_struct(0)
         for key in ['z_ji', 'l_ji']:
             self.var_admm[key] = self.q_ji_struct(0)
@@ -124,7 +125,8 @@ class ADMM(Problem):
         self.define_objective(obj)
         # construct problem
         self.father = OptiFather(self.group.values())
-        prob, compile_time = self.father.construct_problem(self.options, str(self._index))
+        prob, _ = self.father.construct_problem(
+            self.options, str(self._index))
         self.problem_upd_x = prob
         self.father.init_transformations(self.problem.init_primal_transform,
                                          self.problem.init_dual_transform)
@@ -175,7 +177,7 @@ class ADMM(Problem):
         self._transform_spline(z_ij_new, tf, self.q_ij)
         out = [z_i_new.cat, z_ij_new.cat]
         # create problem
-        prob, compile_time = self.father.create_function(
+        prob, _ = self.father.create_function(
             'upd_z_'+str(self._index), inp, out, self.options)
         self.problem_upd_z = prob
 
@@ -251,7 +253,7 @@ class ADMM(Problem):
                     l = l_ij[str(nghb), child.label, name]
                     obj += mtimes(l.T, x-z) + 0.5*rho*mtimes((x-z).T, (x-z))
         # construct problem
-        prob, compile_time = self.father.create_nlp(var, par, obj,
+        prob, _ = self.father.create_nlp(var, par, obj,
                                                     constraints, self.options, str(self._index))
         self.problem_upd_z = prob
 
@@ -266,28 +268,13 @@ class ADMM(Problem):
         t = MX.sym('t')
         T = MX.sym('T')
         rho = MX.sym('rho')
-        t0 = t/T
         inp = [x_i, z_i, z_ij, l_i, l_ij, x_j, t, T, rho]
-        # put symbols in MX structs (necessary for transformation)
-        x_i = self.q_i_struct(x_i)
-        z_i = self.q_i_struct(z_i)
-        z_ij = self.q_ij_struct(z_ij)
-        l_i = self.q_i_struct(l_i)
-        l_ij = self.q_ij_struct(l_ij)
-        x_j = self.q_ij_struct(x_j)
-        # transform spline variables: only consider future piece of spline
-        tf = lambda cfs, basis: shift_knot1_fwd(cfs, basis, t0)
-        self._transform_spline([x_i, z_i, l_i], tf, self.q_i)
-        self._transform_spline([x_j, z_ij, l_ij], tf, self.q_ij)
         # update lambda
         l_i_new = self.q_i_struct(l_i.cat + rho*(x_i.cat - z_i.cat))
         l_ij_new = self.q_ij_struct(l_ij.cat + rho*(x_j.cat - z_ij.cat))
-        tf = lambda cfs, basis: shift_knot1_bwd(cfs, basis, t0)
-        self._transform_spline(l_i_new, tf, self.q_i)
-        self._transform_spline(l_ij_new, tf, self.q_ij)
         out = [l_i_new, l_ij_new]
         # create problem
-        prob, compile_time = self.father.create_function(
+        prob, _ = self.father.create_function(
             'upd_l_'+str(self._index), inp, out, self.options)
         self.problem_upd_l = prob
 
@@ -394,7 +381,7 @@ class ADMM(Problem):
             g = vertcat(g, con[0] - lb)
             if not isinstance(lb, np.ndarray):
                 lb, ub = [lb], [ub]
-            for k in range(len(lb)):
+            for k, _ in enumerate(lb):
                 if lb[k] != ub[k]:
                     return False, None, None
         sym, jac = [], []
@@ -521,7 +508,10 @@ class ADMM(Problem):
         return t1-t0
 
     def update_l(self, current_time):
+        # save previous result
         t0 = time.time()
+        self.var_admm['l_i_p'] = self.var_admm['l_i']
+        self.var_admm['l_ij_p'] = self.var_admm['l_ij']
         # set inputs
         x_i = self.var_admm['x_i']
         z_i = self.var_admm['z_i']
@@ -547,42 +537,94 @@ class ADMM(Problem):
             self.var_admm['l_ji'][str(nghb)] = l_ji
             self.var_admm['x_j'][str(nghb)] = x_j
 
-    def init_step(self, current_time):
-        self.problem.init_step(current_time)
+    def init_step(self, current_time, update_time):
+        self.problem.init_step(current_time, update_time)
         # transform spline variables
         if ((current_time > 0. and
              np.round(current_time, 6) % self.problem.knot_time == 0)):
-            tf = lambda cfs, basis: shift_over_knot(cfs, basis)
-            for key in ['x_i', 'z_i', 'z_i_p', 'l_i']:
+            tf = shift_over_knot
+            for key in ['x_i', 'z_i', 'z_i_p', 'l_i', 'l_i_p']:
                 self.var_admm[key] = self._transform_spline(
                     self.var_admm[key], tf, self.q_i)
-            for key in ['x_j', 'z_ij', 'z_ij_p', 'l_ij']:
+            for key in ['x_j', 'z_ij', 'z_ij_p', 'l_ij', 'l_ij_p']:
                 self.var_admm[key] = self._transform_spline(
                     self.var_admm[key], tf, self.q_ij)
             for key in ['z_ji', 'l_ji']:
                 self.var_admm[key] = self._transform_spline(
                     self.var_admm[key], tf, self.q_ji)
 
-    def get_residuals(self):
+    def get_residuals(self, current_time):
         t0 = time.time()
-        x_i = self.var_admm['x_i'].cat
+        current_time = np.round(current_time, 6) % self.problem.knot_time
+        horizon_time = self.problem.options['horizon_time']
+        tf = lambda cfs, basis: shift_knot1_fwd(
+            cfs, basis, current_time/horizon_time)
+        x_i = self._transform_spline(self.var_admm['x_i'], tf, self.q_i).cat
+        z_i = self._transform_spline(self.var_admm['z_i'], tf, self.q_i).cat
+        z_i_p = self._transform_spline(
+            self.var_admm['z_i_p'], tf, self.q_i).cat
+        x_j = self._transform_spline(self.var_admm['x_j'], tf, self.q_ij).cat
+        z_ij = self._transform_spline(self.var_admm['z_ij'], tf, self.q_ij).cat
+        z_ij_p = self._transform_spline(
+            self.var_admm['z_ij_p'], tf, self.q_ij).cat
+        rho = self.options['admm']['rho']
+        pr = la.norm(x_i-z_i)**2 + la.norm(x_j-z_ij)**2
+        dr = rho*(la.norm(z_i-z_i_p)**2 + la.norm(z_ij-z_ij_p)**2)
+        cr = rho*pr + dr
+        t1 = time.time()
+        return t1-t0, pr, dr, cr
+
+    def accelerate(self, c_res):
+        eta = self.options['admm']['eta']
+        if not hasattr(self, 'c_res_p'):
+            self.c_res_p = (1./eta)*c_res
+        if not hasattr(self, 'alpha'):
+            self.alpha = 1.
         z_i = self.var_admm['z_i'].cat
-        x_j = self.var_admm['x_j'].cat
         z_ij = self.var_admm['z_ij'].cat
         z_i_p = self.var_admm['z_i_p'].cat
         z_ij_p = self.var_admm['z_ij_p'].cat
-        rho = self.options['admm']['rho']
-
-        pr = la.norm(x_i-z_i)**2 + la.norm(x_j-z_ij)**2
-        dr = rho*(la.norm(z_i-z_i_p)**2 + la.norm(z_ij-z_ij_p)**2)
-        t1 = time.time()
-        return t1-t0, pr, dr
+        l_i = self.var_admm['l_i'].cat
+        l_ij = self.var_admm['l_ij'].cat
+        l_i_p = self.var_admm['l_i_p'].cat
+        l_ij_p = self.var_admm['l_ij_p'].cat
+        if self.options['admm']['nesterov_reset']:
+            if c_res <= eta*self.c_res_p:
+                alpha_p = self.alpha
+                self.alpha = 0.5*(1. + np.sqrt(1 + 4.*alpha_p**2))
+                z_i = z_i + ((alpha_p - 1)/self.alpha)*(z_i - z_i_p)
+                z_ij = z_ij + ((alpha_p - 1)/self.alpha)*(z_ij - z_ij_p)
+                l_i = l_i + ((alpha_p - 1)/self.alpha)*(l_i - l_i_p)
+                l_ij = l_ij + ((alpha_p - 1)/self.alpha)*(l_ij - l_ij_p)
+                self.c_res_p = c_res
+            else:
+                print 'resetting alpha'
+                self.alpha = 1.
+                z_i = z_i_p
+                z_ij = z_ij_p
+                l_i = l_i_p
+                l_ij = l_ij_p
+                self.c_res_p = (1./eta)*self.c_res_p
+        else:
+            alpha_p = self.alpha
+            self.alpha = 0.5*(1. + np.sqrt(1 + 4.*alpha_p**2))
+            z_i = z_i + ((alpha_p - 1)/self.alpha)*(z_i - z_i_p)
+            z_ij = z_ij + ((alpha_p - 1)/self.alpha)*(z_ij - z_ij_p)
+            l_i = l_i + ((alpha_p - 1)/self.alpha)*(l_i - l_i_p)
+            l_ij = l_ij + ((alpha_p - 1)/self.alpha)*(l_ij - l_ij_p)
+            self.c_res_p = c_res
+        self.var_admm['z_i'] = self.q_i_struct(z_i)
+        self.var_admm['z_ij'] = self.q_ij_struct(z_ij)
+        self.var_admm['l_i'] = self.q_i_struct(l_i)
+        self.var_admm['l_ij'] = self.q_ij_struct(l_ij)
 
 
 class ADMMProblem(DistributedProblem):
 
-    def __init__(self, problems, options):
-        DistributedProblem.__init__(self, problems, ADMM, options)
+    def __init__(self, fleet, environment, problems, options):
+        DistributedProblem.__init__(
+            self, fleet, environment, problems, ADMM, options)
+        self.residuals = {'primal': [], 'dual': [], 'combined': []}
 
     # ========================================================================
     # ADMM options
@@ -590,7 +632,11 @@ class ADMMProblem(DistributedProblem):
 
     def set_default_options(self):
         Problem.set_default_options(self)
-        self.options['admm'] = {'max_iter': 1, 'rho': 2., 'init': 5}
+        self.options['admm'] = {'max_iter': None, 'max_iter_per_update': 1,
+                                'rho': 2., 'init_iter': 5,
+                                'nesterov_acceleration': False, 'eta': 0.999,
+                                'nesterov_reset': False,
+                                'save_residuals': None}
 
     def set_options(self, options):
         if 'admm' in options:
@@ -602,17 +648,17 @@ class ADMMProblem(DistributedProblem):
     # ========================================================================
 
     def initialize(self):
-        for k in range(self.options['admm']['init']):
-            self.solve(0.0)
+        for _ in range(self.options['admm']['init_iter']):
+            self.solve(0.0, 0.0)
 
-    def solve(self, current_time):
+    def solve(self, current_time, update_time):
         self.current_time = current_time
         it0 = self.iteration
-        while (self.iteration - it0) < self.options['admm']['max_iter']:
+        while (self.iteration - it0) < self.options['admm']['max_iter_per_update']:
             t_upd_x, t_upd_z, t_upd_l, t_res = 0., 0., 0., 0.
-            p_res, d_res = 0., 0.
+            p_res, d_res, c_res = 0., 0., 0.
             for updater in self.updaters:
-                updater.init_step(current_time)
+                updater.init_step(current_time, update_time)
             for updater in self.updaters:
                 t = updater.update_x(current_time)
                 t_upd_x = max(t_upd_x, t)
@@ -621,13 +667,18 @@ class ADMMProblem(DistributedProblem):
             for updater in self.updaters:
                 t1 = updater.update_z(current_time)
                 t2 = updater.update_l(current_time)
-                t3, pr, dr = updater.get_residuals()
+                t3, pr, dr, cr = updater.get_residuals(current_time)
                 t_upd_z = max(t_upd_z, t1)
                 t_upd_l = max(t_upd_l, t2)
                 t_res = max(t_res, t3)
                 p_res += pr**2
                 d_res += dr**2
-            p_res, d_res = np.sqrt(p_res), np.sqrt(d_res)
+                c_res += cr**2
+            p_res, d_res, c_res = np.sqrt(
+                p_res), np.sqrt(d_res), np.sqrt(c_res)
+            if self.options['admm']['nesterov_acceleration']:
+                for updater in self.updaters:
+                    updater.accelerate(c_res)
             for updater in self.updaters:
                 updater.communicate()
             if self.options['verbose'] >= 1:
@@ -643,4 +694,63 @@ class ADMMProblem(DistributedProblem):
                 print('%3d | %4.1f | %.2e | %.2e | %.2e | %.2e | %.2e | %.2e ' %
                       (self.iteration, current_time, p_res, d_res, t_upd_x,
                        t_upd_z, t_upd_l, t_res))
+            self.residuals['primal'] = np.r_[self.residuals['primal'], p_res]
+            self.residuals['dual'] = np.r_[self.residuals['dual'], d_res]
+            self.residuals['combined'] = np.r_[
+                self.residuals['combined'], c_res]
             self.update_times.append(t_upd_x + t_upd_z + t_upd_l + t_res)
+
+    def stop_criterium(self, current_time, update_time):
+        if self.options['admm']['max_iter']:
+            if self.iteration > self.options['admm']['max_iter']:
+                return True
+        else:
+            return DistributedProblem.stop_criterium(self, current_time, update_time)
+
+    def final(self):
+        DistributedProblem.final(self)
+        if self.options['admm']['save_residuals']:
+            pickle.dump(
+                self.residuals, open(self.options['admm']['save_residuals'], 'wb'))
+
+    # ========================================================================
+    # Plot related functions
+    # ========================================================================
+
+    def init_plot(self, argument, **kwargs):
+        if argument == 'residuals':
+            if len(self.residuals['primal']) == 0:
+                return None
+            labels = ['Primal residual (log10)', 'Dual residual (log10)',
+                      'Combined residual (log10)']
+            info = []
+            for k in range(3):
+                lines = [{'linestyle': 'None', 'marker': '*',
+                          'color': self.colors[k]}]
+                info.append([{'labels': ['Iteration', labels[k]],
+                              'lines': lines}])
+            return info
+        else:
+            return Problem.init_plot(self, argument, **kwargs)
+
+    def update_plot(self, argument, t, **kwargs):
+        if argument == 'residuals':
+            if len(self.residuals['primal']) == 0:
+                return None
+            data = []
+            for residual in self.residuals.values():
+                lines = []
+                if t == -1:
+                    n_it = len(residual)
+                    iterations = np.linspace(1, n_it, n_it)
+                    lines.append([iterations, np.log10(residual)])
+                else:
+                    ind = (self.options['admm']['init_iter'] +
+                           t*self.options['admm']['max_iter_per_update'])
+                    n_it = ind + 1
+                    iterations = np.linspace(1, n_it, n_it)
+                    lines.append([iterations, np.log10(residual[:ind+1])])
+                data.append([lines])
+            return data
+        else:
+            return Problem.update_plot(self, argument, t, **kwargs)

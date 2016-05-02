@@ -24,16 +24,15 @@ import numpy as np
 
 class RendezVous(ADMMProblem):
 
-    def __init__(self, fleet, environment, options={}):
+    def __init__(self, fleet, environment, options=None):
         problems = []
         for veh in fleet.vehicles:
             free_ind = fleet.configuration[veh].keys()
             problems.append(
                 FreeEndPoint2point(veh, environment.copy(), options, {veh: free_ind}))
-        ADMMProblem.__init__(self, problems, options)
+        ADMMProblem.__init__(self, fleet, environment, problems, options)
         problems_dic = {veh: problems[l]
                         for l, veh in enumerate(fleet.vehicles)}
-        self.fleet = fleet
 
         # define parameters
         rel_conT = {veh: self.define_parameter('rcT'+str(l), len(self.fleet.configuration[
@@ -50,10 +49,9 @@ class RendezVous(ADMMProblem):
                     couples[veh].append(nghb)
                     conT_veh = problems_dic[veh].get_variable('conT0')
                     conT_nghb = problems_dic[nghb].get_variable('conT0')
-                    rcT_ = rcT[:, l]
-                    for k in range(len(ind_veh)):
+                    for ind_v, ind_n, rcT_k in zip(ind_veh, ind_nghb, rcT[:, l]):
                         self.define_constraint(
-                            conT_veh[ind_veh[k]] - conT_nghb[ind_nghb[k]] - rcT_[k], 0., 0.)
+                            conT_veh[ind_v] - conT_nghb[ind_n] - rcT_k, 0., 0.)
 
     def set_parameters(self, current_time):
         parameters = {}
@@ -64,18 +62,18 @@ class RendezVous(ADMMProblem):
             parameters['rcT'+str(l)] = np.hstack(rcT_)
         return parameters
 
-    def stop_criterium(self):
+    def stop_criterium(self, current_time, update_time):
         res = 0.
         for veh in self.vehicles:
             ind_veh = sorted(self.fleet.configuration[veh].keys())
             rel_conT = self.fleet.get_rel_config(veh)
             for nghb in self.fleet.get_neighbors(veh):
                 ind_nghb = sorted(self.fleet.configuration[nghb].keys())
-                for k in range(len(ind_veh)):
+                for k, (ind_v, ind_n) in enumerate(zip(ind_veh, ind_nghb)):
                     rcT = rel_conT[nghb]
                     rcT = rcT if isinstance(rcT, float) else rcT[k]
-                    res += np.linalg.norm(veh.trajectories['splines'][ind_veh[k], 0] -
-                                          nghb.trajectories['splines'][ind_nghb[k], 0] -
+                    res += np.linalg.norm(veh.trajectories['splines'][ind_v, 0] -
+                                          nghb.trajectories['splines'][ind_n, 0] -
                                           rcT)**2
         if np.sqrt(res) > 5.e-2:
             return False

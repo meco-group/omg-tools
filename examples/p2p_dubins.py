@@ -20,8 +20,7 @@
 from omgtools import *
 
 # create vehicle
-vehicle = Dubins(#shapes=Rectangle(width=0.4, height=0.1),
-				 bounds={'vmax': 0.7, 'wmax': 60., 'wmin': -60.})  # in deg
+vehicle = Dubins(bounds={'vmax': 0.7, 'wmax': 60., 'wmin': -60.})  # in deg
 vehicle.define_knots(knot_intervals=5)  # choose lower amount of knot intervals
 
 vehicle.set_initial_conditions([0., 0., 0.])  # input orientation in deg
@@ -33,29 +32,26 @@ environment = Environment(room={'shape': Square(5.), 'position': [1.5, 1.5]})
 trajectories = {'velocity': {'time': [0.5],
                              'values': [[0.25, 0.0]]}}
 environment.add_obstacle(Obstacle({'position': [1., 1.]}, shape=Circle(0.5),
-                                  simulation={'trajectories':trajectories}))
+                                  simulation={'trajectories': trajectories}))
 
 # create a point-to-point problem
 problem = Point2point(vehicle, environment, freeT=True)
 # extra solver settings which may improve performance
-# problem.set_options({'solver': {'ipopt.linear_solver': 'ma57'}})
-problem.set_options({'solver': {'ipopt.hessian_approximation': 'limited-memory'}})
-problem.set_options({'solver': {'ipopt.warm_start_bound_push': 1e-6}})
-problem.set_options({'solver': {'ipopt.warm_start_mult_bound_push': 1e-6}})
-problem.set_options({'solver': {'ipopt.mu_init': 1e-5}})
+# problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
+problem.set_options({'solver_options': {'ipopt': {'ipopt.hessian_approximation': 'limited-memory'}}})
+problem.set_options({'solver_options': {'ipopt': {'ipopt.warm_start_bound_push': 1e-6}}})
+problem.set_options({'solver_options': {'ipopt': {'ipopt.warm_start_mult_bound_push': 1e-6}}})
+problem.set_options({'solver_options': {'ipopt': {'ipopt.mu_init': 1e-5}}})
 problem.init()
 
 # create simulator
 simulator = Simulator(problem)
-simulator.plot.set_options({'knots': True, 'prediction': False})
-simulator.plot.show('scene')
-simulator.plot.show('input')
-simulator.plot.show('state')
+problem.plot('scene')
+vehicle.plot('input', knots=True, labels=['v (m/s)', 'w (rad/s)'])
+vehicle.plot('state', knots=True, labels=['x (m)', 'y (m)', 'theta (rad)'])
 
 # run it!
 simulator.run()
 
-# show/save some results
-simulator.plot.show_movie('scene', repeat=False)
-# simulator.plot.save_movie('input', number_of_frames=4)
-# simulator.plot.save('a', time=3)
+# show some results
+problem.plot_movie('scene', repeat=False)
