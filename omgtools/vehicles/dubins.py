@@ -45,7 +45,7 @@ class Dubins(Vehicle):
 
     def __init__(self, shapes=Circle(0.1), options={}, bounds={}):
         Vehicle.__init__(
-            self, n_spl=2, degree=2, shapes=shapes, options=options)
+            self, n_spl=2, degree=3, shapes=shapes, options=options)
         self.vmax = bounds['vmax'] if 'vmax' in bounds else 0.5
         self.amax = bounds['amax'] if 'amax' in bounds else 1.
         self.wmin = bounds['wmin'] if 'wmin' in bounds else -30.  # in deg/s
@@ -132,7 +132,7 @@ class Dubins(Vehicle):
 
     def check_terminal_conditions(self):
         if (np.linalg.norm(self.signals['state'][:, -1] - self.poseT) > 1.e-3 or
-                np.linalg.norm(self.signals['input'][:, -1])) > 1.e-3:
+                np.linalg.norm(self.signals['input'][:, -1])) > 1.e-2:
             return False
         else:
             return True

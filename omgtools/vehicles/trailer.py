@@ -29,12 +29,12 @@ class Trailer(Vehicle):
 
     def __init__(self, lead_veh=None, shapes=Circle(0.2), l_hitch=0.2, options={}, bounds={}):
         Vehicle.__init__(
-            self, n_spl=1 + lead_veh.n_spl, degree=2, shapes=shapes, options=options)
+            self, n_spl=1 + lead_veh.n_spl, degree=3, shapes=shapes, options=options)
         # n_spl contains all splines of lead_veh and trailer
         # being: tg_ha_trailer, v_til_veh, tg_ha_veh
         self.lead_veh = Dubins(Circle(0.2)) if (lead_veh is None) else lead_veh  # vehicle which pulls the trailer
         self.l_hitch = l_hitch  # distance between rear axle of trailer and connection point on the car
-        self.tmax = bounds['tmax'] if 'tmax' in bounds else 45.
+        self.tmax = bounds['tmax'] if 'tmax' in bounds else 45.  # limit angle between trailer and vehicle
         self.tmin = bounds['tmin'] if 'tmin' in bounds else -45.
 
     def set_default_options(self):
@@ -45,10 +45,9 @@ class Trailer(Vehicle):
         tg_ha_tr = splines[0]
         dtg_ha_tr = tg_ha_tr.derivative()
         v_til_veh, tg_ha_veh = splines[1:]  
-        # inputs to the trailer: V_veh and tg_ha_veh
-        eps = 1e-3
         # change in orientation of the trailer is due to velocity of vehicle
-        # relaxed the equality constraint
+        # relaxed this equality constraint with eps
+        eps = 1e-3
         self.define_constraint(2*dtg_ha_tr*self.l_hitch -
                                T*v_til_veh*(2*tg_ha_veh*(1-tg_ha_tr**2)-((1-tg_ha_veh**2)**4)*2*tg_ha_tr) - T*eps,
                                -inf, 0.)
@@ -56,16 +55,19 @@ class Trailer(Vehicle):
                                T*v_til_veh*(2*tg_ha_veh*(1-tg_ha_tr**2)-((1-tg_ha_veh**2)**4)*2*tg_ha_tr) - T*eps,
                                -inf, 0.)
         # limit angle between vehicle and trailer
-        # self.define_constraint(tg_ha_veh - tg_ha_tr - np.tan(np.radians(self.tmax)/2.), -inf, 0.)
-        # self.define_constraint(-tg_ha_veh + tg_ha_tr + np.tan(np.radians(self.tmin)/2.), -inf, 0.)
+        self.define_constraint(tg_ha_veh - tg_ha_tr - np.tan(np.radians(self.tmax)/2.), -inf, 0.)
+        self.define_constraint(-tg_ha_veh + tg_ha_tr + np.tan(np.radians(self.tmin)/2.), -inf, 0.)
         # call lead_veh trajectory constraints
         self.lead_veh.define_trajectory_constraints(splines[1: ])
 
     def get_initial_constraints(self, splines):
         # trailer has a certain theta0 --> trailer position follows from this
+        T = self.define_symbol('T')
         tg_ha_tr0 = self.define_parameter('tg_ha_tr0', 1)
+        dtg_ha_tr0 = self.define_parameter('dtg_ha_tr0', 1)
         tg_ha_tr = splines[0]
-        con_tr = [(tg_ha_tr, tg_ha_tr0)]
+        dtg_ha_tr = tg_ha_tr.derivative()
+        con_tr = [(tg_ha_tr, tg_ha_tr0, dtg_ha_tr, T*dtg_ha_tr0)]
         con_veh = self.lead_veh.get_initial_constraints(splines[1: ])
         return con_tr + con_veh  # put in one list
 
@@ -85,16 +87,18 @@ class Trailer(Vehicle):
         term_con_der = term_con_der_tr + term_con_der_veh
         return [term_con, term_con_der]
 
-    def set_initial_conditions(self, theta, input=np.zeros(4)):
-        # add complete state(6 elements) and input(4 elements)
+    def set_initial_conditions(self, theta, input=np.zeros(2)):
+        # add complete state(6 elements) and input(2 elements)
+        # [x_tr, y_tr, theta_tr, x_veh, y_veh, theta_veh]
         state = np.zeros(6)
-        state[2] = np.radians(theta[0])  # theta, only this is imposed on trailer by the user
-        # Build up prediction of complete system. Note that this requires initializing the 
-        # vehicle before the trailer
+        state[2] = np.radians(theta[0])  # theta, imposed on trailer by the user
+        # Build up prediction of complete system. 
+        # Note that this requires initializing the vehicle before the trailer
         state[3:] = self.lead_veh.prediction['state']
-        input[2:] = self.lead_veh.prediction['input']
+        input = self.lead_veh.prediction['input']
         self.prediction['state'] = state
-        self.prediction['input'] = input  # velocity vector from leading vehicle [V, tg_ha_veh] + lead_veh inputs
+        self.prediction['input'] = input  # lead_veh inputs [V_veh, dtheta_veh]. You also need theta_veh,
+        # so this is also an input to the trailer, but it is already a state.
         # The velocity in which the car pulls will always be parallel to the orientation of the vehicle,
         # except for the case in which you have a holonomic vehicle (which doesn't have an orientation).
 
@@ -106,7 +110,7 @@ class Trailer(Vehicle):
         init_value_tr = np.zeros((len(self.basis), 1))
         tg_ha_tr0 = np.tan(self.prediction['state'][2]/2.)
         if hasattr(self, 'theta_trT'):
-            tg_ha_trT = np.tan(self.tg_ha_trT/2.)
+            tg_ha_trT = np.tan(self.theta_trT/2.)
         else:
             tg_ha_trT = tg_ha_tr0
         init_value_tr[:, 0] = np.linspace(tg_ha_tr0, tg_ha_trT, len(self.basis))
@@ -121,6 +125,8 @@ class Trailer(Vehicle):
         if hasattr(self, 'theta_trT'):
             if (np.linalg.norm(self.signals['state'][2, -1] - self.theta_trT) > 1.e-3):
                 result = False
+            else:
+                result = True
         else:  # theta_trT reached or not specified
             result = True
         result = (self.lead_veh.check_terminal_conditions() and result)  #arrived if lead_veh and trailer checks both True
@@ -130,6 +136,7 @@ class Trailer(Vehicle):
         parameters = {}
         parameters_tr = {}
         parameters_tr['tg_ha_tr0'] = np.tan(self.prediction['state'][2]/2.)
+        parameters_tr['dtg_ha_tr0'] = 0.5*self.prediction['input'][0]/self.l_hitch*(np.sin(self.prediction['state'][5]-self.prediction['state'][2]))*(1+parameters_tr['tg_ha_tr0']**2)  # dtg_ha
         if hasattr(self, 'theta_trT'):
             parameters_tr['tg_ha_trT'] = np.tan(self.theta_trT/2.)
         parameters_veh = self.lead_veh.set_parameters(current_time)
@@ -149,35 +156,40 @@ class Trailer(Vehicle):
     def splines2signals(self, splines, time):
         signals = {}
         tg_ha_tr = splines[0]
+        dtg_ha_tr = tg_ha_tr.derivative()
         tg_ha_tr = np.array(sample_splines([tg_ha_tr], time))
+        dtg_ha_tr = np.array(sample_splines([dtg_ha_tr], time))
         theta_tr = 2*np.arctan2(tg_ha_tr, 1)
         signals_veh = self.lead_veh.splines2signals(splines[1: ], time)        
         x_tr = signals_veh['state'][0, :] - self.l_hitch*np.cos(theta_tr)
         y_tr = signals_veh['state'][1, :] - self.l_hitch*np.sin(theta_tr)
-        input_tr = np.c_[signals_veh['input'][0, :], signals_veh['state'][2, :]].T  # V_veh, theta_veh
+        # input_tr = np.c_[signals_veh['input'][0, :], signals_veh['state'][2, :]].T  # V_veh, theta_veh
         signals['state'] = np.r_[x_tr, y_tr, theta_tr, signals_veh['state']]  # trailer state
         signals['pose'] = signals['state']
-        signals['input'] = np.r_[input_tr, signals_veh['input']]
+        signals['input'] = signals_veh['input']
+        signals['r1'] = np.r_[tg_ha_tr, dtg_ha_tr]
         return signals
 
     def ode(self, state, input):
         # state = [x_tr, y_tr, theta_tr, x_veh, y_veh, theta_veh]
-        # input = [V_veh, theta_veh, V_veh, dtheta_veh]
+        # input = [V_veh, dtheta_veh]
         # state: theta_tr
         # input: V_veh, theta_veh
         # ode: dtheta_tr = V_veh/l_hitch*sin(theta_veh-theta_tr)
-        u1, u2, u3, u4 = input
-        ode_veh = self.lead_veh.ode(state[3:], input[2:])  # pass on state and input which are related to veh
-        ode_trailer = np.r_[ode_veh[0]+self.l_hitch*np.sin(state[2])*u1/self.l_hitch*np.sin(state[5]-state[2]),
-                            ode_veh[1]-self.l_hitch*np.cos(state[2])*u1/self.l_hitch*np.sin(state[5]-state[2]),
-                            u1/self.l_hitch*np.sin(state[5]-state[2])].T
+        x_tr, y_tr, theta_tr, x_veh, y_veh, theta_veh = state
+        V_veh, dtheta_veh = input
+        dtheta_tr = V_veh/self.l_hitch*np.sin(theta_veh-theta_tr)
+        ode_veh = self.lead_veh.ode([x_veh, y_veh, theta_veh], input)  # pass on state and input which are related to veh
+        ode_trailer = np.r_[ode_veh[0]+self.l_hitch*np.sin(theta_tr)*dtheta_tr,
+                            ode_veh[1]-self.l_hitch*np.cos(theta_tr)*dtheta_tr,
+                            dtheta_tr].T
         ode = np.r_[ode_trailer, ode_veh]
         return ode
 
     def draw(self, t=-1):
         ret = []
         for shape in self.shapes:
-            ret += shape.draw(self.signals['pose'][:, t])
+            ret += shape.draw(self.signals['pose'][:3, t])
             # plot connection between car and trailer
             if isinstance(shape, (Circle, Square)):
                 dist = shape.radius
@@ -200,12 +212,11 @@ class Trailer(Vehicle):
         signals_veh={}
         signals_veh['pose'] = self.signals['pose'][3:, ]
         signals_veh['state'] = self.signals['state'][3:, ]
-        signals_veh['input'] = self.signals['input'][2:, ]
+        signals_veh['input'] = self.signals['input']
         self.lead_veh.update_signals(signals_veh)
         pred_veh = {}
-        pred_veh['input'] = self.prediction['input'][2:, ]
+        pred_veh['input'] = self.prediction['input']
         pred_veh['state'] = self.prediction['state'][3:, ]
         self.lead_veh.update_prediction(pred_veh)
         ret += self.lead_veh.draw(t)
-        import pdb; pdb.set_trace()  # breakpoint f43e26c4 //
         return ret
