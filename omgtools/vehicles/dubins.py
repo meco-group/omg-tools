@@ -185,9 +185,11 @@ class Dubins(Vehicle):
         signals['state'] = np.c_[sample_splines([x, y], time)]
         signals['state'] = np.r_[signals['state'], theta]
         signals['input'] = input
-        signals['pose'] = signals['state']
         signals['v_tot'] = input[0, :]
         return signals
+
+    def state2pose(self, state):
+        return state
 
     def ode(self, state, input):
         # state: x, y, theta

@@ -275,9 +275,11 @@ class Bicycle(Vehicle):
         signals['state'] = np.c_[sample_splines([x, y], time)]
         signals['state'] = np.r_[signals['state'], theta, delta]
         signals['input'] = input
-        signals['pose'] = signals['state'][:3]
         signals['delta'] = delta
         return signals
+
+    def state2pose(self, state):
+        return state[:3]
 
     def ode(self, state, input):
         # state: x, y, theta, delta

@@ -23,7 +23,7 @@ from omgtools import *
 vehicle = Holonomic()
 vehicle.set_options({'safety_distance': 0.1})
 # vehicle.set_options({'1storder_delay': True, 'time_constant': 0.1})
-# vehicle.set_options({'input_disturbance': {'fc':0.01, 'stdev':0.05*np.ones(2)}})
+# vehicle.set_options({'input_disturbance': {'fc': 0.01, 'stdev': 0.05*np.ones(2)}})
 
 vehicle.set_initial_conditions([-1.5, -1.5])
 vehicle.set_terminal_conditions([2., 2.])
@@ -41,7 +41,7 @@ environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
 
 # create a point-to-point problem
 problem = Point2point(vehicle, environment, freeT=False)
-# problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
+problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem.init()
 
 # create simulator

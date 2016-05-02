@@ -127,10 +127,12 @@ class Quadrotor(Vehicle):
             ((ddy_s + self.g)**2 + ddx_s**2)
         signals['state'] = np.c_[x_s, y_s, dx_s, dy_s, theta].T
         signals['input'] = np.c_[u1, u2].T
-        signals['pose'] = np.c_[x_s, y_s, -theta].T
         signals['dspl'] = np.c_[dx_s, dy_s].T
         signals['ddspl'] = np.c_[ddx_s, ddy_s].T
         return signals
+
+    def state2pose(self, state):
+        return np.r_[state[0], state[1], -state[4]]
 
     def ode(self, state, input):
         theta = state[4]
