@@ -42,7 +42,7 @@ environment.add_obstacle(
 options = {'horizon_time': 5., 'codegen': {
     'jit': False}, 'admm': {'rho': 0.07}}
 problem = FormationPoint2point(fleet, environment, options=options)
-# problem.set_options({'solver': {'ipopt.linear_solver': 'ma57'}})
+# problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem.init()
 
 # create simulator

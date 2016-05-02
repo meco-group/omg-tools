@@ -43,19 +43,21 @@ class Problem(OptiChild, PlotLayer):
 
     def set_default_options(self):
         self.options = {'verbose': 2}
-        self.options['solver'] = {'ipopt.tol': 1e-3,
-                                  'ipopt.linear_solver': 'mumps',
-                                  'ipopt.warm_start_init_point': 'yes',
-                                  'ipopt.print_level': 0, 'print_time': 0}
+        self.options['solver'] = 'ipopt'
+        ipopt_options = {'ipopt.tol': 1e-3, 'ipopt.linear_solver': 'mumps',
+                         'ipopt.warm_start_init_point': 'yes',
+                         'ipopt.print_level': 0, 'print_time': 0}
+        self.options['solver_options'] = {'ipopt': ipopt_options}
         self.options['codegen'] = {'build': None, 'flags': '-O0'}
 
     def set_options(self, options):
-        if 'solver' in options:
-            self.options['solver'].update(options['solver'])
+        if 'solver_options' in options:
+            for key, value in options['solver_options'].items():
+                self.options['solver_options'][key].update(value)
         if 'codegen' in options:
             self.options['codegen'].update(options['codegen'])
         for key in options:
-            if key not in ['solver', 'codegen']:
+            if key not in ['solver_options', 'codegen']:
                 self.options[key] = options[key]
 
     # ========================================================================
