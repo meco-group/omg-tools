@@ -41,26 +41,23 @@ problem = Point2point(trailer, environment, freeT=True)  # pass trailer to probl
 # todo: isn't there are a cleaner way? 
 problem.father.add(vehicle)  # add vehicle to optifather, such that it knows the trailer variables
 # extra solver settings which may improve performance
-problem.set_options({'solver': {'ipopt.linear_solver': 'ma57'}})
-problem.set_options({'solver': {'ipopt.hessian_approximation': 'limited-memory'}})
-# problem.set_options({'solver': {'ipopt.warm_start_bound_push': 1e-6}})
-# problem.set_options({'solver': {'ipopt.warm_start_mult_bound_push': 1e-6}})
-# problem.set_options({'solver': {'ipopt.mu_init': 1e-5}})
+# problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
+problem.set_options({'solver_options': {'ipopt': {'ipopt.hessian_approximation': 'limited-memory'}}})
+# problem.set_options({'solver_options': {'ipopt': {'ipopt.warm_start_bound_push': 1e-6}}})
+# problem.set_options({'solver_options': {'ipopt': {'ipopt.warm_start_mult_bound_push': 1e-6}}})
+# problem.set_options({'solver_options': {'ipopt': {'ipopt.mu_init': 1e-5}}})
 problem.init()
 
 # create simulator
 simulator = Simulator(problem)
-simulator.plot.set_options({'knots': True, 'prediction': True})
-simulator.plot.show('scene')
-simulator.plot.show('input')
-simulator.plot.show('state')
-simulator.plot.show('r1')
-
+trailer.plot('input', knots=True, labels=['v (m/s)', 'ddelta (rad/s)'])
+problem.plot('scene')
+trailer.plot('state', knots=True, labels=['x_tr (m)', 'y_tr (m)', 'theta_tr (rad)', 'x_veh (m)', 'y_veh (m)', 'theta_veh (rad)'])
+trailer.plot('r1', knots=True)
 
 # run it!
 simulator.run()
 
-# show/save some results
-simulator.plot.show_movie('scene', repeat=False)
-# simulator.plot.save_movie('input', number_of_frames=4)
-# simulator.plot.save('a', time=3)
+trailer.plot_movie('input', knots=True, labels=['v (m/s)', 'ddelta (rad/s)'])
+trailer.plot_movie('state', knots=True, labels=['x_tr (m)', 'y_tr (m)', 'theta_tr (rad)', 'x_veh (m)', 'y_veh (m)', 'theta_veh (rad)'])
+problem.plot_movie('scene', repeat=False)

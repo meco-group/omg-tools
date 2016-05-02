@@ -74,10 +74,6 @@ class Problem(OptiChild, PlotLayer):
     # ========================================================================
 
     def init(self):
-        children = [vehicle for vehicle in self.vehicles]
-        children += [obstacle for obstacle in self.environment.obstacles]
-        children += [self, self.environment]
-        self.father = OptiFather(children)
         self.problem, _ = self.father.construct_problem(
             self.options)
         self.father.init_transformations(self.init_primal_transform,

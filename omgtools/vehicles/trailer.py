@@ -186,6 +186,11 @@ class Trailer(Vehicle):
         ode = np.r_[ode_trailer, ode_veh]
         return ode
 
+    def state2pose(self, state):
+        pose_veh = self.lead_veh.state2pose(state[3:])
+        pose_tr = state[:3]
+        return np.r_[pose_tr , pose_veh]
+
     def draw(self, t=-1):
         ret = []
         for shape in self.shapes:
