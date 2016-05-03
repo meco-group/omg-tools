@@ -27,7 +27,8 @@ import numpy as np
 
 class Trailer(Vehicle):
 
-    def __init__(self, lead_veh=None, shapes=Circle(0.2), l_hitch=0.2, options={}, bounds={}):
+    def __init__(self, lead_veh=None, shapes=Circle(0.2), l_hitch=0.2, options=None, bounds=None):
+        bounds = bounds or {}
         Vehicle.__init__(
             self, n_spl=1 + lead_veh.n_spl, degree=3, shapes=shapes, options=options)
         # n_spl contains all splines of lead_veh and trailer
@@ -201,8 +202,8 @@ class Trailer(Vehicle):
             elif isinstance(shape, (Rectangle)):
                 dist = shape.width/2.
             else: 
-                raise
-                ValueError('Selected a shape different than Circle, Rectangle or Square, which is not implemented yet')
+                raise ValueError('Selected a shape different than Circle,\
+                 Rectangle or Square, which is not implemented yet')
             # start on midpoint trailer, go to side
             pt1 = self.signals['pose'][:2, t] + dist*np.array([np.cos(self.signals['pose'][2, t]),
                                                                np.sin(self.signals['pose'][2, t])])

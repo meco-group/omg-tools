@@ -46,23 +46,20 @@ environment.add_obstacle(Obstacle({'position': [2., 1.]}, shape=Circle(0.5),
 
 # create a point-to-point problem
 problem = Point2point(vehicle, environment, freeT=True)
-problem.set_options({'solver': {'ipopt.linear_solver': 'ma57'}})
-problem.set_options({'solver': {'ipopt.hessian_approximation': 'limited-memory'}})
-# problem.set_options({'solver': {'ipopt.warm_start_bound_push': 1e-6}})
-# problem.set_options({'solver': {'ipopt.warm_start_mult_bound_push': 1e-6}})
-# problem.set_options({'solver': {'ipopt.mu_init': 1e-5}})
+# problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
+# problem.set_options({'solver_options': {'ipopt': {'ipopt.hessian_approximation': 'limited-memory'}}})
+# problem.set_options({'solver_options': {'ipopt': {'ipopt.warm_start_bound_push': 1e-6}}})
+# problem.set_options({'solver_options': {'ipopt': {'ipopt.warm_start_mult_bound_push': 1e-6}}})
+# problem.set_options({'solver_options': {'ipopt': {'ipopt.mu_init': 1e-5}}})
 problem.init()
 
 # create simulator
 simulator = Simulator(problem)
-simulator.plot.set_options({'knots': True, 'prediction': False})
-simulator.plot.show('scene')
-simulator.plot.show('input')
+problem.plot('scene')
+vehicle.plot('input', knots=True, labels=['v (m/s)', 'w (rad/s)'])
 
 # run it!
 simulator.run()
 
-# show/save some results
-simulator.plot.show_movie('scene', repeat=False)
-# simulator.plot.save_movie('input', number_of_frames=4)
-# simulator.plot.save('a', time=3)
+# show some results
+problem.plot_movie('scene', repeat=False)
