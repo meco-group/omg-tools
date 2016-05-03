@@ -289,6 +289,9 @@ class AGV(Vehicle):
         u1, u2 = input[0], input[1]
         return np.r_[u1*np.cos(state[2]), u1*np.sin(state[2]), -u1/self.length*np.tan(state[3]) , u2].T
 
+    def state2pose(self, state):
+        return state[:3]
+
     def draw(self, t=-1):
         ret = []
         if self.options['plot_type'] is 'car':
