@@ -49,8 +49,9 @@ import numpy as np
 
 class AGV(Vehicle):
 
-    def __init__(self, length=0.4, options={}, bounds={}):
+    def __init__(self, length=0.4, options=None, bounds=None):
         # shapes e.g. Rectangle(width=0.8, height=0.2) or Circle(length/2.)
+        bounds = bounds or {}
         Vehicle.__init__(
             self, n_spl=2, degree=2, shapes=Rectangle(width=0.8, height=0.2), options=options)
         self.vmax = bounds['vmax'] if 'vmax' in bounds else 0.5
