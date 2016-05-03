@@ -17,7 +17,7 @@ before_script:
 script:
   - cd examples
   - chmod 644 *.py # nose doesnt match executable files
-  - "nosetests -s --verbosity=4 -i '\\.py$' -e p2p_bicycle p2p_agv p2p_agv2 . --with-xcoverage --cover-package=omgtools --cover-tests 2> >(grep -v -P 'DEBUG: (?!wantFile)')"
+  - "nosetests -s --verbosity=4 -i '\\.py$' -e p2p_bicycle . --with-xcoverage --cover-package=omgtools --cover-tests 2> >(grep -v -P 'DEBUG: (?!wantFile)')"
   - pushd export
   - make && pushd bin
 #  - valgrind ./Point2Point
