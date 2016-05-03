@@ -177,8 +177,8 @@ class Trailer(Vehicle):
         # state: theta_tr
         # input: V_veh, theta_veh
         # ode: dtheta_tr = V_veh/l_hitch*sin(theta_veh-theta_tr)
-        x_tr, y_tr, theta_tr, x_veh, y_veh, theta_veh = state
-        V_veh, dtheta_veh = input
+        _, _, theta_tr, x_veh, y_veh, theta_veh = state
+        V_veh, _ = input
         dtheta_tr = V_veh/self.l_hitch*np.sin(theta_veh-theta_tr)
         ode_veh = self.lead_veh.ode([x_veh, y_veh, theta_veh], input)  # pass on state and input which are related to veh
         ode_trailer = np.r_[ode_veh[0]+self.l_hitch*np.sin(theta_tr)*dtheta_tr,

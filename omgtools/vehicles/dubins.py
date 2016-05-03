@@ -225,7 +225,6 @@ class Dubins(Vehicle):
 
     def get_pos_splines(self, splines):
         v_til, tg_ha = splines
-        dtg_ha = tg_ha.derivative(1)
         dx = v_til*(1-tg_ha**2)
         dy = v_til*(2*tg_ha)
         x_int, y_int = self.T*running_integral(dx), self.T*running_integral(dy)
