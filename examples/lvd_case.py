@@ -29,7 +29,7 @@ environment = Environment(
     room={'shape': Cuboid(10., 3.7, 2.3), 'position': [5., -0.35, 1.15]})
 
 # obstacles for collision avoidance
-cuboids = False  # False -> a bit faster
+cuboids = True  # False -> a bit faster
 if cuboids:
     # table
     shape1 = Cuboid(3.350, 1.7, 1.0)
@@ -60,9 +60,9 @@ else:
     shape3 = Polyhedron3D(vertices3, 0.001)
     position3 = [6.875, -1.325, 0.575]
 
-obstacle1 = Obstacle({'position': position1}, shape1, {}, {'draw': False})
-obstacle2 = Obstacle({'position': position2}, shape2, {}, {'draw': False})
-obstacle3 = Obstacle({'position': position3}, shape3, {}, {'draw': False})
+obstacle1 = Obstacle({'position': position1}, shape1, {}, {'draw': True})
+obstacle2 = Obstacle({'position': position2}, shape2, {}, {'draw': True})
+obstacle3 = Obstacle({'position': position3}, shape3, {}, {'draw': True})
 
 environment.add_obstacle([obstacle1, obstacle2, obstacle3])
 
@@ -81,7 +81,7 @@ pilar = Obstacle(
     {'position': [3.2, -1.925, 0.75]}, Cuboid(0.3, 0.45, 1.5), {}, {'avoid': False})
 measure = Obstacle(
     {'position': [6.875, -1.325, 0.575]}, Cuboid(0.15, 0.15, 1.15), {}, {'avoid': False})
-environment.add_obstacle([frame, table, cover, beam, leg, pilar, measure])
+# environment.add_obstacle([frame, table, cover, beam, leg, pilar, measure])
 
 # create a point-to-point problem
 problem = Point2point(plate, environment, freeT=True)
@@ -108,6 +108,7 @@ trajectories = simulator.run_once()
 #     'scene', number_of_frames=40, repeat=False, view=[0, 90])
 # problem.plot_movie(
 #     'scene', number_of_frames=40, repeat=True, view=[90, 0])
+# problem.save_plot('scene', 'obstacles', axis=False, view=[60, 45], time=0)
 
 # save results
 if save:
