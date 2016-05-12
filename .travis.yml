@@ -1,7 +1,9 @@
 env:
   global:
     - CASADIVERSION=3.0.0
-
+    - LD_LIBRARY_PATH=$HOME/libhsl
+    - IPOPT_DEFAULT_LINEAR_SOLVER=ma57
+    
 # works from matplotlib 1.5 onwards
 #    - MPLBACKEND=Agg # Matplotlib backend; must be headless to run on travis
 
@@ -13,6 +15,9 @@ language: generic
 before_script:
   - set -e
   - set -o pipefail  # otherwise, piping with grep discards exit statuses
+  - git clone https://github.com/meco-group/bob.git
+  - pushd bob && source setup.sh && popd
+  - bob_get libhsl.tar.gz && mkdir $HOME/libhsl && tar -xf libhsl.tar.gz -C $HOME/libhsl
 
 script:
   - cd examples
