@@ -18,7 +18,8 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from ..basics.optilayer import OptiFather
-from ..basics.spline_extra import shift_knot1_fwd, shift_knot1_bwd, shift_over_knot
+from ..basics.spline_extra import shift_knot1_fwd, shift_knot1_bwd, shift_over_knot, definite_integral
+from ..basics.spline import BSpline
 from problem import Problem
 from distributedproblem import DistributedProblem
 from casadi import symvar, mtimes, SX, MX, DM, Function, reshape
@@ -374,6 +375,45 @@ class ADMM(Problem):
                                 var[child.label][name][sl] = v
             return var
 
+    def _distinct_splines(self, var, dic):
+        if isinstance(var, list):
+            splines, no_splines = [], []
+            for v in var:
+                spl, no_spl = self._distinct_splines(v, dic)
+                splines.extend(spl)
+                no_splines.extend(no_spl)
+            return splines, no_splines
+        elif isinstance(var, struct):
+            var = self._struct2dict(var, dic)
+            return self._distinct_splines(var, dic)
+        elif isinstance(dic.keys()[0], ADMM):
+            splines, no_splines = [], []
+            for nghb in dic.keys():
+                spl, no_spl = self._distinct_splines(var[nghb.label], dic[nghb])
+                splines.extend(spl)
+                no_splines.extend(no_spl)
+            return splines, no_splines
+        else:
+            splines, no_splines = [], []
+            for child, q_i in dic.items():
+                for name, ind in q_i.items():
+                    if name in child._splines_prim:
+                        basis = child._splines_prim[name]['basis']
+                        for l in range(child._variables[name].shape[1]):
+                            sl_min = l*len(basis)
+                            sl_max = (l+1)*len(basis)
+                            if set(range(sl_min, sl_max)) <= set(ind):
+                                sl = slice(sl_min, sl_max)
+                                v = var[child.label][name][sl]
+                                splines.append(BSpline(basis, v))
+                            else:
+                                sl = slice(sl_min, sl_max)
+                                v = var[child.label][name][sl]
+                                no_splines.append(var[child.label][name][sl])
+                    else:
+                        no_splines.append(var[child.label][name])
+            return splines, no_splines
+
     def _check_for_lineq(self):
         g = []
         for con in self.constraints:
@@ -554,24 +594,67 @@ class ADMM(Problem):
                     self.var_admm[key], tf, self.q_ji)
 
     def get_residuals(self, current_time):
-        t0 = time.time()
-        current_time = np.round(current_time, 6) % self.problem.knot_time
-        horizon_time = self.problem.options['horizon_time']
-        tf = lambda cfs, basis: shift_knot1_fwd(
-            cfs, basis, current_time/horizon_time)
-        x_i = self._transform_spline(self.var_admm['x_i'], tf, self.q_i).cat
-        z_i = self._transform_spline(self.var_admm['z_i'], tf, self.q_i).cat
-        z_i_p = self._transform_spline(
-            self.var_admm['z_i_p'], tf, self.q_i).cat
-        x_j = self._transform_spline(self.var_admm['x_j'], tf, self.q_ij).cat
-        z_ij = self._transform_spline(self.var_admm['z_ij'], tf, self.q_ij).cat
-        z_ij_p = self._transform_spline(
-            self.var_admm['z_ij_p'], tf, self.q_ij).cat
-        rho = self.options['admm']['rho']
-        pr = la.norm(x_i-z_i)**2 + la.norm(x_j-z_ij)**2
-        dr = rho*(la.norm(z_i-z_i_p)**2 + la.norm(z_ij-z_ij_p)**2)
-        cr = rho*pr + dr
-        t1 = time.time()
+        experimental = True
+        if experimental:
+            t0 = time.time()
+            current_time = np.round(current_time, 6) % self.problem.knot_time
+            horizon_time = self.problem.options['horizon_time']
+            rho = self.options['admm']['rho']
+
+            x_i = self.var_admm['x_i']
+            z_i = self.var_admm['z_i']
+            z_i_p = self.var_admm['z_i_p']
+
+            x_j = self.var_admm['x_j']
+            z_ij = self.var_admm['z_ij']
+            z_ij_p = self.var_admm['z_ij_p']
+
+            x_i_s, x_i_ns = self._distinct_splines(x_i, self.q_i)
+            z_i_s, z_i_ns = self._distinct_splines(z_i, self.q_i)
+            z_i_p_s, z_i_p_ns = self._distinct_splines(z_i_p, self.q_i)
+
+            x_j_s, x_j_ns = self._distinct_splines(x_j, self.q_ij)
+            z_ij_s, z_ij_ns = self._distinct_splines(z_ij, self.q_ij)
+            z_ij_p_s, z_ij_p_ns = self._distinct_splines(z_ij_p, self.q_ij)
+
+            x_i_ns = np.array(x_i_ns)
+            z_i_ns = np.array(z_i_ns)
+            z_i_p_ns = np.array(z_i_p_ns)
+            x_j_ns = np.array(x_j_ns)
+            z_ij_ns = np.array(z_ij_ns)
+            z_ij_p_ns = np.array(z_ij_p_ns)
+
+            pr = la.norm(x_i_ns - z_i_ns)**2 + la.norm(x_j_ns - z_ij_ns)**2
+            dr = rho*(la.norm(z_i_ns - z_i_p_ns)**2 + la.norm(z_ij_ns - z_ij_p_ns)**2)
+            for x_i, z_i, z_i_p in zip(x_i_s, z_i_s, z_i_p_s):
+                pr += definite_integral((x_i - z_i)*(x_i - z_i), current_time/horizon_time, 1.)
+                dr += definite_integral((z_i - z_i_p)*(z_i - z_i_p), current_time/horizon_time, 1.)
+            for x_j, z_ij, z_ij_p in zip(x_j_s, z_ij_s, z_ij_p_s):
+                pr += definite_integral((x_j - z_ij)*(x_j - z_ij), current_time/horizon_time, 1.)
+                dr += definite_integral((z_ij - z_ij_p)*(z_ij - z_ij_p), current_time/horizon_time, 1.)
+            pr, dr = float(pr), float(dr)
+            cr = rho*pr + dr
+            t1 = time.time()
+        else:
+            t0 = time.time()
+            current_time = np.round(current_time, 6) % self.problem.knot_time
+            horizon_time = self.problem.options['horizon_time']
+            tf = lambda cfs, basis: shift_knot1_fwd(
+                cfs, basis, current_time/horizon_time)
+            x_i = self._transform_spline(self.var_admm['x_i'], tf, self.q_i).cat
+            z_i = self._transform_spline(self.var_admm['z_i'], tf, self.q_i).cat
+            z_i_p = self._transform_spline(
+                self.var_admm['z_i_p'], tf, self.q_i).cat
+            x_j = self._transform_spline(self.var_admm['x_j'], tf, self.q_ij).cat
+            z_ij = self._transform_spline(self.var_admm['z_ij'], tf, self.q_ij).cat
+            z_ij_p = self._transform_spline(
+                self.var_admm['z_ij_p'], tf, self.q_ij).cat
+            rho = self.options['admm']['rho']
+            pr = la.norm(x_i-z_i)**2 + la.norm(x_j-z_ij)**2
+            dr = rho*(la.norm(z_i-z_i_p)**2 + la.norm(z_ij-z_ij_p)**2)
+            cr = rho*pr + dr
+            t1 = time.time()
+
         return t1-t0, pr, dr, cr
 
     def accelerate(self, c_res):
