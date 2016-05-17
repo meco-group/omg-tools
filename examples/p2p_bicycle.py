@@ -56,6 +56,3 @@ vehicle.plot('state', knots=True, labels=['x (m)', 'y (m)', 'theta (rad)', 'delt
 # run it!
 simulator.run()
 
-# show some results
-problem.plot_movie('scene', repeat=False)
-

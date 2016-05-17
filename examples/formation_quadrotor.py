@@ -42,7 +42,7 @@ environment.add_obstacle(Obstacle({'position': [-0.6, -5.4]},
 # create a formation point-to-point problem
 options = {'horizon_time': 5., 'admm': {'rho': 0.1}}
 problem = FormationPoint2point(fleet, environment, options=options)
-# problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
+problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem.init()
 
 # create simulator
@@ -53,6 +53,3 @@ fleet.plot('input', knots=True, labels=['Thrust force (N/kg)',
 
 # run it!
 simulator.run()
-
-# show/save some results
-problem.plot_movie('scene', repeat=False)

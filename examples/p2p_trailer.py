@@ -38,10 +38,10 @@ environment = Environment(room={'shape': Square(5.), 'position': [1.5, 1.5]})
 
 # create a point-to-point problem
 problem = Point2point(trailer, environment, freeT=True)  # pass trailer to problem
-# todo: isn't there are a cleaner way? 
+# todo: isn't there are a cleaner way?
 problem.father.add(vehicle)  # add vehicle to optifather, such that it knows the trailer variables
 # extra solver settings which may improve performance
-# problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
+problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem.set_options({'solver_options': {'ipopt': {'ipopt.hessian_approximation': 'limited-memory'}}})
 # problem.set_options({'solver_options': {'ipopt': {'ipopt.warm_start_bound_push': 1e-6}}})
 # problem.set_options({'solver_options': {'ipopt': {'ipopt.warm_start_mult_bound_push': 1e-6}}})
@@ -57,5 +57,3 @@ trailer.plot('r1', knots=True)
 
 # run it!
 simulator.run()
-
-problem.plot_movie('scene', repeat=False)

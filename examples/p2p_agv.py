@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
- 
+
 from omgtools import *
 
 # create vehicle
@@ -52,6 +52,3 @@ vehicle.plot('state', knots=True)
 
 # run it!
 simulator.run()
-
-# show/save some results
-problem.plot_movie('scene', repeat=False)
