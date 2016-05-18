@@ -37,11 +37,11 @@ omega = 1.5*(2*np.pi/horizon_time)
 velocity = [0., 0.]
 # velocity = [0., -0.2] # crazy revolving door
 environment.add_obstacle(Obstacle({'position': [0., 0.], 'velocity': velocity,
-                                   'angular_velocity': omega},
-                                  shape=beam2, simulation={}, options={'horizon_time': horizon_time}))
+    'angular_velocity': omega}, shape=beam2, simulation={},
+    options={'horizon_time': horizon_time}))
 environment.add_obstacle(Obstacle({'position': [0., 0.], 'velocity': velocity,
-                                   'orientation': 0.5*np.pi, 'angular_velocity': omega},
-                                  shape=beam2, simulation={}, options={'horizon_time': horizon_time}))
+    'orientation': 0.5*np.pi, 'angular_velocity': omega},
+    shape=beam2, simulation={}, options={'horizon_time': horizon_time}))
 
 # create a point-to-point problem
 problem = Point2point(

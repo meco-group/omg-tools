@@ -20,10 +20,7 @@
 from omgtools import *
 
 # create vehicle
-vehicle = AGV(length=0.8,
-              bounds={'vmax': 0.5, 'dmax': 30., 'dmin': -30.,
-                      'ddmax': 45, 'ddmin': -45},  # in deg
-              options={'plot_type': 'agv'})
+vehicle = AGV(length=0.8, options={'plot_type': 'agv'})
 vehicle.define_knots(knot_intervals=5)  # choose lower amount of knot intervals
 
 vehicle.set_initial_conditions([-1., -0.5, 0.], [0.])  # x, y, theta, delta
@@ -37,17 +34,14 @@ rectangle = Rectangle(width=0.8, height=0.2)
 problem = Point2point(vehicle, environment, freeT=True)
 # extra solver settings which may improve performance
 problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57',
-                                                  'ipopt.hessian_approximation': 'limited-memory'}}})
+    'ipopt.hessian_approximation': 'limited-memory'}}})
 problem.init()
 
 # create simulator
 simulator = Simulator(problem)
 problem.plot('scene')
-vehicle.plot('input', knots=True)
-vehicle.plot('state', knots=True)
-
+vehicle.plot('input', knots=True, labels=['v (m/s)', 'ddelta (rad/s)'])
+vehicle.plot('state', knots=True, labels=[
+             'x (m)', 'y (m)', 'theta (rad)', 'delta (rad)'])
 # run it!
 simulator.run()
-
-# show/save some results
-problem.plot_movie('scene', repeat=False)

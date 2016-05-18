@@ -54,7 +54,7 @@ class Bicycle(Vehicle):
         bounds = bounds or {}
         Vehicle.__init__(
             self, n_spl=2, degree=2, shapes=Circle(length/2.), options=options)
-        self.vmax = bounds['vmax'] if 'vmax' in bounds else 0.5
+        self.vmax = bounds['vmax'] if 'vmax' in bounds else 0.8
         self.amax = bounds['amax'] if 'amax' in bounds else 1.
         self.dmin = bounds['dmin'] if 'dmin' in bounds else -30.  # steering angle [deg]
         self.dmax = bounds['dmax'] if 'dmax' in bounds else 30.

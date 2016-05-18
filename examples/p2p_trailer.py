@@ -16,7 +16,8 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
-
+import sys, os
+sys.path.insert(0, os.getcwd()+'/..')
 from omgtools import *
 
 # create vehicle
@@ -41,19 +42,14 @@ problem = Point2point(trailer, environment, freeT=True)  # pass trailer to probl
 # todo: isn't there are a cleaner way?
 problem.father.add(vehicle)  # add vehicle to optifather, such that it knows the trailer variables
 # extra solver settings which may improve performance
-# problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
-problem.set_options({'solver_options': {'ipopt': {'ipopt.hessian_approximation': 'limited-memory'}}})
-# problem.set_options({'solver_options': {'ipopt': {'ipopt.warm_start_bound_push': 1e-6}}})
-# problem.set_options({'solver_options': {'ipopt': {'ipopt.warm_start_mult_bound_push': 1e-6}}})
-# problem.set_options({'solver_options': {'ipopt': {'ipopt.mu_init': 1e-5}}})
+problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57', 'ipopt.hessian_approximation': 'limited-memory'}}})
 problem.init()
 
 # create simulator
 simulator = Simulator(problem)
-trailer.plot('input', knots=True, labels=['v (m/s)', 'ddelta (rad/s)'])
 problem.plot('scene')
+trailer.plot('input', knots=True, labels=['v (m/s)', 'ddelta (rad/s)'])
 trailer.plot('state', knots=True, labels=['x_tr (m)', 'y_tr (m)', 'theta_tr (rad)', 'x_veh (m)', 'y_veh (m)', 'theta_veh (rad)'])
-trailer.plot('r1', knots=True)
 
 # run it!
 simulator.run()
