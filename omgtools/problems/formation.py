@@ -17,17 +17,19 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-from admm import ADMMProblem
+# from admm import ADMMProblem
+from dualdecomp import DDProblem
 from point2point import Point2point
 import numpy as np
 
 
-class FormationPoint2point(ADMMProblem):
+class FormationPoint2point(DDProblem):
 
     def __init__(self, fleet, environment, options=None):
         problems = [Point2point(vehicle, environment.copy(), options)
                     for vehicle in fleet.vehicles]
-        ADMMProblem.__init__(self, fleet, environment, problems, options)
+        # ADMMProblem.__init__(self, fleet, environment, problems, options)
+        DDProblem.__init__(self, fleet, environment, problems, options)
 
         # define parameters
         rel_splines = {veh: self.define_parameter('rs'+str(l), len(self.fleet.configuration[
