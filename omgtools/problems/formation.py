@@ -23,7 +23,7 @@ from point2point import Point2point
 import numpy as np
 
 dual_method = ADMMProblem
-dual_method = DDProblem
+# dual_method = DDProblem
 
 class FormationPoint2point(dual_method):
 
