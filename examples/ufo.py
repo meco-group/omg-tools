@@ -39,8 +39,7 @@ environment.add_obstacle(
     Obstacle({'position': [13, 4.]}, UFO(1.5, 0.6), {'trajectories': trajectory}))
 
 # create a formation point-to-point problem
-options = {'horizon_time': 5., 'codegen': {
-    'jit': False}, 'admm': {'rho': 0.07}}
+options = {'horizon_time': 5., 'codegen': {'jit': False}, 'rho': 0.07}
 problem = FormationPoint2point(fleet, environment, options=options)
 problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem.init()
