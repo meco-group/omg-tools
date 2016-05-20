@@ -20,23 +20,32 @@
 from omgtools import *
 
 # create vehicle
-vehicle = Dubins(bounds={'vmax': 0.7, 'wmax': 60., 'wmin': -60.})  # in deg
-vehicle.define_knots(knot_intervals=5)  # choose lower amount of knot intervals
+vehicle = Holonomic(options={'syslimit': 'norm_2'})
 
-vehicle.set_initial_conditions([0., 0., 0.])  # input orientation in deg
-vehicle.set_terminal_conditions([3., 3., 0.])
+vehicle.set_initial_conditions([0., 0.])
+vehicle.set_terminal_conditions([6., 3.5])
 
 # create environment
-environment = Environment(room={'shape': Square(5.), 'position': [1.5, 1.5]})
+environment = Environment(room={'shape': Rectangle(width=7., height=4.5), 'position': [3., 1.75]})
+rectangle = Rectangle(width=1., height=1.)
 
-trajectories = {'velocity': {'time': [0.5],
-                             'values': [[0.25, 0.0]]}}
-environment.add_obstacle(Obstacle({'position': [1., 1.]}, shape=Circle(0.5),
-                                  simulation={'trajectories': trajectories}))
+environment.add_obstacle(Obstacle({'position': [1., 1.]}, shape=rectangle))
+environment.add_obstacle(Obstacle({'position': [3., 1.]}, shape=rectangle))
+environment.add_obstacle(Obstacle({'position': [5., 1.]}, shape=rectangle))
+environment.add_obstacle(Obstacle({'position': [1., 2.5]}, shape=rectangle))
+environment.add_obstacle(Obstacle({'position': [3., 2.5]}, shape=rectangle))
+environment.add_obstacle(Obstacle({'position': [5., 2.5]}, shape=rectangle))
+trajectories1 = {'velocity': {'time': [1., 2.],
+                             'values': [[0., 0.0], [0., 0.15]]}}
+trajectories2 = {'velocity': {'time': [1., 2.],
+                             'values': [[0., 0.0], [0., -0.1]]}}
+environment.add_obstacle(Obstacle({'position': [4., 2.5]}, shape=Circle(0.5),
+                                  simulation={'trajectories': trajectories2}))
+environment.add_obstacle(Obstacle({'position': [2., 1.]}, shape=Circle(0.5),
+                                  simulation={'trajectories': trajectories1}))
 
 # create a point-to-point problem
 problem = Point2point(vehicle, environment, freeT=True)
-# extra solver settings which may improve performance
 problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem.init()
 
@@ -44,7 +53,6 @@ problem.init()
 simulator = Simulator(problem)
 problem.plot('scene')
 vehicle.plot('input', knots=True, labels=['v (m/s)', 'w (rad/s)'])
-vehicle.plot('state', knots=True, labels=['x (m)', 'y (m)', 'theta (rad)'])
 
 # run it!
 simulator.run()

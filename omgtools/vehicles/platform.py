@@ -96,9 +96,11 @@ class Platform(Vehicle):
         dx, ddx = x.derivative(), x.derivative(2)
         signals['state'] = np.c_[sample_splines(x, time)].T
         signals['input'] = np.c_[sample_splines(dx, time)].T
-        signals['pose'] = np.r_[signals['state'], np.zeros((2, len(time)))]
         signals['a'] = np.c_[sample_splines(ddx, time)].T
         return signals
+
+    def state2pose(self, state):
+        return np.r_[state, np.zeros(2)]
 
     def ode(self, state, input):
         return input

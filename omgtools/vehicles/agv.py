@@ -27,34 +27,34 @@ import numpy as np
 # Elaboration of the vehicle model:
 # dx = V*cos(theta)
 # dy = V*sin(theta)
-# dtheta = V/L*tan(delta) with L = distance between front and back wheel
+# dtheta = -V/L*tan(delta) with L = distance between front and back wheel
 
 # Use tangent half angle substitution: tg_ha = tan(theta/2)
 # sin(theta) = (2*tg_ha)/(1+tg_ha**2)
 # cos(theta) = (1-tg_ha**2)/(1+tg_ha**2)
-# This gives:
+# This gives: 
 # dx = V/(1+tg_ha**2)*(1-tg_ha**2)
 # dy = V/(1+tg_ha**2)*(2*tg_ha)
 # Substitute: v_til = V/(1+tg_ha**2)
 
 # dx = v_til*(1-tg_ha**2)
 # dy = v_til*(2*tg_ha)
-# dtheta = v_til/L*(1+tg_ha**2)*tan(delta)
+# dtheta = -v_til/L*(1+tg_ha**2)*tan(delta)
 
 # And since theta = 2*arctan(tg_ha)
 # dtheta = 2*dtg_ha/(1+tg_ha**2)
-# So tan(delta) = (2*dtg_ha*L)/(v_til*(1+tg_ha**2)**2)
+# So tan(delta) = (-2*dtg_ha*L)/(v_til*(1+tg_ha**2)**2)
 # Spline variables of the problem: v_til and tg_ha
 # delta follows from v_til, tg_ha, dtg_ha
 
-
-class Bicycle(Vehicle):
+class AGV(Vehicle):
 
     def __init__(self, length=0.4, options=None, bounds=None):
+        # shapes e.g. Rectangle(width=0.8, height=0.2) or Circle(length/2.)
         bounds = bounds or {}
         Vehicle.__init__(
-            self, n_spl=2, degree=2, shapes=Circle(length/2.), options=options)
-        self.vmax = bounds['vmax'] if 'vmax' in bounds else 0.8
+            self, n_spl=2, degree=2, shapes=Rectangle(width=0.8, height=0.2), options=options)
+        self.vmax = bounds['vmax'] if 'vmax' in bounds else 0.5
         self.amax = bounds['amax'] if 'amax' in bounds else 1.
         self.dmin = bounds['dmin'] if 'dmin' in bounds else -30.  # steering angle [deg]
         self.dmax = bounds['dmax'] if 'dmax' in bounds else 30.
@@ -89,18 +89,18 @@ class Bicycle(Vehicle):
 
         # limit steering angle
         self.define_constraint(
-             2*dtg_ha*self.length - v_til*(1+tg_ha**2)**2*np.tan(np.radians(self.dmax))*self.T, -inf, 0.)
+             -2*dtg_ha*self.length - v_til*(1+tg_ha**2)**2*np.tan(np.radians(self.dmax))*self.T, -inf, 0.)
         self.define_constraint(
-             -2*dtg_ha*self.length + v_til*(1+tg_ha**2)**2*np.tan(np.radians(self.dmin))*self.T, -inf, 0.)
+             +2*dtg_ha*self.length + v_til*(1+tg_ha**2)**2*np.tan(np.radians(self.dmin))*self.T, -inf, 0.)
     # limit rate of change of steering angle
-        self.define_constraint(
-             2*self.length*ddtg_ha*(v_til*(1+tg_ha**2)**2)
-             -2*self.length*dtg_ha*(dv_til*(1+tg_ha**2)**2
-             +v_til*(4*tg_ha+4*tg_ha**3)*dtg_ha) - ((self.T**2)*v_til**2*(1+tg_ha**2)**4
-             +(2*self.length*dtg_ha)**2)*np.radians(self.ddmax), -inf, 0.)
         self.define_constraint(
              -2*self.length*ddtg_ha*(v_til*(1+tg_ha**2)**2)
              +2*self.length*dtg_ha*(dv_til*(1+tg_ha**2)**2
+             +v_til*(4*tg_ha+4*tg_ha**3)*dtg_ha) - ((self.T**2)*v_til**2*(1+tg_ha**2)**4
+             +(2*self.length*dtg_ha)**2)*np.radians(self.ddmax), -inf, 0.)
+        self.define_constraint(
+             2*self.length*ddtg_ha*(v_til*(1+tg_ha**2)**2)
+             -2*self.length*dtg_ha*(dv_til*(1+tg_ha**2)**2
              +v_til*(4*tg_ha+4*tg_ha**3)*dtg_ha) + ((self.T**2)*v_til**2*(1+tg_ha**2)**4
              +(2*self.length*dtg_ha)**2)*np.radians(self.ddmin), -inf, 0.)
         self.define_constraint(-v_til, -inf, 0)  # model requires positive V, so positive v_tilde
@@ -117,7 +117,7 @@ class Bicycle(Vehicle):
 
         hop0 = self.define_parameter('hop0', 1)
         tdelta0 = self.define_parameter('tdelta0', 1)  # tan(delta)
-        self.define_constraint(hop0*(2.*evalspline(ddtg_ha, self.t/self.T)*self.length
+        self.define_constraint(hop0*(-2.*evalspline(ddtg_ha, self.t/self.T)*self.length
                                -tdelta0*(evalspline(dv_til, self.t/self.T)*(1.+tg_ha0**2)**2)*self.T), 0., 0.)
         # This constraint is obtained by using l'Hopital's rule on the expression of
         # tan(delta) = 2*dtg_ha*self.length / (v_til*(1+tg_ha**2)**2)
@@ -126,8 +126,8 @@ class Bicycle(Vehicle):
         # it contains evalspline(v_til, self.t/self.T)*... which is zero.
         # When v_til is not 0 the steering angle is implicitly imposed due to the fact that tan(delta)
         # is only a function of v_til, tg_ha, dtg_ha. If these variables are smooth the steering angle
-        # will also be smooth. Furthermore the steering angle and its rate of change are limited by the
-        # extra constraints above.
+        # will also be smooth. Furthermore the steering angle and its rate of change are limited by the 
+        # extra constraints above. 
 
         # Impose final steering angle
         # tdeltaT = self.define_parameter('tdeltaT', 1)  # tan(delta)
@@ -179,8 +179,8 @@ class Bicycle(Vehicle):
         # generate initial guess for spline variables
         init_value = np.zeros((len(self.basis), 2))
         v_til0 = np.zeros(len(self.basis))
-        tg_ha0 = np.tan(self.prediction['state'][2]/2)
-        tg_haT = np.tan(self.poseT[2]/2)
+        tg_ha0 = np.tan(self.prediction['state'][2]/2.)
+        tg_haT = np.tan(self.poseT[2]/2.)
         init_value[:, 0] = v_til0
         init_value[:, 1] = np.linspace(tg_ha0, tg_haT, len(self.basis))
         return init_value
@@ -196,13 +196,13 @@ class Bicycle(Vehicle):
     def set_parameters(self, current_time):
         # for the optimization problem
         parameters = {}
-        parameters['tg_ha0'] = np.tan(self.prediction['state'][2]/2)
-        parameters['v_til0'] = self.prediction['input'][0]/(1+parameters['tg_ha0']**2)
+        parameters['tg_ha0'] = np.tan(self.prediction['state'][2]/2.)
+        parameters['v_til0'] = self.prediction['input'][0]/(1+parameters['tg_ha0']**2) 
         parameters['pos0'] = self.prediction['state'][:2]
         parameters['posT'] = self.poseT[:2]  # x, y
         parameters['v_tilT'] = 0.
         parameters['dv_tilT'] = 0.
-        parameters['tg_haT'] = np.tan(self.poseT[2]/2)
+        parameters['tg_haT'] = np.tan(self.poseT[2]/2.)
         parameters['dtg_haT'] = 0.
         parameters['ddtg_haT'] = 0.
         # parameters['tdeltaT'] = np.tan(self.poseT[3])
@@ -213,8 +213,8 @@ class Bicycle(Vehicle):
             parameters['tdelta0'] = np.tan(self.prediction['state'][3])
         else:  # no need for l'Hopital's rule
             parameters['hop0'] = 0.
-            parameters['dtg_ha0'] = np.tan(self.prediction['state'][3])*parameters['v_til0']* \
-                                           (1+parameters['tg_ha0']**2)**2/(2*self.length)
+            parameters['dtg_ha0'] = -np.tan(self.prediction['state'][3])*parameters['v_til0']* \
+                                           (1+parameters['tg_ha0']**2)**2/(2.*self.length)
             # tdelta0 is only used when hop0 = 1, so no need to assign here
         return parameters
 
@@ -251,12 +251,12 @@ class Bicycle(Vehicle):
         dv_til = np.array(sample_splines([dv_til], time))
         ddtg_ha = np.array(sample_splines([ddtg_ha], time))
         theta = 2*np.arctan2(tg_ha, 1)
-        delta = np.arctan2(2*dtg_ha*self.length, v_til*(1+tg_ha**2)**2)
-        ddelta = (2*ddtg_ha*self.length*(v_til*(1+tg_ha**2)**2)-2*dtg_ha*self.length*(dv_til*(1+tg_ha**2)**2 + v_til*(4*tg_ha+4*tg_ha**3)*dtg_ha))/(v_til**2*(1+tg_ha**2)**4+(2*dtg_ha*self.length)**2)
+        delta = np.arctan2(-2*dtg_ha*self.length, v_til*(1+tg_ha**2)**2)
+        ddelta = -(2*ddtg_ha*self.length*(v_til*(1+tg_ha**2)**2)-2*dtg_ha*self.length*(dv_til*(1+tg_ha**2)**2 + v_til*(4*tg_ha+4*tg_ha**3)*dtg_ha))/(v_til**2*(1+tg_ha**2)**4+(2*dtg_ha*self.length)**2)
         # check if you needed to use l'Hopital's rule to find delta and ddelta above, if so adapt signals
         # start
         if (v_til[0, 0] <= 1e-4 and dtg_ha[0, 0] <= 1e-4):
-            delta[0, 0] = np.arctan2(2*ddtg_ha[0, 0]*self.length , (dv_til[0, 0]*(1+tg_ha[0, 0]**2)**2))
+            delta[0, 0] = np.arctan2(-2*ddtg_ha[0, 0]*self.length , (dv_til[0, 0]*(1+tg_ha[0, 0]**2)**2))
             ddelta[0, 0] = ddelta[0, 1]  # choose next input
         # middle
         for k in range(1,len(time)-1):
@@ -264,7 +264,7 @@ class Bicycle(Vehicle):
                 if (ddtg_ha[0, k] <= 1e-4 and dv_til[0, k] <= 1e-4):  # l'Hopital won't work
                     delta[0, k] = delta[0, k-1]  # choose previous steering angle
                 else:
-                    delta[0, k] = np.arctan2(2*ddtg_ha[0, k]*self.length , (dv_til[0, k]*(1+tg_ha[0, k]**2)**2))
+                    delta[0, k] = np.arctan2(-2*ddtg_ha[0, k]*self.length , (dv_til[0, k]*(1+tg_ha[0, k]**2)**2))
                 ddelta[0, k] = ddelta[0, k-1]  # choose previous input
         # end
         if (v_til[0, -1] <= 1e-4 and dtg_ha[0, -1] <= 1e-4):  # correct at end point
@@ -275,11 +275,9 @@ class Bicycle(Vehicle):
         signals['state'] = np.c_[sample_splines([x, y], time)]
         signals['state'] = np.r_[signals['state'], theta, delta]
         signals['input'] = input
+        signals['pose'] = signals['state'][:3]
         signals['delta'] = delta
         return signals
-
-    def state2pose(self, state):
-        return state[:3]
 
     def ode(self, state, input):
         # state: x, y, theta, delta
@@ -288,39 +286,45 @@ class Bicycle(Vehicle):
         # dstate = dx, dy, dtheta, ddelta
         # dstate[3] = input[1]
         u1, u2 = input[0], input[1]
-        return np.r_[u1*np.cos(state[2]), u1*np.sin(state[2]), u1/self.length*np.tan(state[3]) , u2].T
+        return np.r_[u1*np.cos(state[2]), u1*np.sin(state[2]), -u1/self.length*np.tan(state[3]) , u2].T
+
+    def state2pose(self, state):
+        return state[:3]
 
     def draw(self, t=-1):
         ret = []
         if self.options['plot_type'] is 'car':
             car = Rectangle(width=self.length, height=self.length/4.)
-            wheel = Rectangle(self.length/8., self.length/10.)
+            wheel = Rectangle(width=self.length/8., height=self.length/10.)
             ret += car.draw(self.signals['pose'][:3, t])  # vehicle
             pos_front_l = self.signals['pose'][:2, t] + np.array([(self.length/2.5)*np.cos(self.signals['pose'][2, t]+np.radians(30.)),
                                                          (self.length/2.5)*np.sin(self.signals['pose'][2, t]+np.radians(30.))])
             pos_front_r = self.signals['pose'][:2, t] + np.array([(self.length/2.5)*np.cos(self.signals['pose'][2, t]-np.radians(30.)),
                                                          (self.length/2.5)*np.sin(self.signals['pose'][2, t]-np.radians(30.))])
-            orient_front = self.signals['pose'][2, t] + self.signals['delta'][0, t]
+            orient_front = self.signals['pose'][2, t]
             pos_back_l = self.signals['pose'][:2, t] - np.array([(self.length/2.5)*np.cos(self.signals['pose'][2, t]+np.radians(30.)),
                                                          (self.length/2.5)*np.sin(self.signals['pose'][2, t]+np.radians(30.))])
             pos_back_r = self.signals['pose'][:2, t] - np.array([(self.length/2.5)*np.cos(self.signals['pose'][2, t]-np.radians(30.)),
                                                          (self.length/2.5)*np.sin(self.signals['pose'][2, t]-np.radians(30.))])
-            orient_back = self.signals['pose'][2, t]
+            orient_back = self.signals['pose'][2, t] + self.signals['delta'][0, t]
             ret += wheel.draw(np.r_[pos_front_l, orient_front])  # front wheel left
             ret += wheel.draw(np.r_[pos_front_r, orient_front])  # front wheel right
             ret += wheel.draw(np.r_[pos_back_l, orient_back])  # back wheel left
             ret += wheel.draw(np.r_[pos_back_r, orient_back])  # back wheel right
 
-        if self.options['plot_type'] is 'bicycle':
+        if self.options['plot_type'] is 'agv':
+            # plot approximation of vehicle
+            # real = Circle(self.length/2.)
+            # ret += real.draw(self.signals['pose'][:2,t])
             car = Rectangle(width=self.length, height=self.length/4.)
-            wheel = Rectangle(self.length/2., self.length/6.)
+            wheel = Rectangle(width=self.length/10., height=self.length/14.)
             ret += car.draw(self.signals['pose'][:3, t])  # vehicle
             pos_front = self.signals['pose'][:2, t] + (self.length/3)*np.array([np.cos(self.signals['pose'][2, t]),
                                                          np.sin(self.signals['pose'][2, t])])
-            orient_front = self.signals['pose'][2, t] + self.signals['delta'][0, t]
+            orient_front = self.signals['pose'][2, t]
             pos_back = self.signals['pose'][:2, t] - (self.length/3)*np.array([np.cos(self.signals['pose'][2, t]),
                                                          np.sin(self.signals['pose'][2, t])])
-            orient_back = self.signals['pose'][2, t]
+            orient_back = self.signals['pose'][2, t] + self.signals['delta'][0, t]
             ret += wheel.draw(np.r_[pos_front, orient_front])  # front wheel
             ret += wheel.draw(np.r_[pos_back, orient_back])  # back wheel
         return ret

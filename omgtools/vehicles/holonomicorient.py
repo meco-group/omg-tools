@@ -166,10 +166,12 @@ class HolonomicOrient(Vehicle):
         signals['state'] = np.c_[sample_splines([x, y], time)]
         signals['state'] = np.r_[signals['state'], theta]
         signals['input'] = input
-        signals['pose'] = np.r_[signals['state']]
         signals['v_tot'] = np.sqrt(input[0, :]**2 + input[1, :]**2)
         signals['a'] = np.c_[sample_splines([ddx, ddy], time)]
         return signals
+
+    def state2pose(self, state):
+        return state
 
     def ode(self, state, input):
         return input

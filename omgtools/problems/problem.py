@@ -37,25 +37,36 @@ class Problem(OptiChild, PlotLayer):
         self.iteration = 0
         self.update_times = []
 
+        # first add children and construct father, this allows making a
+        # difference between the simulated and the processed vehicles,
+        # e.g. when passing on a trailer + leading vehicle to problem, but
+        # only the trailer to the simulator
+        children = [vehicle for vehicle in self.vehicles]
+        children += [obstacle for obstacle in self.environment.obstacles]
+        children += [self, self.environment]
+        self.father = OptiFather(children)
+
     # ========================================================================
     # Problem options
     # ========================================================================
 
     def set_default_options(self):
         self.options = {'verbose': 2}
-        self.options['solver'] = {'ipopt.tol': 1e-3,
-                                  'ipopt.linear_solver': 'mumps',
-                                  'ipopt.warm_start_init_point': 'yes',
-                                  'ipopt.print_level': 0, 'print_time': 0}
+        self.options['solver'] = 'ipopt'
+        ipopt_options = {'ipopt.tol': 1e-3, 'ipopt.linear_solver': 'mumps',
+                         'ipopt.warm_start_init_point': 'yes',
+                         'ipopt.print_level': 0, 'print_time': 0}
+        self.options['solver_options'] = {'ipopt': ipopt_options}
         self.options['codegen'] = {'build': None, 'flags': '-O0'}
 
     def set_options(self, options):
-        if 'solver' in options:
-            self.options['solver'].update(options['solver'])
+        if 'solver_options' in options:
+            for key, value in options['solver_options'].items():
+                self.options['solver_options'][key].update(value)
         if 'codegen' in options:
             self.options['codegen'].update(options['codegen'])
         for key in options:
-            if key not in ['solver', 'codegen']:
+            if key not in ['solver_options', 'codegen']:
                 self.options[key] = options[key]
 
     # ========================================================================
@@ -63,10 +74,6 @@ class Problem(OptiChild, PlotLayer):
     # ========================================================================
 
     def init(self):
-        children = [vehicle for vehicle in self.vehicles]
-        children += [obstacle for obstacle in self.environment.obstacles]
-        children += [self, self.environment]
-        self.father = OptiFather(children)
         self.problem, _ = self.father.construct_problem(
             self.options)
         self.father.init_transformations(self.init_primal_transform,

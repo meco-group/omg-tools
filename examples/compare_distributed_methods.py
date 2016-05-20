@@ -71,7 +71,7 @@ fleet_1b.set_terminal_conditions(terminal_positions.tolist())
 environment_1b = Environment(room={'shape': Square(5.)})
 # create problem
 options = {'admm': {'rho': 2., 'nesterov_acceleration': True, 'init_iter': 300},
-           'horizon_time': 10}
+           'horizon_time': 10, 'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}}
 problem_1b = FormationPoint2point(fleet_1b, environment_1b, options=options)
 problem_1b.init()
 # run simulation
@@ -101,7 +101,8 @@ environment_2a.add_obstacle(
 environment_2a.add_obstacle(
     Obstacle({'position': [1.7, -0.5]}, shape=Rectangle(width=3., height=0.2)))
 # create problem
-options = {'admm': {'rho': 2., 'init_iter': 300}, 'horizon_time': 10}
+options = {'admm': {'rho': 2., 'init_iter': 300}, 'horizon_time': 10,
+           'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}}
 problem_2a = FormationPoint2point(fleet_2a, environment_2a, options=options)
 problem_2a.init()
 # run simulation
@@ -129,7 +130,7 @@ environment_2b.add_obstacle(
     Obstacle({'position': [1.7, -0.5]}, shape=Rectangle(width=3., height=0.2)))
 # create problem
 options = {'admm': {'rho': 2., 'nesterov_acceleration': True, 'init_iter': 300},
-           'horizon_time': 10}
+           'horizon_time': 10, 'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}}
 problem_2b = FormationPoint2point(fleet_2b, environment_2b, options=options)
 problem_2b.init()
 # run simulation
@@ -155,7 +156,8 @@ fleet_3a.set_terminal_conditions(terminal_positions.tolist())
 # create environment
 environment_3a = Environment(room={'shape': Square(5.)})
 # create problem
-options = {'admm': {'rho': 2., 'max_iter': 300}, 'horizon_time': 10}
+options = {'admm': {'rho': 2., 'max_iter': 300}, 'horizon_time': 10,
+           'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}}
 problem_3a = FormationPoint2point(fleet_3a, environment_3a, options=options)
 problem_3a.init()
 # run simulation
@@ -179,7 +181,7 @@ fleet_3b.set_terminal_conditions(terminal_positions.tolist())
 environment_3b = Environment(room={'shape': Square(5.)})
 # create problem
 options = {'admm': {'rho': 2., 'nesterov_acceleration': True, 'max_iter': 300},
-           'horizon_time': 10}
+           'horizon_time': 10, 'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}}
 problem_3b = FormationPoint2point(fleet_3b, environment_3b, options=options)
 problem_3b.init()
 # run simulation
@@ -209,7 +211,8 @@ environment_4a.add_obstacle(
 environment_4a.add_obstacle(
     Obstacle({'position': [1.7, -0.5]}, shape=Rectangle(width=3., height=0.2)))
 # create problem
-options = {'admm': {'rho': 2., 'init_iter': 300}, 'horizon_time': 10}
+options = {'admm': {'rho': 2., 'init_iter': 300}, 'horizon_time': 10,
+           'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}}
 problem_4a = FormationPoint2point(fleet_4a, environment_4a, options=options)
 problem_4a.init()
 # run simulation
@@ -237,7 +240,7 @@ environment_4b.add_obstacle(
     Obstacle({'position': [1.7, -0.5]}, shape=Rectangle(width=3., height=0.2)))
 # create problem
 options = {'admm': {'rho': 2., 'nesterov_acceleration': True, 'init_iter': 300},
-           'horizon_time': 10}
+           'horizon_time': 10, 'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}}
 problem_4b = FormationPoint2point(fleet_4b, environment_4b, options=options)
 problem_4b.init()
 # run simulation
@@ -277,6 +280,3 @@ for key, value in residuals.items():
         axes[0].set_ylabel('Primal residual')
         axes[1].set_ylabel('Dual residual')
         axes[2].set_ylabel('Combined residual')
-
-
-plt.show(block=True)

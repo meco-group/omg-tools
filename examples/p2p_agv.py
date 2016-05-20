@@ -20,34 +20,31 @@
 from omgtools import *
 
 # create vehicle
-vehicle = Holonomic()
-vehicle.set_options({'safety_distance': 0.1})
-# vehicle.set_options({'1storder_delay': True, 'time_constant': 0.1})
-# vehicle.set_options({'input_disturbance': {'fc': 0.01, 'stdev': 0.05*np.ones(2)}})
+vehicle = AGV(length=0.8, options={'plot_type': 'agv'})
+vehicle.define_knots(knot_intervals=5)  # choose lower amount of knot intervals
 
-vehicle.set_initial_conditions([-1.5, -1.5])
-vehicle.set_terminal_conditions([2., 2.])
+vehicle.set_initial_conditions([0.8, -0.1, 0.], [0.])  # x, y, theta, delta
+vehicle.set_terminal_conditions([2.45, -0.35, 0.])  # x, y, theta
 
 # create environment
-environment = Environment(room={'shape': Square(5.)})
-rectangle = Rectangle(width=3., height=0.2)
-
-environment.add_obstacle(Obstacle({'position': [-2.1, -0.5]}, shape=rectangle))
-environment.add_obstacle(Obstacle({'position': [1.7, -0.5]}, shape=rectangle))
-trajectories = {'velocity': {'time': [3., 4.],
-                             'values': [[-0.15, 0.0], [0., 0.15]]}}
-environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
-                                  simulation={'trajectories': trajectories}))
+environment = Environment(room={'shape': Square(5.), 'position': [1.5, 1.5]})
+rectangle = Rectangle(width=0.8, height=0.2)
+environment.add_obstacle(Obstacle({'position': [1., -0.35]}, shape=rectangle))
+environment.add_obstacle(Obstacle({'position': [3.6, -0.35]}, shape=rectangle))
 
 # create a point-to-point problem
-problem = Point2point(vehicle, environment, freeT=False)
-problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
+problem = Point2point(vehicle, environment, freeT=True)
+# extra solver settings which may improve performance
+problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57',
+    'ipopt.hessian_approximation': 'limited-memory'}}})
 problem.init()
 
 # create simulator
 simulator = Simulator(problem)
 problem.plot('scene')
-vehicle.plot('input', knots=True, labels=['v_x (m/s)', 'v_y (m/s)'])
+vehicle.plot('input', knots=True, labels=['v (m/s)', 'ddelta (rad/s)'])
+vehicle.plot('state', knots=True, labels=[
+             'x (m)', 'y (m)', 'theta (rad)', 'delta (rad)'])
 
 # run it!
 simulator.run()

@@ -115,7 +115,7 @@ class ExportP2P(object):
         opt = self.father.problem_description['opt']
         nlp = {'x': var, 'p': par, 'f': obj, 'g': con}
         options = {}
-        for key, value in opt['solver'].items():
+        for key, value in opt['solver_options']['ipopt'].items():
             options[key] = value
         options.update({'expand': True})
         solver = nlpsol('solver', 'ipopt', nlp, options)
@@ -129,9 +129,9 @@ class ExportP2P(object):
         defines['N_VAR'] = self.father._var_struct.size
         defines['N_PAR'] = self.father._par_struct.size
         defines['N_CON'] = self.father._con_struct.size
-        defines['TOL'] = self.problem.options['solver']['ipopt.tol']
+        defines['TOL'] = self.problem.options['solver_options']['ipopt']['ipopt.tol']
         defines['LINEAR_SOLVER'] = '"' + \
-            self.problem.options['solver']['ipopt.linear_solver']+'"'
+            self.problem.options['solver_options']['ipopt']['ipopt.linear_solver']+'"'
         defines['N_DIM'] = self.vehicle.n_dim
         defines['N_OBS'] = self.problem.environment.n_obs
         defines['VEHICLELBL'] = '"' + self.vehicle.label + '"'

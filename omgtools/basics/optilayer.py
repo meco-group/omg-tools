@@ -177,11 +177,12 @@ class OptiFather(object):
             print 'Building nlp ... ',
         t0 = time.time()
         nlp = {'x': var, 'p': par, 'f': obj, 'g': con}
+        slv_opt = options['solver_options'][options['solver']]
         opt = {}
-        for key, value in options['solver'].items():
+        for key, value in slv_opt.items():
             opt[key] = value
         opt.update({'expand': True})
-        solver = nlpsol('solver', 'ipopt', nlp, opt)
+        solver = nlpsol('solver', options['solver'], nlp, opt)
         name = 'nlp_' + name
         if codegen['build'] == 'jit':
             if options['verbose'] >= 2:
@@ -189,7 +190,7 @@ class OptiFather(object):
             solver.generate_dependencies(name+'.c')
             compiler = Compiler(
                 name+'.c', 'clang', {'flags': codegen['flags']})
-            problem = nlpsol('solver', 'ipopt', compiler, options['solver'])
+            problem = nlpsol('solver', options['solver'], compiler, slv_opt)
             os.remove(name+'.c')
         elif codegen['build'] == 'shared':
             if options['verbose'] >= 2:
@@ -199,14 +200,14 @@ class OptiFather(object):
             solver.generate_dependencies(name+'.c')
             os.system('gcc -fPIC -shared %s %s.c -o %s.so' %
                       (codegen['flags'], name, name))
-            problem = nlpsol('solver', 'ipopt', name+'.so', options['solver'])
+            problem = nlpsol('solver', options['solver'], name+'.so', slv_opt)
             os.remove(name+'.c')
         elif codegen['build'] == 'existing':
             if not os.path.isfile(name+'.so'):
                 raise ValueError('%s.so does not exist!', name)
             if options['verbose'] >= 2:
                 print('[using shared object %s.so]' % name),
-            problem = nlpsol('solver', 'ipopt', name+'.so', options['solver'])
+            problem = nlpsol('solver', options['solver'], name+'.so', slv_opt)
         elif codegen['build'] is None:
             problem = solver
         else:

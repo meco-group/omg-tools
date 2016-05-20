@@ -82,6 +82,12 @@ class Environment(OptiChild, PlotLayer):
             raise ValueError('Not possible to combine ' +
                              str(vehicle.n_dim) + 'D vehicle with ' +
                              str(self.n_dim) + 'D environment.')
+        degree = 1
+        knots = np.r_[np.zeros(degree),
+                      vehicle.knots[
+                          vehicle.degree:-vehicle.degree],
+                      np.ones(degree)]
+        basis = BSplineBasis(knots, degree)
         hyp_veh, hyp_obs = {}, {}
         for k, shape in enumerate(vehicle.shapes):
             hyp_veh[shape] = []
@@ -89,16 +95,10 @@ class Environment(OptiChild, PlotLayer):
                 if obstacle.options['avoid']:
                     if obstacle not in hyp_obs:
                         hyp_obs[obstacle] = []
-                    degree = 1
-                    knots = np.r_[np.zeros(degree),
-                                  vehicle.knots[
-                                      vehicle.degree:-vehicle.degree],
-                                  np.ones(degree)]
-                    basis = BSplineBasis(knots, degree)
                     a = self.define_spline_variable(
-                        'a'+str(k)+str(l), self.n_dim, basis=basis)
+                        'a'+'_'+vehicle.label+'_'+str(k)+str(l), self.n_dim, basis=basis)
                     b = self.define_spline_variable(
-                        'b'+str(k)+str(l), 1, basis=basis)[0]
+                        'b'+'_'+vehicle.label+'_'+str(k)+str(l), 1, basis=basis)[0]
                     self.define_constraint(
                         sum([a[p]*a[p] for p in range(self.n_dim)])-1, -inf, 0.)
                     hyp_veh[shape].append({'a': a, 'b': b})

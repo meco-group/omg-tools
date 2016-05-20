@@ -47,7 +47,7 @@ class Dubins(Vehicle):
     def __init__(self, shapes=Circle(0.1), options=None, bounds=None):
         bounds = bounds or {}
         Vehicle.__init__(
-            self, n_spl=2, degree=2, shapes=shapes, options=options)
+            self, n_spl=2, degree=3, shapes=shapes, options=options)
         self.vmax = bounds['vmax'] if 'vmax' in bounds else 0.5
         self.amax = bounds['amax'] if 'amax' in bounds else 1.
         self.wmin = bounds['wmin'] if 'wmin' in bounds else -30.  # in deg/s
@@ -126,15 +126,15 @@ class Dubins(Vehicle):
         # generate initial guess for spline variables
         init_value = np.zeros((len(self.basis), 2))
         v_til0 = np.zeros(len(self.basis))
-        tg_ha0 = np.tan(self.prediction['state'][2]/2)
-        tg_haT = np.tan(self.poseT[2]/2)
+        tg_ha0 = np.tan(self.prediction['state'][2]/2.)
+        tg_haT = np.tan(self.poseT[2]/2.)
         init_value[:, 0] = v_til0
         init_value[:, 1] = np.linspace(tg_ha0, tg_haT, len(self.basis))
         return init_value
 
     def check_terminal_conditions(self):
         if (np.linalg.norm(self.signals['state'][:, -1] - self.poseT) > 1.e-3 or
-                np.linalg.norm(self.signals['input'][:, -1])) > 1.e-3:
+                np.linalg.norm(self.signals['input'][:, -1])) > 1.e-2:
             return False
         else:
             return True
@@ -143,12 +143,12 @@ class Dubins(Vehicle):
         # for the optimization problem
         # convert theta to tg_ha here
         parameters = {}
-        parameters['tg_ha0'] = np.tan(self.prediction['state'][2]/2)
-        parameters['v_til0'] = self.prediction['input'][0]/(1+parameters['tg_ha0']**2)
+        parameters['tg_ha0'] = np.tan(self.prediction['state'][2]/2.)
+        parameters['v_til0'] = self.prediction['input'][0]/(1+parameters['tg_ha0']**2) 
         parameters['dtg_ha0'] = 0.5*self.prediction['input'][1]*(1+parameters['tg_ha0']**2)  # dtg_ha
         parameters['pos0'] = self.prediction['state'][:2]
         parameters['posT'] = self.poseT[:2]  # x,y
-        parameters['tg_haT'] = np.tan(self.poseT[2]/2)
+        parameters['tg_haT'] = np.tan(self.poseT[2]/2.)
         parameters['dtg_haT'] = 0.
         parameters['v_tilT'] = 0.
         return parameters
@@ -158,7 +158,7 @@ class Dubins(Vehicle):
         dx = v_til*(1-tg_ha**2)
         dy = v_til*(2*tg_ha)
         x_int, y_int = self.T*running_integral(dx), self.T*running_integral(dy)
-        x = x_int-evalspline(x_int, self.t/self.T) + self.pos0[0]  # todo: or is it self.t?
+        x = x_int-evalspline(x_int, self.t/self.T) + self.pos0[0]
         y = y_int-evalspline(y_int, self.t/self.T) + self.pos0[1]
         self.define_collision_constraints_2d(hyperplanes, environment, [x, y], tg_ha)
 
@@ -179,15 +179,17 @@ class Dubins(Vehicle):
             x = dx_int - dx_int(time[0]) + self.signals['state'][0, -1]
             y = dy_int - dy_int(time[0]) + self.signals['state'][1, -1]
         theta = 2*np.arctan2(sample_splines([tg_ha], time),1)
-        dtheta = 2*np.array(sample_splines([dtg_ha],time))/(1+np.array(sample_splines([tg_ha], time))**2)
+        dtheta = 2*np.array(sample_splines([dtg_ha],time))/(1.+np.array(sample_splines([tg_ha], time))**2)
         input = np.c_[sample_splines([v_til*(1+tg_ha**2)], time)]
         input = np.r_[input, dtheta]
         signals['state'] = np.c_[sample_splines([x, y], time)]
         signals['state'] = np.r_[signals['state'], theta]
         signals['input'] = input
-        signals['pose'] = signals['state']
         signals['v_tot'] = input[0, :]
         return signals
+
+    def state2pose(self, state):
+        return state
 
     def ode(self, state, input):
         # state: x, y, theta
@@ -202,16 +204,16 @@ class Dubins(Vehicle):
         ret = []
         for shape in self.shapes:
             if isinstance(shape, Circle):
-                wheel = Square(shape.radius/3)
-                front = Circle(shape.radius/8)
+                wheel = Square(shape.radius/3.)
+                front = Circle(shape.radius/8.)
                 ret += shape.draw(self.signals['pose'][:, t])
                 ret += wheel.draw(self.signals['pose'][:, t]+
-                                  (shape.radius/2)*np.array([np.cos(self.signals['pose'][2, t]-np.pi/2),
-                                                             np.sin(self.signals['pose'][2, t]-np.pi/2),
+                                  (shape.radius/2.)*np.array([np.cos(self.signals['pose'][2, t]-np.pi/2.),
+                                                             np.sin(self.signals['pose'][2, t]-np.pi/2.),
                                                              self.signals['pose'][2, t]]))
                 ret += wheel.draw(self.signals['pose'][:, t]+
-                                  (shape.radius/2)*np.array([np.cos(self.signals['pose'][2, t]+np.pi/2),
-                                                             np.sin(self.signals['pose'][2, t]+np.pi/2),
+                                  (shape.radius/2.)*np.array([np.cos(self.signals['pose'][2, t]+np.pi/2.),
+                                                             np.sin(self.signals['pose'][2, t]+np.pi/2.),
                                                              self.signals['pose'][2, t]]))
                 ret += front.draw(self.signals['pose'][:, t]+
                                   (shape.radius/1.5)*np.array([np.cos(self.signals['pose'][2, t]),
@@ -220,3 +222,21 @@ class Dubins(Vehicle):
             else:
                 ret += shape.draw(self.signals['pose'][:, t])
         return ret
+
+    def get_pos_splines(self, splines):
+        v_til, tg_ha = splines
+        dx = v_til*(1-tg_ha**2)
+        dy = v_til*(2*tg_ha)
+        x_int, y_int = self.T*running_integral(dx), self.T*running_integral(dy)
+        x = x_int-evalspline(x_int, self.t/self.T) + self.pos0[0]  # self.pos0 was already defined in init
+        y = y_int-evalspline(y_int, self.t/self.T) + self.pos0[1]
+        return np.array([x, y])
+
+    # Next two functions are required if vehicle is not passed to problem, but is still used in the optimization
+    # problem e.g. when considering a vehicle with a trailer. You manually have to update signals and prediction,
+    # here the inputs are coming from e.g. the trailer class.
+    def update_signals(self, signals):
+        self.signals = signals
+
+    def update_prediction(self, prediction):
+        self.prediction = prediction

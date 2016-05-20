@@ -93,7 +93,7 @@ class Vehicle(OptiChild, PlotLayer):
             self.splines.append(spline)
         return self.splines
 
-    def define_collision_constraints_2d(self, hyperplanes, environment, positions, tg_ha=0):
+    def define_collision_constraints_2d(self, hyperplanes, environment, positions, tg_ha=0, offset=0):
         t = self.define_symbol('t')
         T = self.define_symbol('T')
         safety_distance = self.options['safety_distance']
@@ -120,8 +120,10 @@ class Vehicle(OptiChild, PlotLayer):
                         con = 0
                         con += (a[0]*chck[0] + a[1]*chck[1])*(1.-tg_ha**2)
                         con += (-a[0]*chck[1] + a[1]*chck[0])*(2*tg_ha)
-                        con += (a[0]*position[0] + a[1]*position[1]) * \
-                            (1+tg_ha**2)
+                        pos = [0, 0]  # next part gives an offset to input position e.g. for trailer position
+                        pos[0] = position[0]*(1+tg_ha**2) + offset*(1-tg_ha**2)  # = real_pos*(1+tg_ha**2)
+                        pos[1] = position[1]*(1+tg_ha**2) + offset*(2*tg_ha)  # = real_pos*(1+tg_ha**2)
+                        con += (a[0]*pos[0] + a[1]*pos[1])
                         con += (-b+rad[l]+safety_distance-eps)*(1+tg_ha**2)
                         self.define_constraint(con, -inf, 0)
             # room constraints
@@ -145,7 +147,10 @@ class Vehicle(OptiChild, PlotLayer):
                                 con = 0
                                 con += (hpp['a'][0]*chck[0] + hpp['a'][1]*chck[1])*(1.-tg_ha**2)
                                 con += (-hpp['a'][0]*chck[1] + hpp['a'][1]*chck[0])*(2*tg_ha)
-                                con += (hpp['a'][0]*position[0] + hpp['a'][1]*position[1])*(1+tg_ha**2)
+                                pos = [0, 0]  # next part gives an offset to input position e.g. for trailer position
+                                pos[0] = position[0]*(1+tg_ha**2) + offset*(1-tg_ha**2)  # = real_pos*(1+tg_ha**2)
+                                pos[1] = position[1]*(1+tg_ha**2) + offset*(2*tg_ha)  # = real_pos*(1+tg_ha**2)
+                                con += (hpp['a'][0]*pos[0] + hpp['a'][1]*pos[1])
                                 con += (-hpp['b']+rad[l])*(1+tg_ha**2)
                                 self.define_constraint(con, -inf, 0)
 
@@ -215,10 +220,11 @@ class Vehicle(OptiChild, PlotLayer):
 
     def get_trajectories(self, splines, time_axis, current_time):
         self.trajectories = self.splines2signals(splines, time_axis)
-        if not set(['state', 'input', 'pose']).issubset(self.trajectories):
+        if not set(['state', 'input']).issubset(self.trajectories):
             raise ValueError(
                 'Signals should contain at least state, input and pose.')
         self.trajectories['time'] = time_axis - time_axis[0] + current_time
+        self.trajectories['pose'] = self._state2pose(self.trajectories['state'])
         self.trajectories['splines'] = np.c_[
             sample_splines(splines, time_axis)]
         knots = splines[0].basis.knots
@@ -227,6 +233,7 @@ class Vehicle(OptiChild, PlotLayer):
         self.trajectories_kn = self.splines2signals(splines, time_axis_kn)
         self.trajectories_kn['time'] = time_axis_kn - \
             time_axis_kn[0] + current_time
+        self.trajectories_kn['pose'] = self._state2pose(self.trajectories_kn['state'])
         self.trajectories_kn['splines'] = np.c_[
             sample_splines(splines, time_axis_kn)]
         for key in self.trajectories:
@@ -247,7 +254,7 @@ class Vehicle(OptiChild, PlotLayer):
                 self.prediction[key] = self.trajectories[key][:, n_samp]
         else:
             for key in self.trajectories:
-                if key not in ['state', 'input']:
+                if key not in ['state', 'input', 'pose']:
                     self.prediction[key] = self.trajectories[key][:, n_samp]
             input = self.trajectories['input']
             state0 = self.signals['state'][:, -1]  # current state
@@ -255,6 +262,7 @@ class Vehicle(OptiChild, PlotLayer):
                 state0, input, predict_time, sample_time)
             self.prediction['state'] = state[:, -1]
             self.prediction['input'] = self.trajectories['input'][:, n_samp]
+            self.prediction['pose'] = self._state2pose(state[:, -1])
 
     def simulate(self, simulation_time, sample_time):
         n_samp = int(simulation_time/sample_time)
@@ -264,7 +272,7 @@ class Vehicle(OptiChild, PlotLayer):
                     self.signals[key], self.trajectories[key][:, 1:n_samp+1]]
         else:
             for key in self.trajectories:
-                if key not in ['state', 'input']:
+                if key not in ['state', 'input', 'pose']:
                     self.signals[key] = np.c_[
                         self.signals[key], self.trajectories[key][:, 1:n_samp+1]]
             input = self.trajectories['input']
@@ -281,6 +289,7 @@ class Vehicle(OptiChild, PlotLayer):
                 self.signals['input'], input[:, 1:n_samp+1]]
             self.signals['state'] = np.c_[
                 self.signals['state'], state[:, 1:n_samp+1]]
+            self.signals['pose'] = np.c_[self.signals['pose'], self._state2pose(state[:, 1:n_samp+1])]
 
     def store(self, update_time, sample_time):
         if not hasattr(self, 'traj_storage'):
@@ -296,6 +305,15 @@ class Vehicle(OptiChild, PlotLayer):
         self.signals = {}
         for key in self.trajectories:
             self.signals[key] = np.c_[self.trajectories[key][:, 0]]
+
+    def _state2pose(self, state):
+        if len(state.shape) <= 1:
+            return self.state2pose(state)
+        else:
+            pose = []
+            for k in range(state.shape[1]):
+                pose.append(self.state2pose(state[:, k]))
+            return np.c_[pose].T
 
     def integrate_ode(self, state0, input, integration_time, sample_time, ode=None):
         if ode is None:
@@ -431,6 +449,9 @@ class Vehicle(OptiChild, PlotLayer):
         raise NotImplementedError('Please implement this method!')
 
     def splines2signals(self, splines, time):
+        raise NotImplementedError('Please implement this method!')
+
+    def state2pose(self, state):
         raise NotImplementedError('Please implement this method!')
 
     def ode(self, state, input):

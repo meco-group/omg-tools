@@ -20,10 +20,7 @@
 from omgtools import *
 
 # create vehicle
-vehicle = Bicycle(length=0.4,
-                  bounds={'vmax': 0.8, 'dmax': 30., 'dmin': -30.,
-                          'ddmax': 45, 'ddmin': -45},  # in deg
-                  options={'plot_type': 'car'})
+vehicle = Bicycle(length=0.4, options={'plot_type': 'car'})
 vehicle.define_knots(knot_intervals=5)  # choose lower amount of knot intervals
 
 vehicle.set_initial_conditions([0., 0., 0.], [0.])  # x, y, theta, delta
@@ -39,12 +36,8 @@ environment.add_obstacle(Obstacle({'position': [1., 1.]}, shape=Circle(0.5),
 # create a point-to-point problem
 problem = Point2point(vehicle, environment, freeT=True)
 # extra solver settings which may improve performance
-problem.set_options({'solver': {'ipopt.linear_solver': 'ma57'}})
-# problem.set_options(
-#     {'solver': {'ipopt.hessian_approximation': 'limited-memory'}})
-# problem.set_options({'solver': {'ipopt.warm_start_bound_push': 1e-6}})
-# problem.set_options({'solver': {'ipopt.warm_start_mult_bound_push': 1e-6}})
-# problem.set_options({'solver': {'ipopt.mu_init': 1e-5}})
+problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57',
+    'ipopt.hessian_approximation': 'limited-memory'}}})
 problem.init()
 
 # create simulator
@@ -52,11 +45,8 @@ simulator = Simulator(problem)
 
 problem.plot('scene')
 vehicle.plot('input', knots=True, labels=['v (m/s)', 'ddelta (rad/s)'])
-vehicle.plot('state', knots=True, labels=['x (m)', 'y (m)', 'theta (rad)', 'delta (rad)'])
+vehicle.plot('state', knots=True, labels=[
+             'x (m)', 'y (m)', 'theta (rad)', 'delta (rad)'])
 
 # run it!
 simulator.run()
-
-# show some results
-problem.plot_movie('scene', repeat=False)
-
