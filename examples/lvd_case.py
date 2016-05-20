@@ -85,8 +85,7 @@ measure = Obstacle(
 
 # create a point-to-point problem
 problem = Point2point(plate, environment, freeT=True)
-problem.set_options(
-    {'solver': {'ipopt.linear_solver': 'ma57'}, 'horizon_time': 10.})
+problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}, 'horizon_time': 10.})
 problem.init()
 
 # create simulator
@@ -96,18 +95,18 @@ simulator = Simulator(problem)
 trajectories = simulator.run_once()
 
 # show results
-# plate.plot('state', labels=['x (m)', 'y (m)', 'z (m)'])
-# plate.plot('velocity', labels=['dx (m/s)', 'dy (m/s)', 'dz (m/s)'])
-# plate.plot(
-#     'acceleration', labels=['ddx (m/s^2)', 'ddy (m/s^2)', 'ddz (m/s^2)'])
-# plate.plot(
-#     'jerk', labels=['dddx (m/s^3)', 'dddy (m/s^3)', 'dddz (m/s^3)'])
-# problem.plot_movie(
-#     'scene', number_of_frames=40, repeat=False, view=[60, 45])
-# problem.plot_movie(
-#     'scene', number_of_frames=40, repeat=False, view=[0, 90])
-# problem.plot_movie(
-#     'scene', number_of_frames=40, repeat=True, view=[90, 0])
+plate.plot('state', labels=['x (m)', 'y (m)', 'z (m)'])
+plate.plot('velocity', labels=['dx (m/s)', 'dy (m/s)', 'dz (m/s)'])
+plate.plot(
+    'acceleration', labels=['ddx (m/s^2)', 'ddy (m/s^2)', 'ddz (m/s^2)'])
+plate.plot(
+    'jerk', labels=['dddx (m/s^3)', 'dddy (m/s^3)', 'dddz (m/s^3)'])
+problem.plot_movie(
+    'scene', number_of_frames=40, repeat=False, view=[60, 45])
+problem.plot_movie(
+    'scene', number_of_frames=40, repeat=False, view=[0, 90])
+problem.plot_movie(
+    'scene', number_of_frames=40, repeat=True, view=[90, 0])
 # problem.save_plot('scene', 'obstacles', axis=False, view=[60, 45], time=0)
 
 # save results
@@ -116,7 +115,7 @@ if save:
         'x (m)', 'y (m)', 'z (m)'], figurewidth='15cm', figureheight='4cm')
     plate.save_plot('velocity', 'velocity', labels=[
         'dx (m/s)', 'dy (m/s)', 'dz (m/s)'], figurewidth='15cm', figureheight='4cm')
-    plate.save_plot('acceleration', 'acceleration', labels=[
+    plate.save_plot('acceleration', 'acchttps://gitlab.mech.kuleuven.be/meco/omg-tools.giteleration', labels=[
         'ddx (m/s^2)', 'ddy (m/s^2)', 'ddz (m/s^2)'], figurewidth='15cm', figureheight='4cm')
     plate.save_plot('jerk', 'jerk', labels=[
         'dddx (m/s^3)', 'dddy (m/s^3)', 'dddz (m/s^3)'], figurewidth='15cm', figureheight='4cm')

@@ -117,11 +117,13 @@ class LVD(Vehicle):
         input = np.c_[sample_splines([dx, dy, dz], time)]
         signals['state'] = np.c_[sample_splines([x, y, z], time)]
         signals['input'] = input
-        signals['pose'] = np.r_[signals['state'], np.zeros((3, len(time)))]
         signals['velocity'] = input
         signals['acceleration'] = np.c_[sample_splines([ddx, ddy, ddz], time)]
         signals['jerk'] = np.c_[sample_splines([dddx, dddy, dddz], time)]
         return signals
+
+    def state2pose(self, state):
+        return np.r_[state, np.zeros(3)]
 
     def ode(self, state, input):
         return input
