@@ -42,7 +42,7 @@ environment.add_obstacle(Obstacle({'position': [4.2, 2.0]}, shape=rectangle))
 
 # create a point-to-point problem
 problem = Point2point(vehicle, environment, freeT=False)
-# problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}}
+problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem.init()
 
 options = {}

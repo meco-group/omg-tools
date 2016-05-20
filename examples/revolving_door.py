@@ -37,16 +37,16 @@ omega = 1.5*(2*np.pi/horizon_time)
 velocity = [0., 0.]
 # velocity = [0., -0.2] # crazy revolving door
 environment.add_obstacle(Obstacle({'position': [0., 0.], 'velocity': velocity,
-                                   'angular_velocity': omega},
-                                  shape=beam2, simulation={}, options={'horizon_time': horizon_time}))
+    'angular_velocity': omega}, shape=beam2, simulation={},
+    options={'horizon_time': horizon_time}))
 environment.add_obstacle(Obstacle({'position': [0., 0.], 'velocity': velocity,
-                                   'orientation': 0.5*np.pi, 'angular_velocity': omega},
-                                  shape=beam2, simulation={}, options={'horizon_time': horizon_time}))
+    'orientation': 0.5*np.pi, 'angular_velocity': omega},
+    shape=beam2, simulation={}, options={'horizon_time': horizon_time}))
 
 # create a point-to-point problem
 problem = Point2point(
     vehicle, environment, freeT=False, options={'horizon_time': horizon_time})
-# problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
+problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem.init()
 
 # create simulator
@@ -56,6 +56,3 @@ vehicle.plot('input', knots=True, labels=['v_x (m/s)', 'v_y (m/s)'])
 
 # run it!
 simulator.run()
-
-# show/save some results
-problem.plot_movie('scene', repeat=False, number_of_frames=80)

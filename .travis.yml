@@ -1,6 +1,8 @@
 env:
   global:
     - CASADIVERSION=3.0.0
+    - LD_LIBRARY_PATH=$HOME/libhsl
+    - IPOPT_DEFAULT_LINEAR_SOLVER=ma57
 
 # works from matplotlib 1.5 onwards
 #    - MPLBACKEND=Agg # Matplotlib backend; must be headless to run on travis
@@ -13,13 +15,17 @@ language: generic
 before_script:
   - set -e
   - set -o pipefail  # otherwise, piping with grep discards exit statuses
+  - git clone https://github.com/meco-group/bob.git
+  - pushd bob && source setup.sh && popd
+  - bob_get libhsl.tar.gz && mkdir $HOME/libhsl && tar -xf libhsl.tar.gz -C $HOME/libhsl
 
 script:
   - cd examples
   - chmod 644 *.py # nose doesnt match executable files
-  - "nosetests -s --verbosity=4 -i '\\.py$' -e p2p_bicycle; p2p_agv; p2p_agv2 . --with-xcoverage --cover-package=omgtools --cover-tests 2> >(grep -v -P 'DEBUG: (?!wantFile)')"
+  - "nosetests -s --verbosity=4 -i '\\.py$' . --with-xcoverage --cover-package=omgtools --cover-tests 2> >(grep -v -P 'DEBUG: (?!wantFile)')"
   - pushd export
   - make && pushd bin
+  - ./Point2Point
 #  - valgrind ./Point2Point
   - popd
   - popd
