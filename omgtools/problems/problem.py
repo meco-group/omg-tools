@@ -61,8 +61,9 @@ class Problem(OptiChild, PlotLayer):
 
     def set_options(self, options):
         if 'solver_options' in options:
-            self.options['solver_options'] = options['solver_options']
             for key, value in options['solver_options'].items():
+                if key not in self.options['solver_options']:
+                    self.options['solver_options'][key] = {}
                 self.options['solver_options'][key].update(value)
         if 'codegen' in options:
             self.options['codegen'].update(options['codegen'])
