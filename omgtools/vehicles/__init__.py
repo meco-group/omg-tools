@@ -7,4 +7,5 @@ from bicycle import Bicycle
 from agv import AGV
 from trailer import Trailer
 from platform import Platform
+from vehicle1d import Vehicle1D
 from fleet import Fleet
