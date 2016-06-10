@@ -58,7 +58,11 @@ class DDUpdater(DualUpdater):
             for child, q_j in q_ij.items():
                 for name, ind in q_j.items():
                     var = child._values[name]
-                    v = np.reshape(var.T, var.shape[0]*var.shape[1])[ind]
+                    if len(var.shape) == 2:
+                        var_len = var.shape[0]*var.shape[1]
+                    elif len(var.shape) == 1:
+                        var_len = len(var)
+                    v = np.reshape(var.T, var_len)[ind]
                     init[nghb.label, child.label, name, ind] = v
         z_ij = self.define_variable(
             'z_ij', self.q_ij_struct.shape[0], value=np.array(init.cat))

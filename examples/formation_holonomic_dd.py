@@ -53,7 +53,6 @@ problem.plot('scene')
 # problem.plot('residuals')
 
 # run it!
-# simulator.run_once()
 simulator.run()
 
 import matplotlib.pyplot as plt
