@@ -35,31 +35,29 @@ class RendezVous(ADMMProblem):
                         for l, veh in enumerate(fleet.vehicles)}
 
         # define parameters
-        rel_conT = {veh: self.define_parameter('rcT'+str(l), len(self.fleet.configuration[
-                                               veh].keys()), len(self.fleet.get_neighbors(veh))) for l, veh in enumerate(self.vehicles)}
+        rel_conT = {veh: {nghb: self.define_parameter('rcT'+str(l)+str(n), len(self.fleet.configuration[veh].keys())) for n, nghb in enumerate(self.fleet.get_neighbors(veh))} for l, veh in enumerate(self.vehicles)}
 
         # end pose constraints
         couples = {veh: [] for veh in self.vehicles}
         for veh in self.vehicles:
             ind_veh = sorted(self.fleet.configuration[veh].keys())
             rcT = rel_conT[veh]
-            for l, nghb in enumerate(self.fleet.get_neighbors(veh)):
+            for nghb in self.fleet.get_neighbors(veh):
                 ind_nghb = sorted(self.fleet.configuration[nghb].keys())
                 if veh not in couples[nghb] and nghb not in couples[veh]:
                     couples[veh].append(nghb)
                     conT_veh = problems_dic[veh].get_variable('conT0')
                     conT_nghb = problems_dic[nghb].get_variable('conT0')
-                    for ind_v, ind_n, rcT_k in zip(ind_veh, ind_nghb, rcT[:, l]):
+                    for ind_v, ind_n, rcT_k in zip(ind_veh, ind_nghb, rcT[nghb]):
                         self.define_constraint(
                             conT_veh[ind_v] - conT_nghb[ind_n] - rcT_k, 0., 0.)
 
     def set_parameters(self, current_time):
         parameters = {}
         for l, veh in enumerate(self.vehicles):
-            rel_conT, rcT_ = self.fleet.get_rel_config(veh), []
-            for nghb in self.fleet.get_neighbors(veh):
-                rcT_.append(np.c_[rel_conT[nghb]])
-            parameters['rcT'+str(l)] = np.hstack(rcT_)
+            rel_conT = self.fleet.get_rel_config(veh)
+            for n, nghb in enumerate(self.fleet.get_neighbors(veh)):
+                parameters['rcT'+str(l)+str(n)] = rel_conT[nghb]
         return parameters
 
     def stop_criterium(self, current_time, update_time):

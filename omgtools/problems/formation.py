@@ -17,13 +17,13 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-from dualdecomposition import DDProblem
+# from dualdecomposition import DDProblem
 from admm import ADMMProblem
 from point2point import Point2point
 import numpy as np
 
 dual_method = ADMMProblem
-# dual_method = DDProblem
+
 
 class FormationPoint2point(dual_method):
 
@@ -31,24 +31,21 @@ class FormationPoint2point(dual_method):
         problems = [Point2point(vehicle, environment.copy(), options)
                     for vehicle in fleet.vehicles]
         dual_method.__init__(self, fleet, environment, problems, options)
-
         # define parameters
-        rel_splines = {veh: self.define_parameter('rs'+str(l), len(self.fleet.configuration[
-                                                  veh].keys()), len(self.fleet.get_neighbors(veh))) for l, veh in enumerate(self.vehicles)}
+        rel_splines = {veh: {nghb: self.define_parameter('rs'+str(l)+str(n), len(self.fleet.configuration[veh].keys())) for n, nghb in enumerate(self.fleet.get_neighbors(veh))} for l, veh in enumerate(self.vehicles)}
 
         # formation constraints
         couples = {veh: [] for veh in self.vehicles}
         for veh in self.vehicles:
             ind_veh = sorted(self.fleet.configuration[veh].keys())
             rs = rel_splines[veh]
-            for l, nghb in enumerate(self.fleet.get_neighbors(veh)):
+            for nghb in self.fleet.get_neighbors(veh):
                 ind_nghb = sorted(self.fleet.configuration[nghb].keys())
                 if veh not in couples[nghb] and nghb not in couples[veh]:
                     couples[veh].append(nghb)
                     spl_veh = veh.get_variable('splines0')
                     spl_nghb = nghb.get_variable('splines0')
-                    rel_spl = rs[:, l]
-                    for ind_v, ind_n, rel_spl in zip(ind_veh, ind_nghb, rs[:, l]):
+                    for ind_v, ind_n, rel_spl in zip(ind_veh, ind_nghb, rs[nghb]):
                         self.define_constraint(
                             spl_veh[ind_v] - spl_nghb[ind_n] - rel_spl, 0., 0.)
 
@@ -67,10 +64,9 @@ class FormationPoint2point(dual_method):
     def set_parameters(self, current_time):
         parameters = {}
         for l, veh in enumerate(self.vehicles):
-            rel_spl, rs_ = self.fleet.get_rel_config(veh), []
-            for nghb in self.fleet.get_neighbors(veh):
-                rs_.append(np.c_[rel_spl[nghb]])
-            parameters['rs'+str(l)] = np.hstack(rs_)
+            rel_spl = self.fleet.get_rel_config(veh)
+            for n, nghb in enumerate(self.fleet.get_neighbors(veh)):
+                parameters['rs'+str(l)+str(n)] = rel_spl[nghb]
         return parameters
 
     def get_interaction_error(self):
