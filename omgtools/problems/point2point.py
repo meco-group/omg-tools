@@ -174,6 +174,15 @@ class FixedTPoint2point(Point2pointProblem):
         self.objective += part_objective
 
     def compute_objective(self):
+        if self.objective == 0:
+            obj = 0.
+            for vehicle in self.vehicles:
+                term_con, _ = vehicle.get_terminal_constraints(
+                    vehicle.splines[0])
+                for k in range(len(term_con)):
+                    g = self.get_variable('g'+str(k), solution=True)[0]
+                    obj += self.options['horizon_time']*g.integral()
+            return obj
         return self.objective
 
 

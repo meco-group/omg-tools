@@ -202,6 +202,7 @@ class DualProblem(DistributedProblem):
     # ========================================================================
 
     def initialize(self):
+        self.objectives = []
         for _ in range(self.options['init_iter']):
             self.solve(0.0, 0.0)
 
@@ -210,6 +211,7 @@ class DualProblem(DistributedProblem):
         it0 = self.iteration
         while (self.iteration - it0) < self.options['max_iter_per_update']:
             self.dual_update(current_time, update_time)
+            self.objectives.append(self.compute_objective())
 
     def dual_update(self, current_time, update_time):
         raise NotImplementedError('Please implement this method!')
