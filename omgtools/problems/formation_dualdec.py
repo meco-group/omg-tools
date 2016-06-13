@@ -17,17 +17,17 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-from admm import ADMMProblem
+from dualdecomposition import DDProblem
 from point2point import Point2point
 import numpy as np
 
 
-class FormationPoint2point(ADMMProblem):
+class FormationPoint2pointDualDecomposition(DDProblem):
 
     def __init__(self, fleet, environment, options=None):
         problems = [Point2point(vehicle, environment.copy(), options)
                     for vehicle in fleet.vehicles]
-        ADMMProblem.__init__(self, fleet, environment, problems, options)
+        DDProblem.__init__(self, fleet, environment, problems, options)
         # define parameters
         rel_splines = {veh: {nghb: self.define_parameter('rs'+str(l)+str(n), len(self.fleet.configuration[veh].keys())) for n, nghb in enumerate(self.fleet.get_neighbors(veh))} for l, veh in enumerate(self.vehicles)}
 
@@ -93,6 +93,6 @@ class FormationPoint2point(ADMMProblem):
         return error
 
     def final(self):
-        ADMMProblem.final(self)
+        DDProblem.final(self)
         err = self.get_interaction_error()
         print '%-18s %6g %%' % ('Formation error:', err*100.)
