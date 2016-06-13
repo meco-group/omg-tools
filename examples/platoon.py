@@ -57,7 +57,7 @@ for vehicle in vehicles:
     var_central = np.vstack((var_central, iet))
 
 # create & solve ADMM problem
-options = {'rho': 0.01, 'horizon_time': 10., 'init_iter': number_of_iterations-1,
+options = {'rho': 1.e-2, 'horizon_time': 10., 'init_iter': number_of_iterations-1,
            'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57', 'ipopt.tol': 1e-8}}}
 problem = FormationPoint2point(fleet, environment, options=options)
 problem.init()
@@ -66,7 +66,7 @@ simulator.run_once(update=False)
 var_admm = problem.get_stacked_x()
 
 # create & solve Fast ADMM problem
-options = {'rho': 0.01, 'horizon_time': 10., 'init_iter': number_of_iterations-1,
+options = {'rho': 1.e-2, 'horizon_time': 10., 'init_iter': number_of_iterations-1,
            'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57', 'ipopt.tol': 1e-8}}, 'nesterov_acceleration': True}
 problem = FormationPoint2point(fleet, environment, options=options)
 problem.init()
@@ -75,7 +75,7 @@ simulator.run_once(update=False)
 var_fastadmm = problem.get_stacked_x()
 
 # create & solve Dual decomposition problem
-options = {'rho': 0.000005, 'horizon_time': 10., 'init_iter': number_of_iterations-1,
+options = {'rho': 5.e-6, 'horizon_time': 10., 'init_iter': number_of_iterations-1,
            'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57', 'ipopt.tol': 1e-8}}}
 problem = FormationPoint2pointDualDecomposition(fleet, environment, options=options)
 problem.init()
@@ -95,5 +95,4 @@ plt.semilogy(iterations, err_dualdec, label='Dual decomposition')
 plt.semilogy(iterations, err_admm, label='ADMM')
 plt.semilogy(iterations, err_fastadmm, label='Fast ADMM')
 plt.legend()
-# from matplotlib2tikz import save as tikz_save
-# tikz_save('comparison.tikz')
+plt.show()
