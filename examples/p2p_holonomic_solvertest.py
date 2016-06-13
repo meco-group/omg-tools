@@ -44,7 +44,8 @@ if solver is 'ipopt':
     options = {'solver': solver}
     problem = Point2point(vehicle, environment, options, freeT=False)
     problem.set_options(
-        {'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
+        {'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57', 
+                                      'ipopt.hessian_approximation': 'limited-memory'}}})
 elif solver is 'worhp':
     options = {'solver': solver}
     worhp_options = {  # 'worhp.qp_ipLsMethod': 'MA57',  # todo: option not found?
@@ -59,8 +60,8 @@ elif solver is 'snopt':
     options = {'solver': solver}  # todo: plugin snopt not found?
     problem = Point2point(vehicle, environment, options, freeT=False)
     problem.set_options({'solver_options':
-                         {'snopt': {'snopt.Hessian': 'limited memory',
-                                    'snopt.start': 'Warm'}}})
+                         {'snopt': {'snopt.Hessian': 'limited memory', 
+                                    'start': 'warm'}}}) 
 else:
     print('You selected solver: ' + solver +
           ' but this solver is not supported. ' +

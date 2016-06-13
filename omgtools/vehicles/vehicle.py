@@ -79,6 +79,14 @@ class Vehicle(OptiChild, PlotLayer):
             self.knots = kwargs['knots']
         self.basis = BSplineBasis(self.knots, self.degree)
 
+    def set_init_spline_value(self, values):
+        init_value = np.zeros((len(self.basis), self.n_spl))
+        if not (np.shape(init_value) == np.shape(values)):
+            raise ValueError('Initial guess has wrong dimensions, required: ' + str(np.shape(init_value)) + 
+                ' while you gave: ' + str(np.shape(values)))
+        else:
+            self.init_value = values
+
     # ========================================================================
     # Optimization modelling related functions
     # ========================================================================
@@ -87,7 +95,10 @@ class Vehicle(OptiChild, PlotLayer):
         self.n_seg = n_seg
         self.splines = []
         for k in range(n_seg):
-            init = self.get_init_spline_value()
+            if not hasattr(self, 'init_value'):
+                init = self.get_init_spline_value()
+            else:
+                init = self.init_value
             spline = self.define_spline_variable(
                 'splines'+str(k), self.n_spl, value=init)
             self.splines.append(spline)

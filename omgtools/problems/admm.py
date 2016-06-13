@@ -18,7 +18,8 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from ..basics.optilayer import OptiFather
-from ..basics.spline_extra import shift_knot1_fwd, shift_knot1_bwd, shift_over_knot
+from ..basics.spline_extra import shift_knot1_fwd, shift_knot1_bwd, shift_over_knot, definite_integral
+from ..basics.spline import BSpline
 from problem import Problem
 from dualmethod import DualUpdater, DualProblem
 from casadi import symvar, mtimes, MX, Function, reshape
