@@ -202,7 +202,9 @@ class DualProblem(DistributedProblem):
     # ========================================================================
 
     def initialize(self):
-        self.objectives = []
+        self._objectives = []
+        self._stacked_x = [self.get_stacked_x_var_it()] # init value
+        self.x_var = []
         for _ in range(self.options['init_iter']):
             self.solve(0.0, 0.0)
 
@@ -211,7 +213,17 @@ class DualProblem(DistributedProblem):
         it0 = self.iteration
         while (self.iteration - it0) < self.options['max_iter_per_update']:
             self.dual_update(current_time, update_time)
-            self.objectives.append(self.compute_objective())
+            self._objectives.append(self.compute_objective())
+            self._stacked_x.append(self.get_stacked_x_var_it())
+
+    def get_stacked_x(self):
+        return self._stacked_x
+
+    def get_objectives(self):
+        return self._objectives
+
+    def get_stacked_x_var_it(self):
+        raise NotImplementedError('Please implement this method!')
 
     def dual_update(self, current_time, update_time):
         raise NotImplementedError('Please implement this method!')
@@ -228,3 +240,5 @@ class DualProblem(DistributedProblem):
         if self.options['save_residuals']:
             pickle.dump(
                 self.residuals, open(self.options['save_residuals'], 'wb'))
+
+

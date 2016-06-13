@@ -303,6 +303,7 @@ class ADMM(DualUpdater):
         for child, q in self.q_i.items():
             for name, ind in q.items():
                 var = self.father._var_result[child.label, name][ind]
+                self.var_admm['x_i'][child.label, name] = var
                 self.var_admm['z_i'][child.label, name] = var
 
     def set_parameters(self, current_time):
@@ -507,6 +508,12 @@ class ADMMProblem(DualProblem):
         DualProblem.set_default_options(self)
         self.options.update({'nesterov_acceleration': False, 'eta': 0.999,
                              'nesterov_reset': False})
+
+    def get_stacked_x_var_it(self):
+        stacked_x_var = np.zeros((0, 1))
+        for updater in self.updaters:
+            stacked_x_var = np.vstack((stacked_x_var, updater.var_admm['x_i'].cat))
+        return stacked_x_var
 
     def dual_update(self, current_time, update_time):
         t_upd_x, t_upd_z, t_upd_l, t_res = 0., 0., 0., 0.

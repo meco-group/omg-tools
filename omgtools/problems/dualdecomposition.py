@@ -140,6 +140,11 @@ class DDUpdater(DualUpdater):
         self.problem_upd_xz = prob
         self.father.init_transformations(self.problem.init_primal_transform,
                                          self.problem.init_dual_transform)
+        # init var_dd
+        for child, q in self.q_i.items():
+            for name, ind in q.items():
+                var = self.father._var_result[child.label, name][ind]
+                self.var_dd['x_i'][child.label, name] = var
 
     def construct_upd_l(self):
         # create parameters
@@ -250,6 +255,12 @@ class DDProblem(DualProblem):
         DualProblem.__init__(
             self, fleet, environment, problems, DDUpdater, options)
         self.residuals = {'primal': []}
+
+    def get_stacked_x_var_it(self):
+        stacked_x_var = np.zeros((0, 1))
+        for updater in self.updaters:
+            stacked_x_var = np.vstack((stacked_x_var, updater.var_dd['x_i'].cat))
+        return stacked_x_var
 
     def dual_update(self, current_time, update_time):
         t_upd_xz, t_upd_l, t_res = 0., 0., 0.
