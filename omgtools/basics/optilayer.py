@@ -17,7 +17,15 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-from casadi import MX, inf, Function, nlpsol, Compiler, external
+try:
+    from casadi import Compiler
+except:
+    from casadi import Importer
+    Compiler = Importer
+
+from casadi import MX, inf, Function, nlpsol, external
+
+
 from casadi import symvar, substitute
 from casadi.tools import struct, struct_MX, struct_symMX, entry
 from spline import BSpline
