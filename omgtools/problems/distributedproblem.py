@@ -129,8 +129,8 @@ class DistributedProblem(Problem):
     def update(self, current_time, update_time, sample_time):
         for problem in self.problems:
             problem.update(current_time, update_time, sample_time)
-        if self.options['horizon_time'] < update_time:
-            update_time = self.options['horizon_time']
+        if self.problems[0].options['horizon_time'] < update_time:
+            update_time = self.problems[0].options['horizon_time']
         self.environment.update(update_time, sample_time)
         self.fleet.update_plots()
         self.update_plots()

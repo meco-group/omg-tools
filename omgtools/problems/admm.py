@@ -18,65 +18,31 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from ..basics.optilayer import OptiFather
-from ..basics.spline_extra import shift_knot1_fwd, shift_knot1_bwd, shift_over_knot
+from ..basics.spline_extra import shift_knot1_fwd, shift_knot1_bwd, shift_over_knot, definite_integral
+from ..basics.spline import BSpline
 from problem import Problem
-from distributedproblem import DistributedProblem
-from casadi import symvar, mtimes, SX, MX, DM, Function, reshape
+from dualmethod import DualUpdater, DualProblem
+from casadi import symvar, mtimes, MX, Function, reshape
 from casadi import vertcat, horzcat, jacobian, solve, substitute
-from casadi.tools import struct, struct_symMX, entry, structure
+from casadi.tools import struct, struct_symMX, entry
 import numpy as np
 import numpy.linalg as la
-import pickle
 import time
 
 
-def _create_struct_from_dict(dictionary):
-    entries = []
-    for key, data in dictionary.items():
-        if isinstance(data, dict):
-            stru = _create_struct_from_dict(data)
-            entries.append(entry(str(key), struct=stru))
-        else:
-            if isinstance(data, list):
-                sh = len(data)
-            else:
-                sh = data.shape
-            entries.append(entry(key, shape=sh))
-    return struct(entries)
-
-
-class ADMM(Problem):
+class ADMM(DualUpdater):
 
     def __init__(self, index, vehicle, problem, environment, distr_problem,
                  options=None):
-        Problem.__init__(self, vehicle, environment, options, label='admm')
-        self.problem = problem
-        self.distr_problem = distr_problem
-        self.vehicle = vehicle
-        self.environment = environment
-        self.group = {child.label: child for child in ([
-            vehicle, problem, environment, self] + environment.obstacles)}
-        for child in self.group.values():
-            child._index = index
-
-    # ========================================================================
-    # ADMM options
-    # ========================================================================
-
-    def set_default_options(self):
-        Problem.set_default_options(self)
-        self.options['admm'] = {'rho': 0.1}
+        DualUpdater.__init__(self, index, vehicle, problem, environment,
+                             distr_problem, 'admm', options)
 
     # ========================================================================
     # Create problem
     # ========================================================================
 
     def init(self):
-        self.q_i_struct = _create_struct_from_dict(self.q_i)
-        self.q_ij_struct = _create_struct_from_dict(self.q_ij)
-        self.q_ji_struct = _create_struct_from_dict(self.q_ji)
-        self.par_struct = _create_struct_from_dict(self.par_i)
-
+        DualUpdater.init(self)
         self.var_admm = {}
         for key in ['x_i', 'z_i', 'z_i_p', 'l_i', 'l_i_p']:
             self.var_admm[key] = self.q_i_struct(0)
@@ -254,7 +220,7 @@ class ADMM(Problem):
                     obj += mtimes(l.T, x-z) + 0.5*rho*mtimes((x-z).T, (x-z))
         # construct problem
         prob, _ = self.father.create_nlp(var, par, obj,
-                                                    constraints, self.options, str(self._index))
+                                         constraints, self.options, str(self._index))
         self.problem_upd_z = prob
 
     def construct_upd_l(self):
@@ -281,98 +247,6 @@ class ADMM(Problem):
     # ========================================================================
     # Auxiliary methods
     # ========================================================================
-
-    def _struct2dict(self, var, dic):
-        if isinstance(var, list):
-            return [self._struct2dict(v, dic) for v in var]
-        elif isinstance(dic.keys()[0], ADMM):
-            ret = {}
-            for nghb in dic.keys():
-                ret[nghb.label] = {}
-                for child, q in dic[nghb].items():
-                    ret[nghb.label][child.label] = {}
-                    for name in q.keys():
-                        ret[nghb.label][child.label][name] = var[
-                            nghb.label, child.label, name]
-            return ret
-        else:
-            ret = {}
-            for child, q in dic.items():
-                ret[child.label] = {}
-                for name in q.keys():
-                    ret[child.label][name] = var[child.label, name]
-            return ret
-
-    def _dict2struct(self, var, stru):
-        if isinstance(var, list):
-            return [self._dict2struct(v, stru) for v in var]
-        elif 'admm' in var.keys()[0]:
-            chck = var.values()[0].values()[0].values()[0]
-            if isinstance(chck, SX):
-                ret = structure.SXStruct(stru)
-            elif isinstance(chck, MX):
-                ret = structure.MXStruct(stru)
-            elif isinstance(chck, DM):
-                ret = stru(0)
-            for nghb in var.keys():
-                for child, q in var[nghb].items():
-                    for name in q.keys():
-                        ret[nghb, child, name] = var[nghb][child][name]
-            return ret
-        else:
-            chck = var.values()[0].values()[0]
-            if isinstance(chck, SX):
-                ret = structure.SXStruct(stru)
-            elif isinstance(chck, MX):
-                ret = structure.MXStruct(stru)
-            elif isinstance(chck, DM):
-                ret = stru(0)
-            for child, q in var.items():
-                for name in q.keys():
-                    ret[child, name] = var[child][name]
-            return ret
-
-    def _get_x_variables(self, **kwargs):
-        sol = kwargs['solution'] if 'solution' in kwargs else False
-        x = self.q_i_struct(0) if sol else {}
-        for child, q_i in self.q_i.items():
-            if not sol:
-                x[child.label] = {}
-            for name, ind in q_i.items():
-                var = child.get_variable(name, spline=False, **kwargs)
-                if sol:
-                    x[child.label, name] = var.T.ravel()[ind]
-                else:
-                    x[child.label][name] = var[ind]
-        return x
-
-    def _transform_spline(self, var, tf, dic):
-        if isinstance(var, list):
-            return [self._transform_spline(v, tf, dic) for v in var]
-        elif isinstance(var, struct):
-            var = self._struct2dict(var, dic)
-            var = self._transform_spline(var, tf, dic)
-            return self._dict2struct(var, _create_struct_from_dict(dic))
-        elif isinstance(dic.keys()[0], ADMM):
-            ret = {}
-            for nghb in dic.keys():
-                ret[nghb.label] = self._transform_spline(
-                    var[nghb.label], tf, dic[nghb])
-            return ret
-        else:
-            for child, q_i in dic.items():
-                for name, ind in q_i.items():
-                    if name in child._splines_prim:
-                        basis = child._splines_prim[name]['basis']
-                        for l in range(child._variables[name].shape[1]):
-                            sl_min = l*len(basis)
-                            sl_max = (l+1)*len(basis)
-                            if set(range(sl_min, sl_max)) <= set(ind):
-                                sl = slice(sl_min, sl_max)
-                                v = var[child.label][name][sl]
-                                v = tf(v, basis)
-                                var[child.label][name][sl] = v
-            return var
 
     def _check_for_lineq(self):
         g = []
@@ -430,6 +304,7 @@ class ADMM(Problem):
         for child, q in self.q_i.items():
             for name, ind in q.items():
                 var = self.father._var_result[child.label, name][ind]
+                self.var_admm['x_i'][child.label, name] = var
                 self.var_admm['z_i'][child.label, name] = var
 
     def set_parameters(self, current_time):
@@ -438,7 +313,7 @@ class ADMM(Problem):
         parameters['z_ji'] = self.var_admm['z_ji'].cat
         parameters['l_i'] = self.var_admm['l_i'].cat
         parameters['l_ji'] = self.var_admm['l_ji'].cat
-        parameters['rho'] = self.options['admm']['rho']
+        parameters['rho'] = self.options['rho']
         return parameters
 
     def update_x(self, current_time):
@@ -474,7 +349,7 @@ class ADMM(Problem):
         self.var_admm['z_ij_p'] = self.var_admm['z_ij']
         current_time = np.round(current_time, 6) % self.problem.knot_time
         horizon_time = self.problem.options['horizon_time']
-        rho = self.options['admm']['rho']
+        rho = self.options['rho']
         if self._lineq_updz:
             # set inputs
             x_i = self.var_admm['x_i']
@@ -521,7 +396,7 @@ class ADMM(Problem):
         x_j = self.var_admm['x_j']
         t = np.round(current_time, 6) % self.problem.knot_time
         T = self.problem.options['horizon_time']
-        rho = self.options['admm']['rho']
+        rho = self.options['rho']
         out = self.problem_upd_l(x_i, z_i, z_ij, l_i, l_ij, x_j, t, T, rho)
         self.var_admm['l_i'] = self.q_i_struct(out[0])
         self.var_admm['l_ij'] = self.q_ij_struct(out[1])
@@ -567,7 +442,7 @@ class ADMM(Problem):
         z_ij = self._transform_spline(self.var_admm['z_ij'], tf, self.q_ij).cat
         z_ij_p = self._transform_spline(
             self.var_admm['z_ij_p'], tf, self.q_ij).cat
-        rho = self.options['admm']['rho']
+        rho = self.options['rho']
         pr = la.norm(x_i-z_i)**2 + la.norm(x_j-z_ij)**2
         dr = rho*(la.norm(z_i-z_i_p)**2 + la.norm(z_ij-z_ij_p)**2)
         cr = rho*pr + dr
@@ -575,7 +450,7 @@ class ADMM(Problem):
         return t1-t0, pr, dr, cr
 
     def accelerate(self, c_res):
-        eta = self.options['admm']['eta']
+        eta = self.options['eta']
         if not hasattr(self, 'c_res_p'):
             self.c_res_p = (1./eta)*c_res
         if not hasattr(self, 'alpha'):
@@ -588,7 +463,7 @@ class ADMM(Problem):
         l_ij = self.var_admm['l_ij'].cat
         l_i_p = self.var_admm['l_i_p'].cat
         l_ij_p = self.var_admm['l_ij_p'].cat
-        if self.options['admm']['nesterov_reset']:
+        if self.options['nesterov_reset']:
             if c_res <= eta*self.c_res_p:
                 alpha_p = self.alpha
                 self.alpha = 0.5*(1. + np.sqrt(1 + 4.*alpha_p**2))
@@ -619,10 +494,10 @@ class ADMM(Problem):
         self.var_admm['l_ij'] = self.q_ij_struct(l_ij)
 
 
-class ADMMProblem(DistributedProblem):
+class ADMMProblem(DualProblem):
 
     def __init__(self, fleet, environment, problems, options):
-        DistributedProblem.__init__(
+        DualProblem.__init__(
             self, fleet, environment, problems, ADMM, options)
         self.residuals = {'primal': [], 'dual': [], 'combined': []}
 
@@ -631,87 +506,61 @@ class ADMMProblem(DistributedProblem):
     # ========================================================================
 
     def set_default_options(self):
-        Problem.set_default_options(self)
-        self.options['admm'] = {'max_iter': None, 'max_iter_per_update': 1,
-                                'rho': 2., 'init_iter': 5,
-                                'nesterov_acceleration': False, 'eta': 0.999,
-                                'nesterov_reset': False,
-                                'save_residuals': None}
+        DualProblem.set_default_options(self)
+        self.options.update({'nesterov_acceleration': False, 'eta': 0.999,
+                             'nesterov_reset': False})
 
-    def set_options(self, options):
-        if 'admm' in options:
-            self.options['admm'].update(options.pop('admm'))
-        Problem.set_options(self, options)
+    def get_stacked_x_var_it(self):
+        stacked_x_var = np.zeros((0, 1))
+        for updater in self.updaters:
+            stacked_x_var = np.vstack((stacked_x_var, updater.var_admm['x_i'].cat))
+        return stacked_x_var
 
-    # ========================================================================
-    # Perform ADMM sequence
-    # ========================================================================
-
-    def initialize(self):
-        for _ in range(self.options['admm']['init_iter']):
-            self.solve(0.0, 0.0)
-
-    def solve(self, current_time, update_time):
-        self.current_time = current_time
-        it0 = self.iteration
-        while (self.iteration - it0) < self.options['admm']['max_iter_per_update']:
-            t_upd_x, t_upd_z, t_upd_l, t_res = 0., 0., 0., 0.
-            p_res, d_res, c_res = 0., 0., 0.
+    def dual_update(self, current_time, update_time):
+        t_upd_x, t_upd_z, t_upd_l, t_res = 0., 0., 0., 0.
+        p_res, d_res, c_res = 0., 0., 0.
+        for updater in self.updaters:
+            updater.init_step(current_time, update_time)
+        for updater in self.updaters:
+            t = updater.update_x(current_time)
+            t_upd_x = max(t_upd_x, t)
+        for updater in self.updaters:
+            updater.communicate()
+        for updater in self.updaters:
+            t1 = updater.update_z(current_time)
+            t2 = updater.update_l(current_time)
+            t3, pr, dr, cr = updater.get_residuals(current_time)
+            t_upd_z = max(t_upd_z, t1)
+            t_upd_l = max(t_upd_l, t2)
+            t_res = max(t_res, t3)
+            p_res += pr**2
+            d_res += dr**2
+            c_res += cr**2
+        p_res, d_res, c_res = np.sqrt(
+            p_res), np.sqrt(d_res), np.sqrt(c_res)
+        if self.options['nesterov_acceleration']:
             for updater in self.updaters:
-                updater.init_step(current_time, update_time)
-            for updater in self.updaters:
-                t = updater.update_x(current_time)
-                t_upd_x = max(t_upd_x, t)
-            for updater in self.updaters:
-                updater.communicate()
-            for updater in self.updaters:
-                t1 = updater.update_z(current_time)
-                t2 = updater.update_l(current_time)
-                t3, pr, dr, cr = updater.get_residuals(current_time)
-                t_upd_z = max(t_upd_z, t1)
-                t_upd_l = max(t_upd_l, t2)
-                t_res = max(t_res, t3)
-                p_res += pr**2
-                d_res += dr**2
-                c_res += cr**2
-            p_res, d_res, c_res = np.sqrt(
-                p_res), np.sqrt(d_res), np.sqrt(c_res)
-            if self.options['admm']['nesterov_acceleration']:
-                for updater in self.updaters:
-                    updater.accelerate(c_res)
-            for updater in self.updaters:
-                updater.communicate()
-            if self.options['verbose'] >= 1:
-                self.iteration += 1
-                if ((self.iteration - 1) % 20 == 0):
-                    print('----|------|----------|----------|'
-                          '----------|----------|----------|----------')
-                    print('%3s | %4s | %8s | %8s | %8s | %8s | %8s | %8s ' %
-                          ('It', 't', 'prim res', 'dual res',
-                           't upd_x', 't upd_z', 't upd_l', 't_res'))
-                    print('----|------|----------|----------|'
-                          '----------|----------|----------|----------')
-                print('%3d | %4.1f | %.2e | %.2e | %.2e | %.2e | %.2e | %.2e ' %
-                      (self.iteration, current_time, p_res, d_res, t_upd_x,
-                       t_upd_z, t_upd_l, t_res))
-            self.residuals['primal'] = np.r_[self.residuals['primal'], p_res]
-            self.residuals['dual'] = np.r_[self.residuals['dual'], d_res]
-            self.residuals['combined'] = np.r_[
-                self.residuals['combined'], c_res]
-            self.update_times.append(t_upd_x + t_upd_z + t_upd_l + t_res)
-
-    def stop_criterium(self, current_time, update_time):
-        if self.options['admm']['max_iter']:
-            if self.iteration > self.options['admm']['max_iter']:
-                return True
-        else:
-            return DistributedProblem.stop_criterium(self, current_time, update_time)
-
-    def final(self):
-        DistributedProblem.final(self)
-        if self.options['admm']['save_residuals']:
-            pickle.dump(
-                self.residuals, open(self.options['admm']['save_residuals'], 'wb'))
+                updater.accelerate(c_res)
+        for updater in self.updaters:
+            updater.communicate()
+        if self.options['verbose'] >= 1:
+            self.iteration += 1
+            if ((self.iteration - 1) % 20 == 0):
+                print('----|------|----------|----------|'
+                      '----------|----------|----------|----------')
+                print('%3s | %4s | %8s | %8s | %8s | %8s | %8s | %8s ' %
+                      ('It', 't', 'prim res', 'dual res',
+                       't upd_x', 't upd_z', 't upd_l', 't_res'))
+                print('----|------|----------|----------|'
+                      '----------|----------|----------|----------')
+            print('%3d | %4.1f | %.2e | %.2e | %.2e | %.2e | %.2e | %.2e ' %
+                  (self.iteration, current_time, p_res, d_res, t_upd_x,
+                   t_upd_z, t_upd_l, t_res))
+        self.residuals['primal'] = np.r_[self.residuals['primal'], p_res]
+        self.residuals['dual'] = np.r_[self.residuals['dual'], d_res]
+        self.residuals['combined'] = np.r_[
+            self.residuals['combined'], c_res]
+        self.update_times.append(t_upd_x + t_upd_z + t_upd_l + t_res)
 
     # ========================================================================
     # Plot related functions
@@ -745,8 +594,8 @@ class ADMMProblem(DistributedProblem):
                     iterations = np.linspace(1, n_it, n_it)
                     lines.append([iterations, np.log10(residual)])
                 else:
-                    ind = (self.options['admm']['init_iter'] +
-                           t*self.options['admm']['max_iter_per_update'])
+                    ind = (self.options['init_iter'] +
+                           t*self.options['max_iter_per_update'])
                     n_it = ind + 1
                     iterations = np.linspace(1, n_it, n_it)
                     lines.append([iterations, np.log10(residual[:ind+1])])

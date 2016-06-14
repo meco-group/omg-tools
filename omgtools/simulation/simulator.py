@@ -59,11 +59,13 @@ class Simulator:
         stop = self.problem.stop_criterium(self.current_time, self.update_time)
         return stop
 
-    def run_once(self):
+    def run_once(self, update=True):
         # initialize problem
         self.problem.initialize()
         # solve problem
         self.problem.solve(0., 0.)
+        if not update:
+            return None
         # update everything
         self.problem.update(0., np.inf, self.sample_time)
         self.problem.final()
