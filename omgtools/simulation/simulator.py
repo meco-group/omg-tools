@@ -23,19 +23,26 @@ from plotlayer import PlotLayer
 
 class Simulator:
 
-    def __init__(self, problem, update_time=0.1, sample_time=0.01):
-        self.problem = problem
+    def __init__(self, problem, sample_time=0.01, update_time=0.1):
+        self.set_problem(problem)
         self.update_time = update_time
         self.sample_time = sample_time
         PlotLayer.simulator = self
+        self.reset_timing()
+
+    def set_problem(self, problem):
+        self.problem = problem
 
     def run(self):
-        self.reset_timing()
+        # self.reset_timing()
         self.problem.initialize()
         stop = False
         while not stop:
             stop = self.update()
-            if not stop:
+            if stop:
+                update_time = self.problem.vehicles[0].signals['time'][:, -1] - self.current_time
+                self.update_timing(update_time)
+            else:
                 self.update_timing()
         self.problem.final()
 
@@ -43,9 +50,10 @@ class Simulator:
         self.current_time = 0.
         self.time = np.r_[0.]
 
-    def update_timing(self):
-        self.current_time += self.update_time
-        n_samp = int(self.update_time/self.sample_time)
+    def update_timing(self, update_time=None):
+        update_time = self.update_time if not update_time else update_time
+        self.current_time += update_time
+        n_samp = int(update_time/self.sample_time)
         self.time = np.r_[self.time, np.linspace(
             self.time[-1]+self.sample_time, self.time[-1]+n_samp*self.sample_time, n_samp)]
 
@@ -59,21 +67,45 @@ class Simulator:
         stop = self.problem.stop_criterium(self.current_time, self.update_time)
         return stop
 
-    def run_once(self):
+    def run_once(self, **kwargs):
+        if 'update' in kwargs and not kwargs['update']:
+            update = False
+        else:
+            update = True
+        if 'hard_stop' in kwargs:
+            hard_stop = kwargs['hard_stop']
+        else:
+            hard_stop = None
         # initialize problem
         self.problem.initialize()
         # solve problem
         self.problem.solve(0., 0.)
+        if not update:
+            return None
         # update everything
-        self.problem.update(0., np.inf, self.sample_time)
+        if hard_stop:
+            self.hard_stop(hard_stop['time'], hard_stop['perturbation'])
+        else:
+            self.problem.update(self.current_time, np.inf, self.sample_time)
         self.problem.final()
         # determine timing
-        self.time = self.problem.vehicles[0].signals['time'].ravel()
+        update_time = self.problem.vehicles[0].signals['time'][:, -1] - self.current_time
+        self.update_timing(update_time)
         # return trajectories
         trajectories = {}
         for vehicle in self.problem.vehicles:
             trajectories[str(vehicle)] = vehicle.trajectories
         return trajectories
+
+    def hard_stop(self, stop_time, perturbation):
+        self.problem.update(self.current_time, stop_time, self.sample_time)
+        for k, vehicle in enumerate(self.problem.vehicles):
+            vehicle.overrule_state(vehicle.signals['state'][:, -1] + np.array(perturbation[k]))
+            vehicle.overrule_input(np.zeros(len(vehicle.prediction['input'])))
+
+    def sleep(self, sleep_time):
+        self.problem.sleep(self.current_time, sleep_time, self.sample_time)
+        self.update_timing(sleep_time)
 
     def time2index(self, time):
         Ts = self.sample_time

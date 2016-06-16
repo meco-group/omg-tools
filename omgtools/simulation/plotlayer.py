@@ -21,6 +21,7 @@ import os
 import matplotlib
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+import numpy as np
 import warnings
 matplotlib.use('TKAgg')
 
@@ -79,6 +80,27 @@ def _update_axis_3d(axis, info, data):
     scaley = ('ylim' not in info or info['ylim'] is None)
     scalez = ('zlim' not in info or info['zlim'] is None)
     axis.autoscale_view(True, scalex, scaley, scalez)
+    if 'aspect_equal' in info and info['aspect_equal']:
+        # hack due to bug in matplotlib3d
+        limits = []
+        if 'xlim' in info:
+            limits.append(info['xlim'])
+        else:
+            limits.append(axis.get_xlim3d())
+        if 'ylim' in info:
+            limits.append(info['ylim'])
+        else:
+            limits.append(axis.get_ylim3d())
+        if 'zlim' in info:
+            limits.append(info['zlim'])
+        else:
+            limits.append(axis.get_zlim3d())
+        ranges = [abs(lim[1] - lim[0]) for lim in limits]
+        centra = [np.mean(lim) for lim in limits]
+        radius = 0.5*max(ranges)
+        axis.set_xlim3d([centra[0] - radius, centra[0] + radius])
+        axis.set_ylim3d([centra[1] - radius, centra[1] + radius])
+        axis.set_zlim3d([centra[2] - radius, centra[2] + radius])
 
 
 def _cleanup_rubbish(path, root=None):

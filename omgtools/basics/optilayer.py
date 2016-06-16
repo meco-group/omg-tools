@@ -17,7 +17,15 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-from casadi import MX, inf, Function, nlpsol, Compiler, external
+try:
+    from casadi import Compiler
+except:
+    from casadi import Importer
+    Compiler = Importer
+
+from casadi import MX, inf, Function, nlpsol, external
+
+
 from casadi import symvar, substitute
 from casadi.tools import struct, struct_MX, struct_symMX, entry
 from spline import BSpline
@@ -33,6 +41,97 @@ def evalf(fun, x):
     return fun.call(x)
 
 
+# ========================================================================
+# Functions related to c code generation
+# ========================================================================
+
+def create_nlp(var, par, obj, con, options, name=''):
+    codegen = options['codegen']
+    if options['verbose'] >= 2:
+        print 'Building nlp ... ',
+    t0 = time.time()
+    nlp = {'x': var, 'p': par, 'f': obj, 'g': con}
+    slv_opt = options['solver_options'][options['solver']]
+    opt = {}
+    for key, value in slv_opt.items():
+        opt[key] = value
+    opt.update({'expand': True})
+    solver = nlpsol('solver', options['solver'], nlp, opt)
+    name = 'nlp_' + name
+    if codegen['build'] == 'jit':
+        if options['verbose'] >= 2:
+            print('[jit compilation with flags %s]' % (codegen['flags'])),
+        solver.generate_dependencies(name+'.c')
+        compiler = Compiler(
+            name+'.c', 'clang', {'flags': codegen['flags']})
+        problem = nlpsol('solver', options['solver'], compiler, slv_opt)
+        os.remove(name+'.c')
+    elif codegen['build'] == 'shared':
+        if options['verbose'] >= 2:
+            print('[compile to .so with flags %s]' % (codegen['flags'])),
+        if os.path.isfile(name+'.so'):
+            os.remove(name+'.so')
+        solver.generate_dependencies(name+'.c')
+        os.system('gcc -fPIC -shared %s %s.c -o %s.so' %
+                  (codegen['flags'], name, name))
+        problem = nlpsol('solver', options['solver'], name+'.so', slv_opt)
+        os.remove(name+'.c')
+    elif codegen['build'] == 'existing':
+        if not os.path.isfile(name+'.so'):
+            raise ValueError('%s.so does not exist!', name)
+        if options['verbose'] >= 2:
+            print('[using shared object %s.so]' % name),
+        problem = nlpsol('solver', options['solver'], name+'.so', slv_opt)
+    elif codegen['build'] is None:
+        problem = solver
+    else:
+        raise ValueError('Invalid build option.')
+    t1 = time.time()
+    if options['verbose'] >= 2:
+        print 'in %5f s' % (t1-t0)
+    return problem, (t1-t0)
+
+
+def create_function(name, inp, out, options):
+    codegen = options['codegen']
+    if options['verbose'] >= 2:
+        print 'Building function %s ... ' % name,
+    t0 = time.time()
+    fun = Function(name, inp, out).expand()
+    if codegen['build'] == 'jit':
+        if options['verbose'] >= 2:
+            print('[jit compilation with flags %s]' % (codegen['flags'])),
+        fun.generate(name)
+        compiler = Compiler(
+            name+'.c', 'clang', {'flags': codegen['flags']})
+        fun = external(name, compiler)
+        os.remove(name+'.c')
+    elif codegen['build'] == 'shared':
+        if options['verbose'] >= 2:
+            print('[compile to .so with flags %s]' % (codegen['flags'])),
+        if os.path.isfile(name+'.so'):
+            os.remove(name+'.so')
+        fun.generate(name)
+        os.system('gcc -fPIC -shared %s %s.c -o %s.so' %
+                  (codegen['flags'], name, name))
+        fun = external(name, './'+name+'.so')
+        os.remove(name+'.c')
+    elif codegen['build'] == 'existing':
+        if not os.path.isfile(name+'.so'):
+            raise ValueError('%s.so does not exist!', name)
+        if options['verbose'] >= 2:
+            print('[using shared object %s.so]' % name),
+        fun = external(name, './'+name+'.so')
+    elif codegen['build'] is None:
+        fun = fun
+    else:
+        raise ValueError('Invalid build option.')
+    t1 = time.time()
+    if options['verbose'] >= 2:
+        print 'in %5f s' % (t1-t0)
+    return fun, (t1-t0)
+
+
 class OptiFather(object):
 
     def __init__(self, children=None):
@@ -45,7 +144,7 @@ class OptiFather(object):
     def add(self, children):
         children = children if isinstance(children, list) else [children]
         for child in children:
-            child.father = self
+            # child.father = self
             self.children.update({child.label: child})
 
     def add_to_dict(self, symbol, child, name):
@@ -66,8 +165,8 @@ class OptiFather(object):
         self.problem_description = {'var': variables, 'par': parameters,
                                     'obj': objective, 'con': constraints,
                                     'opt': options}
-        problem, buildtime = self.create_nlp(variables, parameters, objective,
-                                             constraints, options, name)
+        problem, buildtime = create_nlp(variables, parameters, objective,
+            constraints, options, name)
         self.init_variables()
         return problem, buildtime
 
@@ -143,6 +242,10 @@ class OptiFather(object):
                 child._objective, variables, parameters)
         return objective
 
+    def reset(self):
+        for child in self.children.values():
+            child.reset()
+
     def _substitute_symbols(self, expr, variables, parameters):
         if isinstance(expr, (int, float)):
             return expr
@@ -168,95 +271,6 @@ class OptiFather(object):
         return evalf(f, f_in)
 
     # ========================================================================
-    # Methods related to c code generation
-    # ========================================================================
-
-    def create_nlp(self, var, par, obj, con, options, name=''):
-        codegen = options['codegen']
-        if options['verbose'] >= 2:
-            print 'Building nlp ... ',
-        t0 = time.time()
-        nlp = {'x': var, 'p': par, 'f': obj, 'g': con}
-        slv_opt = options['solver_options'][options['solver']]
-        opt = {}
-        for key, value in slv_opt.items():
-            opt[key] = value
-        opt.update({'expand': True})
-        solver = nlpsol('solver', options['solver'], nlp, opt)
-        name = 'nlp_' + name
-        if codegen['build'] == 'jit':
-            if options['verbose'] >= 2:
-                print('[jit compilation with flags %s]' % (codegen['flags'])),
-            solver.generate_dependencies(name+'.c')
-            compiler = Compiler(
-                name+'.c', 'clang', {'flags': codegen['flags']})
-            problem = nlpsol('solver', options['solver'], compiler, slv_opt)
-            os.remove(name+'.c')
-        elif codegen['build'] == 'shared':
-            if options['verbose'] >= 2:
-                print('[compile to .so with flags %s]' % (codegen['flags'])),
-            if os.path.isfile(name+'.so'):
-                os.remove(name+'.so')
-            solver.generate_dependencies(name+'.c')
-            os.system('gcc -fPIC -shared %s %s.c -o %s.so' %
-                      (codegen['flags'], name, name))
-            problem = nlpsol('solver', options['solver'], name+'.so', slv_opt)
-            os.remove(name+'.c')
-        elif codegen['build'] == 'existing':
-            if not os.path.isfile(name+'.so'):
-                raise ValueError('%s.so does not exist!', name)
-            if options['verbose'] >= 2:
-                print('[using shared object %s.so]' % name),
-            problem = nlpsol('solver', options['solver'], name+'.so', slv_opt)
-        elif codegen['build'] is None:
-            problem = solver
-        else:
-            raise ValueError('Invalid build option.')
-        t1 = time.time()
-        if options['verbose'] >= 2:
-            print 'in %5f s' % (t1-t0)
-        return problem, (t1-t0)
-
-    def create_function(self, name, inp, out, options):
-        codegen = options['codegen']
-        if options['verbose'] >= 2:
-            print 'Building function %s ... ' % name,
-        t0 = time.time()
-        fun = Function(name, inp, out).expand()
-        if codegen['build'] == 'jit':
-            if options['verbose'] >= 2:
-                print('[jit compilation with flags %s]' % (codegen['flags'])),
-            fun.generate(name)
-            compiler = Compiler(
-                name+'.c', 'clang', {'flags': codegen['flags']})
-            fun = external(name, compiler)
-            os.remove(name+'.c')
-        elif codegen['build'] == 'shared':
-            if options['verbose'] >= 2:
-                print('[compile to .so with flags %s]' % (codegen['flags'])),
-            if os.path.isfile(name+'.so'):
-                os.remove(name+'.so')
-            fun.generate(name)
-            os.system('gcc -fPIC -shared %s %s.c -o %s.so' %
-                      (codegen['flags'], name, name))
-            fun = external(name, './'+name+'.so')
-            os.remove(name+'.c')
-        elif codegen['build'] == 'existing':
-            if not os.path.isfile(name+'.so'):
-                raise ValueError('%s.so does not exist!', name)
-            if options['verbose'] >= 2:
-                print('[using shared object %s.so]' % name),
-            fun = external(name, './'+name+'.so')
-        elif codegen['build'] is None:
-            fun = fun
-        else:
-            raise ValueError('Invalid build option.')
-        t1 = time.time()
-        if options['verbose'] >= 2:
-            print 'in %5f s' % (t1-t0)
-        return fun, (t1-t0)
-
-    # ========================================================================
     # Problem evaluation
     # ========================================================================
 
@@ -276,13 +290,65 @@ class OptiFather(object):
         self._var_result = variables
         self._dual_var_result = self._con_struct(0.)
 
-    def set_variables(self, variables, label=None, name=None):
-        if label is None:
+    def set_variables(self, variables, child=None, name=None):
+        if child is None:
             self._var_result = self._var_struct(variables)
         elif name is None:
-            self._var_result[label] = variables
+            self._var_result[child.label] = variables
         else:
-            self._var_result[label, name] = variables
+            self._var_result[child.label, name] = variables
+
+    def get_variables(self, child=None, name=None, **kwargs):
+        if child is None:
+            return self._var_result
+        elif name is None:
+            return self._var_result.prefix(child.label)
+        else:
+            if name in child._splines_prim and not ('spline' in kwargs and not kwargs['spline']):
+                basis = child._splines_prim[name]['basis']
+                if 'symbolic' in kwargs and kwargs['symbolic']:
+                    coeffs = child._variables[name]
+                else:
+                    coeffs = np.array(self._var_result[child.label, name])
+                return [BSpline(basis, coeffs[:, k]) for k in range(coeffs.shape[1])]
+            else:
+                if 'symbolic' in kwargs and kwargs['symbolic']:
+                    return child._variables[name]
+                else:
+                    return np.array(self._var_result[child.label, name])
+
+    def get_parameters(self, child=None, name=None, **kwargs):
+        if child is None:
+            return self._par_result
+        elif name is None:
+            return self._par_result.prefix(child.label)
+        else:
+            if name in child._splines_prim and not ('spline' in kwargs and not kwargs['spline']):
+                basis = child._splines_prim[name]['basis']
+                if 'symbolic' in kwargs and kwargs['symbolic']:
+                    coeffs = child._parameters[name]
+                else:
+                    coeffs = np.array(self._par_result[child.label, name])
+                return [BSpline(basis, coeffs[:, k]) for k in range(coeffs.shape[1])]
+            else:
+                if 'symbolic' in kwargs and kwargs['symbolic']:
+                    return child._parameters[name]
+                else:
+                    return np.array(self._par_result[child.label, name])
+
+    def get_constraint(self, child, name, symbolic=False):
+        if symbolic:
+            return child._constraints[name][0]
+        else:
+            return self._evaluate_symbols(self.children[child.label]._constraints[name][0],
+                self._var_result, self._par_result)
+
+    def get_objective(self, child, name, symbolic=False):
+        if symbolic:
+            return child._objective
+        else:
+            return self._evaluate_symbols(self.children[child.label]._objective,
+                self._var_result, self._par_result)
 
     def set_parameters(self, time):
         self._par = self._par_struct(0.)
@@ -294,30 +360,6 @@ class OptiFather(object):
                 else:
                     self._par[label, name] = child._values[name]
         return self._par
-
-    def get_variables(self, label=None, name=None):
-        if label is None:
-            return self._var_result
-        elif name is None:
-            return self._var_result.prefix(label)
-        else:
-            return np.array(self._var_result[label, name])
-
-    def get_parameters(self, label=None, name=None):
-        if label is None:
-            return self._par_result
-        elif name is None:
-            return self._par_result.prefix(label)
-        else:
-            return np.array(self._par_result[label, name])
-
-    def get_constraint(self, label, name):
-        return self._evaluate_symbols(self.children[label]._constraints[name][0],
-                                      self._var_result, self._par_result)
-
-    def get_objective(self, label, name):
-        return self._evaluate_symbols(self.children[label]._objective,
-                                      self._var_result, self._par_result)
 
     # ========================================================================
     # Spline tranformations
@@ -489,46 +531,21 @@ class OptiChild(object):
     def define_objective(self, expr):
         self._objective += expr
 
-    def set_variable(self, name, value):
-        self.father.set_variables(value, self.label, name)
+    # ========================================================================
+    # Reset variables, parameters, constraints, objectives
+    # ========================================================================
 
-    def get_variable(self, name, **kwargs):
-        if name in self._splines_prim and not('spline' in kwargs and not kwargs['spline']):
-            basis = self._splines_prim[name]['basis']
-            if 'solution' in kwargs and kwargs['solution']:
-                coeffs = self.father.get_variables(self.label, name)
-            else:
-                coeffs = self._variables[name]
-            return [BSpline(basis, coeffs[:, k]) for k in range(coeffs.shape[1])]
-        if 'solution' in kwargs and kwargs['solution']:
-            return self.father.get_variables(self.label, name)
-        else:
-            return self._variables[name]
-
-    def get_parameter(self, name, **kwargs):
-        if name in self._splines_prim and not('spline' in kwargs and not kwargs['spline']):
-            basis = self._splines_prim[name]['basis']
-            if 'solution' in kwargs and kwargs['solution']:
-                coeffs = self.father.get_variables(self.label, name)
-            else:
-                coeffs = self._variables[name]
-            return [BSpline(basis, coeffs[:, k]) for k in range(coeffs.shape[1])]
-        if 'solution' in kwargs and kwargs['solution']:
-            return self.father.get_parameters(self.label, name)
-        else:
-            return self._parameters[name]
-
-    def get_constraint(self, name, solution=False):
-        if solution:
-            return self.father.get_constraint(self.label, name)
-        else:
-            return self._constraints[name][0]
-
-    def get_objective(self, solution=False):
-        if solution:
-            return self.father.get_objective(self.label)
-        else:
-            return self._objective
+    def reset(self):
+        self._variables = {}
+        self._parameters = {}
+        self._symbols = {}
+        self._values = {}
+        self._splines_prim = {}
+        self._splines_dual = {}
+        self._constraints = {}
+        self._objective = 0.
+        self.symbol_dict = {}
+        self._constraint_cnt = 0
 
     # ========================================================================
     # Methods required to override

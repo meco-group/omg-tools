@@ -36,6 +36,8 @@ class Quadrotor(Vehicle):
         self.u2min = bounds['u2min'] if 'u2min' in bounds else -8.
         self.u2max = bounds['u2max'] if 'u2max' in bounds else 8.
         self.g = 9.81
+
+    def init(self):
         # time horizon
         self.T = self.define_symbol('T')
 
