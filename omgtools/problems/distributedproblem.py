@@ -42,7 +42,12 @@ class DistributedProblem(Problem):
     # Create problem
     # ========================================================================
 
+    def construct(self):
+        for problem in self.problems:
+            problem.construct()
+
     def init(self):
+        self.construct()
         self.updaters = []
         for index, vehicle in enumerate(self.vehicles):
             updater = self.updater_type(index, vehicle, self.problems[index],

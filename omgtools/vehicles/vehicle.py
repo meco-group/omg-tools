@@ -47,6 +47,7 @@ class Vehicle(OptiChild, PlotLayer):
                                  'dimension.')
 
         self.prediction = {}
+        self.init_spline_value = None
         self.degree = degree
         # set options
         self.set_default_options()
@@ -79,13 +80,26 @@ class Vehicle(OptiChild, PlotLayer):
             self.knots = kwargs['knots']
         self.basis = BSplineBasis(self.knots, self.degree)
 
-    def set_init_spline_value(self, values):
-        init_value = np.zeros((len(self.basis), self.n_spl))
-        if not (np.shape(init_value) == np.shape(values)):
-            raise ValueError('Initial guess has wrong dimensions, required: ' + str(np.shape(init_value)) + 
-                ' while you gave: ' + str(np.shape(values)))
+    def set_init_spline_value(self, value):
+        if value.shape == (len(self.basis), self.n_spl):
+            self.init_spline_value = value
         else:
-            self.init_value = values
+            raise ValueError('Initial guess has wrong dimensions, ' +
+                'required: ' + str((len(self.basis), self.n_spl)) +
+                ' while you gave: ' + str(values.shape))
+
+    def reinit_splines(self, problem, value=None):
+        for k in range(self.n_seg):
+            if value is None:
+                init = self.get_init_spline_value()
+            else:
+                if value.shape == (len(self.basis), self.n_spl):
+                    init = value
+                else:
+                    raise ValueError('Initial guess has wrong dimensions, ' +
+                        'required: ' + str((len(self.basis), self.n_spl)) +
+                        ' while you gave: ' + str(values.shape))
+            problem.father.set_variables(init, self, 'splines'+str(k))
 
     # ========================================================================
     # Optimization modelling related functions
@@ -95,10 +109,11 @@ class Vehicle(OptiChild, PlotLayer):
         self.n_seg = n_seg
         self.splines = []
         for k in range(n_seg):
-            if not hasattr(self, 'init_value'):
-                init = self.get_init_spline_value()
+            if self.init_spline_value:
+                init = self.init_spline_value
+                self.init_spline_value = None
             else:
-                init = self.init_value
+                init = self.get_init_spline_value()
             spline = self.define_spline_variable(
                 'splines'+str(k), self.n_spl, value=init)
             self.splines.append(spline)
@@ -210,17 +225,15 @@ class Vehicle(OptiChild, PlotLayer):
     # Simulation and prediction related functions
     # ========================================================================
 
-    def update(self, current_time, update_time, sample_time, segment_times, time_axis=None):
+    def update(self, current_time, update_time, sample_time, spline_segments, segment_times, time_axis=None):
         if not isinstance(segment_times, list):
             segment_times = [segment_times]
-        spline_segments = [self.get_variable('splines'+str(k), solution=True)
-                           for k in range(self.n_seg)]
         splines = concat_splines(spline_segments, segment_times)
         horizon_time = sum(segment_times)
         if time_axis is None:
             n_samp = int(
                 round(horizon_time/sample_time, 3)) + 1
-            time_axis = np.linspace(0., horizon_time, n_samp)
+            time_axis = np.linspace(0., (n_samp-1)*sample_time, n_samp)
         self.get_trajectories(splines, time_axis, current_time)
         if not hasattr(self, 'signals'):
             self.init_signals()
@@ -446,6 +459,9 @@ class Vehicle(OptiChild, PlotLayer):
     # ========================================================================
     # Methods required to override
     # ========================================================================
+
+    def init(self):
+        pass
 
     def define_trajectory_constraints(self, splines):
         raise NotImplementedError('Please implement this method!')

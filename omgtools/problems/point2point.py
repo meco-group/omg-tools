@@ -39,10 +39,13 @@ class Point2pointProblem(Problem):
 
     def __init__(self, fleet, environment, options):
         Problem.__init__(self, fleet, environment, options, label='p2p')
+
+    def construct(self):
+        Problem.construct(self)
         for vehicle in self.vehicles:
             splines = vehicle.define_splines(n_seg=1)[0]
             vehicle.define_trajectory_constraints(splines)
-            environment.define_collision_constraints(vehicle, splines)
+            self.environment.define_collision_constraints(vehicle, splines)
 
     def stop_criterium(self, current_time, update_time):
         stop = True
@@ -80,6 +83,9 @@ class FixedTPoint2point(Point2pointProblem):
                              'a fixed T point2point problem.')
         self.knot_time = (int(self.options['horizon_time']*1000.) /
                           self.vehicles[0].knot_intervals) / 1000.
+
+    def construct(self):
+        Point2pointProblem.construct(self)
         T, t = self.define_parameter('T'), self.define_parameter('t')
         self.t0 = t/T
         self.define_init_constraints()
@@ -151,9 +157,10 @@ class FixedTPoint2point(Point2pointProblem):
             rel_current_time = np.round(current_time, 6) % self.knot_time
             n_samp = int(
                 round((horizon_time-rel_current_time)/sample_time, 3)) + 1
-            time_axis = np.linspace(rel_current_time, horizon_time, n_samp)
+            time_axis = np.linspace(rel_current_time, rel_current_time + (n_samp-1)*sample_time, n_samp)
+            spline_segments = [self.father.get_variables(vehicle, 'splines'+str(k)) for k in range(vehicle.n_seg)]
             vehicle.update(
-                current_time, update_time, sample_time, horizon_time, time_axis)
+                current_time, update_time, sample_time, spline_segments, horizon_time, time_axis)
         # update environment
         self.environment.update(update_time, sample_time)
         # update plots
@@ -169,7 +176,7 @@ class FixedTPoint2point(Point2pointProblem):
             term_con, _ = vehicle.get_terminal_constraints(
                 vehicle.splines[0])
             for k in range(len(term_con)):
-                g = self.get_variable('g'+str(k), solution=True)[0]
+                g = self.father.get_variables(self, 'g'+str(k))[0]
                 part_objective += horizon_time*definite_integral(g, t0, t1)
         self.objective += part_objective
 
@@ -180,7 +187,7 @@ class FixedTPoint2point(Point2pointProblem):
                 term_con, _ = vehicle.get_terminal_constraints(
                     vehicle.splines[0])
                 for k in range(len(term_con)):
-                    g = self.get_variable('g'+str(k), solution=True)[0]
+                    g = self.father.get_variables(self, 'g'+str(k))[0]
                     obj += self.options['horizon_time']*g.integral()
             return obj
         return self.objective
@@ -191,6 +198,9 @@ class FreeTPoint2point(Point2pointProblem):
     def __init__(self, fleet, environment, options):
         Point2pointProblem.__init__(self, fleet, environment, options)
         self.objective = 0.
+
+    def construct(self):
+        Point2pointProblem.construct(self)
         T = self.define_variable('T', value=10)
         self.define_parameter('t')
         self.define_objective(T)
@@ -222,27 +232,28 @@ class FreeTPoint2point(Point2pointProblem):
 
     def update(self, current_time, update_time, sample_time):
         self.update_time = update_time
-        horizon_time = self.get_variable('T', solution=True)[0][0]
+        horizon_time = self.father.get_variables(self, 'T')[0][0]
         if horizon_time < update_time:
             update_time = horizon_time
         self.compute_partial_objective(current_time+update_time)
         # update vehicles
         for vehicle in self.vehicles:
+            spline_segments = [self.father.get_variables(vehicle, 'splines'+str(k)) for k in range(vehicle.n_seg)]
             vehicle.update(
-                current_time, update_time, sample_time, horizon_time)
+                current_time, update_time, sample_time, spline_segments, horizon_time)
         # update environment
         self.environment.update(update_time, sample_time)
         # update plots
         self.update_plots()
 
     def stop_criterium(self, current_time, update_time):
-        T = self.get_variable('T', solution=True)[0][0]
+        T = self.father.get_variables(self, 'T')[0][0]
         if T < update_time:
             return True
         return Point2pointProblem.stop_criterium(self, current_time, update_time)
 
     def init_step(self, current_time, update_time):
-        T = self.get_variable('T', solution=True)[0][0]
+        T = self.father.get_variables(self, 'T')[0][0]
         # check if almost arrived, if so lower the update time
         if T < 2*update_time:
             update_time = T - update_time
@@ -254,7 +265,7 @@ class FreeTPoint2point(Point2pointProblem):
         # a new basis with new equidistant knots.
         self.father.transform_primal_splines(
             lambda coeffs, basis: shift_spline(coeffs, update_time/target_time, basis))
-        self.set_variable('T', target_time)
+        self.father.set_variables(target_time, self, 'T')
 
     def compute_partial_objective(self, current_time):
         self.objective = current_time
@@ -266,14 +277,16 @@ class FreeTPoint2point(Point2pointProblem):
 class FreeEndPoint2point(FixedTPoint2point):
 
     def __init__(self, fleet, environment, options, free_ind=None):
-        if free_ind is None:
+        FixedTPoint2point.__init__(self, fleet, environment, options)
+        self.free_ind = free_ind
+
+    def construct(self):
+        if self.free_ind is None:
             self.free_ind = {}
-            for vehicle in fleet:
+            for vehicle in self.vehicles:
                 term_con = vehicle.get_terminal_constraints(vehicle.splines[0])
                 self.free_ind[vehicle] = range(len(term_con))
-        else:
-            self.free_ind = free_ind
-        FixedTPoint2point.__init__(self, fleet, environment, options)
+        FixedTPoint2point.construct(self)
 
     def define_terminal_constraints(self):
         objective = 0.

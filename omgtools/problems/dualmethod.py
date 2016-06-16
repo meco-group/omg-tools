@@ -128,14 +128,14 @@ class DualUpdater(Problem):
             return ret
 
     def _get_x_variables(self, **kwargs):
-        sol = kwargs['solution'] if 'solution' in kwargs else False
-        x = self.q_i_struct(0) if sol else {}
+        symbolic = kwargs['symbolic'] if 'symbolic' in kwargs else False
+        x = self.q_i_struct(0) if not symbolic else {}
         for child, q_i in self.q_i.items():
-            if not sol:
+            if symbolic:
                 x[child.label] = {}
             for name, ind in q_i.items():
-                var = child.get_variable(name, spline=False, **kwargs)
-                if sol:
+                var = self.father_updx.get_variables(child, name, spline=False, symbolic=symbolic)
+                if not symbolic:
                     x[child.label, name] = var.T.ravel()[ind]
                 else:
                     x[child.label][name] = var[ind]

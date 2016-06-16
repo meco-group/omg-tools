@@ -33,6 +33,8 @@ class Holonomic1D(Vehicle):
         self.vmax = bounds['vmax'] if 'vmax' in bounds else 0.5
         self.amin = bounds['amin'] if 'amin' in bounds else -1.
         self.amax = bounds['amax'] if 'amax' in bounds else 1.
+
+    def init(self):
         # time horizon
         self.T = self.define_symbol('T')
 

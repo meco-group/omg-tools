@@ -17,7 +17,7 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-from ..basics.optilayer import OptiFather
+from ..basics.optilayer import OptiFather, create_nlp, create_function
 from ..basics.spline_extra import shift_knot1_fwd, shift_knot1_bwd, shift_over_knot, definite_integral
 from ..basics.spline import BSpline
 from problem import Problem
@@ -55,6 +55,9 @@ class ADMM(DualUpdater):
         self.construct_upd_l()
 
     def construct_upd_x(self):
+        # construct optifather & give reference to problem
+        self.father_updx = OptiFather(self.group.values())
+        self.problem.father = self.father_updx
         # define parameters
         z_i = self.define_parameter('z_i', self.q_i_struct.shape[0])
         z_ji = self.define_parameter('z_ji', self.q_ji_struct.shape[0])
@@ -71,7 +74,7 @@ class ADMM(DualUpdater):
         T = self.define_symbol('T')
         t0 = t/T
         # get (part of) variables
-        x_i = self._get_x_variables()
+        x_i = self._get_x_variables(symbolic=True)
         # transform spline variables: only consider future piece of spline
         tf = lambda cfs, basis: shift_knot1_fwd(cfs, basis, t0)
         self._transform_spline([x_i, z_i, l_i], tf, self.q_i)
@@ -90,11 +93,10 @@ class ADMM(DualUpdater):
                     obj += mtimes(l.T, x-z) + 0.5*rho*mtimes((x-z).T, (x-z))
         self.define_objective(obj)
         # construct problem
-        self.father = OptiFather(self.group.values())
-        prob, _ = self.father.construct_problem(
+        prob, _ = self.father_updx.construct_problem(
             self.options, str(self._index))
         self.problem_upd_x = prob
-        self.father.init_transformations(self.problem.init_primal_transform,
+        self.father_updx.init_transformations(self.problem.init_primal_transform,
                                          self.problem.init_dual_transform)
         self.init_var_admm()
 
@@ -143,8 +145,7 @@ class ADMM(DualUpdater):
         self._transform_spline(z_ij_new, tf, self.q_ij)
         out = [z_i_new.cat, z_ij_new.cat]
         # create problem
-        prob, _ = self.father.create_function(
-            'upd_z_'+str(self._index), inp, out, self.options)
+        prob, _ = create_function('upd_z_'+str(self._index), inp, out, self.options)
         self.problem_upd_z = prob
 
     def _construct_upd_z_nlp(self):
@@ -219,8 +220,7 @@ class ADMM(DualUpdater):
                     l = l_ij[str(nghb), child.label, name]
                     obj += mtimes(l.T, x-z) + 0.5*rho*mtimes((x-z).T, (x-z))
         # construct problem
-        prob, _ = self.father.create_nlp(var, par, obj,
-                                         constraints, self.options, str(self._index))
+        prob, _ = create_nlp(var, par, obj, constraints, self.options, str(self._index))
         self.problem_upd_z = prob
 
     def construct_upd_l(self):
@@ -240,8 +240,7 @@ class ADMM(DualUpdater):
         l_ij_new = self.q_ij_struct(l_ij.cat + rho*(x_j.cat - z_ij.cat))
         out = [l_i_new, l_ij_new]
         # create problem
-        prob, _ = self.father.create_function(
-            'upd_l_'+str(self._index), inp, out, self.options)
+        prob, _ = create_function('upd_l_'+str(self._index), inp, out, self.options)
         self.problem_upd_l = prob
 
     # ========================================================================
@@ -261,14 +260,14 @@ class ADMM(DualUpdater):
         sym, jac = [], []
         for child, q_i in self.q_i.items():
             for name, ind in q_i.items():
-                var = child.get_variable(name, spline=False)
+                var = self.distr_problem.father.get_variables(child, name, spline=False, symbolic=True)
                 jj = jacobian(g, var)
                 jac = horzcat(jac, jj[:, ind])
                 sym.append(var)
         for nghb in self.q_ij.keys():
             for child, q_ij in self.q_ij[nghb].items():
                 for name, ind in q_ij.items():
-                    var = child.get_variable(name, spline=False)
+                    var = self.distr_problem.father.get_variables(child, name, spline=False, symbolic=True)
                     jj = jacobian(g, var)
                     jac = horzcat(jac, jj[:, ind])
                     sym.append(var)
@@ -299,11 +298,11 @@ class ADMM(DualUpdater):
         for nghb, q_ji in self.q_ji.items():
             for child, q in q_ji.items():
                 for name, ind in q.items():
-                    var = self.father._var_result[child.label, name][ind]
+                    var = self.father_updx._var_result[child.label, name][ind]
                     self.var_admm['z_ji'][str(nghb), child.label, name] = var
         for child, q in self.q_i.items():
             for name, ind in q.items():
-                var = self.father._var_result[child.label, name][ind]
+                var = self.father_updx._var_result[child.label, name][ind]
                 self.var_admm['x_i'][child.label, name] = var
                 self.var_admm['z_i'][child.label, name] = var
 
@@ -320,16 +319,16 @@ class ADMM(DualUpdater):
         self.current_time = current_time
         self.problem.current_time = current_time
         # set initial guess, parameters, lb & ub
-        var = self.father.get_variables()
-        par = self.father.set_parameters(current_time)
-        lb, ub = self.father.update_bounds(current_time)
+        var = self.father_updx.get_variables()
+        par = self.father_updx.set_parameters(current_time)
+        lb, ub = self.father_updx.update_bounds(current_time)
         # solve!
         t0 = time.time()
         result = self.problem_upd_x(x0=var, p=par, lbg=lb, ubg=ub)
         t1 = time.time()
         t_upd = t1-t0
-        self.father.set_variables(result['x'])
-        self.var_admm['x_i'] = self._get_x_variables(solution=True)
+        self.father_updx.set_variables(result['x'])
+        self.var_admm['x_i'] = self._get_x_variables()
         stats = self.problem_upd_x.stats()
         if (stats['return_status'] != 'Solve_Succeeded'):
             print 'upd_x %d: %s' % (self._index, stats['return_status'])

@@ -17,7 +17,7 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-from ..basics.optilayer import OptiFather
+from ..basics.optilayer import OptiFather, create_function
 from ..basics.spline_extra import shift_knot1_fwd, shift_over_knot
 from problem import Problem
 from dualmethod import DualUpdater, DualProblem
@@ -52,6 +52,9 @@ class DDUpdater(DualUpdater):
         self.construct_upd_l()
 
     def construct_upd_xz(self):
+        # construct optifather & give reference to problem
+        self.father_updx = OptiFather(self.group.values())
+        self.problem.father = self.father_updx
         # define z_ij variables
         init = self.q_ij_struct(0)
         for nghb, q_ij in self.q_ij.items():
@@ -78,7 +81,7 @@ class DDUpdater(DualUpdater):
         T = self.define_symbol('T')
         t0 = t/T
         # get (part of) variables
-        x_i = self._get_x_variables()
+        x_i = self._get_x_variables(symbolic=True)
         # construct local copies of parameters
         par = {}
         for name, s in self.par_i.items():
@@ -134,16 +137,15 @@ class DDUpdater(DualUpdater):
             lb, ub = con[1], con[2]
             self.define_constraint(c, lb, ub)
         # construct problem
-        self.father = OptiFather(self.group.values())
-        prob, _ = self.father.construct_problem(
+        prob, _ = self.father_updx.construct_problem(
             self.options, str(self._index))
         self.problem_upd_xz = prob
-        self.father.init_transformations(self.problem.init_primal_transform,
+        self.father_updx.init_transformations(self.problem.init_primal_transform,
                                          self.problem.init_dual_transform)
         # init var_dd
         for child, q in self.q_i.items():
             for name, ind in q.items():
-                var = self.father._var_result[child.label, name][ind]
+                var = self.father_updx._var_result[child.label, name][ind]
                 self.var_dd['x_i'][child.label, name] = var
 
     def construct_upd_l(self):
@@ -159,8 +161,7 @@ class DDUpdater(DualUpdater):
         l_ij_new = self.q_ij_struct(l_ij.cat + rho*(x_j.cat - z_ij.cat))
         out = [l_ij_new]
         # create problem
-        prob, _ = self.father.create_function(
-            'upd_l_'+str(self._index), inp, out, self.options)
+        prob, _ = create_function('upd_l_'+str(self._index), inp, out, self.options)
         self.problem_upd_l = prob
 
     # ========================================================================
@@ -180,17 +181,17 @@ class DDUpdater(DualUpdater):
         self.current_time = current_time
         self.problem.current_time = current_time
         # set initial guess, parameters, lb & ub
-        var = self.father.get_variables()
-        par = self.father.set_parameters(current_time)
-        lb, ub = self.father.update_bounds(current_time)
+        var = self.father_updx.get_variables()
+        par = self.father_updx.set_parameters(current_time)
+        lb, ub = self.father_updx.update_bounds(current_time)
         # solve!
         t0 = time.time()
         result = self.problem_upd_xz(x0=var, p=par, lbg=lb, ubg=ub)
         t1 = time.time()
         t_upd = t1-t0
-        self.father.set_variables(result['x'])
-        self.var_dd['x_i'] = self._get_x_variables(solution=True)
-        z_ij = self.get_variable('z_ij', spline=False, solution=True)
+        self.father_updx.set_variables(result['x'])
+        self.var_dd['x_i'] = self._get_x_variables()
+        z_ij = self.father_updx.get_variables(self, 'z_ij', spline=False)
         self.var_dd['z_ij'] = self.q_ij_struct(z_ij)
         stats = self.problem_upd_xz.stats()
         if (stats['return_status'] != 'Solve_Succeeded'):
