@@ -17,7 +17,7 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-from ..basics.optilayer import OptiFather
+from ..basics.optilayer import OptiFather, create_nlp, create_function
 from ..basics.spline_extra import shift_knot1_fwd, shift_knot1_bwd, shift_over_knot, definite_integral
 from ..basics.spline import BSpline
 from problem import Problem
@@ -143,8 +143,7 @@ class ADMM(DualUpdater):
         self._transform_spline(z_ij_new, tf, self.q_ij)
         out = [z_i_new.cat, z_ij_new.cat]
         # create problem
-        prob, _ = self.father.create_function(
-            'upd_z_'+str(self._index), inp, out, self.options)
+        prob, _ = create_function('upd_z_'+str(self._index), inp, out, self.options)
         self.problem_upd_z = prob
 
     def _construct_upd_z_nlp(self):
@@ -219,8 +218,7 @@ class ADMM(DualUpdater):
                     l = l_ij[str(nghb), child.label, name]
                     obj += mtimes(l.T, x-z) + 0.5*rho*mtimes((x-z).T, (x-z))
         # construct problem
-        prob, _ = self.father.create_nlp(var, par, obj,
-                                         constraints, self.options, str(self._index))
+        prob, _ = create_nlp(var, par, obj, constraints, self.options, str(self._index))
         self.problem_upd_z = prob
 
     def construct_upd_l(self):
@@ -240,8 +238,7 @@ class ADMM(DualUpdater):
         l_ij_new = self.q_ij_struct(l_ij.cat + rho*(x_j.cat - z_ij.cat))
         out = [l_i_new, l_ij_new]
         # create problem
-        prob, _ = self.father.create_function(
-            'upd_l_'+str(self._index), inp, out, self.options)
+        prob, _ = create_function('upd_l_'+str(self._index), inp, out, self.options)
         self.problem_upd_l = prob
 
     # ========================================================================

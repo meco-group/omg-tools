@@ -17,7 +17,7 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-from ..basics.optilayer import OptiFather
+from ..basics.optilayer import OptiFather, create_function
 from ..basics.spline_extra import shift_knot1_fwd, shift_over_knot
 from problem import Problem
 from dualmethod import DualUpdater, DualProblem
@@ -159,8 +159,7 @@ class DDUpdater(DualUpdater):
         l_ij_new = self.q_ij_struct(l_ij.cat + rho*(x_j.cat - z_ij.cat))
         out = [l_ij_new]
         # create problem
-        prob, _ = self.father.create_function(
-            'upd_l_'+str(self._index), inp, out, self.options)
+        prob, _ = create_function('upd_l_'+str(self._index), inp, out, self.options)
         self.problem_upd_l = prob
 
     # ========================================================================
