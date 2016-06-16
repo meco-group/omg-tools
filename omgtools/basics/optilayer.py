@@ -242,6 +242,10 @@ class OptiFather(object):
                 child._objective, variables, parameters)
         return objective
 
+    def reset(self):
+        for child in self.children.values():
+            child.reset()
+
     def _substitute_symbols(self, expr, variables, parameters):
         if isinstance(expr, (int, float)):
             return expr
@@ -527,6 +531,21 @@ class OptiChild(object):
     def define_objective(self, expr):
         self._objective += expr
 
+    # ========================================================================
+    # Reset variables, parameters, constraints, objectives
+    # ========================================================================
+
+    def reset(self):
+        self._variables = {}
+        self._parameters = {}
+        self._symbols = {}
+        self._values = {}
+        self._splines_prim = {}
+        self._splines_dual = {}
+        self._constraints = {}
+        self._objective = 0.
+        self.symbol_dict = {}
+        self._constraint_cnt = 0
 
     # ========================================================================
     # Methods required to override
