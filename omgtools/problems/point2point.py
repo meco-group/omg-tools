@@ -39,13 +39,30 @@ class Point2pointProblem(Problem):
 
     def __init__(self, fleet, environment, options):
         Problem.__init__(self, fleet, environment, options, label='p2p')
+        self.init_time = None
+
+    def set_init_time(self, time):
+        self.init_time = time
+
+    def reset_init_time(self):
+        self.init_time = None
 
     def construct(self):
+        self.T, self.t = self.define_parameter('T'), self.define_parameter('t')
+        self.t0 = self.t/self.T
         Problem.construct(self)
         for vehicle in self.vehicles:
             splines = vehicle.define_splines(n_seg=1)[0]
             vehicle.define_trajectory_constraints(splines)
             self.environment.define_collision_constraints(vehicle, splines)
+
+    def define_init_constraints(self):
+        for vehicle in self.vehicles:
+            init_con = vehicle.get_initial_constraints(vehicle.splines[0])
+            for con in init_con:
+                spline, condition = con[0], con[1]
+                self.define_constraint(
+                    evalspline(spline, self.t0) - condition, 0., 0.)
 
     def stop_criterium(self, current_time, update_time):
         stop = True
@@ -54,6 +71,7 @@ class Point2pointProblem(Problem):
         return stop
 
     def final(self):
+        self.reset_init_time()
         obj = self.compute_objective()
         print '\nWe reached our target!'
         print '%-18s %6g' % ('Objective:', obj)
@@ -72,6 +90,21 @@ class Point2pointProblem(Problem):
             self.init()
         ExportP2P(self, options)
 
+    def sleep(self, current_time, sleep_time, sample_time):
+        # update vehicles
+        for vehicle in self.vehicles:
+            spline_segments = [self.father.get_variables(vehicle, 'splines'+str(k)) for k in range(vehicle.n_seg)]
+            spline_values = vehicle.signals['splines'][:, -1]
+            spline_values = [self.father.get_variables(vehicle, 'splines'+str(k), spline=False)[-1, :] for k in range(vehicle.n_seg)]
+            for segment, values in zip(spline_segments, spline_values):
+                for spl, value in zip(segment, values):
+                    spl.coeffs = value*np.ones(len(spl.basis))
+            vehicle.update(current_time, sleep_time, sample_time, spline_segments, sleep_time)
+        # update plots
+        self.environment.update(sleep_time, sample_time)
+        # update plots
+        self.update_plots()
+
 
 class FixedTPoint2point(Point2pointProblem):
 
@@ -86,18 +119,8 @@ class FixedTPoint2point(Point2pointProblem):
 
     def construct(self):
         Point2pointProblem.construct(self)
-        T, t = self.define_parameter('T'), self.define_parameter('t')
-        self.t0 = t/T
         self.define_init_constraints()
         self.define_terminal_constraints()
-
-    def define_init_constraints(self):
-        for vehicle in self.vehicles:
-            init_con = vehicle.get_initial_constraints(vehicle.splines[0])
-            for con in init_con:
-                spline, condition = con[0], con[1]
-                self.define_constraint(
-                    evalspline(spline, self.t0) - condition, 0., 0.)
 
     def define_terminal_constraints(self):
         objective = 0.
@@ -122,7 +145,10 @@ class FixedTPoint2point(Point2pointProblem):
 
     def set_parameters(self, current_time):
         parameters = Point2pointProblem.set_parameters(self, current_time)
-        parameters['t'] = np.round(current_time, 6) % self.knot_time
+        if self.init_time is None:
+            parameters['t'] = np.round(current_time, 6) % self.knot_time
+        else:
+            parameters['t'] = self.init_time
         parameters['T'] = self.options['horizon_time']
         return parameters
 
@@ -145,16 +171,19 @@ class FixedTPoint2point(Point2pointProblem):
 
     def update(self, current_time, update_time, sample_time):
         horizon_time = self.options['horizon_time']
-        if horizon_time < update_time:
-            update_time = horizon_time
-        self.compute_partial_objective(current_time, update_time)
-        # update vehicles
-        for vehicle in self.vehicles:
+        if self.init_time is None:
             # y_coeffs represents coefficients of a spline, for which a part of
             # its time horizon lies in the past. Therefore, we need to pass the
             # current time relatively to the begin of this time horizon. In this
             # way, only the future, relevant, part will be saved/plotted.
             rel_current_time = np.round(current_time, 6) % self.knot_time
+        else:
+            rel_current_time = self.init_time
+        if horizon_time - rel_current_time < update_time:
+            update_time = horizon_time - rel_current_time
+        self.compute_partial_objective(current_time, update_time)
+        # update vehicles
+        for vehicle in self.vehicles:
             n_samp = int(
                 round((horizon_time-rel_current_time)/sample_time, 3)) + 1
             time_axis = np.linspace(rel_current_time, rel_current_time + (n_samp-1)*sample_time, n_samp)
@@ -202,19 +231,13 @@ class FreeTPoint2point(Point2pointProblem):
     def construct(self):
         Point2pointProblem.construct(self)
         T = self.define_variable('T', value=10)
-        self.define_parameter('t')
+        t = self.define_parameter('t')
+        self.t0 = t/T
         self.define_objective(T)
         # positivity contraint on motion time
         self.define_constraint(-T, -inf, 0.)
         self.define_init_constraints()
         self.define_terminal_constraints()
-
-    def define_init_constraints(self):
-        for vehicle in self.vehicles:
-            init_con = vehicle.get_initial_constraints(vehicle.splines[0])
-            for con in init_con:
-                spline, condition = con[0], con[1]
-                self.define_constraint(spline(0) - condition, 0., 0.)
 
     def define_terminal_constraints(self):
         for vehicle in self.vehicles:
@@ -227,20 +250,32 @@ class FreeTPoint2point(Point2pointProblem):
     def set_parameters(self, current_time):
         parameters = Point2pointProblem.set_parameters(self, current_time)
         # current time is always 0 for FreeT problem, time axis always resets
-        parameters['t'] = 0
+        if self.init_time is None:
+            parameters['t'] = 0
+        else:
+            parameters['t'] = self.init_time
         return parameters
 
     def update(self, current_time, update_time, sample_time):
         self.update_time = update_time
         horizon_time = self.father.get_variables(self, 'T')[0][0]
+        if self.init_time is None:
+            rel_current_time = 0.0
+        else:
+            rel_current_time = self.init_time
         if horizon_time < update_time:
             update_time = horizon_time
+        if horizon_time - rel_current_time < update_time:
+            update_time = horizon_time - rel_current_time
         self.compute_partial_objective(current_time+update_time)
         # update vehicles
         for vehicle in self.vehicles:
+            n_samp = int(
+                round((horizon_time-rel_current_time)/sample_time, 3)) + 1
+            time_axis = np.linspace(rel_current_time, rel_current_time + (n_samp-1)*sample_time, n_samp)
             spline_segments = [self.father.get_variables(vehicle, 'splines'+str(k)) for k in range(vehicle.n_seg)]
             vehicle.update(
-                current_time, update_time, sample_time, spline_segments, horizon_time)
+                current_time, update_time, sample_time, spline_segments, horizon_time, time_axis)
         # update environment
         self.environment.update(update_time, sample_time)
         # update plots
