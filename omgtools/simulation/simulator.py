@@ -67,7 +67,15 @@ class Simulator:
         stop = self.problem.stop_criterium(self.current_time, self.update_time)
         return stop
 
-    def run_once(self, update=True):
+    def run_once(self, **kwargs):
+        if 'update' in kwargs and not kwargs['update']:
+            update = False
+        else:
+            update = True
+        if 'hard_stop' in kwargs:
+            hard_stop = kwargs['hard_stop']
+        else:
+            hard_stop = None
         # initialize problem
         self.problem.initialize()
         # solve problem
@@ -75,7 +83,10 @@ class Simulator:
         if not update:
             return None
         # update everything
-        self.problem.update(self.current_time, np.inf, self.sample_time)
+        if hard_stop:
+            self.hard_stop(hard_stop['time'], hard_stop['perturbation'])
+        else:
+            self.problem.update(self.current_time, np.inf, self.sample_time)
         self.problem.final()
         # determine timing
         update_time = self.problem.vehicles[0].signals['time'][:, -1] - self.current_time
@@ -85,6 +96,16 @@ class Simulator:
         for vehicle in self.problem.vehicles:
             trajectories[str(vehicle)] = vehicle.trajectories
         return trajectories
+
+    def hard_stop(self, stop_time, perturbation):
+        self.problem.update(self.current_time, stop_time, self.sample_time)
+        for k, vehicle in enumerate(self.problem.vehicles):
+            vehicle.overrule_state(vehicle.signals['state'][:, -1] + np.array(perturbation[k]))
+            vehicle.overrule_input(np.zeros(len(vehicle.prediction['input'])))
+
+    def sleep(self, sleep_time):
+        self.problem.sleep(self.current_time, sleep_time, self.sample_time)
+        self.update_timing(sleep_time)
 
     def time2index(self, time):
         Ts = self.sample_time
