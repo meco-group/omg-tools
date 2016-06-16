@@ -6,7 +6,7 @@ import os
 sys.path.insert(0, os.getcwd()+'/../')
 import matplotlib
 from omgtools import *
-from omgtools.vehicles.lvd_fap import FAP
+from lvd_fap import FAP
 
 save = False
 

@@ -1,8 +1,8 @@
 # Implementation of 3 dof serial plate picker of LVD
 # questions: ruben.vanparys@kuleuven.be
 
-from vehicle import Vehicle
-from ..basics.spline_extra import sample_splines
+from omgtools.vehicles.vehicle import Vehicle
+from omgtools.basics.spline_extra import sample_splines
 from casadi import inf
 import numpy as np
 
