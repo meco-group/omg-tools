@@ -225,10 +225,21 @@ class Vehicle(OptiChild, PlotLayer):
     # Simulation and prediction related functions
     # ========================================================================
 
+    def overrule_state(self, state):
+        self.signals['state'][:, -1] = state
+        self.signals['pose'][:, -1] = self._state2pose(state)
+        self.prediction['state'] = state
+        self.prediction['pose'] = self._state2pose(state)
+
+    def overrule_input(self, input):
+        self.signals['input'][:, -1] = input
+        self.prediction['input'] = input
+
     def update(self, current_time, update_time, sample_time, spline_segments, segment_times, time_axis=None):
         if not isinstance(segment_times, list):
             segment_times = [segment_times]
         splines = concat_splines(spline_segments, segment_times)
+        self.result_splines = splines
         horizon_time = sum(segment_times)
         if time_axis is None:
             n_samp = int(
@@ -252,8 +263,10 @@ class Vehicle(OptiChild, PlotLayer):
         self.trajectories['splines'] = np.c_[
             sample_splines(splines, time_axis)]
         knots = splines[0].basis.knots
-        time_axis_kn = np.r_[
-            knots[self.degree] + time_axis[0], knots[self.degree+1:-self.degree]]
+        # time_axis_kn = np.r_[
+        #     knots[self.degree] + time_axis[0], knots[self.degree+1:-self.degree]]
+        time_axis_kn = np.r_[knots[self.degree] + time_axis[0], [k for k in knots[
+        self.degree+1:-self.degree] if k > (knots[self.degree]+time_axis[0])]]
         self.trajectories_kn = self.splines2signals(splines, time_axis_kn)
         self.trajectories_kn['time'] = time_axis_kn - \
             time_axis_kn[0] + current_time

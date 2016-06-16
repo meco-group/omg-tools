@@ -2,7 +2,7 @@
 # questions: ruben.vanparys@kuleuven.be
 
 from omgtools.vehicles.vehicle import Vehicle
-from omgtools.basics.spline_extra import sample_splines
+from omgtools.basics.spline_extra import sample_splines, shift_spline
 from casadi import inf
 import numpy as np
 
@@ -49,14 +49,13 @@ class FAP(Vehicle):
     def get_initial_constraints(self, splines):
         state0 = self.define_parameter('state0', 3)
         input0 = self.define_parameter('input0', 3)
-        acceleration0 = self.define_parameter('acceleration0', 3)
         x, y, z = splines
         dx, dy, dz = x.derivative(), y.derivative(), z.derivative()
         ddx, ddy, ddz = x.derivative(2), y.derivative(2), z.derivative(2)
         return [(x, state0[0]), (y, state0[1]), (z, state0[2]),
                 (dx, self.T*input0[0]), (dy, self.T*input0[1]),
-                (dz, self.T*input0[2]), (ddx, (self.T**2)*acceleration0[0]),
-                (ddy, (self.T**2)*acceleration0[1]), (ddz, (self.T**2)*acceleration0[2])]
+                (dz, self.T*input0[2]), (ddx, 0.),
+                (ddy, 0.), (ddz, 0.)]
 
     def get_terminal_constraints(self, splines):
         position = self.define_parameter('positionT', 3)
@@ -73,7 +72,6 @@ class FAP(Vehicle):
     def set_initial_conditions(self, position, input=np.zeros(3)):
         self.prediction['state'] = position
         self.prediction['input'] = input
-        self.prediction['acceleration'] = np.zeros(3)
 
     def set_terminal_conditions(self, position):
         self.positionT = position
@@ -92,6 +90,36 @@ class FAP(Vehicle):
             1.2*posT[2], posT[2], len(self.basis)-breakpoint - end_cont - 2), posT[2]*np.ones(end_cont)]
         return init_value
 
+    # def recover_hard_stop(self, problem, stop_time=None):
+    #     pos0 = self.signals['state'][:, -1]
+    #     posT = self.positionT
+    #     # search time of stop
+    #     if not stop_time:
+    #         stop_time = 0.
+    #         dist = np.inf
+    #         for k in range(self.trajectories['splines'].shape[1]):
+    #             value = self.trajectories['splines'][:, k]
+    #             _dist = np.linalg.norm(value - pos0)
+    #             if _dist < dist:
+    #                 dist = _dist
+    #                 stop_time = self.trajectories['time'][:, k]
+    #     # retrieve previous spline result
+    #     splines = self.result_splines
+    #     horizon_time = splines[0].basis.knots[-1]
+    #     # define stop_time in spline basis time axis
+    #     sample_time = self.trajectories['time'][:, 1] - self.trajectories['time'][:, 0]
+    #     n_samp = int(horizon_time/sample_time)
+    #     horizon_time = n_samp*sample_time
+    #     t0 = stop_time - (self.trajectories['time'][:, -1] - horizon_time)
+    #     # get future piece of spline in equidistant basis
+    #     init_value = np.zeros((len(self.basis), 3))
+    #     for k, spline in enumerate(splines):
+    #         init_value[:, k] = shift_spline(spline.coeffs, t0, spline.basis)
+    #     self.reinit_splines(problem, init_value)
+    #     # change time variable
+    #     problem.father.set_variables(horizon_time - t0, problem, 'T')
+    #     print stop_time
+
     def check_terminal_conditions(self):
         if (np.linalg.norm(self.signals['state'][:, -1] - self.positionT) > 1.e-3 or
                 np.linalg.norm(self.signals['input'][:, -1])) > 1.e-3:
@@ -103,7 +131,6 @@ class FAP(Vehicle):
         parameters = {}
         parameters['state0'] = self.prediction['state']
         parameters['input0'] = self.prediction['input']
-        parameters['acceleration0'] = self.prediction['acceleration']
         parameters['positionT'] = self.positionT
         return parameters
 
