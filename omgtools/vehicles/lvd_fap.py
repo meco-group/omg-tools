@@ -7,7 +7,7 @@ from casadi import inf
 import numpy as np
 
 
-class LVD(Vehicle):
+class FAP(Vehicle):
 
     def __init__(self, shapes, options={}, bounds={}):
         Vehicle.__init__(
@@ -18,9 +18,10 @@ class LVD(Vehicle):
         self.vmax = bounds['vmax'] if 'vmax' in bounds else [1.6,  0.5,  0.3]
         self.amin = bounds['amin'] if 'amin' in bounds else [-2.0, -2.0, -1.0]
         self.amax = bounds['amax'] if 'amax' in bounds else [2.0,  2.0,  1.0]
-        self.jmin = bounds[
-            'jmin'] if 'jmin' in bounds else [-4.0, -100.0, -5.0]
+        self.jmin = bounds['jmin'] if 'jmin' in bounds else [-4.0, -100.0, -5.0]
         self.jmax = bounds['jmax'] if 'jmax' in bounds else [4.0,  100.0,  5.0]
+
+    def init(self):
         # time horizon
         self.T = self.define_symbol('T')
 
@@ -62,9 +63,11 @@ class LVD(Vehicle):
         x, y, z = splines
         dx, dy, dz = x.derivative(), y.derivative(), z.derivative()
         ddx, ddy, ddz = x.derivative(2), y.derivative(2), z.derivative(2)
+        dddx, dddy, dddz = x.derivative(3), y.derivative(3), z.derivative(3)
         term_con = [(x, position[0]), (y, position[1]), (z, position[2])]
-        term_con_der = [
-            (dx, 0.), (dy, 0.), (dz, 0.), (ddx, 0.), (ddy, 0.), (ddz, 0.)]
+        term_con_der = [(dx, 0.), (dy, 0.), (dz, 0.),
+                        (ddx, 0.), (ddy, 0.), (ddz, 0.),
+                        (dddx, 0.), (dddy, 0.)] # end with vertical motion
         return [term_con, term_con_der]
 
     def set_initial_conditions(self, position, input=np.zeros(3)):
