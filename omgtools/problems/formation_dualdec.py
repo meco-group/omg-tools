@@ -30,7 +30,6 @@ class FormationPoint2pointDualDecomposition(DDProblem):
         DDProblem.__init__(self, fleet, environment, problems, options)
         # define parameters
         rel_splines = {veh: {nghb: self.define_parameter('rs'+str(l)+str(n), len(self.fleet.configuration[veh].keys())) for n, nghb in enumerate(self.fleet.get_neighbors(veh))} for l, veh in enumerate(self.vehicles)}
-
         # formation constraints
         couples = {veh: [] for veh in self.vehicles}
         for veh in self.vehicles:
@@ -40,15 +39,14 @@ class FormationPoint2pointDualDecomposition(DDProblem):
                 ind_nghb = sorted(self.fleet.configuration[nghb].keys())
                 if veh not in couples[nghb] and nghb not in couples[veh]:
                     couples[veh].append(nghb)
-                    spl_veh = veh.get_variable('splines0')
-                    spl_nghb = nghb.get_variable('splines0')
+                    spl_veh = self.father.get_variables(veh, 'splines0', symbolic=True)
+                    spl_nghb = self.father.get_variables(nghb, 'splines0', symbolic=True)
                     for ind_v, ind_n, rel_spl in zip(ind_veh, ind_nghb, rs[nghb]):
                         self.define_constraint(
                             spl_veh[ind_v] - spl_nghb[ind_n] - rel_spl, 0., 0.)
-
         # terminal constraints (stability issue)
         for veh in self.vehicles:
-            splines = veh.get_variable('splines0')
+            splines = self.father.get_variables(veh, 'splines0', symbolic=True)
             for spline in splines:
                 for d in range(1, veh.degree+1):
                     # constraints imposed on distributedproblem instance will be

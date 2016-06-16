@@ -38,8 +38,8 @@ class FormationPoint2pointCentral(FixedTPoint2point):
                 ind_nghb = sorted(self.fleet.configuration[nghb].keys())
                 if veh not in couples[nghb] and nghb not in couples[veh]:
                     couples[veh].append(nghb)
-                    spl_veh = veh.get_variable('splines0')
-                    spl_nghb = nghb.get_variable('splines0')
+                    spl_veh = self.father.get_variables(veh, 'splines0', symbolic=True)
+                    spl_nghb = self.father.get_variables(nghb, 'splines0', symbolic=True)
                     for ind_v, ind_n, rel_spl in zip(ind_veh, ind_nghb, rs[nghb]):
                         self.define_constraint(
                             spl_veh[ind_v] - spl_nghb[ind_n] - rel_spl, 0., 0.)

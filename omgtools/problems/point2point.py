@@ -151,9 +151,10 @@ class FixedTPoint2point(Point2pointProblem):
             rel_current_time = np.round(current_time, 6) % self.knot_time
             n_samp = int(
                 round((horizon_time-rel_current_time)/sample_time, 3)) + 1
-            time_axis = np.linspace(rel_current_time, horizon_time, n_samp)
+            time_axis = np.linspace(rel_current_time, rel_current_time + (n_samp-1)*sample_time, n_samp)
+            spline_segments = [self.father.get_variables(vehicle, 'splines'+str(k)) for k in range(vehicle.n_seg)]
             vehicle.update(
-                current_time, update_time, sample_time, horizon_time, time_axis)
+                current_time, update_time, sample_time, spline_segments, horizon_time, time_axis)
         # update environment
         self.environment.update(update_time, sample_time)
         # update plots
@@ -169,7 +170,7 @@ class FixedTPoint2point(Point2pointProblem):
             term_con, _ = vehicle.get_terminal_constraints(
                 vehicle.splines[0])
             for k in range(len(term_con)):
-                g = self.get_variable('g'+str(k), solution=True)[0]
+                g = self.father.get_variables(self, 'g'+str(k))[0]
                 part_objective += horizon_time*definite_integral(g, t0, t1)
         self.objective += part_objective
 
@@ -180,7 +181,7 @@ class FixedTPoint2point(Point2pointProblem):
                 term_con, _ = vehicle.get_terminal_constraints(
                     vehicle.splines[0])
                 for k in range(len(term_con)):
-                    g = self.get_variable('g'+str(k), solution=True)[0]
+                    g = self.father.get_variables(self, 'g'+str(k))[0]
                     obj += self.options['horizon_time']*g.integral()
             return obj
         return self.objective
@@ -222,27 +223,28 @@ class FreeTPoint2point(Point2pointProblem):
 
     def update(self, current_time, update_time, sample_time):
         self.update_time = update_time
-        horizon_time = self.get_variable('T', solution=True)[0][0]
+        horizon_time = self.father.get_variables(self, 'T')[0][0]
         if horizon_time < update_time:
             update_time = horizon_time
         self.compute_partial_objective(current_time+update_time)
         # update vehicles
         for vehicle in self.vehicles:
+            spline_segments = [self.father.get_variables(vehicle, 'splines'+str(k)) for k in range(vehicle.n_seg)]
             vehicle.update(
-                current_time, update_time, sample_time, horizon_time)
+                current_time, update_time, sample_time, spline_segments, horizon_time)
         # update environment
         self.environment.update(update_time, sample_time)
         # update plots
         self.update_plots()
 
     def stop_criterium(self, current_time, update_time):
-        T = self.get_variable('T', solution=True)[0][0]
+        T = self.father.get_variables(self, 'T')[0][0]
         if T < update_time:
             return True
         return Point2pointProblem.stop_criterium(self, current_time, update_time)
 
     def init_step(self, current_time, update_time):
-        T = self.get_variable('T', solution=True)[0][0]
+        T = self.father.get_variables(self, 'T')[0][0]
         # check if almost arrived, if so lower the update time
         if T < 2*update_time:
             update_time = T - update_time
@@ -254,7 +256,7 @@ class FreeTPoint2point(Point2pointProblem):
         # a new basis with new equidistant knots.
         self.father.transform_primal_splines(
             lambda coeffs, basis: shift_spline(coeffs, update_time/target_time, basis))
-        self.set_variable('T', target_time)
+        self.father.set_variables(target_time, self, 'T')
 
     def compute_partial_objective(self, current_time):
         self.objective = current_time

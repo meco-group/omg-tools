@@ -46,8 +46,8 @@ class RendezVous(ADMMProblem):
                 ind_nghb = sorted(self.fleet.configuration[nghb].keys())
                 if veh not in couples[nghb] and nghb not in couples[veh]:
                     couples[veh].append(nghb)
-                    conT_veh = problems_dic[veh].get_variable('conT0')
-                    conT_nghb = problems_dic[nghb].get_variable('conT0')
+                    conT_veh = self.father.get_variables(problems_dic[veh], 'conT0', symbolic=True)
+                    conT_nghb = self.father.get_variables(problems_dic[nghb], 'conT0', symbolic=True)
                     for ind_v, ind_n, rcT_k in zip(ind_veh, ind_nghb, rcT[nghb]):
                         self.define_constraint(
                             conT_veh[ind_v] - conT_nghb[ind_n] - rcT_k, 0., 0.)

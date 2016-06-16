@@ -144,7 +144,7 @@ class OptiFather(object):
     def add(self, children):
         children = children if isinstance(children, list) else [children]
         for child in children:
-            child.father = self
+            # child.father = self
             self.children.update({child.label: child})
 
     def add_to_dict(self, symbol, child, name):
@@ -286,13 +286,65 @@ class OptiFather(object):
         self._var_result = variables
         self._dual_var_result = self._con_struct(0.)
 
-    def set_variables(self, variables, label=None, name=None):
-        if label is None:
+    def set_variables(self, variables, child=None, name=None):
+        if child is None:
             self._var_result = self._var_struct(variables)
         elif name is None:
-            self._var_result[label] = variables
+            self._var_result[child.label] = variables
         else:
-            self._var_result[label, name] = variables
+            self._var_result[child.label, name] = variables
+
+    def get_variables(self, child=None, name=None, **kwargs):
+        if child is None:
+            return self._var_result
+        elif name is None:
+            return self._var_result.prefix(child.label)
+        else:
+            if name in child._splines_prim and not ('spline' in kwargs and not kwargs['spline']):
+                basis = child._splines_prim[name]['basis']
+                if 'symbolic' in kwargs and kwargs['symbolic']:
+                    coeffs = child._variables[name]
+                else:
+                    coeffs = np.array(self._var_result[child.label, name])
+                return [BSpline(basis, coeffs[:, k]) for k in range(coeffs.shape[1])]
+            else:
+                if 'symbolic' in kwargs and kwargs['symbolic']:
+                    return child._variables[name]
+                else:
+                    return np.array(self._var_result[child.label, name])
+
+    def get_parameters(self, child=None, name=None, **kwargs):
+        if child is None:
+            return self._par_result
+        elif name is None:
+            return self._par_result.prefix(child.label)
+        else:
+            if name in child._splines_prim and not ('spline' in kwargs and not kwargs['spline']):
+                basis = child._splines_prim[name]['basis']
+                if 'symbolic' in kwargs and kwargs['symbolic']:
+                    coeffs = child._parameters[name]
+                else:
+                    coeffs = np.array(self._par_result[child.label, name])
+                return [BSpline(basis, coeffs[:, k]) for k in range(coeffs.shape[1])]
+            else:
+                if 'symbolic' in kwargs and kwargs['symbolic']:
+                    return child._parameters[name]
+                else:
+                    return np.array(self._par_result[child.label, name])
+
+    def get_constraint(self, child, name, symbolic=False):
+        if symbolic:
+            return child._constraints[name][0]
+        else:
+            return self._evaluate_symbols(self.children[child.label]._constraints[name][0],
+                self._var_result, self._par_result)
+
+    def get_objective(self, child, name, symbolic=False):
+        if symbolic:
+            return child._objective
+        else:
+            return self._evaluate_symbols(self.children[child.label]._objective,
+                self._var_result, self._par_result)
 
     def set_parameters(self, time):
         self._par = self._par_struct(0.)
@@ -304,30 +356,6 @@ class OptiFather(object):
                 else:
                     self._par[label, name] = child._values[name]
         return self._par
-
-    def get_variables(self, label=None, name=None):
-        if label is None:
-            return self._var_result
-        elif name is None:
-            return self._var_result.prefix(label)
-        else:
-            return np.array(self._var_result[label, name])
-
-    def get_parameters(self, label=None, name=None):
-        if label is None:
-            return self._par_result
-        elif name is None:
-            return self._par_result.prefix(label)
-        else:
-            return np.array(self._par_result[label, name])
-
-    def get_constraint(self, label, name):
-        return self._evaluate_symbols(self.children[label]._constraints[name][0],
-                                      self._var_result, self._par_result)
-
-    def get_objective(self, label, name):
-        return self._evaluate_symbols(self.children[label]._objective,
-                                      self._var_result, self._par_result)
 
     # ========================================================================
     # Spline tranformations
@@ -499,46 +527,6 @@ class OptiChild(object):
     def define_objective(self, expr):
         self._objective += expr
 
-    def set_variable(self, name, value):
-        self.father.set_variables(value, self.label, name)
-
-    def get_variable(self, name, **kwargs):
-        if name in self._splines_prim and not('spline' in kwargs and not kwargs['spline']):
-            basis = self._splines_prim[name]['basis']
-            if 'solution' in kwargs and kwargs['solution']:
-                coeffs = self.father.get_variables(self.label, name)
-            else:
-                coeffs = self._variables[name]
-            return [BSpline(basis, coeffs[:, k]) for k in range(coeffs.shape[1])]
-        if 'solution' in kwargs and kwargs['solution']:
-            return self.father.get_variables(self.label, name)
-        else:
-            return self._variables[name]
-
-    def get_parameter(self, name, **kwargs):
-        if name in self._splines_prim and not('spline' in kwargs and not kwargs['spline']):
-            basis = self._splines_prim[name]['basis']
-            if 'solution' in kwargs and kwargs['solution']:
-                coeffs = self.father.get_variables(self.label, name)
-            else:
-                coeffs = self._variables[name]
-            return [BSpline(basis, coeffs[:, k]) for k in range(coeffs.shape[1])]
-        if 'solution' in kwargs and kwargs['solution']:
-            return self.father.get_parameters(self.label, name)
-        else:
-            return self._parameters[name]
-
-    def get_constraint(self, name, solution=False):
-        if solution:
-            return self.father.get_constraint(self.label, name)
-        else:
-            return self._constraints[name][0]
-
-    def get_objective(self, solution=False):
-        if solution:
-            return self.father.get_objective(self.label)
-        else:
-            return self._objective
 
     # ========================================================================
     # Methods required to override
