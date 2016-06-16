@@ -53,7 +53,7 @@ simulator = Simulator(problem)
 simulator.run_once(update=False)
 var_central = np.zeros((0, 1))
 for vehicle in vehicles:
-    iet = vehicle.get_variable('splines0', solution=True, spline=False)
+    iet = problem.father.get_variables(vehicle, 'splines0', spline=False)
     var_central = np.vstack((var_central, iet))
 
 # create & solve ADMM problem
