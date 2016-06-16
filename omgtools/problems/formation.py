@@ -28,6 +28,9 @@ class FormationPoint2point(ADMMProblem):
         problems = [Point2point(vehicle, environment.copy(), options)
                     for vehicle in fleet.vehicles]
         ADMMProblem.__init__(self, fleet, environment, problems, options)
+
+    def construct(self):
+        ADMMProblem.construct(self)
         # define parameters
         rel_splines = {veh: {nghb: self.define_parameter('rs'+str(l)+str(n), len(self.fleet.configuration[veh].keys())) for n, nghb in enumerate(self.fleet.get_neighbors(veh))} for l, veh in enumerate(self.vehicles)}
         # formation constraints

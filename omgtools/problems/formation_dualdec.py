@@ -28,6 +28,9 @@ class FormationPoint2pointDualDecomposition(DDProblem):
         problems = [Point2point(vehicle, environment.copy(), options)
                     for vehicle in fleet.vehicles]
         DDProblem.__init__(self, fleet, environment, problems, options)
+
+    def construct(self):
+        DDProblem.construct(self)
         # define parameters
         rel_splines = {veh: {nghb: self.define_parameter('rs'+str(l)+str(n), len(self.fleet.configuration[veh].keys())) for n, nghb in enumerate(self.fleet.get_neighbors(veh))} for l, veh in enumerate(self.vehicles)}
         # formation constraints

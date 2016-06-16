@@ -75,9 +75,15 @@ class Problem(OptiChild, PlotLayer):
     # Create and solve problem
     # ========================================================================
 
+    def construct(self):
+        self.environment.init()
+        for vehicle in self.vehicles:
+            vehicle.init()
+
     def init(self):
-        self.problem, _ = self.father.construct_problem(
-            self.options)
+        self.father.reset()
+        self.construct()
+        self.problem, _ = self.father.construct_problem(self.options)
         self.father.init_transformations(self.init_primal_transform,
                                          self.init_dual_transform)
 

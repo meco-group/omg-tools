@@ -24,9 +24,9 @@ class FormationPoint2pointCentral(FixedTPoint2point):
 
     def __init__(self, fleet, environment, options=None):
         FixedTPoint2point.__init__(self, fleet, environment, options)
-        self.define_formation_constraints()
 
-    def define_formation_constraints(self):
+    def construct(self):
+        FixedTPoint2point.construct(self)
         # define parameters
         rel_splines = {veh: {nghb: self.define_parameter('rs'+str(l)+str(n), len(self.fleet.configuration[veh].keys())) for n, nghb in enumerate(self.fleet.get_neighbors(veh))} for l, veh in enumerate(self.vehicles)}
         # define constraints

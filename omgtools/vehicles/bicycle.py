@@ -61,14 +61,15 @@ class Bicycle(Vehicle):
         self.ddmin = bounds['ddmin'] if 'ddmin' in bounds else -45.  # dsteering angle [deg/s]
         self.ddmax = bounds['ddmax'] if 'ddmax' in bounds else 45.
         self.length = length
-        # time horizon
-        self.T = self.define_symbol('T')  # motion time
-        self.t = self.define_symbol('t')  # current time of first knot
-        self.pos0 = self.define_symbol('pos0', 2)  # current position
 
     def set_default_options(self):
         Vehicle.set_default_options(self)
         self.options.update({'plot_type': 'bicycle'})  # by default plot a bicycle
+
+    def init(self):
+        self.T = self.define_symbol('T')  # motion time
+        self.t = self.define_symbol('t')  # current time of first knot
+        self.pos0 = self.define_symbol('pos0', 2)  # current position
 
     def define_trajectory_constraints(self, splines):
         v_til, tg_ha = splines

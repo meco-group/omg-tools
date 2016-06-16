@@ -39,10 +39,13 @@ class Point2pointProblem(Problem):
 
     def __init__(self, fleet, environment, options):
         Problem.__init__(self, fleet, environment, options, label='p2p')
+
+    def construct(self):
+        Problem.construct(self)
         for vehicle in self.vehicles:
             splines = vehicle.define_splines(n_seg=1)[0]
             vehicle.define_trajectory_constraints(splines)
-            environment.define_collision_constraints(vehicle, splines)
+            self.environment.define_collision_constraints(vehicle, splines)
 
     def stop_criterium(self, current_time, update_time):
         stop = True
@@ -80,6 +83,9 @@ class FixedTPoint2point(Point2pointProblem):
                              'a fixed T point2point problem.')
         self.knot_time = (int(self.options['horizon_time']*1000.) /
                           self.vehicles[0].knot_intervals) / 1000.
+
+    def construct(self):
+        Point2pointProblem.construct(self)
         T, t = self.define_parameter('T'), self.define_parameter('t')
         self.t0 = t/T
         self.define_init_constraints()
@@ -192,6 +198,9 @@ class FreeTPoint2point(Point2pointProblem):
     def __init__(self, fleet, environment, options):
         Point2pointProblem.__init__(self, fleet, environment, options)
         self.objective = 0.
+
+    def construct(self):
+        Point2pointProblem.construct(self)
         T = self.define_variable('T', value=10)
         self.define_parameter('t')
         self.define_objective(T)
@@ -268,14 +277,16 @@ class FreeTPoint2point(Point2pointProblem):
 class FreeEndPoint2point(FixedTPoint2point):
 
     def __init__(self, fleet, environment, options, free_ind=None):
-        if free_ind is None:
+        FixedTPoint2point.__init__(self, fleet, environment, options)
+        self.free_ind = free_ind
+
+    def construct(self):
+        if self.free_ind is None:
             self.free_ind = {}
-            for vehicle in fleet:
+            for vehicle in self.vehicles:
                 term_con = vehicle.get_terminal_constraints(vehicle.splines[0])
                 self.free_ind[vehicle] = range(len(term_con))
-        else:
-            self.free_ind = free_ind
-        FixedTPoint2point.__init__(self, fleet, environment, options)
+        FixedTPoint2point.construct(self)
 
     def define_terminal_constraints(self):
         objective = 0.

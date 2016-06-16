@@ -51,7 +51,6 @@ class ObstaclexD(OptiChild):
         self.initial = initial
         self.prepare_simulation(initial, simulation)
         self.A = np.array([[0., 1., 0.], [0., 0., 1.], [0., 0., 0.]])
-        self.create_splines()
 
     # ========================================================================
     # Obstacle options
@@ -67,7 +66,7 @@ class ObstaclexD(OptiChild):
     # Optimization modelling related functions
     # ========================================================================
 
-    def create_splines(self):
+    def init(self):
         # pos, vel, acc
         x = self.define_parameter('x', self.n_dim)
         v = self.define_parameter('v', self.n_dim)
@@ -213,8 +212,8 @@ class Obstacle2D(ObstaclexD):
     # Optimization modelling related functions
     # ========================================================================
 
-    def create_splines(self):
-        ObstaclexD.create_splines(self)
+    def init(self):
+        ObstaclexD.init(self)
         if self.signals['angular_velocity'][:, -1] == 0.:
             self.cos = cos(self.signals['orientation'][:, -1][0])
             self.sin = sin(self.signals['orientation'][:, -1][0])

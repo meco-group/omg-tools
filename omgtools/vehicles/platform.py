@@ -33,6 +33,8 @@ class Platform(Vehicle):
         self.vmax = bounds['vmax'] if 'vmax' in bounds else 0.8
         self.amin = bounds['amin'] if 'amin' in bounds else -2.
         self.amax = bounds['amax'] if 'amax' in bounds else 2.
+
+    def init(self):
         # time horizon
         self.T = self.define_symbol('T')
 

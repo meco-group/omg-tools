@@ -34,12 +34,14 @@ class Holonomic(Vehicle):
         self.vmax = bounds['vmax'] if 'vmax' in bounds else 0.5
         self.amin = bounds['amin'] if 'amin' in bounds else -1.
         self.amax = bounds['amax'] if 'amax' in bounds else 1.
-        # time horizon
-        self.T = self.define_symbol('T')
 
     def set_default_options(self):
         Vehicle.set_default_options(self)
         self.options.update({'syslimit': 'norm_inf'})
+
+    def init(self):
+        # time horizon
+        self.T = self.define_symbol('T')
 
     def define_trajectory_constraints(self, splines):
         x, y = splines

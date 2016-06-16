@@ -210,17 +210,15 @@ class Vehicle(OptiChild, PlotLayer):
     # Simulation and prediction related functions
     # ========================================================================
 
-    def update(self, current_time, update_time, sample_time, segment_times, time_axis=None):
+    def update(self, current_time, update_time, sample_time, spline_segments, segment_times, time_axis=None):
         if not isinstance(segment_times, list):
             segment_times = [segment_times]
-        spline_segments = [self.get_variable('splines'+str(k), solution=True)
-                           for k in range(self.n_seg)]
         splines = concat_splines(spline_segments, segment_times)
         horizon_time = sum(segment_times)
         if time_axis is None:
             n_samp = int(
                 round(horizon_time/sample_time, 3)) + 1
-            time_axis = np.linspace(0., horizon_time, n_samp)
+            time_axis = np.linspace(0., (n_samp-1)*sample_time, n_samp)
         self.get_trajectories(splines, time_axis, current_time)
         if not hasattr(self, 'signals'):
             self.init_signals()
@@ -446,6 +444,9 @@ class Vehicle(OptiChild, PlotLayer):
     # ========================================================================
     # Methods required to override
     # ========================================================================
+
+    def init(self):
+        pass
 
     def define_trajectory_constraints(self, splines):
         raise NotImplementedError('Please implement this method!')
