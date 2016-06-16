@@ -263,8 +263,6 @@ class Vehicle(OptiChild, PlotLayer):
         self.trajectories['splines'] = np.c_[
             sample_splines(splines, time_axis)]
         knots = splines[0].basis.knots
-        # time_axis_kn = np.r_[
-        #     knots[self.degree] + time_axis[0], knots[self.degree+1:-self.degree]]
         time_axis_kn = np.r_[knots[self.degree] + time_axis[0], [k for k in knots[
         self.degree+1:-self.degree] if k > (knots[self.degree]+time_axis[0])]]
         self.trajectories_kn = self.splines2signals(splines, time_axis_kn)
