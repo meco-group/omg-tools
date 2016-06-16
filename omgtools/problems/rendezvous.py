@@ -31,12 +31,12 @@ class RendezVous(ADMMProblem):
             problems.append(
                 FreeEndPoint2point(veh, environment.copy(), options, {veh: free_ind}))
         ADMMProblem.__init__(self, fleet, environment, problems, options)
-        problems_dic = {veh: problems[l]
-                        for l, veh in enumerate(fleet.vehicles)}
 
+    def construct(self):
+        ADMMProblem.construct(self)
+        problems_dic = {veh: self.problems[l] for l, veh in enumerate(self.fleet.vehicles)}
         # define parameters
         rel_conT = {veh: {nghb: self.define_parameter('rcT'+str(l)+str(n), len(self.fleet.configuration[veh].keys())) for n, nghb in enumerate(self.fleet.get_neighbors(veh))} for l, veh in enumerate(self.vehicles)}
-
         # end pose constraints
         couples = {veh: [] for veh in self.vehicles}
         for veh in self.vehicles:
