@@ -5,6 +5,7 @@ import sys
 import os
 sys.path.insert(0, os.getcwd()+'/../')
 import matplotlib
+import numpy as np
 from omgtools import *
 from lvd_fap import FAP
 
@@ -14,9 +15,9 @@ hard_stop = True
 go_back = True
 
 # results
-save_figures = True
-plot_figures = False
-plot_movies = False
+save_figures = False
+plot_figures = True
+plot_movies = True
 
 
 def reinit_after_hard_stop(problem, stop_time=None):
@@ -36,8 +37,11 @@ def reinit_after_hard_stop(problem, stop_time=None):
 
 
 def save_trajectories(trajectories, name):
-    time = trajectories['vehicle0']['time']
-    state = trajectories['vehicle0']['state']
+    time = np.copy(trajectories['vehicle0']['time'])
+    state = np.copy(trajectories['vehicle0']['state'])
+    for k in range(3):
+        # transform to machine frame
+        state[k, :] = state[k, :] - 0.5*plate['dim'][k]
     data = np.r_[time, state].T
     np.savetxt(name+'.csv', data, delimiter=',')
 
@@ -53,7 +57,7 @@ pilar = {'pos': [3.05, -2.15, 0.], 'dim': [0.3, 0.45, 1.5]}
 measure = {'pos': [6.8, -1.4, 0.], 'dim': [0.15, 0.15, 1.15]}
 
 # plate (defined wrt machine frame)
-plate = {'start': [7., -1.5, 0.4], 'end': [0., -1.3, 1.01], 'end2': [3.575, -1.5, 0.4],
+plate = {'start': [7., -1.5, 0.4], 'end': [0., -1.3, 1.01], 'end2': [3.5, -1.4, 0.4],
          'dim': [3., 1.5, 0.01]}
 
 # room limits (should prevent collisions with beam & pillar)
@@ -130,17 +134,14 @@ environment = Environment(room={'shape': Cuboid(10., 3.7, 2.3), 'position': [5.,
 environment.add_obstacle(obstacles)
 
 # 4. create problem
-problem1 = Point2point(fap, environment, freeT=True)
-problem1.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}, 'horizon_time': 10.})
-problem1.init()
-problem2 = Point2point(fap, environment, freeT=True)
-problem2.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}, 'horizon_time': 10.})
-obstacles[-1].set_options({'avoid': False})
-problem2.init()
+problem = Point2point(fap, environment, freeT=True)
+problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}, 'horizon_time': 10.})
+problem.init()
+
 
 """simulation with omg-tools"""
 
-simulator = Simulator(problem1, sample_time=0.001)
+simulator = Simulator(problem, sample_time=0.001)
 if plot_figures:
     fap.plot('state', labels=['x (m)', 'y (m)', 'z (m)'])
     fap.plot('velocity', labels=['dx (m/s)', 'dy (m/s)', 'dz (m/s)'])
@@ -150,10 +151,10 @@ if plot_figures:
 # from initial stack to machine
 if go_forward:
     if hard_stop:
-        trajectories = simulator.run_once(hard_stop={'time': 4., 'perturbation': [0.1*np.random.rand(3)-0.05]})
+        trajectories = simulator.run_once(hard_stop={'time': 4., 'perturbation': [0.05, 0.05, 0.05]})
         simulator.sleep(3.)
         # recover from hard stop
-        reinit_after_hard_stop(problem1, 4.)
+        reinit_after_hard_stop(problem, 4.)
         trajectories = simulator.run_once()
     else:
         trajectories = simulator.run_once()
@@ -165,14 +166,14 @@ if go_back:
         fap.set_initial_conditions([plate['end'][k]+0.5*plate['dim'][k] for k in range(3)])
     fap.set_terminal_conditions([plate['end2'][k]+0.5*plate['dim'][k] for k in range(3)])
     # re-initialize
-    fap.reinit_splines(problem1)
-    # fap.reinit_splines(problem2)
-    # simulator.set_problem(problem2)
+    fap.reinit_splines(problem)
     trajectories = simulator.run_once()
     # save_trajectories(trajectories, 'go_back')
 
 if plot_movies:
-    problem1.plot_movie('scene', number_of_frames=100, repeat=False, view=[30, 60])
+    problem.plot_movie('scene', number_of_frames=100, repeat=False, view=[30, 60])
+    problem.plot_movie('scene', number_of_frames=100, repeat=False, view=[0, 90])
+    problem.plot_movie('scene', number_of_frames=100, repeat=False, view=[90, 0])
 
 if save_figures:
     fap.save_plot('state', 'position', labels=['x (m)', 'y (m)', 'z (m)'],
@@ -184,9 +185,8 @@ if save_figures:
     fap.save_plot('jerk', 'jerk', labels=['dddx (m/s^3)', 'dddy (m/s^3)', 'dddz (m/s^3)'],
         figurewidth='15cm', figureheight='4cm')
 
-    problem1.save_movie('scene', 'scene1', number_of_frames=40, view=[30, 60], axis=False)
-    problem1.save_movie('scene', 'scene2', number_of_frames=40, view=[0, 90], axis=False)
-    problem1.save_movie('scene', 'scene3', number_of_frames=40, view=[90, 0], axis=False)
+    problem.save_movie('scene', 'scene1', number_of_frames=40, view=[30, 60], axis=False)
+    problem.save_movie('scene', 'scene2', number_of_frames=40, view=[0, 90], axis=False)
+    problem.save_movie('scene', 'scene3', number_of_frames=40, view=[90, 0], axis=False)
 
 matplotlib.pyplot.show(block=True)
-
