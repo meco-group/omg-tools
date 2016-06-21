@@ -1,9 +1,6 @@
 # Implementation of pick and place case of LVD
 # questions: ruben.vanparys@kuleuven.be
 
-import sys
-import os
-sys.path.insert(0, os.getcwd()+'/../')
 import matplotlib
 import numpy as np
 from omgtools import *
