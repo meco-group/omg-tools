@@ -49,8 +49,7 @@ class Holonomic1D(Vehicle):
     def get_initial_constraints(self, splines):
         state0 = self.define_parameter('state0')
         input0 = self.define_parameter('input0')
-        x = splines[0]
-        dx = x.derivative()
+        x, dx = splines[0], splines[0].derivative()
         return [(x, state0[0]), (dx, self.T*input0[0])]
 
     def get_terminal_constraints(self, splines):
@@ -78,7 +77,7 @@ class Holonomic1D(Vehicle):
 
     def check_terminal_conditions(self):
         tol = self.options['stop_tol']
-        if (np.linalg.norm(self.signals['pose'][:1, -1] - self.positionT) > tol or
+        if (np.linalg.norm(self.signals['state'][:, -1] - self.positionT) > tol or
                 np.linalg.norm(self.signals['input'][:, -1])) > tol:
             return False
         else:
@@ -98,9 +97,9 @@ class Holonomic1D(Vehicle):
         signals = {}
         x = splines[0]
         dx, ddx = x.derivative(), x.derivative(2)
-        signals['state'] = np.c_[sample_splines([x], time)]
-        signals['input'] = np.c_[sample_splines([dx], time)]
-        signals['a'] = np.c_[sample_splines([ddx], time)]
+        signals['state'] = np.c_[sample_splines(x, time)].T
+        signals['input'] = np.c_[sample_splines(dx, time)].T
+        signals['a'] = np.c_[sample_splines(ddx, time)].T
         return signals
 
     def state2pose(self, state):
