@@ -55,6 +55,7 @@ class Dubins(Vehicle):
 
     def set_default_options(self):
         Vehicle.set_default_options(self)
+        self.options['stop_tol'] = 1.e-2
 
     def init(self):
         self.T = self.define_symbol('T')  # motion time
@@ -134,8 +135,9 @@ class Dubins(Vehicle):
         return init_value
 
     def check_terminal_conditions(self):
-        if (np.linalg.norm(self.signals['state'][:, -1] - self.poseT) > 1.e-3 or
-                np.linalg.norm(self.signals['input'][:, -1])) > 1.e-2:
+        tol = self.options['stop_tol']
+        if (np.linalg.norm(self.signals['state'][:, -1] - self.poseT) > tol or
+                np.linalg.norm(self.signals['input'][:, -1])) > tol:
             return False
         else:
             return True

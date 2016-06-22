@@ -77,8 +77,9 @@ class Holonomic1D(Vehicle):
         return init_value
 
     def check_terminal_conditions(self):
-        if (np.linalg.norm(self.signals['pose'][:1, -1] - self.positionT) > 1.e-3 or
-                np.linalg.norm(self.signals['input'][:, -1])) > 1.e-3:
+        tol = self.options['stop_tol']
+        if (np.linalg.norm(self.signals['pose'][:1, -1] - self.positionT) > tol or
+                np.linalg.norm(self.signals['input'][:, -1])) > tol:
             return False
         else:
             return True
@@ -97,8 +98,6 @@ class Holonomic1D(Vehicle):
         signals = {}
         x = splines[0]
         dx, ddx = x.derivative(), x.derivative(2)
-        x_s = sample_splines(x, time)
-        dx_s = sample_splines(dx, time)
         signals['state'] = np.c_[sample_splines([x], time)]
         signals['input'] = np.c_[sample_splines([dx], time)]
         signals['a'] = np.c_[sample_splines([ddx], time)]
