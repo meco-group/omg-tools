@@ -110,7 +110,6 @@ options = {}
 options['codegen'] = {'build': None}
 # options['codegen'] = {'build': 'jit', 'flags': '-O2'} # just-in-time compilation
 # options['codegen'] = {'build': 'shared', 'flags': '-O2'} # compile to shared object
-# options['codegen'] = {'build': 'nlp.so'} # provide a shared object
 # Compilation of the code takes some time, while execution is slightly faster
 # There are other options, set on a default value. Check them out with
 # problem.options
@@ -139,11 +138,11 @@ problem.plot('scene')
 simulator.run()
 
 # Show scene plot at some time (no time argument means 'at the end')
-# problem.plot('scene', time=2.)
+problem.plot('scene', time=2.)
 # Show movie (you can make a movie of all possible plot data)
-# problem.plot_movie('scene', repeat=False)
+problem.plot_movie('scene', repeat=False)
 # Save a plot as Tikz: you need matplotlib2tikz for this!
-# vehicle.save_plot('state', name='state')
+vehicle.save_plot('state', name='state')
 # Save a movie as multiple Tikz: you need matplotlib2tikz for this!
-# vehicle.save_movie('input', number_of_frames=4)
-# problem.save_movie('scene', number_of_frames=4, name='holonomic', axis=False)
+vehicle.save_movie('input', number_of_frames=4, knots=True, prediction=True, axis=False)
+problem.save_movie('scene', number_of_frames=4, name='holonomic', axis=False)
