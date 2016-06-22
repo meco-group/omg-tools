@@ -57,31 +57,32 @@ def create_nlp(var, par, obj, con, options, name=''):
         opt[key] = value
     opt.update({'expand': True})
     solver = nlpsol('solver', options['solver'], nlp, opt)
-    name = 'nlp_' + name
+    name = 'nlp' if name == '' else 'nlp_' + name
+    path = os.path.join(os.getcwd(), name)
     if codegen['build'] == 'jit':
         if options['verbose'] >= 1:
             print('[jit compilation with flags %s]' % (codegen['flags'])),
         solver.generate_dependencies(name+'.c')
         compiler = Compiler(
-            name+'.c', 'clang', {'flags': codegen['flags']})
+            path+'.c', 'clang', {'flags': codegen['flags']})
         problem = nlpsol('solver', options['solver'], compiler, slv_opt)
-        os.remove(name+'.c')
+        os.remove(path+'.c')
     elif codegen['build'] == 'shared':
         if options['verbose'] >= 1:
             print('[compile to .so with flags %s]' % (codegen['flags'])),
-        if os.path.isfile(name+'.so'):
-            os.remove(name+'.so')
+        if os.path.isfile(path+'.so'):
+            os.remove(path+'.so')
         solver.generate_dependencies(name+'.c')
         os.system('gcc -fPIC -shared %s %s.c -o %s.so' %
-                  (codegen['flags'], name, name))
-        problem = nlpsol('solver', options['solver'], name+'.so', slv_opt)
-        os.remove(name+'.c')
+                  (codegen['flags'], path, path))
+        problem = nlpsol('solver', options['solver'], path+'.so', slv_opt)
+        os.remove(path+'.c')
     elif codegen['build'] == 'existing':
-        if not os.path.isfile(name+'.so'):
-            raise ValueError('%s.so does not exist!', name)
+        if not os.path.isfile(path+'.so'):
+            raise ValueError('%s.so does not exist!', path)
         if options['verbose'] >= 1:
-            print('[using shared object %s.so]' % name),
-        problem = nlpsol('solver', options['solver'], name+'.so', slv_opt)
+            print('[using shared object %s.so]' % path),
+        problem = nlpsol('solver', options['solver'], path+'.so', slv_opt)
     elif codegen['build'] is None:
         problem = solver
     else:
@@ -98,30 +99,31 @@ def create_function(name, inp, out, options):
         print 'Building function %s ... ' % name,
     t0 = time.time()
     fun = Function(name, inp, out).expand()
+    path = os.path.join(os.getcwd(), name)
     if codegen['build'] == 'jit':
         if options['verbose'] >= 1:
             print('[jit compilation with flags %s]' % (codegen['flags'])),
         fun.generate(name)
         compiler = Compiler(
-            name+'.c', 'clang', {'flags': codegen['flags']})
+            path+'.c', 'clang', {'flags': codegen['flags']})
         fun = external(name, compiler)
-        os.remove(name+'.c')
+        os.remove(path+'.c')
     elif codegen['build'] == 'shared':
         if options['verbose'] >= 1:
             print('[compile to .so with flags %s]' % (codegen['flags'])),
-        if os.path.isfile(name+'.so'):
-            os.remove(name+'.so')
+        if os.path.isfile(path+'.so'):
+            os.remove(path+'.so')
         fun.generate(name)
         os.system('gcc -fPIC -shared %s %s.c -o %s.so' %
-                  (codegen['flags'], name, name))
-        fun = external(name, './'+name+'.so')
-        os.remove(name+'.c')
+                  (codegen['flags'], path, path))
+        fun = external(name, path+'.so')
+        os.remove(path+'.c')
     elif codegen['build'] == 'existing':
-        if not os.path.isfile(name+'.so'):
-            raise ValueError('%s.so does not exist!', name)
+        if not os.path.isfile(path+'.so'):
+            raise ValueError('%s.so does not exist!', path)
         if options['verbose'] >= 1:
-            print('[using shared object %s.so]' % name),
-        fun = external(name, './'+name+'.so')
+            print('[using shared object %s.so]' % path),
+        fun = external(name, path+'.so')
     elif codegen['build'] is None:
         fun = fun
     else:
