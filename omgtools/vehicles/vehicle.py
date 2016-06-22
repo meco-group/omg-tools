@@ -109,7 +109,7 @@ class Vehicle(OptiChild, PlotLayer):
         self.n_seg = n_seg
         self.splines = []
         for k in range(n_seg):
-            if self.init_spline_value:
+            if self.init_spline_value is not None:
                 init = self.init_spline_value
                 self.init_spline_value = None
             else:
