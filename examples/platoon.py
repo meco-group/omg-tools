@@ -80,7 +80,7 @@ options = {'rho': 5.e-6, 'horizon_time': 10., 'init_iter': number_of_iterations-
 problem = FormationPoint2pointDualDecomposition(fleet, environment, options=options)
 problem.init()
 simulator = Simulator(problem)
-simulator.run_once(update=False)
+simulator.run_once()
 var_dualdec = problem.get_stacked_x()
 
 # compare convergence

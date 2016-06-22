@@ -44,7 +44,7 @@ if solver is 'ipopt':
     options = {'solver': solver}
     problem = Point2point(vehicle, environment, options, freeT=False)
     problem.set_options(
-        {'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57', 
+        {'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57',
                                       'ipopt.hessian_approximation': 'limited-memory'}}})
 elif solver is 'worhp':
     options = {'solver': solver}
@@ -60,8 +60,8 @@ elif solver is 'snopt':
     options = {'solver': solver}  # todo: plugin snopt not found?
     problem = Point2point(vehicle, environment, options, freeT=False)
     problem.set_options({'solver_options':
-                         {'snopt': {'snopt.Hessian': 'limited memory', 
-                                    'start': 'warm'}}}) 
+                         {'snopt': {'snopt.Hessian': 'limited memory',
+                                    'start': 'warm'}}})
 else:
     print('You selected solver: ' + solver +
           ' but this solver is not supported. ' +
@@ -75,10 +75,3 @@ vehicle.plot('input', knots=True, labels=['v_x (m/s)', 'v_y (m/s)'])
 
 # run it!
 simulator.run()
-
-# show/save some results
-problem.plot_movie('scene', repeat=False)
-vehicle.plot_movie('input', repeat=False, knots=True,
-                   labels=['v_x (m/s)', 'v_y (m/s)'])
-# problem.save_movie('scene', axis=False)
-# vehicle.save_plot('input', time=3., knots=True)
