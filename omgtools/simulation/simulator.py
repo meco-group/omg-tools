@@ -75,6 +75,32 @@ class Simulator:
             trajectories[str(vehicle)] = vehicle.trajectories
         return trajectories
 
+
+    def run_iterative(self, region):  # run until vehicle is in region
+        self.reset_timing()
+        self.problem.initialize()
+        stop = False
+        isInRegion = False
+        while stop == False and isInRegion == False: # region or endpoint not reached
+            stop = self.update()
+            curr_pos = self.problem.vehicles[0].signals['state'][:, -1]
+            isInRegion = self.inRegion(region, curr_pos)
+            if not stop and not isInRegion:
+                self.update_timing()
+        self.problem.final()
+        return curr_pos
+
+    def inRegion(self, region, curr_pos):
+        # Note: region can only be rectangular for the moment
+        # Region is given by the bottom left and top right vertex
+        # Or region = goal state
+        if(region[0][0] <= curr_pos[0] <= region[1][0] and
+               region[0][1] <= curr_pos[1] <= region[1][1]):
+            # curr_pos in rectangle
+            return True
+        else:
+            return False
+
     def time2index(self, time):
         Ts = self.sample_time
         for k, t in enumerate(self.time):
