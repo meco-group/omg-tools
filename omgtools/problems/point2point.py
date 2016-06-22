@@ -73,13 +73,14 @@ class Point2pointProblem(Problem):
     def final(self):
         self.reset_init_time()
         obj = self.compute_objective()
-        print '\nWe reached our target!'
-        print '%-18s %6g' % ('Objective:', obj)
-        print '%-18s %6g ms' % ('Max update time:',
-                                max(self.update_times)*1000.)
-        print '%-18s %6g ms' % ('Av update time:',
-                                (sum(self.update_times)*1000. /
-                                 len(self.update_times)))
+        if self.options['verbose'] >= 1:
+            print '\nWe reached our target!'
+            print '%-18s %6g' % ('Objective:', obj)
+            print '%-18s %6g ms' % ('Max update time:',
+                                    max(self.update_times)*1000.)
+            print '%-18s %6g ms' % ('Av update time:',
+                                    (sum(self.update_times)*1000. /
+                                     len(self.update_times)))
 
     def compute_objective(self):
         raise NotImplementedError('Please implement this method!')

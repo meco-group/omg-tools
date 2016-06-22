@@ -47,7 +47,7 @@ def evalf(fun, x):
 
 def create_nlp(var, par, obj, con, options, name=''):
     codegen = options['codegen']
-    if options['verbose'] >= 2:
+    if options['verbose'] >= 1:
         print 'Building nlp ... ',
     t0 = time.time()
     nlp = {'x': var, 'p': par, 'f': obj, 'g': con}
@@ -59,7 +59,7 @@ def create_nlp(var, par, obj, con, options, name=''):
     solver = nlpsol('solver', options['solver'], nlp, opt)
     name = 'nlp_' + name
     if codegen['build'] == 'jit':
-        if options['verbose'] >= 2:
+        if options['verbose'] >= 1:
             print('[jit compilation with flags %s]' % (codegen['flags'])),
         solver.generate_dependencies(name+'.c')
         compiler = Compiler(
@@ -67,7 +67,7 @@ def create_nlp(var, par, obj, con, options, name=''):
         problem = nlpsol('solver', options['solver'], compiler, slv_opt)
         os.remove(name+'.c')
     elif codegen['build'] == 'shared':
-        if options['verbose'] >= 2:
+        if options['verbose'] >= 1:
             print('[compile to .so with flags %s]' % (codegen['flags'])),
         if os.path.isfile(name+'.so'):
             os.remove(name+'.so')
@@ -79,7 +79,7 @@ def create_nlp(var, par, obj, con, options, name=''):
     elif codegen['build'] == 'existing':
         if not os.path.isfile(name+'.so'):
             raise ValueError('%s.so does not exist!', name)
-        if options['verbose'] >= 2:
+        if options['verbose'] >= 1:
             print('[using shared object %s.so]' % name),
         problem = nlpsol('solver', options['solver'], name+'.so', slv_opt)
     elif codegen['build'] is None:
@@ -87,19 +87,19 @@ def create_nlp(var, par, obj, con, options, name=''):
     else:
         raise ValueError('Invalid build option.')
     t1 = time.time()
-    if options['verbose'] >= 2:
+    if options['verbose'] >= 1:
         print 'in %5f s' % (t1-t0)
     return problem, (t1-t0)
 
 
 def create_function(name, inp, out, options):
     codegen = options['codegen']
-    if options['verbose'] >= 2:
+    if options['verbose'] >= 1:
         print 'Building function %s ... ' % name,
     t0 = time.time()
     fun = Function(name, inp, out).expand()
     if codegen['build'] == 'jit':
-        if options['verbose'] >= 2:
+        if options['verbose'] >= 1:
             print('[jit compilation with flags %s]' % (codegen['flags'])),
         fun.generate(name)
         compiler = Compiler(
@@ -107,7 +107,7 @@ def create_function(name, inp, out, options):
         fun = external(name, compiler)
         os.remove(name+'.c')
     elif codegen['build'] == 'shared':
-        if options['verbose'] >= 2:
+        if options['verbose'] >= 1:
             print('[compile to .so with flags %s]' % (codegen['flags'])),
         if os.path.isfile(name+'.so'):
             os.remove(name+'.so')
@@ -119,7 +119,7 @@ def create_function(name, inp, out, options):
     elif codegen['build'] == 'existing':
         if not os.path.isfile(name+'.so'):
             raise ValueError('%s.so does not exist!', name)
-        if options['verbose'] >= 2:
+        if options['verbose'] >= 1:
             print('[using shared object %s.so]' % name),
         fun = external(name, './'+name+'.so')
     elif codegen['build'] is None:
@@ -127,7 +127,7 @@ def create_function(name, inp, out, options):
     else:
         raise ValueError('Invalid build option.')
     t1 = time.time()
-    if options['verbose'] >= 2:
+    if options['verbose'] >= 1:
         print 'in %5f s' % (t1-t0)
     return fun, (t1-t0)
 
