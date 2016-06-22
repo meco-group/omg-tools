@@ -18,8 +18,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from ..basics.optilayer import OptiFather, create_nlp, create_function
-from ..basics.spline_extra import shift_knot1_fwd, shift_knot1_bwd, shift_over_knot, definite_integral
-from ..basics.spline import BSpline
+from ..basics.spline_extra import shift_knot1_fwd, shift_knot1_bwd, shift_over_knot
 from problem import Problem
 from dualmethod import DualUpdater, DualProblem
 from casadi import symvar, mtimes, MX, Function, reshape
@@ -27,6 +26,7 @@ from casadi import vertcat, horzcat, jacobian, solve, substitute
 from casadi.tools import struct, struct_symMX, entry
 import numpy as np
 import numpy.linalg as la
+import warnings
 import time
 
 
@@ -149,6 +149,8 @@ class ADMM(DualUpdater):
         self.problem_upd_z = prob
 
     def _construct_upd_z_nlp(self):
+        warnings.warn('Your z update is not an equality constrained QP. ' +
+                      'You are exploring non-tested code. Good luck!')
         # construct variables
         self._var_struct_updz = struct([entry('z_i', struct=self.q_i_struct),
                                         entry('z_ij', struct=self.q_ij_struct)])

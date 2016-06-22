@@ -126,8 +126,9 @@ class Trailer(Vehicle):
         # Two options: move vehicle with a trailer, or position/park the trailer somewhere.
         # Move vehicle with trailer: no theta_trT specified
         # Park vehicle with trailer: theta_trT specified, True if vehicle and trailer pose reached.
+        tol = self.options['stop_tol']
         if hasattr(self, 'theta_trT'):
-            if (np.linalg.norm(self.signals['state'][2, -1] - self.theta_trT) > 1.e-3):
+            if (np.linalg.norm(self.signals['state'][2, -1] - self.theta_trT) > tol):
                 result = False
             else:
                 result = True

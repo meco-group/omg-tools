@@ -143,7 +143,7 @@ class Environment(OptiChild, PlotLayer):
     # ========================================================================
 
     def init_plot(self, argument, **kwargs):
-        lines = [{'color': 'black'} for _ in self.draw()]
+        lines = [{'color': 'black', 'linewidth': 1.2} for _ in self.draw()]
         if 'limits' in kwargs:
             limits = kwargs['limits']
         else:

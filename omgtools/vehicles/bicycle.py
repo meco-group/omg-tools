@@ -188,8 +188,9 @@ class Bicycle(Vehicle):
 
     def check_terminal_conditions(self):
         # todo: kicked out state[3] since you cannot impose a steerT for now
-        if (np.linalg.norm(self.signals['state'][:3, -1] - self.poseT) > 1.e-3 or
-            np.linalg.norm(self.signals['input'][:, -1])) > 1.e-3:
+        tol = self.options['stop_tol']
+        if (np.linalg.norm(self.signals['state'][:3, -1] - self.poseT) > tol or
+            np.linalg.norm(self.signals['input'][:, -1])) > tol:
             return False
         else:
             return True

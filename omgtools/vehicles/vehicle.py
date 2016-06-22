@@ -63,7 +63,7 @@ class Vehicle(OptiChild, PlotLayer):
 
     def set_default_options(self):
         self.options = {'safety_distance': 0., 'safety_weight': 10.,
-                        'room_constraints': True,
+                        'room_constraints': True, 'stop_tol': 1.e-3,
                         'ideal_prediction': False, 'ideal_update': False,
                         '1storder_delay': False, 'time_constant': 0.1,
                         'input_disturbance': None}
@@ -109,7 +109,7 @@ class Vehicle(OptiChild, PlotLayer):
         self.n_seg = n_seg
         self.splines = []
         for k in range(n_seg):
-            if self.init_spline_value:
+            if self.init_spline_value is not None:
                 init = self.init_spline_value
                 self.init_spline_value = None
             else:
