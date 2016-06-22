@@ -25,7 +25,6 @@ import numpy as np
 import warnings
 matplotlib.use('TKAgg')
 
-
 def mix_with_white(color, perc_white=80.):
     r, g, b = color[0], color[1], color[2]
     r_m = ((100. - perc_white)*r + perc_white)/100.
@@ -103,11 +102,36 @@ def _update_axis_3d(axis, info, data):
         axis.set_zlim3d([centra[2] - radius, centra[2] + radius])
 
 
-def _cleanup_rubbish(path, root=None):
+def _cleanup_rubbish(path, info, root=None):
     # cleanup rubbish due to bugs in matplotlib2tikz
     with open(path, 'r+') as f:
         body = f.read()
-        body = body.replace('fill opacity=0', 'opacity=0')
+        if body.find('\path [draw=black, fill opacity=0]') >= 0:
+            # make lines invisible
+            body = body.replace('fill opacity=0', 'opacity=0')
+        else:
+            # For some reason, matplotlib2tikz does not add lines for getting
+            # the limits right. We add them ourselves, but invisible.
+            index = 0
+            ax_r, ax_c = len(info), len(info[0])
+            for k in range(ax_r):
+                for l in range(ax_c):
+                    insert = ''
+                    index = body.find('\end{axis}', index)
+                    if 'xlim' in info[k][l] and info[k][l]['xlim'] is not None:
+                        x_min = info[k][l]['xlim'][0]
+                        x_max = info[k][l]['xlim'][1]
+                        insert += ('\n\path [draw=black, opacity=0] ' +
+                                   '(axis cs:'+str(x_min)+',0)--' +
+                                   '(axis cs:'+str(x_max)+',0);')
+                    if 'ylim' in info[k][l] and info[k][l]['ylim'] is not None:
+                        y_min = info[k][l]['ylim'][0]
+                        y_max = info[k][l]['ylim'][1]
+                        insert += ('\n\path [draw=black, opacity=0] ' +
+                                   '(axis cs:0,'+str(y_min)+')--' +
+                                   '(axis cs:0,'+str(y_max)+');')
+                    insert += '\n'
+                    body = body[:index] + insert + body[index:]
         # add root at beginning of tikz file
         if root is not None:
             body = '%root=' + root + '\n' + body
@@ -237,7 +261,7 @@ class PlotLayer(object):
             else:
                 tikz_save(
                     path, figurewidth=figurewidth, figureheight=figureheight)
-            _cleanup_rubbish(path)
+            _cleanup_rubbish(path, info)
 
     def plot_movie(self, argument=None, repeat=False, **kwargs):
         t = self.__class__.simulator.time
@@ -276,8 +300,8 @@ class PlotLayer(object):
         proj_3d = False
         for k in range(0, len(t)-1, subsample):
             self.update_plots(plot, k)
+            info = plot['info']
             if not proj_3d:
-                info = plot['info']
                 for inf in info:
                     for i in inf:
                         if 'projection' in i and i['projection'] == '3d':
@@ -295,5 +319,5 @@ class PlotLayer(object):
                 else:
                     tikz_save(
                         path, figurewidth=figurewidth, figureheight=figureheight)
-                _cleanup_rubbish(path, root)
+                _cleanup_rubbish(path, info, root)
             cnt += 1
