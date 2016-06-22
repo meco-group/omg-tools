@@ -34,7 +34,7 @@ class FormationPoint2pointCentral(FixedTPoint2point):
         for veh in self.vehicles:
             ind_veh = sorted(self.fleet.configuration[veh].keys())
             rs = rel_splines[veh]
-            for n, nghb in enumerate(self.fleet.get_neighbors(veh)):
+            for nghb in self.fleet.get_neighbors(veh):
                 ind_nghb = sorted(self.fleet.configuration[nghb].keys())
                 if veh not in couples[nghb] and nghb not in couples[veh]:
                     couples[veh].append(nghb)
@@ -47,7 +47,7 @@ class FormationPoint2pointCentral(FixedTPoint2point):
     def set_parameters(self, current_time):
         parameters = FixedTPoint2point.set_parameters(self, current_time)
         for l, veh in enumerate(self.vehicles):
-            rel_spl, rs_ = self.fleet.get_rel_config(veh), []
+            rel_spl = self.fleet.get_rel_config(veh)
             for n, nghb in enumerate(self.fleet.get_neighbors(veh)):
                 parameters['rs'+str(l)+str(n)] = rel_spl[nghb]
         return parameters

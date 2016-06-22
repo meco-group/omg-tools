@@ -114,8 +114,7 @@ class Fleet(PlotLayer):
             for k in range(len(infos[0])):
                 inf = []
                 for l in range(len(infos[0][0])):
-                    labels = [
-                        veh_type + ' ' + lbl for lbl in infos[0][k][l]['labels']]
+                    labels = infos[0][k][l]['labels']
                     lines = []
                     for v in range(len(vehicles)):
                         lines += infos[v][k][l]['lines']
