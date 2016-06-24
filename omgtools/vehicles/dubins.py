@@ -84,21 +84,23 @@ class Dubins(Vehicle):
         self.define_constraint(-2*dtg_ha + (1+tg_ha**2)*self.T*np.radians(self.wmin), -inf, 0.)
         self.define_constraint(-v_til, -inf, 0)  # positive v_tilde
 
-        # under construction -> for formation
+
+    def get_fleet_center(self, splines, rel_pos):
+        T = self.define_symbol('T')
+        t = self.define_symbol('t')
+        pos0 = self.define_parameter('pos0', 2)
+        v_til, tg_ha = splines
+        dv_til, dtg_ha = v_til.derivative(), tg_ha.derivative()
         dx = v_til*(1-tg_ha**2)
         dy = v_til*(2*tg_ha)
-        x_int, y_int = self.T*running_integral(dx), self.T*running_integral(dy)
-        x = x_int-evalspline(x_int, self.t/self.T) + self.pos0[0]  # self.pos0 was already defined in init
-        y = y_int-evalspline(y_int, self.t/self.T) + self.pos0[1]
-        pos_nghb = self.define_spline_variable('pos_nghb', self.n_dim)
-        DX  = 2.
+        x_int, y_int = T*running_integral(dx), T*running_integral(dy)
+        x = x_int-evalspline(x_int, t/T) + pos0[0]
+        y = y_int-evalspline(y_int, t/T) + pos0[1]
         eps = 1.e-2
-        self.define_constraint((pos_nghb[0] - x)*(1+tg_ha**2) - DX*(1-tg_ha**2), -eps, eps)
-        self.define_constraint((pos_nghb[1] - y)*(1+tg_ha**2) + DX*(1-tg_ha**2), -eps, eps)
-
-        # position = self.define_spline_variable('position', self.n_dim, basis=x.basis)
-        # self.define_constraint(x - position[0], 0., 0.)
-        # self.define_constraint(y - position[1], 0., 0.)
+        center = self.define_spline_variable('formation_center', self.n_dim)
+        self.define_constraint((x-center[0])*(1+tg_ha**2) + rel_pos[0]*2*tg_ha + rel_pos[1]*(1-tg_ha**2), -eps, eps)
+        self.define_constraint((y-center[1])*(1+tg_ha**2) + rel_pos[1]*2*tg_ha - rel_pos[0]*(1-tg_ha**2), -eps, eps)
+        return center
 
     def get_initial_constraints(self, splines):
         # these make sure you get continuity along different iterations

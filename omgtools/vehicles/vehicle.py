@@ -119,6 +119,9 @@ class Vehicle(OptiChild, PlotLayer):
             self.splines.append(spline)
         return self.splines
 
+    def get_fleet_center(self, splines, rel_pos):
+        return [s+rp for s, rp in zip(splines, rel_pos)]
+
     def define_collision_constraints_2d(self, hyperplanes, environment, positions, tg_ha=0, offset=0):
         t = self.define_symbol('t')
         T = self.define_symbol('T')
