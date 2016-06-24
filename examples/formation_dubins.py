@@ -16,8 +16,7 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
-import sys, os
-sys.path.insert(0, os.getcwd()+'/..')
+
 from omgtools import *
 
 # create fleet
@@ -27,11 +26,15 @@ for vehicle in vehicles:
     vehicle.define_knots(knot_intervals=5)
 
 fleet = Fleet(vehicles)
-configuration = RegularPolyhedron(0.2, N, np.pi/4.).vertices.T
+configuration = RegularPolyhedron(0.2, N, np.pi/4).vertices.T
+# configuration = np.array([[-0.2, 0.0], [0.2, 0.0]])
+# configuration2 = np.array([[0., 0.2], [0., -0.2]])
 init_positions = [-1.5, -1.5] + configuration
 terminal_positions = [2., 2.] + configuration
-init_pose = np.c_[init_positions, np.zeros(N)]
-terminal_pose = np.c_[terminal_positions, np.zeros(N)]
+init_pose = np.c_[init_positions, 90.*np.ones(N)]
+terminal_pose = np.c_[terminal_positions, 90.*np.ones(N)]
+
+configuration = configuration
 
 fleet.set_configuration(configuration.tolist())
 fleet.set_initial_conditions(init_pose.tolist())
@@ -40,11 +43,11 @@ fleet.set_terminal_conditions(terminal_pose.tolist())
 # create environment
 environment = Environment(room={'shape': Square(5.)})
 rectangle = Rectangle(width=3., height=0.2)
-environment.add_obstacle(Obstacle({'position': [-2.1, -0.5]}, shape=rectangle))
-environment.add_obstacle(Obstacle({'position': [1.7, -0.5]}, shape=rectangle))
+# environment.add_obstacle(Obstacle({'position': [-2.1, -0.5]}, shape=rectangle))
+# environment.add_obstacle(Obstacle({'position': [1.7, -0.5]}, shape=rectangle))
 
 # create a formation point-to-point problem
-options = {'rho': 0.01, 'horizon_time': 10}
+options = {'rho': 2., 'horizon_time': 10}
 problem = FormationPoint2point(fleet, environment, options=options)
 problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem.init()
@@ -53,7 +56,6 @@ problem.init()
 simulator = Simulator(problem)
 problem.plot('scene')
 fleet.plot('input', knots=True, labels=['v (m/s)', 'w (rad/s)'])
-# vehicle.plot('state', knots=True, labels=['x (m)', 'y (m)', 'theta (rad)'])
 
 # run it!
-simulator.run()
+# simulator.run()
