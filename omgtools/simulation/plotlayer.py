@@ -25,6 +25,7 @@ import numpy as np
 import warnings
 matplotlib.use('TKAgg')
 
+
 def mix_with_white(color, perc_white=80.):
     r, g, b = color[0], color[1], color[2]
     r_m = ((100. - perc_white)*r + perc_white)/100.
@@ -106,32 +107,32 @@ def _cleanup_rubbish(path, info, root=None):
     # cleanup rubbish due to bugs in matplotlib2tikz
     with open(path, 'r+') as f:
         body = f.read()
-        if body.find('\path [draw=black, fill opacity=0]') >= 0:
-            # make lines invisible
-            body = body.replace('fill opacity=0', 'opacity=0')
-        else:
-            # For some reason, matplotlib2tikz does not add lines for getting
-            # the limits right. We add them ourselves, but invisible.
-            index = 0
-            ax_r, ax_c = len(info), len(info[0])
-            for k in range(ax_r):
-                for l in range(ax_c):
-                    insert = ''
-                    index = body.find('\end{axis}', index)
-                    if 'xlim' in info[k][l] and info[k][l]['xlim'] is not None:
-                        x_min = info[k][l]['xlim'][0]
-                        x_max = info[k][l]['xlim'][1]
-                        insert += ('\n\path [draw=black, opacity=0] ' +
-                                   '(axis cs:'+str(x_min)+',0)--' +
-                                   '(axis cs:'+str(x_max)+',0);')
-                    if 'ylim' in info[k][l] and info[k][l]['ylim'] is not None:
-                        y_min = info[k][l]['ylim'][0]
-                        y_max = info[k][l]['ylim'][1]
-                        insert += ('\n\path [draw=black, opacity=0] ' +
-                                   '(axis cs:0,'+str(y_min)+')--' +
-                                   '(axis cs:0,'+str(y_max)+');')
-                    insert += '\n'
-                    body = body[:index] + insert + body[index:]
+        # matplotlib2tikz's \path lines are buggy and comprise errors.
+        # Let's remove them and replace them with our own.
+        index = body.find('\path [draw=black, fill opacity=0]')
+        while index >= 0:
+            body = body.replace(body[index:].split(';')[0]+';', '')
+            index = body.find('\path [draw=black, fill opacity=0]')
+        index = 0
+        ax_r, ax_c = len(info), len(info[0])
+        for k in range(ax_r):
+            for l in range(ax_c):
+                insert = ''
+                index = body.find('\end{axis}', index)
+                if 'xlim' in info[k][l] and info[k][l]['xlim'] is not None:
+                    x_min = info[k][l]['xlim'][0]
+                    x_max = info[k][l]['xlim'][1]
+                    insert += ('\n\path [draw=black, opacity=0] ' +
+                               '(axis cs:'+str(x_min)+',0)--' +
+                               '(axis cs:'+str(x_max)+',0);')
+                if 'ylim' in info[k][l] and info[k][l]['ylim'] is not None:
+                    y_min = info[k][l]['ylim'][0]
+                    y_max = info[k][l]['ylim'][1]
+                    insert += ('\n\path [draw=black, opacity=0] ' +
+                               '(axis cs:0,'+str(y_min)+')--' +
+                               '(axis cs:0,'+str(y_max)+');')
+                insert += '\n'
+                body = body[:index] + insert + body[index:]
         # add root at beginning of tikz file
         if root is not None:
             body = '%root=' + root + '\n' + body
