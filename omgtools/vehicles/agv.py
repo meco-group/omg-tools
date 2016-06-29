@@ -18,7 +18,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from vehicle import Vehicle
-from ..basics.shape import Rectangle, Circle
+from ..basics.shape import Rectangle
 from ..basics.spline_extra import sample_splines, evalspline
 from ..basics.spline_extra import running_integral
 from casadi import inf
@@ -32,7 +32,7 @@ import numpy as np
 # Use tangent half angle substitution: tg_ha = tan(theta/2)
 # sin(theta) = (2*tg_ha)/(1+tg_ha**2)
 # cos(theta) = (1-tg_ha**2)/(1+tg_ha**2)
-# This gives: 
+# This gives:
 # dx = V/(1+tg_ha**2)*(1-tg_ha**2)
 # dy = V/(1+tg_ha**2)*(2*tg_ha)
 # Substitute: v_til = V/(1+tg_ha**2)
@@ -61,14 +61,16 @@ class AGV(Vehicle):
         self.ddmin = bounds['ddmin'] if 'ddmin' in bounds else -45.  # dsteering angle [deg/s]
         self.ddmax = bounds['ddmax'] if 'ddmax' in bounds else 45.
         self.length = length
-        # time horizon
-        self.T = self.define_symbol('T')  # motion time
-        self.t = self.define_symbol('t')  # current time of first knot
-        self.pos0 = self.define_symbol('pos0', 2)  # current position
+
 
     def set_default_options(self):
         Vehicle.set_default_options(self)
         self.options.update({'plot_type': 'bicycle'})  # by default plot a bicycle
+
+    def init(self):
+        self.T = self.define_symbol('T')  # motion time
+        self.t = self.define_symbol('t')  # current time of first knot
+        self.pos0 = self.define_symbol('pos0', 2)  # current position
 
     def define_trajectory_constraints(self, splines):
         v_til, tg_ha = splines
@@ -126,8 +128,8 @@ class AGV(Vehicle):
         # it contains evalspline(v_til, self.t/self.T)*... which is zero.
         # When v_til is not 0 the steering angle is implicitly imposed due to the fact that tan(delta)
         # is only a function of v_til, tg_ha, dtg_ha. If these variables are smooth the steering angle
-        # will also be smooth. Furthermore the steering angle and its rate of change are limited by the 
-        # extra constraints above. 
+        # will also be smooth. Furthermore the steering angle and its rate of change are limited by the
+        # extra constraints above.
 
         # Impose final steering angle
         # tdeltaT = self.define_parameter('tdeltaT', 1)  # tan(delta)
@@ -187,8 +189,9 @@ class AGV(Vehicle):
 
     def check_terminal_conditions(self):
         # todo: kicked out state[3] since you cannot impose a steerT for now
-        if (np.linalg.norm(self.signals['state'][:3, -1] - self.poseT) > 1.e-3 or
-            np.linalg.norm(self.signals['input'][:, -1])) > 1.e-3:
+        tol = self.options['stop_tol']
+        if (np.linalg.norm(self.signals['state'][:3, -1] - self.poseT) > tol or
+            np.linalg.norm(self.signals['input'][:, -1])) > tol:
             return False
         else:
             return True
@@ -197,7 +200,7 @@ class AGV(Vehicle):
         # for the optimization problem
         parameters = {}
         parameters['tg_ha0'] = np.tan(self.prediction['state'][2]/2.)
-        parameters['v_til0'] = self.prediction['input'][0]/(1+parameters['tg_ha0']**2) 
+        parameters['v_til0'] = self.prediction['input'][0]/(1+parameters['tg_ha0']**2)
         parameters['pos0'] = self.prediction['state'][:2]
         parameters['posT'] = self.poseT[:2]  # x, y
         parameters['v_tilT'] = 0.

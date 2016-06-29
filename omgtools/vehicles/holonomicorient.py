@@ -36,14 +36,16 @@ class HolonomicOrient(Vehicle):
         self.amax = bounds['amax'] if 'amax' in bounds else 1.
         self.wmin = bounds['wmin'] if 'wmin' in bounds else -30.  # in deg/s
         self.wmax = bounds['wmax'] if 'wmax' in bounds else 30.
-        # time horizon
-        self.T = self.define_symbol('T')
-        self.t = self.define_symbol('t')
 
     def set_default_options(self):
         Vehicle.set_default_options(self)
         self.options.update({'syslimit': 'norm_inf'})
         self.options.update({'reg_type': None})  # no reg by default
+
+    def init(self):
+        # time horizon
+        self.T = self.define_symbol('T')
+        self.t = self.define_symbol('t')
 
     def define_trajectory_constraints(self, splines):
         x, y, tg_ha = splines
@@ -131,8 +133,9 @@ class HolonomicOrient(Vehicle):
         return init_value
 
     def check_terminal_conditions(self):
-        if (np.linalg.norm(self.signals['state'][:, -1] - self.poseT) > 1.e-3 or
-                np.linalg.norm(self.signals['input'][:, -1])) > 1.e-3:
+        tol = self.options['stop_tol']
+        if (np.linalg.norm(self.signals['state'][:, -1] - self.poseT) > tol or
+                np.linalg.norm(self.signals['input'][:, -1])) > tol:
             return False
         else:
             return True

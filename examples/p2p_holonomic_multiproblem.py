@@ -30,22 +30,38 @@ vehicle.set_terminal_conditions([2., 2.])
 environment = Environment(room={'shape': Square(5.)})
 rectangle = Rectangle(width=3., height=0.2)
 
-environment.add_obstacle(Obstacle({'position': [-2.1, -0.5]}, shape=rectangle))
-environment.add_obstacle(Obstacle({'position': [1.7, -0.5]}, shape=rectangle))
+obstacle1 = Obstacle({'position': [-2.1, -0.5]}, shape=rectangle)
+obstacle2 = Obstacle({'position': [1.7, -0.5]}, shape=rectangle)
 trajectories = {'velocity': {'time': [3., 4.],
                              'values': [[-0.15, 0.0], [0., 0.15]]}}
-environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
-                                  simulation={'trajectories': trajectories}))
+obstacle3 = Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
+                     simulation={'trajectories': trajectories})
 
-# create a point-to-point problem
-problem = Point2point(vehicle, environment, freeT=False)
-problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
-problem.init()
+environment.add_obstacle([obstacle1, obstacle2, obstacle3])
 
-# create simulator
-simulator = Simulator(problem)
-problem.plot('scene')
+# create problems
+problem1 = Point2point(vehicle, environment, freeT=False)
+problem1.init()
+obstacle3.set_options({'avoid': False})
+problem2 = Point2point(vehicle, environment, freeT=False)
+problem2.init()
+
+# create simulator & plots
+simulator = Simulator(problem1)
 vehicle.plot('input', knots=True, labels=['v_x (m/s)', 'v_y (m/s)'])
 
-# run it!
+# 1st task
 simulator.run()
+# 2nd task
+vehicle.set_terminal_conditions([2., 0.0])
+vehicle.reinit_splines(problem1)
+simulator.run()
+# 3th task (we can neglect circular obstacle), but first sleep 2 seconds
+simulator.sleep(2.)
+simulator.set_problem(problem2)
+vehicle.set_terminal_conditions([0.0, 1.0])
+vehicle.reinit_splines(problem2)
+simulator.run()
+
+# plot movie
+problem2.plot_movie('scene', number_of_frames=100, repeat=False)

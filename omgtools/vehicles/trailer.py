@@ -41,11 +41,14 @@ class Trailer(Vehicle):
     def set_default_options(self):
         Vehicle.set_default_options(self)
 
+    def init(self):
+        self.lead_veh.init()
+
     def define_trajectory_constraints(self, splines):
         T = self.define_symbol('T')
         tg_ha_tr = splines[0]
         dtg_ha_tr = tg_ha_tr.derivative()
-        v_til_veh, tg_ha_veh = splines[1:]  
+        v_til_veh, tg_ha_veh = splines[1:]
         # change in orientation of the trailer is due to velocity of vehicle
         # relaxed this equality constraint with eps
         eps = 1e-3
@@ -93,7 +96,7 @@ class Trailer(Vehicle):
         # [x_tr, y_tr, theta_tr, x_veh, y_veh, theta_veh]
         state = np.zeros(6)
         state[2] = np.radians(theta[0])  # theta, imposed on trailer by the user
-        # Build up prediction of complete system. 
+        # Build up prediction of complete system.
         # Note that this requires initializing the vehicle before the trailer
         state[3:] = self.lead_veh.prediction['state']
         input = self.lead_veh.prediction['input']
@@ -123,8 +126,9 @@ class Trailer(Vehicle):
         # Two options: move vehicle with a trailer, or position/park the trailer somewhere.
         # Move vehicle with trailer: no theta_trT specified
         # Park vehicle with trailer: theta_trT specified, True if vehicle and trailer pose reached.
+        tol = self.options['stop_tol']
         if hasattr(self, 'theta_trT'):
-            if (np.linalg.norm(self.signals['state'][2, -1] - self.theta_trT) > 1.e-3):
+            if (np.linalg.norm(self.signals['state'][2, -1] - self.theta_trT) > tol):
                 result = False
             else:
                 result = True
@@ -161,7 +165,7 @@ class Trailer(Vehicle):
         tg_ha_tr = np.array(sample_splines([tg_ha_tr], time))
         dtg_ha_tr = np.array(sample_splines([dtg_ha_tr], time))
         theta_tr = 2*np.arctan2(tg_ha_tr, 1)
-        signals_veh = self.lead_veh.splines2signals(splines[1: ], time)        
+        signals_veh = self.lead_veh.splines2signals(splines[1: ], time)
         x_tr = signals_veh['state'][0, :] - self.l_hitch*np.cos(theta_tr)
         y_tr = signals_veh['state'][1, :] - self.l_hitch*np.sin(theta_tr)
         # input_tr = np.c_[signals_veh['input'][0, :], signals_veh['state'][2, :]].T  # V_veh, theta_veh
@@ -201,13 +205,13 @@ class Trailer(Vehicle):
                 dist = shape.radius
             elif isinstance(shape, (Rectangle)):
                 dist = shape.width/2.
-            else: 
+            else:
                 raise ValueError('Selected a shape different than Circle,\
                  Rectangle or Square, which is not implemented yet')
             # start on midpoint trailer, go to side
             pt1 = self.signals['pose'][:2, t] + dist*np.array([np.cos(self.signals['pose'][2, t]),
                                                                np.sin(self.signals['pose'][2, t])])
-            # start on midpoint trailer, go to side + l_hitch, but l_hitch was defined as distance between 
+            # start on midpoint trailer, go to side + l_hitch, but l_hitch was defined as distance between
             # midpoint of trailer and connection point on vehicle so this already contains 'dist' --> use l_hitch
             pt2 = self.signals['pose'][:2, t] + (self.l_hitch)*np.array([np.cos(self.signals['pose'][2, t]),
                                                                          np.sin(self.signals['pose'][2, t])])

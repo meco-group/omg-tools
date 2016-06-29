@@ -110,6 +110,14 @@ class Environment(OptiChild, PlotLayer):
             vehicle.define_collision_constraints(hyp_veh, self, spline)
 
     # ========================================================================
+    # Optimization modelling related functions
+    # ========================================================================
+
+    def init(self):
+        for obstacle in self.obstacles:
+            obstacle.init()
+
+    # ========================================================================
     # Update environment
     # ========================================================================
 
@@ -135,8 +143,11 @@ class Environment(OptiChild, PlotLayer):
     # ========================================================================
 
     def init_plot(self, argument, **kwargs):
-        lines = [{'color': 'black'} for _ in self.draw()]
-        limits = self.get_canvas_limits()
+        lines = [{'color': 'black', 'linewidth': 1.2} for _ in self.draw()]
+        if 'limits' in kwargs:
+            limits = kwargs['limits']
+        else:
+            limits = self.get_canvas_limits()
         labels = ['' for k in range(self.n_dim)]
         if self.n_dim == 2:
             return [[{'labels': labels, 'lines': lines, 'aspect_equal': True,

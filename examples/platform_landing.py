@@ -22,7 +22,7 @@ from omgtools import *
 # create fleet
 N_quad = 2
 quadrotors = [Quadrotor(0.2) for l in range(N_quad)]
-fleet = Fleet(quadrotors + [Platform()])
+fleet = Fleet(quadrotors + [Holonomic1D()])
 
 configuration = [[0.25], [-0.25], [0.0]]
 init_positions = [[1.5, 3.], [-2., 2.], [1.]]
@@ -38,7 +38,7 @@ environment.add_obstacle(Obstacle({'position': [1., 1.5]},
                                   shape=Rectangle(width=1, height=0.2)))
 
 # create a formation point-to-point problem
-options = {'horizon_time': 5., 'codegen': {'jit': False}, 'admm': {'rho': 3.}}
+options = {'horizon_time': 5., 'codegen': {'jit': False}, 'rho': 3.}
 problem = RendezVous(fleet, environment, options=options)
 problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem.init()

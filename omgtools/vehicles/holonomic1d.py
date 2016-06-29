@@ -24,15 +24,17 @@ from casadi import inf
 import numpy as np
 
 
-class Platform(Vehicle):
+class Holonomic1D(Vehicle):
 
     def __init__(self, width=0.7, height=0.1, options=None, bounds=None):
         bounds = bounds or {}
         Vehicle.__init__(self, n_spl=1, degree=3, shapes=Rectangle(width, height), options=options)
-        self.vmin = bounds['vmin'] if 'vmin' in bounds else -0.8
-        self.vmax = bounds['vmax'] if 'vmax' in bounds else 0.8
-        self.amin = bounds['amin'] if 'amin' in bounds else -2.
-        self.amax = bounds['amax'] if 'amax' in bounds else 2.
+        self.vmin = bounds['vmin'] if 'vmin' in bounds else -0.5
+        self.vmax = bounds['vmax'] if 'vmax' in bounds else 0.5
+        self.amin = bounds['amin'] if 'amin' in bounds else -1.
+        self.amax = bounds['amax'] if 'amax' in bounds else 1.
+
+    def init(self):
         # time horizon
         self.T = self.define_symbol('T')
 
@@ -67,15 +69,16 @@ class Platform(Vehicle):
         self.positionT = position
 
     def get_init_spline_value(self):
-        pos0 = self.prediction['state']
-        posT = self.positionT
+        pos0 = self.prediction['state'][0]
+        posT = self.positionT[0]
         # init_value = np.r_[pos0[0]*np.ones(self.degree), np.linspace(pos0[0], posT[0], len(self.basis) - 2*self.degree), posT[0]*np.ones(self.degree)]
-        init_value = np.linspace(pos0[0], posT[0], len(self.basis))
+        init_value = np.linspace(pos0, posT, len(self.basis))
         return init_value
 
     def check_terminal_conditions(self):
-        if (np.linalg.norm(self.signals['state'][:, -1] - self.positionT) > 1.e-3 or
-                np.linalg.norm(self.signals['input'][:, -1])) > 1.e-3:
+        tol = self.options['stop_tol']
+        if (np.linalg.norm(self.signals['state'][:, -1] - self.positionT) > tol or
+                np.linalg.norm(self.signals['input'][:, -1])) > tol:
             return False
         else:
             return True

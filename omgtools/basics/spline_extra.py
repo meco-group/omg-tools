@@ -316,33 +316,61 @@ def sample_splines(spline, time):
         return splev(time, (spline.basis.knots, spline.coeffs, spline.basis.degree))
 
 
-def integral_sqbasis(basis):
-    # Compute integral of squared bases.
-    basis_prod = basis*basis
-    pairs, _ = basis.pairs(basis)
-    b_self = basis(basis_prod._x)
-    basis_product = b_self[:, pairs[0]].multiply(b_self[:, pairs[1]])
-    T = basis_prod.transform(lambda y: basis_product.toarray()[y, :])
+# def integral_sqbasis(basis):
+#     # Compute integral of squared bases.
+#     basis_prod = basis*basis
+#     pairs, _ = basis.pairs(basis)
+#     b_self = basis(basis_prod._x)
+#     basis_product = b_self[:, pairs[0]].multiply(b_self[:, pairs[1]])
+#     T = basis_prod.transform(lambda y: basis_product.toarray()[y, :])
 
-    knots = basis_prod.knots
-    d = basis_prod.degree
-    K = np.array((knots[d + 1:] - knots[:-(d + 1)]) / (d + 1))
+#     knots = basis_prod.knots
+#     d = basis_prod.degree
+#     K = np.array((knots[d + 1:] - knots[:-(d + 1)]) / (d + 1))
 
-    L = len(basis)
-    B = np.zeros((L, L))
-    degree = basis.degree
-    k = 0
-    for i in range(L):
-        c1 = np.zeros(L)
-        c1[i] = 1
-        for j in range(i, i+degree+1-k):
-            c2 = np.zeros(L)
-            c2[j] = 1
-            coeffs_product = (c1[pairs[0].tolist()]*c2[pairs[1].tolist()])
-            c_prod = T.dot(coeffs_product)
-            bb = K.T.dot(c_prod)
-            B[i, j] = bb
-            B[j, i] = bb
-        if i >= L-degree-1:
-            k += 1
-    return B
+#     L = len(basis)
+#     B = np.zeros((L, L))
+#     degree = basis.degree
+#     k = 0
+#     for i in range(L):
+#         c1 = np.zeros(L)
+#         c1[i] = 1
+#         for j in range(i, i+degree+1-k):
+#             c2 = np.zeros(L)
+#             c2[j] = 1
+#             coeffs_product = (c1[pairs[0].tolist()]*c2[pairs[1].tolist()])
+#             c_prod = T.dot(coeffs_product)
+#             bb = K.T.dot(c_prod)
+#             B[i, j] = bb
+#             B[j, i] = bb
+#         if i >= L-degree-1:
+#             k += 1
+#     return B
+
+
+# def definite_integral_sqbasisMX(basis, a, b):
+#     # Compute integral of squared bases. (in a dirty way)
+#     L = len(basis)
+#     degree = basis.degree
+#     if isinstance(a, MX) or isinstance(b, MX):
+#         typ = MX
+#     elif isinstance(a, SX) or isinstance(b, SX):
+#         typ = SX
+#     else:
+#         typ = np
+#     B = typ.zeros((L, L))
+#     k = 0
+#     for i in range(L):
+#         c1 = np.zeros(L)
+#         c1[i] = 1
+#         for j in range(i, i+degree+1-k):
+#             c2 = np.zeros(L)
+#             c2[j] = 1
+#             s1 = BSpline(basis, c1)
+#             s2 = BSpline(basis, c2)
+#             bb = definite_integral((s1*s2), a, b)
+#             B[i, j] = bb
+#             B[j, i] = bb
+#         if i >= L-degree-1:
+#             k += 1
+#     return B

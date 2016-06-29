@@ -37,41 +37,26 @@ trajectories = {'velocity': {'time': [3., 4.],
 environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
                                   simulation={'trajectories': trajectories}))
 
-# create a point-to-point problem
-# select solver
-solver = 'ipopt'
-if solver is 'ipopt':
-    options = {'solver': solver}
-    problem = Point2point(vehicle, environment, options, freeT=False)
-    problem.set_options(
-        {'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57',
-                                      'ipopt.hessian_approximation': 'limited-memory'}}})
-elif solver is 'worhp':
-    options = {'solver': solver}
-    worhp_options = {  # 'worhp.qp_ipLsMethod': 'MA57',  # todo: option not found?
-        'worhp.MaxIter': 200,
-        'worhp.TolOpti': 1e-6,
-        # False = warm start
-        'worhp.InitialLMest': False,
-        'worhp.UserHM': True}  # True = exact Hessian
-    options['solver_options'] = {'worhp': worhp_options}
-    problem = Point2point(vehicle, environment, options, freeT=False)
-elif solver is 'snopt':
-    options = {'solver': solver}  # todo: plugin snopt not found?
-    problem = Point2point(vehicle, environment, options, freeT=False)
-    problem.set_options({'solver_options':
-                         {'snopt': {'snopt.Hessian': 'limited memory',
-                                    'start': 'warm'}}})
-else:
-    print('You selected solver: ' + solver +
-          ' but this solver is not supported. ' +
-          'Choose between ipopt, worhp or snopt.')
-problem.init()
+problem1 = Point2point(vehicle, environment, freeT=False)
+problem1.set_options({'verbose': 1})
+problem1.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
+problem1.set_options({'codegen': {'build': 'jit', 'flags': '-O2'}}) # just-in-time compilation
 
-# create simulator
-simulator = Simulator(problem)
-problem.plot('scene')
-vehicle.plot('input', knots=True, labels=['v_x (m/s)', 'v_y (m/s)'])
+problem2 = Point2point(vehicle, environment, freeT=False)
+problem2.set_options({'verbose': 1})
+problem2.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
+problem2.set_options({'codegen': {'build': 'shared', 'flags': '-O2'}}) # compile to shared object
 
-# run it!
+
+print('Just-in-time compilation')
+problem1.init()
+simulator = Simulator(problem1)
+simulator.run()
+
+print('\n')
+print('Compile to shared object')
+problem2.init()
+simulator.set_problem(problem2)
+vehicle.overrule_state(np.array([-1.5, -1.5]))
+vehicle.overrule_input(np.zeros(2))
 simulator.run()
