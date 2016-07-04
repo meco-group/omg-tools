@@ -119,9 +119,6 @@ class Vehicle(OptiChild, PlotLayer):
             self.splines.append(spline)
         return self.splines
 
-    def get_fleet_center(self, splines, rel_pos):
-        return [s+rp for s, rp in zip(splines, rel_pos)]
-
     def define_collision_constraints_2d(self, hyperplanes, environment, positions, tg_ha=0, offset=0):
         t = self.define_symbol('t')
         T = self.define_symbol('T')
@@ -224,6 +221,19 @@ class Vehicle(OptiChild, PlotLayer):
                         self.define_constraint(
                             (chck[k]+position[k]) - room_lim[k][1], -inf, 0.)
 
+    def get_fleet_center(self, splines, rel_pos):
+        # center = self.define_spline_variable('formation_center', len(splines))
+        center = self.define_substitute('fleet_center', [s+rp for s, rp in zip(splines, self.rel_pos_c)]) #werkt niet
+        # center = self.define_substitute('fleet_center', splines)
+        # center = [s for s, rp in zip(splines, self.rel_pos_c)] #werkt
+
+        # center = [center[1], center[0]]
+
+        # for c, s, rp in zip(center, splines, rel_pos):
+            # self.define_constraint(s + rp - c, 0., 0.)
+        return center
+        # return [s+rp for s, rp in zip(splines, rel_pos)]
+        # return splines
 
     def set_parameters(self, current_time):
         parameters = {}
