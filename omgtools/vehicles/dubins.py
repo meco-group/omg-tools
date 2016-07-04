@@ -162,7 +162,7 @@ class Dubins(Vehicle):
     def set_parameters(self, current_time):
         # for the optimization problem
         # convert theta to tg_ha here
-        parameters = {}
+        parameters = Vehicle.set_parameters(self, current_time)
         parameters['tg_ha0'] = np.tan(self.prediction['state'][2]/2.)
         parameters['v_til0'] = self.prediction['input'][0]/(1+parameters['tg_ha0']**2)
         parameters['dtg_ha0'] = 0.5*self.prediction['input'][1]*(1+parameters['tg_ha0']**2)  # dtg_ha

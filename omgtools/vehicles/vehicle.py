@@ -224,6 +224,13 @@ class Vehicle(OptiChild, PlotLayer):
                         self.define_constraint(
                             (chck[k]+position[k]) - room_lim[k][1], -inf, 0.)
 
+
+    def set_parameters(self, current_time):
+        parameters = {}
+        if hasattr(self, 'rel_pos_c'):
+            parameters['rel_pos_c'] = self.rel_pos_c
+        return parameters
+
     # ========================================================================
     # Simulation and prediction related functions
     # ========================================================================
