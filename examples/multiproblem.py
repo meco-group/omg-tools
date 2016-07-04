@@ -39,7 +39,8 @@ class splinePlanner():
 				# if there is a new frame, make an initial guess and get movingObstacles
 				splines, motionTime, problem = self.getInitialGuess(frame, state)  # gives initial guess for current frame
 				self.problem = problem
-				xmin, ymin, xmax, ymax = self.frame['border']
+				border = self.frame['border']
+				xmin, ymin, xmax, ymax = border[0], border[1], border[2], border[3]
 				movingObstacles = self.sim.getMovingObstacles(xmin, ymin, xmax, ymax, motionTime)
 				if movingObtacles is not None:
 					self.updateFrame(movingObstacles)  # save current set of moving obstacles
@@ -72,13 +73,21 @@ class splinePlanner():
 				obsState = self.frame['obstacles']
 				goalState = self.frame['endpointFrame']
 				# run deployer	
-				feasible, traj_state, traj_input = deployer.run(self.vehState, obsState, goalState)
+				feasible, traj_state, traj_input, motionTime = deployer.run(self.vehState, obsState, goalState)
 				
-				# trajectory, motionTime, splines = self.getTrajectory(self.frame, self.state, self.problem)	
+				trajectory = buildTrajectory(traj_state, traj_input)
 				
 				# current position = first point of trajectory
 				# trajectory = [array(x), array(y), array(theta), array(vx), array(vy), array(omega)]
 				self.sim.update(trajectory, motionTime)  # assign current pos to attribute
+
+	def buildTrajectory(traj_state, traj_input):
+		trajectory = []
+		trajectory.append(np.array(traj_state[0]))
+		trajectory.append(np.array(traj_state[1]))
+		trajectory.append(np.array(traj_input[0]))
+		trajectory.append(np.array(traj_input[1]))
+		return trajectory
 
 	def setNewFrame(self, newFrame):  # called by simulator class
 		self.newFrame = True
