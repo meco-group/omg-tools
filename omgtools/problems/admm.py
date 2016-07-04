@@ -150,7 +150,8 @@ class ADMM(DualUpdater):
 
     def _construct_upd_z_nlp(self):
         warnings.warn('Your z update is not an equality constrained QP. ' +
-                      'You are exploring non-tested code. Good luck!')
+                      'You are exploring highly experimental and non-tested ' +
+                      'code. Good luck!')
         # construct variables
         self._var_struct_updz = struct([entry('z_i', struct=self.q_i_struct),
                                         entry('z_ij', struct=self.q_ij_struct)])
@@ -262,14 +263,14 @@ class ADMM(DualUpdater):
         sym, jac = [], []
         for child, q_i in self.q_i.items():
             for name, ind in q_i.items():
-                var = self.distr_problem.father.get_variables(child, name, spline=False, symbolic=True)
+                var = self.distr_problem.father.get_variables(child, name, spline=False, symbolic=True, substitute=False)
                 jj = jacobian(g, var)
                 jac = horzcat(jac, jj[:, ind])
                 sym.append(var)
         for nghb in self.q_ij.keys():
             for child, q_ij in self.q_ij[nghb].items():
                 for name, ind in q_ij.items():
-                    var = self.distr_problem.father.get_variables(child, name, spline=False, symbolic=True)
+                    var = self.distr_problem.father.get_variables(child, name, spline=False, symbolic=True, substitute=False)
                     jj = jacobian(g, var)
                     jac = horzcat(jac, jj[:, ind])
                     sym.append(var)
@@ -300,11 +301,12 @@ class ADMM(DualUpdater):
         for nghb, q_ji in self.q_ji.items():
             for child, q in q_ji.items():
                 for name, ind in q.items():
-                    var = self.father_updx._var_result[child.label, name][ind]
+                    var = self.father_updx.get_variables(child, name, spline=False).T.flatten()[ind]
                     self.var_admm['z_ji'][str(nghb), child.label, name] = var
         for child, q in self.q_i.items():
             for name, ind in q.items():
-                var = self.father_updx._var_result[child.label, name][ind]
+                # var = self.father_updx._var_result[child.label, name][ind]
+                var = self.father_updx.get_variables(child, name, spline=False).T.flatten()[ind]
                 self.var_admm['x_i'][child.label, name] = var
                 self.var_admm['z_i'][child.label, name] = var
 

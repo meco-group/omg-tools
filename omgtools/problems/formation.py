@@ -30,15 +30,19 @@ class FormationPoint2point(ADMMProblem):
         ADMMProblem.__init__(self, fleet, environment, problems, options)
 
     def construct(self):
-        ADMMProblem.construct(self)
-        # get formation center as seen by vehicles
         config = self.fleet.configuration
-        centra = {}
+        rel_pos_c = {}
         for veh in self.vehicles:
             ind_veh = sorted(config[veh].keys())
-            rel_pos_c_veh = [-config[veh][ind] for ind in ind_veh]
+            # rel_pos_c[veh] = veh.define_parameter('rel_pos_c', len(ind_veh))
+        ADMMProblem.construct(self)
+        # get formation center as seen by vehicles
+        centra = {}
+        for veh in self.vehicles:
+            # rel_pos_c_veh = [-config[veh][ind] for ind in ind_veh]
             splines = self.father.get_variables(veh, 'splines0', symbolic=True)
-            centra[veh] = veh.get_fleet_center(splines, rel_pos_c_veh)
+            ind_veh = sorted(config[veh].keys())
+            centra[veh] = veh.get_fleet_center(splines, 'yo')
         # formation constraints
         couples = {veh: [] for veh in self.vehicles}
         for veh in self.vehicles:
@@ -54,47 +58,15 @@ class FormationPoint2point(ADMMProblem):
         # terminal constraints (stability issue)
         for veh in self.vehicles:
             center = centra[veh]
-            for spline in center:
+            splines = self.father.get_variables(veh, 'splines0', symbolic=True)
+            for spline in splines:
                 for d in range(1, spline.basis.degree+1):
                     # constraints imposed on distributedproblem instance will be
                     # invoked on the z-variables (because it is interpreted as
                     # 'interconnection constraint')
-                    self.define_constraint(spline.derivative(d)(1.), 0., 0.)
+                    # self.define_constraint(spline.derivative(d)(1.), 0., 0.) #this one!
                     # this one will be invoked on the x-trajectory
                     veh.define_constraint(spline.derivative(d)(1.), 0., 0.)
-
-    # def construct(self):
-    #     ADMMProblem.construct(self)
-    #     # define parameters
-    #     rel_splines = {veh: {nghb: self.define_parameter('rs'+str(l)+str(n), len(self.fleet.configuration[veh].keys())) for n, nghb in enumerate(self.fleet.get_neighbors(veh))} for l, veh in enumerate(self.vehicles)}
-    #     # formation constraints
-    #     couples = {veh: [] for veh in self.vehicles}
-    #     for veh in self.vehicles:
-    #         ind_veh = sorted(self.fleet.configuration[veh].keys())
-    #         rs = rel_splines[veh]
-    #         spl_veh_nghbs = veh.get_rel_neighbor_positions(rs)
-    #         for nghb in self.fleet.get_neighbors(veh):
-    #             ind_nghb = sorted(self.fleet.configuration[nghb].keys())
-    #             if veh not in couples[nghb] and nghb not in couples[veh]:
-    #                 couples[veh].append(nghb)
-    #                 # spl_veh = self.father.get_variables(veh, 'splines0', symbolic=True)
-    #                 # spl_nghb = self.father.get_variables(nghb, 'splines0', symbolic=True)
-    #                 # for ind_v, ind_n, rel_spl in zip(ind_veh, ind_nghb, rs[nghb]):
-    #                 #     self.define_constraint(
-    #                 #         spl_veh[ind_v] - spl_nghb[ind_n] - rel_spl, 0., 0.)
-    #                 spl_veh_nghb = spl_veh_nghbs[nghb]
-    #                 spl_nghb = self.father.get_variables()
-    #     # terminal constraints (stability issue)
-    #     for veh in self.vehicles:
-    #         splines = self.father.get_variables(veh, 'splines0', symbolic=True)
-    #         for spline in splines:
-    #             for d in range(1, veh.degree+1):
-    #                 # constraints imposed on distributedproblem instance will be
-    #                 # invoked on the z-variables (because it is interpreted as
-    #                 # 'interconnection constraint')
-    #                 self.define_constraint(spline.derivative(d)(1.), 0., 0.)
-    #                 # this one will be invoked on the x-trajectory
-    #                 veh.define_constraint(spline.derivative(d)(1.), 0., 0.)
 
     def set_parameters(self, current_time):
         parameters = {}

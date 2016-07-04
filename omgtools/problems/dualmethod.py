@@ -161,7 +161,7 @@ class DualUpdater(Problem):
                 for name, ind in q_i.items():
                     if name in child._splines_prim:
                         basis = child._splines_prim[name]['basis']
-                        for l in range(child._variables[name].shape[1]):
+                        for l in range(len(basis)):
                             sl_min = l*len(basis)
                             sl_max = (l+1)*len(basis)
                             if set(range(sl_min, sl_max)) <= set(ind):
