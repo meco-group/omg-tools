@@ -118,6 +118,11 @@ class FixedTPoint2point(Point2pointProblem):
         self.knot_time = (int(self.options['horizon_time']*1000.) /
                           self.vehicles[0].knot_intervals) / 1000.
 
+    def set_default_options(self):
+        Point2pointProblem.set_default_options(self)
+        self.options['horizon_time'] = 10.
+        self.options['hard_term_con'] = False
+
     def construct(self):
         Point2pointProblem.construct(self)
         self.define_init_constraints()
@@ -135,14 +140,12 @@ class FixedTPoint2point(Point2pointProblem):
                 objective += definite_integral(g, self.t0, 1.)
                 self.define_constraint(spline - condition - g, -inf, 0.)
                 self.define_constraint(-spline + condition - g, -inf, 0.)
+                if self.options['hard_term_con']:
+                    self.define_constraint(spline(1.) - condition, 0., 0.)
             for con in term_con_der:
                 spline, condition = con[0], con[1]
                 self.define_constraint(spline(1.) - condition, 0., 0.)
         self.define_objective(objective)
-
-    def set_default_options(self):
-        Point2pointProblem.set_default_options(self)
-        self.options['horizon_time'] = 10.
 
     def set_parameters(self, current_time):
         parameters = Point2pointProblem.set_parameters(self, current_time)
