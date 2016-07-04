@@ -18,10 +18,11 @@ from omgtools import *
 
 class splinePlanner():
 
-	def __init__(self, sim):
+	def __init__(self, sim, key):
 	# In which sim is the simulator class of Steven, so I can call methods on this simulator.
 	# Idem for the reverse, I give splinePathplanner to Steven.
 		self.sim = sim
+		self.key = key
 
 		# create vehicle
 		vehicle = Holonomic(Circle(radius=0.4))
@@ -79,7 +80,7 @@ class splinePlanner():
 				
 				# current position = first point of trajectory
 				# trajectory = [array(x), array(y), array(theta), array(vx), array(vy), array(omega)]
-				self.sim.update(trajectory, motionTime)  # assign current pos to attribute
+				self.sim.update(trajectory, motionTime, self.key)  # assign current pos to attribute
 
 	def buildTrajectory(traj_state, traj_input):
 		trajectory = []
