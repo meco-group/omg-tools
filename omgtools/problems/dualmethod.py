@@ -240,5 +240,3 @@ class DualProblem(DistributedProblem):
         if self.options['save_residuals']:
             pickle.dump(
                 self.residuals, open(self.options['save_residuals'], 'wb'))
-
-

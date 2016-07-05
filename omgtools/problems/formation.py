@@ -63,33 +63,20 @@ class FormationPoint2point(ADMMProblem):
                     # 'interconnection constraint')
                     self.define_constraint(spline.derivative(d)(1.), 0., 0.)
 
-    def set_parameters(self, current_time):
-        parameters = {}
-        for l, veh in enumerate(self.vehicles):
-            rel_spl = self.fleet.get_rel_config(veh)
-            for n, nghb in enumerate(self.fleet.get_neighbors(veh)):
-                parameters['rs'+str(l)+str(n)] = rel_spl[nghb]
-        return parameters
-
     def get_interaction_error(self):
         error = 0.
         for veh in self.vehicles:
-            ind_veh = sorted(self.fleet.configuration[veh].keys())
+            pos_c_veh = veh.signals['fleet_center']
             n_samp = veh.signals['time'].shape[1]
             end_time = veh.signals['time'][:, -1]
             Ts = veh.signals['time'][0, 1] - veh.signals['time'][0, 0]
-            rs = self.fleet.get_rel_config(veh)
-            spl_veh = veh.signals['splines']
             nghbs = self.fleet.get_neighbors(veh)
             for nghb in nghbs:
-                ind_nghb = sorted(self.fleet.configuration[nghb].keys())
-                spl_nghb = nghb.signals['splines']
-                Dspl = spl_veh[ind_veh] - spl_nghb[ind_nghb]
+                pos_c_nghb = nghb.signals['fleet_center']
+                Dspl = pos_c_veh - pos_c_nghb
                 err_rel = np.zeros(n_samp)
                 for k in range(n_samp):
-                    Dspl_nrm = np.linalg.norm(Dspl[:, k])
-                    rs_nrm = np.linalg.norm(rs[nghb])
-                    err_rel[k] = ((Dspl_nrm - rs_nrm)/rs_nrm)**2
+                    err_rel[k] = np.linalg.norm(Dspl[:, k])**2
                 err_rel_int = 0.
                 for k in range(n_samp-1):
                     err_rel_int += 0.5*(err_rel[k+1] + err_rel[k])*Ts
@@ -100,4 +87,4 @@ class FormationPoint2point(ADMMProblem):
     def final(self):
         ADMMProblem.final(self)
         err = self.get_interaction_error()
-        print '%-18s %6g %%' % ('Formation error:', err*100.)
+        print '%-18s %6g m' % ('Formation error:', err)
