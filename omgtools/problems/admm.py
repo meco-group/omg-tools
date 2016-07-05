@@ -41,7 +41,9 @@ class ADMM(DualUpdater):
     # Create problem
     # ========================================================================
 
-    def init(self):
+    def init(self, problems=None):
+        if problems is None:
+            problems = {'upd_x': None, 'upd_z': None, 'lineq_updz': True, 'upd_l': None}
         DualUpdater.init(self)
         self.var_admm = {}
         for key in ['x_i', 'z_i', 'z_i_p', 'l_i', 'l_i_p']:
@@ -50,11 +52,13 @@ class ADMM(DualUpdater):
             self.var_admm[key] = self.q_ij_struct(0)
         for key in ['z_ji', 'l_ji']:
             self.var_admm[key] = self.q_ji_struct(0)
-        self.construct_upd_x()
-        self.construct_upd_z()
-        self.construct_upd_l()
+        self.construct_upd_x(problems['upd_x'])
+        self.construct_upd_z(problems['upd_z'], problems['lineq_updz'])
+        self.construct_upd_l(problems['upd_l'])
+        return {'upd_x': self.problem_upd_x, 'upd_z': self.problem_upd_z,
+                'lineq_updz': self._lineq_updz, 'upd_l': self.problem_upd_l}
 
-    def construct_upd_x(self):
+    def construct_upd_x(self, problem=None):
         # construct optifather & give reference to problem
         self.father_updx = OptiFather(self.group.values())
         self.problem.father = self.father_updx
@@ -64,47 +68,55 @@ class ADMM(DualUpdater):
         l_i = self.define_parameter('l_i', self.q_i_struct.shape[0])
         l_ji = self.define_parameter('l_ji', self.q_ji_struct.shape[0])
         rho = self.define_parameter('rho')
-        # put them in the struct format
-        z_i = self.q_i_struct(z_i)
-        z_ji = self.q_ji_struct(z_ji)
-        l_i = self.q_i_struct(l_i)
-        l_ji = self.q_ji_struct(l_ji)
-        # get time info
-        t = self.define_symbol('t')
-        T = self.define_symbol('T')
-        t0 = t/T
-        # get (part of) variables
-        x_i = self._get_x_variables(symbolic=True)
-        # transform spline variables: only consider future piece of spline
-        tf = lambda cfs, basis: shift_knot1_fwd(cfs, basis, t0)
-        self._transform_spline([x_i, z_i, l_i], tf, self.q_i)
-        self._transform_spline([z_ji, l_ji], tf, self.q_ji)
-        # construct objective
-        obj = 0.
-        for child, q_i in self.q_i.items():
-            for name in q_i.keys():
-                x = x_i[child.label][name]
-                z = z_i[child.label, name]
-                l = l_i[child.label, name]
-                obj += mtimes(l.T, x-z) + 0.5*rho*mtimes((x-z).T, (x-z))
-                for nghb in self.q_ji.keys():
-                    z = z_ji[str(nghb), child.label, name]
-                    l = l_ji[str(nghb), child.label, name]
+        if problem is None:
+            # put z and l variables in the struct format
+            z_i = self.q_i_struct(z_i)
+            z_ji = self.q_ji_struct(z_ji)
+            l_i = self.q_i_struct(l_i)
+            l_ji = self.q_ji_struct(l_ji)
+            # get time info
+            t = self.define_symbol('t')
+            T = self.define_symbol('T')
+            t0 = t/T
+            # get (part of) variables
+            x_i = self._get_x_variables(symbolic=True)
+            # transform spline variables: only consider future piece of spline
+            tf = lambda cfs, basis: shift_knot1_fwd(cfs, basis, t0)
+            self._transform_spline([x_i, z_i, l_i], tf, self.q_i)
+            self._transform_spline([z_ji, l_ji], tf, self.q_ji)
+            # construct objective
+            obj = 0.
+            for child, q_i in self.q_i.items():
+                for name in q_i.keys():
+                    x = x_i[child.label][name]
+                    z = z_i[child.label, name]
+                    l = l_i[child.label, name]
                     obj += mtimes(l.T, x-z) + 0.5*rho*mtimes((x-z).T, (x-z))
-        self.define_objective(obj)
-        # construct problem
-        prob, _ = self.father_updx.construct_problem(
-            self.options, str(self._index))
+                    for nghb in self.q_ji.keys():
+                        z = z_ji[str(nghb), child.label, name]
+                        l = l_ji[str(nghb), child.label, name]
+                        obj += mtimes(l.T, x-z) + 0.5*rho*mtimes((x-z).T, (x-z))
+            self.define_objective(obj)
+            # construct problem
+            prob, _ = self.father_updx.construct_problem(
+                self.options, str(self._index))
+        else:
+            prob, _ = self.father_updx.construct_problem(self.options, str(self._index), problem)
         self.problem_upd_x = prob
         self.father_updx.init_transformations(self.problem.init_primal_transform,
-                                         self.problem.init_dual_transform)
+            self.problem.init_dual_transform)
         self.init_var_admm()
 
-    def construct_upd_z(self):
+    def construct_upd_z(self, problem=None, lineq_updz=True):
+        if problem is not None:
+            self.problem_upd_z = problem
+            self._lineq_updz = lineq_updz
+            return
         # check if we have linear equality constraints
         self._lineq_updz, A, b = self._check_for_lineq()
         if not self._lineq_updz:
-            self._construct_upd_z_nlp()
+            raise ValueError('For now, only equality constrained QP ' +
+                             'z-updates are allowed!')
         x_i = struct_symMX(self.q_i_struct)
         x_j = struct_symMX(self.q_ij_struct)
         l_i = struct_symMX(self.q_i_struct)
@@ -148,85 +160,88 @@ class ADMM(DualUpdater):
         prob, _ = create_function('upd_z_'+str(self._index), inp, out, self.options)
         self.problem_upd_z = prob
 
-    def _construct_upd_z_nlp(self):
-        warnings.warn('Your z update is not an equality constrained QP. ' +
-                      'You are exploring highly experimental and non-tested ' +
-                      'code. Good luck!')
-        # construct variables
-        self._var_struct_updz = struct([entry('z_i', struct=self.q_i_struct),
-                                        entry('z_ij', struct=self.q_ij_struct)])
-        var = struct_symMX(self._var_struct_updz)
-        z_i = self.q_i_struct(var['z_i'])
-        z_ij = self.q_ij_struct(var['z_ij'])
-        # construct parameters
-        self._par_struct_updz = struct([entry('x_i', struct=self.q_i_struct),
-                                        entry('x_j', struct=self.q_ij_struct),
-                                        entry('l_i', struct=self.q_i_struct),
-                                        entry('l_ij', struct=self.q_ij_struct),
-                                        entry('t'), entry('T'), entry('rho'),
-                                        entry('par', struct=self.par_struct)])
-        par = struct_symMX(self._par_struct_updz)
-        x_i, x_j = self.q_i_struct(par['x_i']), self.q_ij_struct(par['x_j'])
-        l_i, l_ij = self.q_i_struct(par['l_i']), self.q_ij_struct(par['l_ij'])
-        t, T, rho = par['t'], par['T'], par['rho']
-        t0 = t/T
-        # transform spline variables: only consider future piece of spline
-        tf = lambda cfs, basis: shift_knot1_fwd(cfs, basis, t0)
-        self._transform_spline([x_i, z_i, l_i], tf, self.q_i)
-        self._transform_spline([x_j, z_ij, l_ij], tf, self.q_ij)
-        # construct constraints
-        constraints, lb, ub = [], [], []
-        for con in self.constraints:
-            c = con[0]
-            for sym in symvar(c):
-                for label, child in self.group.items():
-                    if sym.name() in child.symbol_dict:
-                        name = child.symbol_dict[sym.name()][1]
-                        v = z_i[label, name]
-                        ind = self.q_i[child][name]
-                        sym2 = MX.zeros(sym.size())
-                        sym2[ind] = v
-                        sym2 = reshape(sym2, sym.shape)
-                        c = substitute(c, sym, sym2)
-                        break
-                for nghb in self.q_ij.keys():
-                    for label, child in nghb.group.items():
-                        if sym.name() in child.symbol_dict:
-                            name = child.symbol_dict[sym.name()][1]
-                            v = z_ij[nghb.label, label, name]
-                            ind = self.q_ij[nghb][child][name]
-                            sym2 = MX.zeros(sym.size())
-                            sym2[ind] = v
-                            sym2 = reshape(sym2, sym.shape)
-                            c = substitute(c, sym, sym2)
-                            break
-                for name, s in self.par_i.items():
-                    if s.name() == sym.name():
-                        c = substitute(c, sym, par['par', name])
-            constraints.append(c)
-            lb.append(con[1])
-            ub.append(con[2])
-        self.lb_updz, self.ub_updz = lb, ub
-        # construct objective
-        obj = 0.
-        for child, q_i in self.q_i.items():
-            for name in q_i.keys():
-                x = x_i[child.label, name]
-                z = z_i[child.label, name]
-                l = l_i[child.label, name]
-                obj += mtimes(l.T, x-z) + 0.5*rho*mtimes((x-z).T, (x-z))
-        for nghb in self.q_ij.keys():
-            for child, q_ij in self.q_ij[nghb].items():
-                for name in q_ij.keys():
-                    x = x_j[str(nghb), child.label, name]
-                    z = z_ij[str(nghb), child.label, name]
-                    l = l_ij[str(nghb), child.label, name]
-                    obj += mtimes(l.T, x-z) + 0.5*rho*mtimes((x-z).T, (x-z))
-        # construct problem
-        prob, _ = create_nlp(var, par, obj, constraints, self.options, str(self._index))
-        self.problem_upd_z = prob
+    # def _construct_upd_z_nlp(self, problem=None):
+    #     warnings.warn('Your z update is not an equality constrained QP. ' +
+    #                   'You are exploring highly experimental and non-tested ' +
+    #                   'code. Good luck!')
+    #     # construct variables
+    #     self._var_struct_updz = struct([entry('z_i', struct=self.q_i_struct),
+    #                                     entry('z_ij', struct=self.q_ij_struct)])
+    #     var = struct_symMX(self._var_struct_updz)
+    #     z_i = self.q_i_struct(var['z_i'])
+    #     z_ij = self.q_ij_struct(var['z_ij'])
+    #     # construct parameters
+    #     self._par_struct_updz = struct([entry('x_i', struct=self.q_i_struct),
+    #                                     entry('x_j', struct=self.q_ij_struct),
+    #                                     entry('l_i', struct=self.q_i_struct),
+    #                                     entry('l_ij', struct=self.q_ij_struct),
+    #                                     entry('t'), entry('T'), entry('rho'),
+    #                                     entry('par', struct=self.par_struct)])
+    #     par = struct_symMX(self._par_struct_updz)
+    #     x_i, x_j = self.q_i_struct(par['x_i']), self.q_ij_struct(par['x_j'])
+    #     l_i, l_ij = self.q_i_struct(par['l_i']), self.q_ij_struct(par['l_ij'])
+    #     t, T, rho = par['t'], par['T'], par['rho']
+    #     t0 = t/T
+    #     # transform spline variables: only consider future piece of spline
+    #     tf = lambda cfs, basis: shift_knot1_fwd(cfs, basis, t0)
+    #     self._transform_spline([x_i, z_i, l_i], tf, self.q_i)
+    #     self._transform_spline([x_j, z_ij, l_ij], tf, self.q_ij)
+    #     # construct constraints
+    #     constraints, lb, ub = [], [], []
+    #     for con in self.constraints:
+    #         c = con[0]
+    #         for sym in symvar(c):
+    #             for label, child in self.group.items():
+    #                 if sym.name() in child.symbol_dict:
+    #                     name = child.symbol_dict[sym.name()][1]
+    #                     v = z_i[label, name]
+    #                     ind = self.q_i[child][name]
+    #                     sym2 = MX.zeros(sym.size())
+    #                     sym2[ind] = v
+    #                     sym2 = reshape(sym2, sym.shape)
+    #                     c = substitute(c, sym, sym2)
+    #                     break
+    #             for nghb in self.q_ij.keys():
+    #                 for label, child in nghb.group.items():
+    #                     if sym.name() in child.symbol_dict:
+    #                         name = child.symbol_dict[sym.name()][1]
+    #                         v = z_ij[nghb.label, label, name]
+    #                         ind = self.q_ij[nghb][child][name]
+    #                         sym2 = MX.zeros(sym.size())
+    #                         sym2[ind] = v
+    #                         sym2 = reshape(sym2, sym.shape)
+    #                         c = substitute(c, sym, sym2)
+    #                         break
+    #             for name, s in self.par_i.items():
+    #                 if s.name() == sym.name():
+    #                     c = substitute(c, sym, par['par', name])
+    #         constraints.append(c)
+    #         lb.append(con[1])
+    #         ub.append(con[2])
+    #     self.lb_updz, self.ub_updz = lb, ub
+    #     # construct objective
+    #     obj = 0.
+    #     for child, q_i in self.q_i.items():
+    #         for name in q_i.keys():
+    #             x = x_i[child.label, name]
+    #             z = z_i[child.label, name]
+    #             l = l_i[child.label, name]
+    #             obj += mtimes(l.T, x-z) + 0.5*rho*mtimes((x-z).T, (x-z))
+    #     for nghb in self.q_ij.keys():
+    #         for child, q_ij in self.q_ij[nghb].items():
+    #             for name in q_ij.keys():
+    #                 x = x_j[str(nghb), child.label, name]
+    #                 z = z_ij[str(nghb), child.label, name]
+    #                 l = l_ij[str(nghb), child.label, name]
+    #                 obj += mtimes(l.T, x-z) + 0.5*rho*mtimes((x-z).T, (x-z))
+    #     # construct problem
+    #     prob, _ = create_nlp(var, par, obj, constraints, self.options, str(self._index), problem)
+    #     self.problem_upd_z = prob
 
-    def construct_upd_l(self):
+    def construct_upd_l(self, problem=None):
+        if problem is not None:
+            self.problem_upd_l = problem
+            return
         # create parameters
         x_i = struct_symMX(self.q_i_struct)
         z_i = struct_symMX(self.q_i_struct)

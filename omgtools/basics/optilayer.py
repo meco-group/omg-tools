@@ -34,7 +34,7 @@ import time
 import numpy as np
 import copy
 import os
-
+import collections as col
 
 def evalf(fun, x):
     x = x if isinstance(x, list) else [x]
@@ -138,15 +138,14 @@ class OptiFather(object):
 
     def __init__(self, children=None):
         children = children or []
-        self.children = {}
-        self.symbol_dict = {}
+        self.children = col.OrderedDict()
+        self.symbol_dict = col.OrderedDict()
         for child in children:
             self.add(child)
 
     def add(self, children):
         children = children if isinstance(children, list) else [children]
         for child in children:
-            # child.father = self
             self.children.update({child.label: child})
 
     def add_to_dict(self, symbol, child, name):
@@ -157,7 +156,7 @@ class OptiFather(object):
     # Problem composition
     # ========================================================================
 
-    def construct_problem(self, options, name=''):
+    def construct_problem(self, options, name='', problem=None):
         self.compose_dictionary()
         self.translate_symbols()
         variables = self.construct_variables()
@@ -168,8 +167,11 @@ class OptiFather(object):
         self.problem_description = {'var': variables, 'par': parameters,
                                     'obj': objective, 'con': constraints,
                                     'opt': options}
-        problem, buildtime = create_nlp(variables, parameters, objective,
-            constraints, options, name)
+        if problem is None:
+            problem, buildtime = create_nlp(variables, parameters, objective,
+                constraints, options, name)
+        else:
+            buildtime = 0.
         self.init_variables()
         self.init_parameters()
         return problem, buildtime
@@ -453,16 +455,16 @@ class OptiChild(object):
 
     def __init__(self, label):
         self.label = OptiChild._make_label(label)
-        self._variables = {}
-        self._parameters = {}
-        self._symbols = {}
-        self._substitutes = {}
-        self._values = {}
-        self._splines_prim = {}
-        self._splines_dual = {}
-        self._constraints = {}
+        self._variables = col.OrderedDict()
+        self._parameters = col.OrderedDict()
+        self._symbols = col.OrderedDict()
+        self._substitutes = col.OrderedDict()
+        self._values = col.OrderedDict()
+        self._splines_prim = col.OrderedDict()
+        self._splines_dual = col.OrderedDict()
+        self._constraints = col.OrderedDict()
         self._objective = 0.
-        self.symbol_dict = {}
+        self.symbol_dict = col.OrderedDict()
         self._constraint_cnt = 0
 
     def __str__(self):
@@ -599,16 +601,16 @@ class OptiChild(object):
     # ========================================================================
 
     def reset(self):
-        self._variables = {}
-        self._parameters = {}
-        self._symbols = {}
-        self._substitutes = {}
-        self._values = {}
-        self._splines_prim = {}
-        self._splines_dual = {}
-        self._constraints = {}
+        self._variables = col.OrderedDict()
+        self._parameters = col.OrderedDict()
+        self._symbols = col.OrderedDict()
+        self._substitutes = col.OrderedDict()
+        self._values = col.OrderedDict()
+        self._splines_prim = col.OrderedDict()
+        self._splines_dual = col.OrderedDict()
+        self._constraints = col.OrderedDict()
         self._objective = 0.
-        self.symbol_dict = {}
+        self.symbol_dict = col.OrderedDict()
         self._constraint_cnt = 0
 
     # ========================================================================

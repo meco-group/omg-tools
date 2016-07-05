@@ -21,6 +21,7 @@ from problem import Problem
 from distributedproblem import DistributedProblem
 from casadi import SX, MX, DM
 from casadi.tools import struct, entry, structure
+import collections as col
 import pickle
 
 
@@ -48,8 +49,9 @@ class DualUpdater(Problem):
         self.distr_problem = distr_problem
         self.vehicle = vehicle
         self.environment = environment
-        self.group = {child.label: child for child in ([
-            vehicle, problem, environment, self] + environment.obstacles)}
+        self.group = col.OrderedDict()
+        for child in ([vehicle, problem, environment, self] + environment.obstacles):
+            self.group[child.label] = child
         for child in self.group.values():
             child._index = index
 
@@ -193,7 +195,7 @@ class DualProblem(DistributedProblem):
     # ========================================================================
 
     def set_default_options(self):
-        Problem.set_default_options(self)
+        DistributedProblem.set_default_options(self)
         self.options.update({'max_iter': None, 'max_iter_per_update': 1,
                              'rho': 2., 'init_iter': 5, 'save_residuals': None})
 
