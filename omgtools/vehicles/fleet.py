@@ -73,6 +73,7 @@ class Fleet(PlotLayer):
             if isinstance(config, list):
                 self.configuration[self.vehicles[l]] = {
                     k: con for k, con in enumerate(config)}
+        self.set_rel_pos_c()
         self.rel_config = {}
         for vehicle in self.vehicles:
             self.rel_config[vehicle] = {}
@@ -88,6 +89,13 @@ class Fleet(PlotLayer):
                     self.rel_config[vehicle][nghb].append(
                         self.configuration[vehicle][ind_v] -
                         self.configuration[nghb][ind_n])
+
+    def set_rel_pos_c(self):
+        if not hasattr(self, 'configuration'):
+            raise ValueError('No configuration set!')
+        for veh in self.vehicles:
+            ind_veh = sorted(self.configuration[veh].keys())
+            veh.rel_pos_c = [-self.configuration[veh][ind] for ind in ind_veh]
 
     def get_rel_config(self, vehicle):
         return self.rel_config[vehicle]

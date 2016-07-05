@@ -138,7 +138,7 @@ class Trailer(Vehicle):
         return result
 
     def set_parameters(self, current_time):
-        parameters = {}
+        parameters = Vehicle.set_parameters(self, current_time)
         parameters_tr = {}
         parameters_tr['tg_ha_tr0'] = np.tan(self.prediction['state'][2]/2.)
         parameters_tr['dtg_ha_tr0'] = 0.5*self.prediction['input'][0]/self.l_hitch*(np.sin(self.prediction['state'][5]-self.prediction['state'][2]))*(1+parameters_tr['tg_ha_tr0']**2)  # dtg_ha

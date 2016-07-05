@@ -38,6 +38,10 @@ class DistributedProblem(Problem):
         self.updater_type = updater_type
         Problem.__init__(self, fleet, environment, options)
 
+    def set_default_options(self):
+        Problem.set_default_options(self)
+        self.options['separate_build'] = False
+
     # ========================================================================
     # Create problem
     # ========================================================================
@@ -47,6 +51,8 @@ class DistributedProblem(Problem):
             problem.construct()
 
     def init(self):
+        for problem in self.problems:
+            problem.father.reset()
         self.construct()
         self.updaters = []
         for index, vehicle in enumerate(self.vehicles):
@@ -55,8 +61,25 @@ class DistributedProblem(Problem):
                                         self.options)
             self.updaters.append(updater)
         self.interprete_constraints(self.updaters)
-        for updater in self.updaters:
-            updater.init()
+        vehicle_types = self.fleet.sort_vehicles()
+
+        if self.options['separate_build']:
+            for updater in self.updaters:
+                updater.init()
+        else:
+            for veh_type, vehicles in vehicle_types.items():
+                nghb_nr = {}
+                for veh in vehicles:
+                    nr = len(self.fleet.get_neighbors(veh))
+                    if nr not in nghb_nr:
+                        nghb_nr[nr] = []
+                    nghb_nr[nr].append(veh)
+                for nr, vehicles in nghb_nr.items():
+                    if self.options['verbose'] >= 2:
+                        print('*Construct problem for type %s with %d neighbor(s):' % (veh_type, nr))
+                    problems = self.updaters[vehicles[0]._index].init()
+                    for veh in vehicles[1:]:
+                        self.updaters[veh._index].init(problems)
 
     def interprete_constraints(self, updaters):
         for upd in updaters:

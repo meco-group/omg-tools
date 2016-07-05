@@ -143,7 +143,7 @@ class HolonomicOrient(Vehicle):
     def set_parameters(self, current_time):
         # for the optimization problem
         # convert theta to tg_ha here
-        parameters = {}
+        parameters = Vehicle.set_parameters(self, current_time)
         parameters['pos0'] = self.prediction['state'][:2]  # x, y
         parameters['tg_ha0'] = np.tan(self.prediction['state'][2]/2)
         parameters['vel0'] = self.prediction['input'][:2]  # dx, dy
