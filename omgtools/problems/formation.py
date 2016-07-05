@@ -34,15 +34,14 @@ class FormationPoint2point(ADMMProblem):
         rel_pos_c = {}
         for veh in self.vehicles:
             ind_veh = sorted(config[veh].keys())
-            # rel_pos_c[veh] = veh.define_parameter('rel_pos_c', len(ind_veh))
+            rel_pos_c[veh] = veh.define_parameter('rel_pos_c', len(ind_veh))
         ADMMProblem.construct(self)
         # get formation center as seen by vehicles
         centra = {}
         for veh in self.vehicles:
-            # rel_pos_c_veh = [-config[veh][ind] for ind in ind_veh]
             splines = self.father.get_variables(veh, 'splines0', symbolic=True)
             ind_veh = sorted(config[veh].keys())
-            centra[veh] = veh.get_fleet_center(splines, 'yo')
+            centra[veh] = veh.get_fleet_center(splines, rel_pos_c[veh])
         # formation constraints
         couples = {veh: [] for veh in self.vehicles}
         for veh in self.vehicles:
@@ -57,16 +56,12 @@ class FormationPoint2point(ADMMProblem):
                         self.define_constraint(pos_c_veh[ind_v] - pos_c_nghb[ind_n], 0., 0.)
         # terminal constraints (stability issue)
         for veh in self.vehicles:
-            center = centra[veh]
-            splines = self.father.get_variables(veh, 'splines0', symbolic=True)
-            for spline in splines:
+            for spline in centra[veh]:
                 for d in range(1, spline.basis.degree+1):
                     # constraints imposed on distributedproblem instance will be
                     # invoked on the z-variables (because it is interpreted as
                     # 'interconnection constraint')
-                    # self.define_constraint(spline.derivative(d)(1.), 0., 0.) #this one!
-                    # this one will be invoked on the x-trajectory
-                    veh.define_constraint(spline.derivative(d)(1.), 0., 0.)
+                    self.define_constraint(spline.derivative(d)(1.), 0., 0.)
 
     def set_parameters(self, current_time):
         parameters = {}
