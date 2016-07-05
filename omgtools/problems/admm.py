@@ -43,7 +43,8 @@ class ADMM(DualUpdater):
 
     def init(self, problems=None):
         if problems is None:
-            problems = {'upd_x': None, 'upd_z': None, 'lineq_updz': True, 'upd_l': None}
+            problems = {'upd_x': None, 'upd_z': None, 'lineq_updz': True,
+                        'upd_l': None, 'upd_res': None}
         DualUpdater.init(self)
         self.var_admm = {}
         for key in ['x_i', 'z_i', 'z_i_p', 'l_i', 'l_i_p']:
@@ -55,8 +56,10 @@ class ADMM(DualUpdater):
         self.construct_upd_x(problems['upd_x'])
         self.construct_upd_z(problems['upd_z'], problems['lineq_updz'])
         self.construct_upd_l(problems['upd_l'])
+        self.construct_upd_res(problems['upd_res'])
         return {'upd_x': self.problem_upd_x, 'upd_z': self.problem_upd_z,
-                'lineq_updz': self._lineq_updz, 'upd_l': self.problem_upd_l}
+                'lineq_updz': self._lineq_updz, 'upd_l': self.problem_upd_l,
+                'upd_res': self.problem_upd_res}
 
     def construct_upd_x(self, problem=None):
         # construct optifather & give reference to problem
@@ -248,10 +251,8 @@ class ADMM(DualUpdater):
         l_i = struct_symMX(self.q_i_struct)
         l_ij = struct_symMX(self.q_ij_struct)
         x_j = struct_symMX(self.q_ij_struct)
-        t = MX.sym('t')
-        T = MX.sym('T')
         rho = MX.sym('rho')
-        inp = [x_i, z_i, z_ij, l_i, l_ij, x_j, t, T, rho]
+        inp = [x_i, z_i, z_ij, l_i, l_ij, x_j, rho]
         # update lambda
         l_i_new = self.q_i_struct(l_i.cat + rho*(x_i.cat - z_i.cat))
         l_ij_new = self.q_ij_struct(l_ij.cat + rho*(x_j.cat - z_ij.cat))
@@ -259,6 +260,44 @@ class ADMM(DualUpdater):
         # create problem
         prob, _ = create_function('upd_l_'+str(self._index), inp, out, self.options)
         self.problem_upd_l = prob
+
+    def construct_upd_res(self, problem=None):
+        if problem is not None:
+            self.problem_upd_res = problem
+            return
+        # create parameters
+        x_i = struct_symMX(self.q_i_struct)
+        z_i = struct_symMX(self.q_i_struct)
+        z_i_p = struct_symMX(self.q_i_struct)
+        z_ij = struct_symMX(self.q_ij_struct)
+        z_ij_p = struct_symMX(self.q_ij_struct)
+        x_j = struct_symMX(self.q_ij_struct)
+        t = MX.sym('t')
+        T = MX.sym('T')
+        t0 = t/T
+        rho = MX.sym('rho')
+        inp = [x_i, z_i, z_i_p, z_ij, z_ij_p, x_j, t, T, rho]
+        # put symbols in MX structs (necessary for transformation)
+        x_i = self.q_i_struct(x_i)
+        z_i = self.q_i_struct(z_i)
+        z_i_p = self.q_i_struct(z_i_p)
+        z_ij = self.q_ij_struct(z_ij)
+        z_ij_p = self.q_ij_struct(z_ij_p)
+        x_j = self.q_ij_struct(x_j)
+        # transform spline variables: only consider future piece of spline
+        tf = lambda cfs, basis: shift_knot1_fwd(cfs, basis, t0)
+        self._transform_spline([x_i, z_i, z_i_p], tf, self.q_i)
+        self._transform_spline([x_j, z_ij, z_ij_p], tf, self.q_ij)
+        # compute residuals
+        pr = mtimes((x_i.cat-z_i.cat).T, (x_i.cat-z_i.cat))
+        pr += mtimes((x_j.cat-z_ij.cat).T, (x_j.cat-z_ij.cat))
+        dr = rho*mtimes((z_i.cat-z_i_p.cat).T, (z_i.cat-z_i_p.cat))
+        dr += rho*mtimes((z_ij.cat-z_ij_p.cat).T, (z_ij.cat-z_ij_p.cat))
+        cr = rho*pr + dr
+        out = [pr, dr, cr]
+        # create problem
+        prob, _ = create_function('upd_res_'+str(self._index), inp, out, self.options)
+        self.problem_upd_res = prob
 
     # ========================================================================
     # Auxiliary methods
@@ -319,7 +358,6 @@ class ADMM(DualUpdater):
                     self.var_admm['z_ji'][str(nghb), child.label, name] = var
         for child, q in self.q_i.items():
             for name, ind in q.items():
-                # var = self.father_updx._var_result[child.label, name][ind]
                 var = self.father_updx.get_variables(child, name, spline=False).T.flatten()[ind]
                 self.var_admm['x_i'][child.label, name] = var
                 self.var_admm['z_i'][child.label, name] = var
@@ -414,7 +452,7 @@ class ADMM(DualUpdater):
         t = np.round(current_time, 6) % self.problem.knot_time
         T = self.problem.options['horizon_time']
         rho = self.options['rho']
-        out = self.problem_upd_l(x_i, z_i, z_ij, l_i, l_ij, x_j, t, T, rho)
+        out = self.problem_upd_l(x_i, z_i, z_ij, l_i, l_ij, x_j, rho)
         self.var_admm['l_i'] = self.q_i_struct(out[0])
         self.var_admm['l_ij'] = self.q_ij_struct(out[1])
         t1 = time.time()
@@ -447,22 +485,18 @@ class ADMM(DualUpdater):
 
     def get_residuals(self, current_time):
         t0 = time.time()
-        current_time = np.round(current_time, 6) % self.problem.knot_time
-        horizon_time = self.problem.options['horizon_time']
-        tf = lambda cfs, basis: shift_knot1_fwd(
-            cfs, basis, current_time/horizon_time)
-        x_i = self._transform_spline(self.var_admm['x_i'], tf, self.q_i).cat
-        z_i = self._transform_spline(self.var_admm['z_i'], tf, self.q_i).cat
-        z_i_p = self._transform_spline(
-            self.var_admm['z_i_p'], tf, self.q_i).cat
-        x_j = self._transform_spline(self.var_admm['x_j'], tf, self.q_ij).cat
-        z_ij = self._transform_spline(self.var_admm['z_ij'], tf, self.q_ij).cat
-        z_ij_p = self._transform_spline(
-            self.var_admm['z_ij_p'], tf, self.q_ij).cat
+        # set inputs
+        x_i = self.var_admm['x_i']
+        z_i = self.var_admm['z_i']
+        z_i_p = self.var_admm['z_i_p']
+        z_ij = self.var_admm['z_ij']
+        z_ij_p = self.var_admm['z_ij_p']
+        x_j = self.var_admm['x_j']
+        t = np.round(current_time, 6) % self.problem.knot_time
+        T = self.problem.options['horizon_time']
         rho = self.options['rho']
-        pr = la.norm(x_i-z_i)**2 + la.norm(x_j-z_ij)**2
-        dr = rho*(la.norm(z_i-z_i_p)**2 + la.norm(z_ij-z_ij_p)**2)
-        cr = rho*pr + dr
+        out = self.problem_upd_res(x_i, z_i, z_i_p, z_ij, z_ij_p, x_j, t, T, rho)
+        pr, dr, cr = [float(o) for o in out]
         t1 = time.time()
         return t1-t0, pr, dr, cr
 
