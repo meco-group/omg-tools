@@ -17,16 +17,14 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-from ..basics.optilayer import OptiFather, create_nlp, create_function
+from ..basics.optilayer import OptiFather, create_function
 from ..basics.spline_extra import shift_knot1_fwd, shift_knot1_bwd, shift_over_knot
 from problem import Problem
 from dualmethod import DualUpdater, DualProblem
-from casadi import symvar, mtimes, MX, Function, reshape
+from casadi import symvar, mtimes, MX, Function
 from casadi import vertcat, horzcat, jacobian, solve, substitute
-from casadi.tools import struct, struct_symMX, entry
+from casadi.tools import struct_symMX
 import numpy as np
-import numpy.linalg as la
-import warnings
 import time
 
 

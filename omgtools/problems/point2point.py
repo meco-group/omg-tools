@@ -267,6 +267,8 @@ class FreeTPoint2point(Point2pointProblem):
             rel_current_time = 0.0
         else:
             rel_current_time = self.init_time
+        if horizon_time < sample_time: #otherwise interp1d() crashes
+            return
         if horizon_time < update_time:
             update_time = horizon_time
         if horizon_time - rel_current_time < update_time:

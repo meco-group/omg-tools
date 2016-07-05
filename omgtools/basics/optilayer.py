@@ -484,8 +484,8 @@ class OptiChild(object):
         self._splines_prim = col.OrderedDict()
         self._splines_dual = col.OrderedDict()
         self._constraints = col.OrderedDict()
-        self._objective = 0.
         self.symbol_dict = col.OrderedDict()
+        self._objective = 0.
         self._constraint_cnt = 0
 
     def __str__(self):
@@ -630,8 +630,8 @@ class OptiChild(object):
         self._splines_prim = col.OrderedDict()
         self._splines_dual = col.OrderedDict()
         self._constraints = col.OrderedDict()
-        self._objective = 0.
         self.symbol_dict = col.OrderedDict()
+        self._objective = 0.
         self._constraint_cnt = 0
 
     # ========================================================================
