@@ -34,6 +34,7 @@ import time
 import numpy as np
 import copy
 import os
+import shutil
 import collections as col
 
 def evalf(fun, x):
@@ -58,26 +59,36 @@ def create_nlp(var, par, obj, con, options, name=''):
     opt.update({'expand': True})
     solver = nlpsol('solver', options['solver'], nlp, opt)
     name = 'nlp' if name == '' else 'nlp_' + name
-    path = os.path.join(os.getcwd(), name)
     if codegen['build'] == 'jit':
         if options['verbose'] >= 1:
             print('[jit compilation with flags %s]' % (codegen['flags'])),
         solver.generate_dependencies(name+'.c')
         compiler = Compiler(
-            path+'.c', 'clang', {'flags': codegen['flags']})
+            name+'.c', 'clang', {'flags': codegen['flags']})
         problem = nlpsol('solver', options['solver'], compiler, slv_opt)
-        os.remove(path+'.c')
+        os.remove(name+'.c')
     elif codegen['build'] == 'shared':
+        if os.name == 'nt':
+            raise ValueError('Build option is not supported for Windows!')
+        directory = os.path.join(os.getcwd(), 'build')
+        if not os.path.isdir(directory):
+            os.makedirs(directory)
+        path = os.path.join(directory, name)
         if options['verbose'] >= 1:
             print('[compile to .so with flags %s]' % (codegen['flags'])),
         if os.path.isfile(path+'.so'):
             os.remove(path+'.so')
         solver.generate_dependencies(name+'.c')
+        shutil.move(name+'.c', path+'.c')
         os.system('gcc -fPIC -shared %s %s.c -o %s.so' %
                   (codegen['flags'], path, path))
         problem = nlpsol('solver', options['solver'], path+'.so', slv_opt)
         os.remove(path+'.c')
     elif codegen['build'] == 'existing':
+        if os.name == 'nt':
+            raise ValueError('Build option is not supported for Windows!')
+        directory = os.path.join(os.getcwd(), 'build')
+        path = os.path.join(directory, name)
         if not os.path.isfile(path+'.so'):
             raise ValueError('%s.so does not exist!', path)
         if options['verbose'] >= 1:
@@ -99,26 +110,36 @@ def create_function(name, inp, out, options):
         print 'Building function %s ... ' % name,
     t0 = time.time()
     fun = Function(name, inp, out).expand()
-    path = os.path.join(os.getcwd(), name)
     if codegen['build'] == 'jit':
         if options['verbose'] >= 1:
             print('[jit compilation with flags %s]' % (codegen['flags'])),
         fun.generate(name)
         compiler = Compiler(
-            path+'.c', 'clang', {'flags': codegen['flags']})
+            name+'.c', 'clang', {'flags': codegen['flags']})
         fun = external(name, compiler)
-        os.remove(path+'.c')
+        os.remove(name+'.c')
     elif codegen['build'] == 'shared':
+        if os.name == 'nt':
+            raise ValueError('Build option is not supported for Windows!')
+        directory = os.path.join(os.getcwd(), 'build')
+        if not os.path.isdir(directory):
+            os.makedirs(directory)
+        path = os.path.join(directory, name)
         if options['verbose'] >= 1:
             print('[compile to .so with flags %s]' % (codegen['flags'])),
         if os.path.isfile(path+'.so'):
             os.remove(path+'.so')
-        fun.generate(name)
+        fun.generate(name+'.c')
+        shutil.move(name+'.c', path+'.c')
         os.system('gcc -fPIC -shared %s %s.c -o %s.so' %
                   (codegen['flags'], path, path))
         fun = external(name, path+'.so')
         os.remove(path+'.c')
     elif codegen['build'] == 'existing':
+        if os.name == 'nt':
+            raise ValueError('Build option is not supported for Windows!')
+        directory = os.path.join(os.getcwd(), 'build')
+        path = os.path.join(directory, name)
         if not os.path.isfile(path+'.so'):
             raise ValueError('%s.so does not exist!', path)
         if options['verbose'] >= 1:
