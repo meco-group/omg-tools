@@ -115,7 +115,7 @@ class Holonomic3D(Vehicle):
             return True
 
     def set_parameters(self, current_time):
-        parameters = {}
+        parameters = Vehicle.set_parameters(self, current_time)
         parameters['state0'] = self.prediction['state']
         parameters['input0'] = self.prediction['input']
         parameters['positionT'] = self.positionT

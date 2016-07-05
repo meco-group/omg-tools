@@ -198,7 +198,7 @@ class AGV(Vehicle):
 
     def set_parameters(self, current_time):
         # for the optimization problem
-        parameters = {}
+        parameters = Vehicle.set_parameters(self, current_time)
         parameters['tg_ha0'] = np.tan(self.prediction['state'][2]/2.)
         parameters['v_til0'] = self.prediction['input'][0]/(1+parameters['tg_ha0']**2)
         parameters['pos0'] = self.prediction['state'][:2]

@@ -33,32 +33,30 @@ class RendezVous(ADMMProblem):
         ADMMProblem.__init__(self, fleet, environment, problems, options)
 
     def construct(self):
+        config = self.fleet.configuration
+        rel_pos_c = {}
+        for veh in self.vehicles:
+            ind_veh = sorted(config[veh].keys())
+            rel_pos_c[veh] = veh.define_parameter('rel_pos_c', len(ind_veh))
         ADMMProblem.construct(self)
         problems_dic = {veh: self.problems[l] for l, veh in enumerate(self.fleet.vehicles)}
-        # define parameters
-        rel_conT = {veh: {nghb: self.define_parameter('rcT'+str(l)+str(n), len(self.fleet.configuration[veh].keys())) for n, nghb in enumerate(self.fleet.get_neighbors(veh))} for l, veh in enumerate(self.vehicles)}
-        # end pose constraints
+        # get fleet center as seen by vehicles
+        centra = {}
+        for veh in self.vehicles:
+            conT = self.father.get_variables(problems_dic[veh], 'conT0', symbolic=True)
+            centra[veh] = veh.get_fleet_center([conT], [rel_pos_c[veh]])[0]
+        # rendez-vous constraints
         couples = {veh: [] for veh in self.vehicles}
         for veh in self.vehicles:
-            ind_veh = sorted(self.fleet.configuration[veh].keys())
-            rcT = rel_conT[veh]
+            ind_veh = sorted(config[veh].keys())
+            pos_c_veh = centra[veh]
             for nghb in self.fleet.get_neighbors(veh):
-                ind_nghb = sorted(self.fleet.configuration[nghb].keys())
                 if veh not in couples[nghb] and nghb not in couples[veh]:
                     couples[veh].append(nghb)
-                    conT_veh = self.father.get_variables(problems_dic[veh], 'conT0', symbolic=True)
-                    conT_nghb = self.father.get_variables(problems_dic[nghb], 'conT0', symbolic=True)
-                    for ind_v, ind_n, rcT_k in zip(ind_veh, ind_nghb, rcT[nghb]):
-                        self.define_constraint(
-                            conT_veh[ind_v] - conT_nghb[ind_n] - rcT_k, 0., 0.)
-
-    def set_parameters(self, current_time):
-        parameters = {}
-        for l, veh in enumerate(self.vehicles):
-            rel_conT = self.fleet.get_rel_config(veh)
-            for n, nghb in enumerate(self.fleet.get_neighbors(veh)):
-                parameters['rcT'+str(l)+str(n)] = rel_conT[nghb]
-        return parameters
+                    ind_nghb = sorted(config[nghb].keys())
+                    pos_c_nghb = centra[nghb]
+                    for ind_v, ind_n in zip(ind_veh, ind_nghb):
+                        self.define_constraint(pos_c_veh[ind_v] - pos_c_nghb[ind_n], 0., 0.)
 
     def stop_criterium(self, current_time, update_time):
         res = 0.

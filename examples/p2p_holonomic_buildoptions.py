@@ -17,6 +17,8 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
+import sys, os
+sys.path.insert(0, os.getcwd()+'/..')
 from omgtools import *
 
 # create vehicle
@@ -40,12 +42,17 @@ environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
 problem1 = Point2point(vehicle, environment, freeT=False)
 problem1.set_options({'verbose': 1})
 problem1.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
-problem1.set_options({'codegen': {'build': 'jit', 'flags': '-O2'}}) # just-in-time compilation
+problem1.set_options({'codegen': {'build': 'jit', 'flags': '-O0'}}) # just-in-time compilation
 
 problem2 = Point2point(vehicle, environment, freeT=False)
 problem2.set_options({'verbose': 1})
 problem2.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
-problem2.set_options({'codegen': {'build': 'shared', 'flags': '-O2'}}) # compile to shared object
+problem2.set_options({'codegen': {'build': 'shared', 'flags': '-O0'}}) # compile to shared object
+
+problem3 = Point2point(vehicle, environment, freeT=False)
+problem3.set_options({'verbose': 1})
+problem3.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
+problem3.set_options({'codegen': {'build': 'existing'}}) # use existing shared object
 
 
 print('Just-in-time compilation')
@@ -57,6 +64,14 @@ print('\n')
 print('Compile to shared object')
 problem2.init()
 simulator.set_problem(problem2)
+vehicle.overrule_state(np.array([-1.5, -1.5]))
+vehicle.overrule_input(np.zeros(2))
+simulator.run()
+
+print('\n')
+print('Use previous shared object')
+problem3.init()
+simulator.set_problem(problem3)
 vehicle.overrule_state(np.array([-1.5, -1.5]))
 vehicle.overrule_input(np.zeros(2))
 simulator.run()

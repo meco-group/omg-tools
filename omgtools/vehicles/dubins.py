@@ -60,7 +60,7 @@ class Dubins(Vehicle):
     def init(self):
         self.T = self.define_symbol('T')  # motion time
         self.t = self.define_symbol('t')  # current time of first knot
-        self.pos0 = self.define_symbol('pos0', 2)  # current position
+        self.pos0 = self.define_parameter('pos0', 2)  # current position
 
     def define_trajectory_constraints(self, splines):
         v_til, tg_ha = splines
@@ -84,6 +84,24 @@ class Dubins(Vehicle):
         self.define_constraint(-2*dtg_ha + (1+tg_ha**2)*self.T*np.radians(self.wmin), -inf, 0.)
         self.define_constraint(-v_til, -inf, 0)  # positive v_tilde
 
+
+    def get_fleet_center(self, splines, rel_pos):
+        T = self.define_symbol('T')
+        t = self.define_symbol('t')
+        pos0 = self.define_parameter('pos0', 2)
+        v_til, tg_ha = splines
+        dv_til, dtg_ha = v_til.derivative(), tg_ha.derivative()
+        dx = v_til*(1-tg_ha**2)
+        dy = v_til*(2*tg_ha)
+        x_int, y_int = T*running_integral(dx), T*running_integral(dy)
+        x = x_int-evalspline(x_int, t/T) + pos0[0]
+        y = y_int-evalspline(y_int, t/T) + pos0[1]
+        eps = 1.e-2
+        center = self.define_spline_variable('formation_center', self.n_dim)
+        self.define_constraint((x-center[0])*(1+tg_ha**2) + rel_pos[0]*2*tg_ha + rel_pos[1]*(1-tg_ha**2), -eps, eps)
+        self.define_constraint((y-center[1])*(1+tg_ha**2) + rel_pos[1]*2*tg_ha - rel_pos[0]*(1-tg_ha**2), -eps, eps)
+        return center
+
     def get_initial_constraints(self, splines):
         # these make sure you get continuity along different iterations
         # inputs are function of v_til, tg_ha and dtg_ha so impose constraints on these
@@ -100,7 +118,6 @@ class Dubins(Vehicle):
         tg_haT = self.define_parameter('tg_haT', 1)
         v_tilT = self.define_parameter('v_tilT', 1)
         dtg_haT = self.define_parameter('dtg_haT', 1)
-        self.define_parameter('pos0', 2)  # starting position for integration
         v_til, tg_ha = splines
         dtg_ha = tg_ha.derivative(1)
         dx = v_til*(1-tg_ha**2)
@@ -145,7 +162,7 @@ class Dubins(Vehicle):
     def set_parameters(self, current_time):
         # for the optimization problem
         # convert theta to tg_ha here
-        parameters = {}
+        parameters = Vehicle.set_parameters(self, current_time)
         parameters['tg_ha0'] = np.tan(self.prediction['state'][2]/2.)
         parameters['v_til0'] = self.prediction['input'][0]/(1+parameters['tg_ha0']**2)
         parameters['dtg_ha0'] = 0.5*self.prediction['input'][1]*(1+parameters['tg_ha0']**2)  # dtg_ha
@@ -227,13 +244,16 @@ class Dubins(Vehicle):
         return ret
 
     def get_pos_splines(self, splines):
+        T = self.define_symbol('T')  # motion time
+        t = self.define_symbol('t')  # current time of first knot
+        pos0 = self.define_parameter('pos0', 2)  # current position
         v_til, tg_ha = splines
         dx = v_til*(1-tg_ha**2)
         dy = v_til*(2*tg_ha)
-        x_int, y_int = self.T*running_integral(dx), self.T*running_integral(dy)
-        x = x_int-evalspline(x_int, self.t/self.T) + self.pos0[0]  # self.pos0 was already defined in init
-        y = y_int-evalspline(y_int, self.t/self.T) + self.pos0[1]
-        return np.array([x, y])
+        x_int, y_int = T*running_integral(dx), T*running_integral(dy)
+        x = x_int-evalspline(x_int, t/T) + pos0[0]  # self.pos0 was already defined in init
+        y = y_int-evalspline(y_int, t/T) + pos0[1]
+        return [x, y]
 
     # Next two functions are required if vehicle is not passed to problem, but is still used in the optimization
     # problem e.g. when considering a vehicle with a trailer. You manually have to update signals and prediction,

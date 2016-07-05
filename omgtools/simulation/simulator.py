@@ -34,7 +34,6 @@ class Simulator:
         self.problem = problem
 
     def run(self):
-        # self.reset_timing()
         self.problem.initialize()
         stop = False
         while not stop:
