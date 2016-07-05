@@ -23,7 +23,7 @@ except:
     from casadi import Importer
     Compiler = Importer
 
-from casadi import MX, inf, Function, nlpsol, external
+from casadi import DM, MX, inf, Function, nlpsol, external
 
 
 from casadi import symvar, substitute
@@ -538,6 +538,12 @@ class OptiChild(object):
                 coeffs = MX.sym(symbol_name, expr.coeffs.shape[0], 1)
                 subst = BSpline(expr.basis, coeffs)
                 self._substitutes[name] = [expr.coeffs, subst.coeffs]
+                inp_sym, inp_num = [], []
+                for sym in symvar(expr.coeffs):
+                    inp_sym.append(sym)
+                    inp_num.append(DM(self._values[self.symbol_dict[sym.name()][1]]))
+                fun = Function('eval', inp_sym, [expr.coeffs])
+                self._values[name] = fun(*inp_num)
                 self.add_to_dict(coeffs, name)
             else:
                 subst = MX.sym(symbol_name, expr.shape[0], expr.shape[1])
@@ -596,6 +602,7 @@ class OptiChild(object):
         self._variables = {}
         self._parameters = {}
         self._symbols = {}
+        self._substitutes = {}
         self._values = {}
         self._splines_prim = {}
         self._splines_dual = {}

@@ -24,7 +24,6 @@ import matplotlib.pyplot as plt
 # settings
 number_of_iterations = 500
 
-
 # create fleet of vehicles
 vehicle1 = Holonomic1D(width=4., height=1., options={}, bounds={'vmax': 30., 'vmin': -30., 'amax': 100., 'amin': -100.})
 vehicle2 = Holonomic1D(width=4., height=1., options={}, bounds={'vmax': 20., 'vmin': -20., 'amax': 100., 'amin': -100.})
@@ -41,7 +40,6 @@ terminal_positions = [150.] + configuration
 fleet.set_configuration(configuration.tolist())
 fleet.set_initial_conditions(init_positions.tolist())
 fleet.set_terminal_conditions(terminal_positions.tolist())
-
 # create environment
 environment = Environment(room={'shape': Rectangle(width=222., height=20.), 'position': [109., 0.]})
 
@@ -53,8 +51,9 @@ simulator = Simulator(problem)
 simulator.run_once(update=False)
 var_central = np.zeros((0, 1))
 for vehicle in vehicles:
-    iet = problem.father.get_variables(vehicle, 'splines0', spline=False)
-    var_central = np.vstack((var_central, iet))
+    splines = problem.father.get_variables(vehicle, 'splines0')
+    pos_c = np.c_[vehicle.get_fleet_center(splines, vehicle.rel_pos_c, substitute=False)[0].coeffs]
+    var_central = np.vstack((var_central, pos_c))
 
 # create & solve ADMM problem
 options = {'rho': 1.e-2, 'horizon_time': 10., 'init_iter': number_of_iterations-1,
