@@ -139,14 +139,13 @@ class ADMM(DualUpdater):
         # fill in parameters
         A = A(par.cat)
         b = b(par.cat)
-        # build KKT system
-        E = mtimes(rho, MX.eye(A.shape[1]))
+        # build KKT system and solve it via schur complement method
         l, x = vertcat(l_i.cat, l_ij.cat), vertcat(x_i.cat, x_j.cat)
         f = -(l + rho*x)
-        G = vertcat(horzcat(E, A.T),
-                    horzcat(A, MX.zeros(A.shape[0], A.shape[0])))
-        h = vertcat(-f, b)
-        z = solve(G, h)
+        G = -(1/rho)*mtimes(A, A.T)
+        h = b + (1/rho)*mtimes(A, f)
+        mu = solve(G, h)
+        z = -(1/rho)*(mtimes(A.T, mu)+f)
         l_qi = self.q_i_struct.shape[0]
         l_qij = self.q_ij_struct.shape[0]
         z_i_new = self.q_i_struct(z[:l_qi])
