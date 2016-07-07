@@ -76,7 +76,7 @@ class Simulator:
         else:
             hard_stop = None
         # initialize problem
-        self.problem.initialize()
+        self.problem.initialize(0.)
         # solve problem
         self.problem.solve(0., 0.)
         if not update:
