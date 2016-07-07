@@ -20,7 +20,7 @@
 from omgtools import *
 
 # create vehicle
-vehicle = Holonomic3D(Cuboid(width=0.5, depth=1., height=0.2))
+vehicle = Holonomic3D(Plate(Rectangle(0.5, 1.), height=0.1))
 
 vehicle.set_initial_conditions([-2., -2., -2])
 vehicle.set_terminal_conditions([2., 2., -2])
@@ -31,12 +31,13 @@ environment.add_obstacle(Obstacle(
     {'position': [0., 0., -1.5]}, shape=Cuboid(width=0.5, depth=4., height=2.)))
 trajectories = {'velocity': {'time': [4.], 'values': [[0.0, 0.0, 1.]]}}
 environment.add_obstacle(Obstacle(
-    {'position': [1., 1., -2.25]}, shape=Cube(0.25),
+    {'position': [1., 1., -2.25]}, shape=RegularPrisma(0.25, 0.25, 6),
     simulation={'trajectories': trajectories}))
 
 # create a point-to-point problem
 problem = Point2point(vehicle, environment, freeT=False)
 problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
+problem.set_options({'hard_term_con': True, 'horizon_time': 12})
 problem.init()
 
 # create simulator

@@ -40,6 +40,7 @@ class Point2pointProblem(Problem):
     def __init__(self, fleet, environment, options):
         Problem.__init__(self, fleet, environment, options, label='p2p')
         self.init_time = None
+        self.start_time = 0.
 
     def set_init_time(self, time):
         self.init_time = time
@@ -55,6 +56,14 @@ class Point2pointProblem(Problem):
             splines = vehicle.define_splines(n_seg=1)[0]
             vehicle.define_trajectory_constraints(splines)
             self.environment.define_collision_constraints(vehicle, splines)
+
+    def reinitialize(self, father=None):
+        if father is None:
+            father = self.father
+        Problem.reinitialize(self)
+        for vehicle in self.vehicles:
+            init = vehicle.get_init_spline_value()
+            father.set_variables(init, vehicle, 'splines0')
 
     def define_init_constraints(self):
         for vehicle in self.vehicles:
@@ -173,6 +182,9 @@ class FixedTPoint2point(Point2pointProblem):
     #     T = shiftoverknot_T(basis)
     #     return B.dot(T).dot(Binv)
 
+    def initialize(self, current_time):
+        self.start_time = current_time
+
     def update(self, current_time, update_time, sample_time):
         horizon_time = self.options['horizon_time']
         if self.init_time is None:
@@ -180,7 +192,7 @@ class FixedTPoint2point(Point2pointProblem):
             # its time horizon lies in the past. Therefore, we need to pass the
             # current time relatively to the begin of this time horizon. In this
             # way, only the future, relevant, part will be saved/plotted.
-            rel_current_time = np.round(current_time, 6) % self.knot_time
+            rel_current_time = np.round(current_time-self.start_time, 6) % self.knot_time
         else:
             rel_current_time = self.init_time
         if horizon_time - rel_current_time < update_time:
@@ -200,7 +212,7 @@ class FixedTPoint2point(Point2pointProblem):
         self.update_plots()
 
     def compute_partial_objective(self, current_time, update_time):
-        rel_current_time = np.round(current_time, 6) % self.knot_time
+        rel_current_time = np.round(current_time-self.start_time, 6) % self.knot_time
         horizon_time = self.options['horizon_time']
         t0 = rel_current_time/horizon_time
         t1 = t0 + update_time/horizon_time
