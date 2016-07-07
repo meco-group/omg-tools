@@ -88,19 +88,6 @@ class Vehicle(OptiChild, PlotLayer):
                 'required: ' + str((len(self.basis), self.n_spl)) +
                 ' while you gave: ' + str(values.shape))
 
-    def reinit_splines(self, problem, value=None):
-        for k in range(self.n_seg):
-            if value is None:
-                init = self.get_init_spline_value()
-            else:
-                if value.shape == (len(self.basis), self.n_spl):
-                    init = value
-                else:
-                    raise ValueError('Initial guess has wrong dimensions, ' +
-                        'required: ' + str((len(self.basis), self.n_spl)) +
-                        ' while you gave: ' + str(values.shape))
-            problem.father.set_variables(init, self, 'splines'+str(k))
-
     # ========================================================================
     # Optimization modelling related functions
     # ========================================================================
@@ -239,12 +226,14 @@ class Vehicle(OptiChild, PlotLayer):
     # ========================================================================
 
     def overrule_state(self, state):
+        state = np.array(state)
         self.signals['state'][:, -1] = state
         self.signals['pose'][:, -1] = self._state2pose(state)
         self.prediction['state'] = state
         self.prediction['pose'] = self._state2pose(state)
 
     def overrule_input(self, input):
+        input = np.array(input)
         self.signals['input'][:, -1] = input
         self.prediction['input'] = input
 
@@ -265,6 +254,7 @@ class Vehicle(OptiChild, PlotLayer):
         self.simulate(update_time, sample_time)
         self.store(update_time, sample_time)
         self.update_plots()
+
 
     def get_trajectories(self, splines, time_axis, current_time):
         self.trajectories = self.splines2signals(splines, time_axis)

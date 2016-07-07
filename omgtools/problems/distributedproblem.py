@@ -154,6 +154,10 @@ class DistributedProblem(Problem):
     # Methods required for simulation
     # ========================================================================
 
+    def initialize(self, current_time):
+        for problem in self.problems:
+            problem.initialize(current_time)
+
     def update(self, current_time, update_time, sample_time):
         for problem in self.problems:
             problem.update(current_time, update_time, sample_time)

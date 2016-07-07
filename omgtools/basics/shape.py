@@ -254,6 +254,7 @@ class RegularPrisma(Polyhedron3D):
     def __init__(self, radius, height, n_faces):
         # radius of outer circle of surface (the one through the vertices)
         self.radius = radius
+        self.height = height
         self.n_faces = n_faces
         Polyhedron3D.__init__(self, self.get_vertices())
 
@@ -282,7 +283,7 @@ class RegularPrisma(Polyhedron3D):
         for l in range(self.n_faces):
             a = np.vstack((A[l, :], A[(l+1) % self.n_faces, :]))
             b = np.vstack((B[l], B[(l+1) % self.n_faces]))
-            vertices[:, l] = np.linalg.solve(a, b).ravel()
+            vertices[:2, l] = np.linalg.solve(a, b).ravel()
             vertices[2, l] = -0.5*self.height
             vertices[:2, l+self.n_faces] = vertices[:2, l]
             vertices[2, l+self.n_faces] = vertices[2, l] + self.height
