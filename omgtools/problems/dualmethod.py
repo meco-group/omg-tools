@@ -67,7 +67,7 @@ class DualUpdater(Problem):
     # Create problem
     # ========================================================================
 
-    def init(self):
+    def init(self, problems=None):
         self.q_i_struct = _create_struct_from_dict(self.q_i)
         self.q_ij_struct = _create_struct_from_dict(self.q_ij)
         self.q_ji_struct = _create_struct_from_dict(self.q_ji)
@@ -203,15 +203,17 @@ class DualProblem(DistributedProblem):
     # Perform dual update sequence
     # ========================================================================
 
-    def initialize(self):
+    def initialize(self, current_time):
+        DistributedProblem.initialize(self, current_time)
+        self.start_time = current_time
         self._objectives = []
         self._stacked_x = [self.get_stacked_x_var_it()] # init value
         self.x_var = []
         for _ in range(self.options['init_iter']):
-            self.solve(0.0, 0.0)
+            self.solve(self.start_time, 0.0)
 
     def solve(self, current_time, update_time):
-        self.current_time = current_time
+        current_time -= self.start_time
         it0 = self.iteration
         while (self.iteration - it0) < self.options['max_iter_per_update']:
             self.dual_update(current_time, update_time)

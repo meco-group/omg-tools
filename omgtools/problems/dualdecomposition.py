@@ -142,11 +142,7 @@ class DDUpdater(DualUpdater):
         self.problem_upd_xz = prob
         self.father_updx.init_transformations(self.problem.init_primal_transform,
                                          self.problem.init_dual_transform)
-        # init var_dd
-        for child, q in self.q_i.items():
-            for name, ind in q.items():
-                var = self.father_updx.get_variables(child, name, spline=False).T.flatten()[ind]
-                self.var_dd['x_i'][child.label, name] = var
+        self.init_var_dd()
 
     def construct_upd_l(self, problem=None):
         if problem is not None:
@@ -171,6 +167,12 @@ class DDUpdater(DualUpdater):
     # Methods related to solving the problem
     # ========================================================================
 
+    def init_var_dd(self):
+        for child, q in self.q_i.items():
+            for name, ind in q.items():
+                var = self.father_updx.get_variables(child, name, spline=False).T.flatten()[ind]
+                self.var_dd['x_i'][child.label, name] = var
+
     def set_parameters(self, current_time):
         parameters = {}
         global_par = self.distr_problem.set_parameters(current_time)
@@ -181,8 +183,6 @@ class DDUpdater(DualUpdater):
         return parameters
 
     def update_xz(self, current_time):
-        self.current_time = current_time
-        self.problem.current_time = current_time
         # set initial guess, parameters, lb & ub
         var = self.father_updx.get_variables()
         par = self.father_updx.set_parameters(current_time)
@@ -260,6 +260,11 @@ class DDProblem(DualProblem):
             self, fleet, environment, problems, DDUpdater, options)
         self.residuals = {'primal': []}
 
+    def reinitialize(self):
+        for updater in self.updaters:
+            updater.problem.reinitialize(father=updater.father_updx)
+            updater.init_var_dd()
+
     def get_stacked_x_var_it(self):
         stacked_x_var = np.zeros((0, 1))
         for updater in self.updaters:
@@ -285,8 +290,8 @@ class DDProblem(DualProblem):
         p_res = np.sqrt(p_res)
         for updater in self.updaters:
             updater.communicate()
-        if self.options['verbose'] >= 1:
-            self.iteration += 1
+        self.iteration += 1
+        if self.options['verbose'] >= 2:
             if ((self.iteration - 1) % 20 == 0):
                 print(
                     '----|------|----------|----------|----------|----------')
