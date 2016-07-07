@@ -42,10 +42,6 @@ class Fleet(PlotLayer):
         self.interconnection = interconnection
         self.set_neighbors()
 
-    def add_vehicle(self, vehicles):
-        self.vehicles.extend(vehicles)
-        self.set_neighbors()
-
     def get_neighbors(self, vehicle):
         return self.nghb_list[vehicle]
 
@@ -73,6 +69,7 @@ class Fleet(PlotLayer):
             if isinstance(config, list):
                 self.configuration[self.vehicles[l]] = {
                     k: con for k, con in enumerate(config)}
+        self.set_rel_pos_c()
         self.rel_config = {}
         for vehicle in self.vehicles:
             self.rel_config[vehicle] = {}
@@ -89,16 +86,37 @@ class Fleet(PlotLayer):
                         self.configuration[vehicle][ind_v] -
                         self.configuration[nghb][ind_n])
 
+    def set_rel_pos_c(self):
+        if not hasattr(self, 'configuration'):
+            raise ValueError('No configuration set!')
+        for veh in self.vehicles:
+            ind_veh = sorted(self.configuration[veh].keys())
+            veh.rel_pos_c = [-self.configuration[veh][ind] for ind in ind_veh]
+
     def get_rel_config(self, vehicle):
         return self.rel_config[vehicle]
 
     def set_initial_conditions(self, conditions):
-        for l, vehicle in enumerate(self.vehicles):
-            vehicle.set_initial_conditions(conditions[l])
+        for condition, vehicle in zip(conditions, self.vehicles):
+            vehicle.set_initial_conditions(condition)
 
     def set_terminal_conditions(self, conditions):
-        for l, vehicle in enumerate(self.vehicles):
-            vehicle.set_terminal_conditions(conditions[l])
+        for condition, vehicle in zip(conditions, self.vehicles):
+            vehicle.set_terminal_conditions(condition)
+
+    def overrule_state(self, states):
+        for state, vehicle in zip(states, self.vehicles):
+            vehicle.overrule_state(state)
+
+    def overrule_input(self, inputs):
+        for input, vehicle in zip(inputs, self.vehicles):
+            vehicle.overrule_input(input)
+
+    def reinit_splines(self, problem, values=None):
+        if values is None:
+            values = [None for veh in self.vehicles]
+        for vehicle, value in zip(self.vehicles, values):
+            vehicle.reinit_splines(problem, value)
 
     # ========================================================================
     # Plot related functions
@@ -114,8 +132,7 @@ class Fleet(PlotLayer):
             for k in range(len(infos[0])):
                 inf = []
                 for l in range(len(infos[0][0])):
-                    labels = [
-                        veh_type + ' ' + lbl for lbl in infos[0][k][l]['labels']]
+                    labels = infos[0][k][l]['labels']
                     lines = []
                     for v in range(len(vehicles)):
                         lines += infos[v][k][l]['lines']

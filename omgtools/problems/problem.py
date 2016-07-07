@@ -87,7 +87,14 @@ class Problem(OptiChild, PlotLayer):
         self.father.init_transformations(self.init_primal_transform,
                                          self.init_dual_transform)
 
+    def reinitialize(self, father=None):
+        if father is None:
+            father = self.father
+        father.init_variables()
+        father.init_parameters()
+
     def solve(self, current_time, update_time):
+        current_time -= self.start_time # start_time: the point in time where you start solving
         self.init_step(current_time, update_time)
         # set initial guess, parameters, lb & ub
         var = self.father.get_variables()
@@ -103,7 +110,7 @@ class Problem(OptiChild, PlotLayer):
         if stats['return_status'] != 'Solve_Succeeded':
             print stats['return_status']
         # print
-        if self.options['verbose'] >= 1:
+        if self.options['verbose'] >= 2:
             self.iteration += 1
             if ((self.iteration-1) % 20 == 0):
                 print "----|------------|------------"
@@ -172,7 +179,7 @@ class Problem(OptiChild, PlotLayer):
     def final(self):
         pass
 
-    def initialize(self):
+    def initialize(self, current_time):
         pass
 
     def init_primal_transform(self, basis):

@@ -62,7 +62,7 @@ class Circle(Shape2D):
         Shape2D.__init__(self)
 
     def _prepare_draw(self):
-        s = np.linspace(0, 1, 50)
+        s = np.linspace(0, 1-1./48, 48)
         points = np.vstack(
             (self.radius*np.cos(s*2*np.pi), self.radius*np.sin(s*2*np.pi)))
         self.plt_lines = self.get_sides(points)
@@ -194,21 +194,6 @@ class Rectangle(Polyhedron):
         return vertices
 
 
-class Rocket(Rectangle):
-
-    def __init__(self, width, height, orientation=0.):
-        Rectangle.__init__(self, width, height, orientation)
-
-    def _prepare_draw(self):
-        w = self.width
-        h = self.height
-        plt_x = [-0.5*w, -0.25*w, 0.25*w, 0.5*w,
-                 0.5*w, 0.25*w, -0.25*w]
-        plt_y = [0., 0.25*h, 0.25*h, 0.5*h, -0.5*h, -0.25*h, -0.25*h]
-        points = np.vstack((plt_x, plt_y))
-        self.plt_lines = self.get_sides(points)
-
-
 class UFO(Rectangle):
 
     def __init__(self, width, height, orientation=0.):
@@ -269,6 +254,7 @@ class RegularPrisma(Polyhedron3D):
     def __init__(self, radius, height, n_faces):
         # radius of outer circle of surface (the one through the vertices)
         self.radius = radius
+        self.height = height
         self.n_faces = n_faces
         Polyhedron3D.__init__(self, self.get_vertices())
 
@@ -297,7 +283,7 @@ class RegularPrisma(Polyhedron3D):
         for l in range(self.n_faces):
             a = np.vstack((A[l, :], A[(l+1) % self.n_faces, :]))
             b = np.vstack((B[l], B[(l+1) % self.n_faces]))
-            vertices[:, l] = np.linalg.solve(a, b).ravel()
+            vertices[:2, l] = np.linalg.solve(a, b).ravel()
             vertices[2, l] = -0.5*self.height
             vertices[:2, l+self.n_faces] = vertices[:2, l]
             vertices[2, l+self.n_faces] = vertices[2, l] + self.height

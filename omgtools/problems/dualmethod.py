@@ -21,6 +21,7 @@ from problem import Problem
 from distributedproblem import DistributedProblem
 from casadi import SX, MX, DM
 from casadi.tools import struct, entry, structure
+import collections as col
 import pickle
 
 
@@ -48,8 +49,9 @@ class DualUpdater(Problem):
         self.distr_problem = distr_problem
         self.vehicle = vehicle
         self.environment = environment
-        self.group = {child.label: child for child in ([
-            vehicle, problem, environment, self] + environment.obstacles)}
+        self.group = col.OrderedDict()
+        for child in ([vehicle, problem, environment, self] + environment.obstacles):
+            self.group[child.label] = child
         for child in self.group.values():
             child._index = index
 
@@ -65,7 +67,7 @@ class DualUpdater(Problem):
     # Create problem
     # ========================================================================
 
-    def init(self):
+    def init(self, problems=None):
         self.q_i_struct = _create_struct_from_dict(self.q_i)
         self.q_ij_struct = _create_struct_from_dict(self.q_ij)
         self.q_ji_struct = _create_struct_from_dict(self.q_ji)
@@ -161,7 +163,7 @@ class DualUpdater(Problem):
                 for name, ind in q_i.items():
                     if name in child._splines_prim:
                         basis = child._splines_prim[name]['basis']
-                        for l in range(child._variables[name].shape[1]):
+                        for l in range(len(basis)):
                             sl_min = l*len(basis)
                             sl_max = (l+1)*len(basis)
                             if set(range(sl_min, sl_max)) <= set(ind):
@@ -193,7 +195,7 @@ class DualProblem(DistributedProblem):
     # ========================================================================
 
     def set_default_options(self):
-        Problem.set_default_options(self)
+        DistributedProblem.set_default_options(self)
         self.options.update({'max_iter': None, 'max_iter_per_update': 1,
                              'rho': 2., 'init_iter': 5, 'save_residuals': None})
 
@@ -201,15 +203,17 @@ class DualProblem(DistributedProblem):
     # Perform dual update sequence
     # ========================================================================
 
-    def initialize(self):
+    def initialize(self, current_time):
+        DistributedProblem.initialize(self, current_time)
+        self.start_time = current_time
         self._objectives = []
         self._stacked_x = [self.get_stacked_x_var_it()] # init value
         self.x_var = []
         for _ in range(self.options['init_iter']):
-            self.solve(0.0, 0.0)
+            self.solve(self.start_time, 0.0)
 
     def solve(self, current_time, update_time):
-        self.current_time = current_time
+        current_time -= self.start_time
         it0 = self.iteration
         while (self.iteration - it0) < self.options['max_iter_per_update']:
             self.dual_update(current_time, update_time)
@@ -240,5 +244,3 @@ class DualProblem(DistributedProblem):
         if self.options['save_residuals']:
             pickle.dump(
                 self.residuals, open(self.options['save_residuals'], 'wb'))
-
-

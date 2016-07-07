@@ -37,6 +37,11 @@ class Quadrotor(Vehicle):
         self.u2max = bounds['u2max'] if 'u2max' in bounds else 8.
         self.g = 9.81
 
+    def set_default_options(self):
+        Vehicle.set_default_options(self)
+        self.options['stop_tol'] = 1.e-2
+
+
     def init(self):
         # time horizon
         self.T = self.define_symbol('T')
@@ -93,14 +98,15 @@ class Quadrotor(Vehicle):
         return init_value
 
     def check_terminal_conditions(self):
-        if (np.linalg.norm(self.signals['pose'][:2, -1] - self.positionT) > 1.e-2 or
-                np.linalg.norm(self.signals['dspl'][:, -1])) > 1.e-2:
+        tol = self.options['stop_tol']
+        if (np.linalg.norm(self.signals['pose'][:2, -1] - self.positionT) > tol or
+                np.linalg.norm(self.signals['dspl'][:, -1])) > tol:
             return False
         else:
             return True
 
     def set_parameters(self, current_time):
-        parameters = {}
+        parameters = Vehicle.set_parameters(self, current_time)
         parameters['spl0'] = self.prediction['state'][:2]
         parameters['dspl0'] = self.prediction['dspl']
         parameters['ddspl0'] = self.prediction['ddspl']

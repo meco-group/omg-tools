@@ -16,15 +16,22 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+<<<<<<< HEAD
 import sys, os
 sys.path.insert(0, os.getcwd()+'/..')
+=======
+
+>>>>>>> dmpc_examples
 from omgtools import *
 
 # create vehicle
 vehicle = Holonomic()
 vehicle.set_options({'safety_distance': 0.1})
+<<<<<<< HEAD
 # vehicle.set_options({'1storder_delay': True, 'time_constant': 0.1})
 # vehicle.set_options({'input_disturbance': {'fc': 0.01, 'stdev': 0.05*np.ones(2)}})
+=======
+>>>>>>> dmpc_examples
 
 vehicle.set_initial_conditions([-1.5, -1.5])
 vehicle.set_terminal_conditions([2., 2.])
@@ -57,13 +64,14 @@ vehicle.plot('input', knots=True, labels=['v_x (m/s)', 'v_y (m/s)'])
 simulator.run()
 # 2nd task
 vehicle.set_terminal_conditions([2., 0.0])
-vehicle.reinit_splines(problem1)
+problem1.reinitialize()
 simulator.run()
-# 3th task (we can neglect circular obstacle)
+# 3th task (we can neglect circular obstacle), but first sleep 2 seconds
+simulator.sleep(2.)
 simulator.set_problem(problem2)
 vehicle.set_terminal_conditions([0.0, 1.0])
-vehicle.reinit_splines(problem2)
+problem2.reinitialize()
 simulator.run()
 
 # plot movie
-problem2.plot_movie('scene', repeat=False)
+problem2.plot_movie('scene', number_of_frames=100, repeat=False)

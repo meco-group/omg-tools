@@ -63,7 +63,7 @@ class Vehicle(OptiChild, PlotLayer):
 
     def set_default_options(self):
         self.options = {'safety_distance': 0., 'safety_weight': 10.,
-                        'room_constraints': True,
+                        'room_constraints': True, 'stop_tol': 1.e-3,
                         'ideal_prediction': False, 'ideal_update': False,
                         '1storder_delay': False, 'time_constant': 0.1,
                         'input_disturbance': None}
@@ -88,19 +88,6 @@ class Vehicle(OptiChild, PlotLayer):
                 'required: ' + str((len(self.basis), self.n_spl)) +
                 ' while you gave: ' + str(values.shape))
 
-    def reinit_splines(self, problem, value=None):
-        for k in range(self.n_seg):
-            if value is None:
-                init = self.get_init_spline_value()
-            else:
-                if value.shape == (len(self.basis), self.n_spl):
-                    init = value
-                else:
-                    raise ValueError('Initial guess has wrong dimensions, ' +
-                        'required: ' + str((len(self.basis), self.n_spl)) +
-                        ' while you gave: ' + str(values.shape))
-            problem.father.set_variables(init, self, 'splines'+str(k))
-
     # ========================================================================
     # Optimization modelling related functions
     # ========================================================================
@@ -109,7 +96,7 @@ class Vehicle(OptiChild, PlotLayer):
         self.n_seg = n_seg
         self.splines = []
         for k in range(n_seg):
-            if self.init_spline_value:
+            if self.init_spline_value is not None:
                 init = self.init_spline_value
                 self.init_spline_value = None
             else:
@@ -221,17 +208,32 @@ class Vehicle(OptiChild, PlotLayer):
                         self.define_constraint(
                             (chck[k]+position[k]) - room_lim[k][1], -inf, 0.)
 
+    def get_fleet_center(self, splines, rel_pos, substitute=True):
+        if substitute:
+            center = self.define_substitute('fleet_center', [s+rp for s, rp in zip(splines, rel_pos)])
+            return center
+        else:
+            return [s+rp for s, rp in zip(splines, rel_pos)]
+
+    def set_parameters(self, current_time):
+        parameters = {}
+        if hasattr(self, 'rel_pos_c'):
+            parameters['rel_pos_c'] = self.rel_pos_c
+        return parameters
+
     # ========================================================================
     # Simulation and prediction related functions
     # ========================================================================
 
     def overrule_state(self, state):
+        state = np.array(state)
         self.signals['state'][:, -1] = state
         self.signals['pose'][:, -1] = self._state2pose(state)
         self.prediction['state'] = state
         self.prediction['pose'] = self._state2pose(state)
 
     def overrule_input(self, input):
+        input = np.array(input)
         self.signals['input'][:, -1] = input
         self.prediction['input'] = input
 
@@ -253,6 +255,7 @@ class Vehicle(OptiChild, PlotLayer):
         self.store(update_time, sample_time)
         self.update_plots()
 
+
     def get_trajectories(self, splines, time_axis, current_time):
         self.trajectories = self.splines2signals(splines, time_axis)
         if not set(['state', 'input']).issubset(self.trajectories):
@@ -262,6 +265,8 @@ class Vehicle(OptiChild, PlotLayer):
         self.trajectories['pose'] = self._state2pose(self.trajectories['state'])
         self.trajectories['splines'] = np.c_[
             sample_splines(splines, time_axis)]
+        if hasattr(self, 'rel_pos_c'):
+            self.trajectories['fleet_center'] = np.c_[sample_splines(self.get_fleet_center(splines, self.rel_pos_c, substitute=False), time_axis)]
         knots = splines[0].basis.knots
         time_axis_kn = np.r_[knots[self.degree] + time_axis[0], [k for k in knots[
         self.degree+1:-self.degree] if k > (knots[self.degree]+time_axis[0])]]

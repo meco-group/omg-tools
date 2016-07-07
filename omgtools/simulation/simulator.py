@@ -34,13 +34,12 @@ class Simulator:
         self.problem = problem
 
     def run(self):
-        # self.reset_timing()
-        self.problem.initialize()
+        self.problem.initialize(self.current_time)
         stop = False
         while not stop:
             stop = self.update()
             if stop:
-                update_time = self.problem.vehicles[0].signals['time'][:, -1] - self.current_time
+                update_time = float(self.problem.vehicles[0].signals['time'][:, -1] - self.current_time)
                 self.update_timing(update_time)
             else:
                 self.update_timing()

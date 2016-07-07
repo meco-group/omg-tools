@@ -19,33 +19,43 @@
 
 from omgtools import *
 
-# create vehicle
-vehicle = Holonomic()
-vehicle.set_options({'safety_distance': 0.1})
+# create fleet
+N = 4
+vehicles = [Dubins(bounds={'vmax': 1., 'wmax': 60., 'wmin': -60.}) for l in range(N)]
+for vehicle in vehicles:
+    vehicle.define_knots(knot_intervals=10)
 
-vehicle.set_initial_conditions([-1.5, -1.5])
-vehicle.set_terminal_conditions([2., 2.])
+fleet = Fleet(vehicles)
+configuration = RegularPolyhedron(0.2, N, np.pi/4).vertices.T
+# configuration = np.array([[-0.2, 0.0], [0.2, 0.0]])
+# configuration2 = np.array([[0., 0.2], [0., -0.2]])
+init_positions = [-1.5, -1.5] + configuration
+terminal_positions = [1.5, 1.5] + configuration
+init_pose = np.c_[init_positions, 90.*np.ones(N)]
+terminal_pose = np.c_[terminal_positions, 0.*np.ones(N)]
+
+configuration = configuration
+
+fleet.set_configuration(configuration.tolist())
+fleet.set_initial_conditions(init_pose.tolist())
+fleet.set_terminal_conditions(terminal_pose.tolist())
 
 # create environment
 environment = Environment(room={'shape': Square(5.)})
 rectangle = Rectangle(width=3., height=0.2)
+# environment.add_obstacle(Obstacle({'position': [-2.1, -0.5]}, shape=rectangle))
+# environment.add_obstacle(Obstacle({'position': [1.7, -0.5]}, shape=rectangle))
 
-environment.add_obstacle(Obstacle({'position': [-2.1, -0.5]}, shape=rectangle))
-environment.add_obstacle(Obstacle({'position': [1.7, -0.5]}, shape=rectangle))
-trajectories = {'velocity': {'time': [3., 4.],
-                             'values': [[-0.15, 0.0], [0., 0.15]]}}
-environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
-                                  simulation={'trajectories': trajectories}))
-
-# create a point-to-point problem
-problem = Point2point(vehicle, environment, freeT=False)
+# create a formation point-to-point problem
+options = {'rho': 1., 'horizon_time': 10, 'hard_term_con': False}
+problem = FormationPoint2point(fleet, environment, options=options)
 problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem.init()
 
 # create simulator
 simulator = Simulator(problem)
 problem.plot('scene')
-vehicle.plot('input', knots=True, labels=['v_x (m/s)', 'v_y (m/s)'])
+fleet.plot('input', knots=True, labels=['v (m/s)', 'w (rad/s)'])
 
 # run it!
-simulator.run()
+# simulator.run()

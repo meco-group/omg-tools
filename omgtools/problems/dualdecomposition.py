@@ -39,7 +39,9 @@ class DDUpdater(DualUpdater):
     # Create problem
     # ========================================================================
 
-    def init(self):
+    def init(self, problems=None):
+        if problems is None:
+            problems = {'upd_xz': None, 'upd_l': None}
         DualUpdater.init(self)
         self.var_dd = {}
         for key in ['x_i']:
@@ -48,10 +50,11 @@ class DDUpdater(DualUpdater):
             self.var_dd[key] = self.q_ij_struct(0)
         for key in ['l_ji']:
             self.var_dd[key] = self.q_ji_struct(0)
-        self.construct_upd_xz()
-        self.construct_upd_l()
+        self.construct_upd_xz(problems['upd_xz'])
+        self.construct_upd_l(problems['upd_l'])
+        return {'upd_xz': self.problem_upd_xz, 'upd_l': self.problem_upd_l}
 
-    def construct_upd_xz(self):
+    def construct_upd_xz(self, problem=None):
         # construct optifather & give reference to problem
         self.father_updx = OptiFather(self.group.values())
         self.problem.father = self.father_updx
@@ -60,12 +63,8 @@ class DDUpdater(DualUpdater):
         for nghb, q_ij in self.q_ij.items():
             for child, q_j in q_ij.items():
                 for name, ind in q_j.items():
-                    var = child._values[name]
-                    if len(var.shape) == 2:
-                        var_len = var.shape[0]*var.shape[1]
-                    elif len(var.shape) == 1:
-                        var_len = len(var)
-                    v = np.reshape(var.T, var_len)[ind]
+                    var = np.array(child._values[name])
+                    v = var.T.flatten()[ind]
                     init[nghb.label, child.label, name, ind] = v
         z_ij = self.define_variable(
             'z_ij', self.q_ij_struct.shape[0], value=np.array(init.cat))
@@ -76,36 +75,37 @@ class DDUpdater(DualUpdater):
         z_ij = self.q_ij_struct(z_ij)
         l_ij = self.q_ij_struct(l_ij)
         l_ji = self.q_ji_struct(l_ji)
-        # get time info
-        t = self.define_symbol('t')
-        T = self.define_symbol('T')
-        t0 = t/T
         # get (part of) variables
         x_i = self._get_x_variables(symbolic=True)
         # construct local copies of parameters
         par = {}
         for name, s in self.par_i.items():
             par[name] = self.define_parameter(name, s.shape[0], s.shape[1])
-        # transform spline variables: only consider future piece of spline
-        tf = lambda cfs, basis: shift_knot1_fwd(cfs, basis, t0)
-        self._transform_spline(x_i, tf, self.q_i)
-        self._transform_spline([z_ij, l_ij], tf, self.q_ij)
-        self._transform_spline(l_ji, tf, self.q_ji)
-        # construct objective
-        obj = 0.
-        for child, q_i in self.q_i.items():
-            for name in q_i.keys():
-                x = x_i[child.label][name]
-                for nghb in self.q_ji.keys():
-                    l = l_ji[str(nghb), child.label, name]
-                    obj += mtimes(l.T, x)
-        for nghb, q_j in self.q_ij.items():
-            for child in q_j.keys():
-                for name in q_j[child].keys():
-                    z = z_ij[str(nghb), child.label, name]
-                    l = l_ij[str(nghb), child.label, name]
-                    obj -= mtimes(l.T, z)
-        self.define_objective(obj)
+        if problem is None:
+            # get time info
+            t = self.define_symbol('t')
+            T = self.define_symbol('T')
+            t0 = t/T
+            # transform spline variables: only consider future piece of spline
+            tf = lambda cfs, basis: shift_knot1_fwd(cfs, basis, t0)
+            self._transform_spline(x_i, tf, self.q_i)
+            self._transform_spline([z_ij, l_ij], tf, self.q_ij)
+            self._transform_spline(l_ji, tf, self.q_ji)
+            # construct objective
+            obj = 0.
+            for child, q_i in self.q_i.items():
+                for name in q_i.keys():
+                    x = x_i[child.label][name]
+                    for nghb in self.q_ji.keys():
+                        l = l_ji[str(nghb), child.label, name]
+                        obj += mtimes(l.T, x)
+            for nghb, q_j in self.q_ij.items():
+                for child in q_j.keys():
+                    for name in q_j[child].keys():
+                        z = z_ij[str(nghb), child.label, name]
+                        l = l_ij[str(nghb), child.label, name]
+                        obj -= mtimes(l.T, z)
+            self.define_objective(obj)
         # construct constraints
         for con in self.constraints:
             c = con[0]
@@ -138,17 +138,16 @@ class DDUpdater(DualUpdater):
             self.define_constraint(c, lb, ub)
         # construct problem
         prob, _ = self.father_updx.construct_problem(
-            self.options, str(self._index))
+            self.options, str(self._index), problem)
         self.problem_upd_xz = prob
         self.father_updx.init_transformations(self.problem.init_primal_transform,
                                          self.problem.init_dual_transform)
-        # init var_dd
-        for child, q in self.q_i.items():
-            for name, ind in q.items():
-                var = self.father_updx._var_result[child.label, name][ind]
-                self.var_dd['x_i'][child.label, name] = var
+        self.init_var_dd()
 
-    def construct_upd_l(self):
+    def construct_upd_l(self, problem=None):
+        if problem is not None:
+            self.problem_upd_l = problem
+            return
         # create parameters
         z_ij = struct_symMX(self.q_ij_struct)
         l_ij = struct_symMX(self.q_ij_struct)
@@ -168,6 +167,12 @@ class DDUpdater(DualUpdater):
     # Methods related to solving the problem
     # ========================================================================
 
+    def init_var_dd(self):
+        for child, q in self.q_i.items():
+            for name, ind in q.items():
+                var = self.father_updx.get_variables(child, name, spline=False).T.flatten()[ind]
+                self.var_dd['x_i'][child.label, name] = var
+
     def set_parameters(self, current_time):
         parameters = {}
         global_par = self.distr_problem.set_parameters(current_time)
@@ -178,8 +183,6 @@ class DDUpdater(DualUpdater):
         return parameters
 
     def update_xz(self, current_time):
-        self.current_time = current_time
-        self.problem.current_time = current_time
         # set initial guess, parameters, lb & ub
         var = self.father_updx.get_variables()
         par = self.father_updx.set_parameters(current_time)
@@ -257,6 +260,11 @@ class DDProblem(DualProblem):
             self, fleet, environment, problems, DDUpdater, options)
         self.residuals = {'primal': []}
 
+    def reinitialize(self):
+        for updater in self.updaters:
+            updater.problem.reinitialize(father=updater.father_updx)
+            updater.init_var_dd()
+
     def get_stacked_x_var_it(self):
         stacked_x_var = np.zeros((0, 1))
         for updater in self.updaters:
@@ -282,8 +290,8 @@ class DDProblem(DualProblem):
         p_res = np.sqrt(p_res)
         for updater in self.updaters:
             updater.communicate()
-        if self.options['verbose'] >= 1:
-            self.iteration += 1
+        self.iteration += 1
+        if self.options['verbose'] >= 2:
             if ((self.iteration - 1) % 20 == 0):
                 print(
                     '----|------|----------|----------|----------|----------')

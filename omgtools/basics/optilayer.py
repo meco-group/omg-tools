@@ -23,7 +23,7 @@ except:
     from casadi import Importer
     Compiler = Importer
 
-from casadi import MX, inf, Function, nlpsol, external
+from casadi import DM, MX, inf, Function, nlpsol, external
 
 
 from casadi import symvar, substitute
@@ -34,7 +34,8 @@ import time
 import numpy as np
 import copy
 import os
-
+import shutil
+import collections as col
 
 def evalf(fun, x):
     x = x if isinstance(x, list) else [x]
@@ -47,7 +48,7 @@ def evalf(fun, x):
 
 def create_nlp(var, par, obj, con, options, name=''):
     codegen = options['codegen']
-    if options['verbose'] >= 2:
+    if options['verbose'] >= 1:
         print 'Building nlp ... ',
     t0 = time.time()
     nlp = {'x': var, 'p': par, 'f': obj, 'g': con}
@@ -57,9 +58,9 @@ def create_nlp(var, par, obj, con, options, name=''):
         opt[key] = value
     opt.update({'expand': True})
     solver = nlpsol('solver', options['solver'], nlp, opt)
-    name = 'nlp_' + name
+    name = 'nlp' if name == '' else 'nlp_' + name
     if codegen['build'] == 'jit':
-        if options['verbose'] >= 2:
+        if options['verbose'] >= 1:
             print('[jit compilation with flags %s]' % (codegen['flags'])),
         solver.generate_dependencies(name+'.c')
         compiler = Compiler(
@@ -67,39 +68,50 @@ def create_nlp(var, par, obj, con, options, name=''):
         problem = nlpsol('solver', options['solver'], compiler, slv_opt)
         os.remove(name+'.c')
     elif codegen['build'] == 'shared':
-        if options['verbose'] >= 2:
+        if os.name == 'nt':
+            raise ValueError('Build option is not supported for Windows!')
+        directory = os.path.join(os.getcwd(), 'build')
+        if not os.path.isdir(directory):
+            os.makedirs(directory)
+        path = os.path.join(directory, name)
+        if options['verbose'] >= 1:
             print('[compile to .so with flags %s]' % (codegen['flags'])),
-        if os.path.isfile(name+'.so'):
-            os.remove(name+'.so')
+        if os.path.isfile(path+'.so'):
+            os.remove(path+'.so')
         solver.generate_dependencies(name+'.c')
+        shutil.move(name+'.c', path+'.c')
         os.system('gcc -fPIC -shared %s %s.c -o %s.so' %
-                  (codegen['flags'], name, name))
-        problem = nlpsol('solver', options['solver'], name+'.so', slv_opt)
-        os.remove(name+'.c')
+                  (codegen['flags'], path, path))
+        problem = nlpsol('solver', options['solver'], path+'.so', slv_opt)
+        os.remove(path+'.c')
     elif codegen['build'] == 'existing':
-        if not os.path.isfile(name+'.so'):
-            raise ValueError('%s.so does not exist!', name)
-        if options['verbose'] >= 2:
-            print('[using shared object %s.so]' % name),
-        problem = nlpsol('solver', options['solver'], name+'.so', slv_opt)
+        if os.name == 'nt':
+            raise ValueError('Build option is not supported for Windows!')
+        directory = os.path.join(os.getcwd(), 'build')
+        path = os.path.join(directory, name)
+        if not os.path.isfile(path+'.so'):
+            raise ValueError('%s.so does not exist!', path)
+        if options['verbose'] >= 1:
+            print('[using shared object %s.so]' % path),
+        problem = nlpsol('solver', options['solver'], path+'.so', slv_opt)
     elif codegen['build'] is None:
         problem = solver
     else:
         raise ValueError('Invalid build option.')
     t1 = time.time()
-    if options['verbose'] >= 2:
+    if options['verbose'] >= 1:
         print 'in %5f s' % (t1-t0)
     return problem, (t1-t0)
 
 
 def create_function(name, inp, out, options):
     codegen = options['codegen']
-    if options['verbose'] >= 2:
+    if options['verbose'] >= 1:
         print 'Building function %s ... ' % name,
     t0 = time.time()
     fun = Function(name, inp, out).expand()
     if codegen['build'] == 'jit':
-        if options['verbose'] >= 2:
+        if options['verbose'] >= 1:
             print('[jit compilation with flags %s]' % (codegen['flags'])),
         fun.generate(name)
         compiler = Compiler(
@@ -107,27 +119,38 @@ def create_function(name, inp, out, options):
         fun = external(name, compiler)
         os.remove(name+'.c')
     elif codegen['build'] == 'shared':
-        if options['verbose'] >= 2:
+        if os.name == 'nt':
+            raise ValueError('Build option is not supported for Windows!')
+        directory = os.path.join(os.getcwd(), 'build')
+        if not os.path.isdir(directory):
+            os.makedirs(directory)
+        path = os.path.join(directory, name)
+        if options['verbose'] >= 1:
             print('[compile to .so with flags %s]' % (codegen['flags'])),
-        if os.path.isfile(name+'.so'):
-            os.remove(name+'.so')
-        fun.generate(name)
+        if os.path.isfile(path+'.so'):
+            os.remove(path+'.so')
+        fun.generate(name+'.c')
+        shutil.move(name+'.c', path+'.c')
         os.system('gcc -fPIC -shared %s %s.c -o %s.so' %
-                  (codegen['flags'], name, name))
-        fun = external(name, './'+name+'.so')
-        os.remove(name+'.c')
+                  (codegen['flags'], path, path))
+        fun = external(name, path+'.so')
+        os.remove(path+'.c')
     elif codegen['build'] == 'existing':
-        if not os.path.isfile(name+'.so'):
-            raise ValueError('%s.so does not exist!', name)
-        if options['verbose'] >= 2:
-            print('[using shared object %s.so]' % name),
-        fun = external(name, './'+name+'.so')
+        if os.name == 'nt':
+            raise ValueError('Build option is not supported for Windows!')
+        directory = os.path.join(os.getcwd(), 'build')
+        path = os.path.join(directory, name)
+        if not os.path.isfile(path+'.so'):
+            raise ValueError('%s.so does not exist!', path)
+        if options['verbose'] >= 1:
+            print('[using shared object %s.so]' % path),
+        fun = external(name, path+'.so')
     elif codegen['build'] is None:
         fun = fun
     else:
         raise ValueError('Invalid build option.')
     t1 = time.time()
-    if options['verbose'] >= 2:
+    if options['verbose'] >= 1:
         print 'in %5f s' % (t1-t0)
     return fun, (t1-t0)
 
@@ -136,15 +159,14 @@ class OptiFather(object):
 
     def __init__(self, children=None):
         children = children or []
-        self.children = {}
-        self.symbol_dict = {}
+        self.children = col.OrderedDict()
+        self.symbol_dict = col.OrderedDict()
         for child in children:
             self.add(child)
 
     def add(self, children):
         children = children if isinstance(children, list) else [children]
         for child in children:
-            # child.father = self
             self.children.update({child.label: child})
 
     def add_to_dict(self, symbol, child, name):
@@ -155,19 +177,24 @@ class OptiFather(object):
     # Problem composition
     # ========================================================================
 
-    def construct_problem(self, options, name=''):
+    def construct_problem(self, options, name='', problem=None):
         self.compose_dictionary()
         self.translate_symbols()
         variables = self.construct_variables()
         parameters = self.construct_parameters()
+        self.construct_substitutes(variables, parameters)
         constraints, _, _ = self.construct_constraints(variables, parameters)
         objective = self.construct_objective(variables, parameters)
         self.problem_description = {'var': variables, 'par': parameters,
                                     'obj': objective, 'con': constraints,
                                     'opt': options}
-        problem, buildtime = create_nlp(variables, parameters, objective,
-            constraints, options, name)
+        if problem is None:
+            problem, buildtime = create_nlp(variables, parameters, objective,
+                constraints, options, name)
+        else:
+            buildtime = 0.
         self.init_variables()
+        self.init_parameters()
         return problem, buildtime
 
     def compose_dictionary(self):
@@ -214,6 +241,15 @@ class OptiFather(object):
             entries.append(entry(label, struct=struct(entries_child)))
         self._par_struct = struct(entries)
         return struct_symMX(self._par_struct)
+
+    def construct_substitutes(self, variables, parameters):
+        self.substitutes = {}
+        for child in self.children.values():
+            self.substitutes[child] = {}
+            for name, subst in child._substitutes.items():
+                expr, _ = subst
+                expression = self._substitute_symbols(expr, variables, parameters)
+                self.substitutes[child][name] = Function(name, [variables, parameters], [expression])
 
     def construct_constraints(self, variables, parameters):
         entries = []
@@ -290,6 +326,9 @@ class OptiFather(object):
         self._var_result = variables
         self._dual_var_result = self._con_struct(0.)
 
+    def init_parameters(self):
+        self.set_parameters(0.)
+
     def set_variables(self, variables, child=None, name=None):
         if child is None:
             self._var_result = self._var_struct(variables)
@@ -304,6 +343,27 @@ class OptiFather(object):
         elif name is None:
             return self._var_result.prefix(child.label)
         else:
+            if name in child._substitutes:
+                if name in child._splines_prim and not ('spline' in kwargs and not kwargs['spline']):
+                    basis = child._splines_prim[name]['basis']
+                    if 'symbolic' in kwargs and kwargs['symbolic']:
+                        if 'substitute' in kwargs and not kwargs['substitute']:
+                            coeffs = child._substitutes[name][1]
+                        else:
+                            coeffs = child._substitutes[name][0]
+                    else:
+                        fun = self.substitutes[child][name]
+                        coeffs = np.array(fun(self._var_result, self._par_result))
+                    return [BSpline(basis, coeffs[:, k]) for k in range(coeffs.shape[1])]
+                else:
+                    if 'symbolic' in kwargs and kwargs['symbolic']:
+                        if 'substitute' in kwargs and not kwargs['substitute']:
+                            return child._substitutes[name][1]
+                        else:
+                            return child._substitutes[name][0]
+                    else:
+                        fun = self.substitutes[child][name]
+                        return np.array(fun(self._var_result, self._par_result))
             if name in child._splines_prim and not ('spline' in kwargs and not kwargs['spline']):
                 basis = child._splines_prim[name]['basis']
                 if 'symbolic' in kwargs and kwargs['symbolic']:
@@ -351,15 +411,15 @@ class OptiFather(object):
                 self._var_result, self._par_result)
 
     def set_parameters(self, time):
-        self._par = self._par_struct(0.)
+        self._par_result = self._par_struct(0.)
         for label, child in self.children.items():
             par = child.set_parameters(time)
             for name in child._parameters.keys():
                 if name in par:
-                    self._par[label, name] = par[name]
+                    self._par_result[label, name] = par[name]
                 else:
-                    self._par[label, name] = child._values[name]
-        return self._par
+                    self._par_result[label, name] = child._values[name]
+        return self._par_result
 
     # ========================================================================
     # Spline tranformations
@@ -416,15 +476,16 @@ class OptiChild(object):
 
     def __init__(self, label):
         self.label = OptiChild._make_label(label)
-        self._variables = {}
-        self._parameters = {}
-        self._symbols = {}
-        self._values = {}
-        self._splines_prim = {}
-        self._splines_dual = {}
-        self._constraints = {}
+        self._variables = col.OrderedDict()
+        self._parameters = col.OrderedDict()
+        self._symbols = col.OrderedDict()
+        self._substitutes = col.OrderedDict()
+        self._values = col.OrderedDict()
+        self._splines_prim = col.OrderedDict()
+        self._splines_dual = col.OrderedDict()
+        self._constraints = col.OrderedDict()
+        self.symbol_dict = col.OrderedDict()
         self._objective = 0.
-        self.symbol_dict = {}
         self._constraint_cnt = 0
 
     def __str__(self):
@@ -488,6 +549,31 @@ class OptiChild(object):
         return self._define_mx_spline(name, size0, size1,
                                       self._parameters, basis, value)
 
+    def define_substitute(self, name, expr):
+        if isinstance(expr, list):
+            return [self.define_substitute(name+str(l), e) for l, e in enumerate(expr)]
+        else:
+            if name in self._substitutes:
+                raise ValueError('Name %s already used for substitutes!' % (name))
+            symbol_name = self._add_label(name)
+            if isinstance(expr, BSpline):
+                self._splines_prim[name] = {'basis': expr.basis}
+                coeffs = MX.sym(symbol_name, expr.coeffs.shape[0], 1)
+                subst = BSpline(expr.basis, coeffs)
+                self._substitutes[name] = [expr.coeffs, subst.coeffs]
+                inp_sym, inp_num = [], []
+                for sym in symvar(expr.coeffs):
+                    inp_sym.append(sym)
+                    inp_num.append(DM(self._values[self.symbol_dict[sym.name()][1]]))
+                fun = Function('eval', inp_sym, [expr.coeffs])
+                self._values[name] = fun(*inp_num)
+                self.add_to_dict(coeffs, name)
+            else:
+                subst = MX.sym(symbol_name, expr.shape[0], expr.shape[1])
+                self._substitutes[name] = [expr, subst]
+                self.add_to_dict(subst, name)
+            return subst
+
     def _define_mx(self, name, size0, size1, dictionary, value=None):
         if value is None:
             value = np.zeros((size0, size1))
@@ -536,15 +622,16 @@ class OptiChild(object):
     # ========================================================================
 
     def reset(self):
-        self._variables = {}
-        self._parameters = {}
-        self._symbols = {}
-        self._values = {}
-        self._splines_prim = {}
-        self._splines_dual = {}
-        self._constraints = {}
+        self._variables = col.OrderedDict()
+        self._parameters = col.OrderedDict()
+        self._symbols = col.OrderedDict()
+        self._substitutes = col.OrderedDict()
+        self._values = col.OrderedDict()
+        self._splines_prim = col.OrderedDict()
+        self._splines_dual = col.OrderedDict()
+        self._constraints = col.OrderedDict()
+        self.symbol_dict = col.OrderedDict()
         self._objective = 0.
-        self.symbol_dict = {}
         self._constraint_cnt = 0
 
     # ========================================================================

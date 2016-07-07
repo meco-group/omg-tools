@@ -22,7 +22,7 @@ from omgtools import *
 # create fleet
 N_quad = 2
 quadrotors = [Quadrotor(0.2) for l in range(N_quad)]
-fleet = Fleet(quadrotors + [Platform()])
+fleet = Fleet(quadrotors + [Holonomic1D()])
 
 configuration = [[0.25], [-0.25], [0.0]]
 init_positions = [[1.5, 3.], [-2., 2.], [1.]]

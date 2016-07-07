@@ -244,7 +244,7 @@ class ExportP2P(object):
     def _create_updateBounds(self):
         code, cnt = '', 0
         _lbg, _ubg = self.father._lb.cat, self.father._ub.cat
-        for label, child in self.father.children.items():
+        for child in self.father.children.values():
             for name, con in child._constraints.items():
                 if child._add_label(name) in self.father._constraint_shutdown:
                     shutdown = self.father._constraint_shutdown[

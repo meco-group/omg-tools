@@ -40,6 +40,7 @@ class Point2pointProblem(Problem):
     def __init__(self, fleet, environment, options):
         Problem.__init__(self, fleet, environment, options, label='p2p')
         self.init_time = None
+        self.start_time = 0.
 
     def set_init_time(self, time):
         self.init_time = time
@@ -55,6 +56,14 @@ class Point2pointProblem(Problem):
             splines = vehicle.define_splines(n_seg=1)[0]
             vehicle.define_trajectory_constraints(splines)
             self.environment.define_collision_constraints(vehicle, splines)
+
+    def reinitialize(self, father=None):
+        if father is None:
+            father = self.father
+        Problem.reinitialize(self)
+        for vehicle in self.vehicles:
+            init = vehicle.get_init_spline_value()
+            father.set_variables(init, vehicle, 'splines0')
 
     def define_init_constraints(self):
         for vehicle in self.vehicles:
@@ -73,13 +82,14 @@ class Point2pointProblem(Problem):
     def final(self):
         self.reset_init_time()
         obj = self.compute_objective()
-        print '\nWe reached our target!'
-        print '%-18s %6g' % ('Objective:', obj)
-        print '%-18s %6g ms' % ('Max update time:',
-                                max(self.update_times)*1000.)
-        print '%-18s %6g ms' % ('Av update time:',
-                                (sum(self.update_times)*1000. /
-                                 len(self.update_times)))
+        if self.options['verbose'] >= 1:
+            print '\nWe reached our target!'
+            print '%-18s %6g' % ('Objective:', obj)
+            print '%-18s %6g ms' % ('Max update time:',
+                                    max(self.update_times)*1000.)
+            print '%-18s %6g ms' % ('Av update time:',
+                                    (sum(self.update_times)*1000. /
+                                     len(self.update_times)))
 
     def compute_objective(self):
         raise NotImplementedError('Please implement this method!')
@@ -117,6 +127,11 @@ class FixedTPoint2point(Point2pointProblem):
         self.knot_time = (int(self.options['horizon_time']*1000.) /
                           self.vehicles[0].knot_intervals) / 1000.
 
+    def set_default_options(self):
+        Point2pointProblem.set_default_options(self)
+        self.options['horizon_time'] = 10.
+        self.options['hard_term_con'] = False
+
     def construct(self):
         Point2pointProblem.construct(self)
         self.define_init_constraints()
@@ -134,14 +149,12 @@ class FixedTPoint2point(Point2pointProblem):
                 objective += definite_integral(g, self.t0, 1.)
                 self.define_constraint(spline - condition - g, -inf, 0.)
                 self.define_constraint(-spline + condition - g, -inf, 0.)
+                if self.options['hard_term_con']:
+                    self.define_constraint(spline(1.) - condition, 0., 0.)
             for con in term_con_der:
                 spline, condition = con[0], con[1]
                 self.define_constraint(spline(1.) - condition, 0., 0.)
         self.define_objective(objective)
-
-    def set_default_options(self):
-        Point2pointProblem.set_default_options(self)
-        self.options['horizon_time'] = 10.
 
     def set_parameters(self, current_time):
         parameters = Point2pointProblem.set_parameters(self, current_time)
@@ -169,6 +182,9 @@ class FixedTPoint2point(Point2pointProblem):
     #     T = shiftoverknot_T(basis)
     #     return B.dot(T).dot(Binv)
 
+    def initialize(self, current_time):
+        self.start_time = current_time
+
     def update(self, current_time, update_time, sample_time):
         horizon_time = self.options['horizon_time']
         if self.init_time is None:
@@ -176,7 +192,7 @@ class FixedTPoint2point(Point2pointProblem):
             # its time horizon lies in the past. Therefore, we need to pass the
             # current time relatively to the begin of this time horizon. In this
             # way, only the future, relevant, part will be saved/plotted.
-            rel_current_time = np.round(current_time, 6) % self.knot_time
+            rel_current_time = np.round(current_time-self.start_time, 6) % self.knot_time
         else:
             rel_current_time = self.init_time
         if horizon_time - rel_current_time < update_time:
@@ -196,7 +212,7 @@ class FixedTPoint2point(Point2pointProblem):
         self.update_plots()
 
     def compute_partial_objective(self, current_time, update_time):
-        rel_current_time = np.round(current_time, 6) % self.knot_time
+        rel_current_time = np.round(current_time-self.start_time, 6) % self.knot_time
         horizon_time = self.options['horizon_time']
         t0 = rel_current_time/horizon_time
         t1 = t0 + update_time/horizon_time
@@ -263,6 +279,8 @@ class FreeTPoint2point(Point2pointProblem):
             rel_current_time = 0.0
         else:
             rel_current_time = self.init_time
+        if horizon_time < sample_time: #otherwise interp1d() crashes
+            return
         if horizon_time < update_time:
             update_time = horizon_time
         if horizon_time - rel_current_time < update_time:
