@@ -54,7 +54,7 @@ pilar = {'pos': [3.05, -2.15, 0.], 'dim': [0.3, 0.45, 1.5]}
 measure = {'pos': [6.8, -1.4, 0.], 'dim': [0.15, 0.15, 1.15]}
 
 # plate (defined wrt machine frame)
-plate = {'start': [7., -1.5, 0.4], 'end': [0., -1.3, 1.01], 'end2': [3.5, -1.4, 0.4],
+plate = {'start': [7., -1.5, 0.4], 'end': [0., -1.3, 1.01], 'end2': [3.5, -1.5, 0.4],
          'dim': [3., 1.5, 0.01]}
 
 # room limits (should prevent collisions with beam & pillar)
@@ -132,9 +132,8 @@ environment.add_obstacle(obstacles)
 
 # 4. create problem
 problem = Point2point(fap, environment, freeT=True)
-problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}, 'horizon_time': 10.})
+problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem.init()
-
 
 """simulation with omg-tools"""
 
@@ -163,7 +162,7 @@ if go_back:
         fap.set_initial_conditions([plate['end'][k]+0.5*plate['dim'][k] for k in range(3)])
     fap.set_terminal_conditions([plate['end2'][k]+0.5*plate['dim'][k] for k in range(3)])
     # re-initialize
-    fap.reinit_splines(problem)
+    problem.reinitialize()
     trajectories = simulator.run_once()
     # save_trajectories(trajectories, 'go_back')
 
