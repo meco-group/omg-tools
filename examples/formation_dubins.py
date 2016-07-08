@@ -58,4 +58,3 @@ fleet.plot('fleet_center')
 # run it!
 simulator.run()
 problem.plot_movie('scene', number_of_frames=100)
-
