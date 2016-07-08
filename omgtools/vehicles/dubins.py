@@ -100,6 +100,9 @@ class Dubins(Vehicle):
         center = self.define_spline_variable('formation_center', self.n_dim)
         self.define_constraint((x-center[0])*(1+tg_ha**2) + rel_pos[0]*2*tg_ha + rel_pos[1]*(1-tg_ha**2), -eps, eps)
         self.define_constraint((y-center[1])*(1+tg_ha**2) + rel_pos[1]*2*tg_ha - rel_pos[0]*(1-tg_ha**2), -eps, eps)
+        for d in range(1, self.degree+1):
+            for c in center:
+                self.define_constraint(c.derivative(d)(1.), 0., 0.)
         return center
         # center = []
         # if substitute:
@@ -134,11 +137,7 @@ class Dubins(Vehicle):
         x = x_int-evalspline(x_int, self.t/self.T) + self.pos0[0]  # self.pos0 was already defined in init
         y = y_int-evalspline(y_int, self.t/self.T) + self.pos0[1]
         term_con = [(x, posT[0]), (y, posT[1]), (tg_ha, tg_haT)]
-        # term_con_der = [(v_til, v_tilT), (dtg_ha, self.T*dtg_haT)]
-        term_con_der = [(v_til, 0.)]
-        for d in range(1, self.degree+1):
-            term_con_der.extend([(v_til.derivative(d), 0.), (tg_ha.derivative(d), 0.)])
-
+        term_con_der = [(v_til, 0.), (tg_ha.derivative(), 0.)]
         return [term_con, term_con_der]
 
     def set_initial_conditions(self, pose, input=np.zeros(2)):
