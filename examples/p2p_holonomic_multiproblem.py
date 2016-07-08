@@ -54,13 +54,13 @@ vehicle.plot('input', knots=True, labels=['v_x (m/s)', 'v_y (m/s)'])
 simulator.run()
 # 2nd task
 vehicle.set_terminal_conditions([2., 0.0])
-vehicle.reinit_splines(problem1)
+problem1.reinitialize()
 simulator.run()
 # 3th task (we can neglect circular obstacle), but first sleep 2 seconds
 simulator.sleep(2.)
 simulator.set_problem(problem2)
 vehicle.set_terminal_conditions([0.0, 1.0])
-vehicle.reinit_splines(problem2)
+problem2.reinitialize()
 simulator.run()
 
 # plot movie

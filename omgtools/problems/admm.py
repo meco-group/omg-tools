@@ -370,8 +370,6 @@ class ADMM(DualUpdater):
         return parameters
 
     def update_x(self, current_time):
-        self.current_time = current_time
-        self.problem.current_time = current_time
         # set initial guess, parameters, lb & ub
         var = self.father_updx.get_variables()
         par = self.father_updx.set_parameters(current_time)
@@ -414,22 +412,22 @@ class ADMM(DualUpdater):
             par = self.set_parameters_upd_z(current_time)
             out = self.problem_upd_z(x_i, l_i, l_ij, x_j, t, T, rho, par)
             z_i, z_ij = out[0], out[1]
-        else:
-            # set parameters
-            par = self._par_struct_updz(0)
-            par['x_i'] = self.var_admm['x_i']
-            par['l_i'] = self.var_admm['l_i']
-            par['l_ij'] = self.var_admm['l_ij']
-            par['x_j'] = self.var_admm['x_j']
-            par['t'] = current_time
-            par['T'] = horizon_time
-            par['rho'] = rho
-            par['par'] = self.set_parameters_upd_z(current_time)
-            lb, ub = self.lb_updz, self.ub_updz
-            result = self.problem_upd_z(p=par, lbg=lb, ubg=ub)
-            out = result['x']
-            out = self._var_struct_updz(out)
-            z_i, z_ij = out['z_i'], out['z_ij']
+        # else:
+        #     # set parameters
+        #     par = self._par_struct_updz(0)
+        #     par['x_i'] = self.var_admm['x_i']
+        #     par['l_i'] = self.var_admm['l_i']
+        #     par['l_ij'] = self.var_admm['l_ij']
+        #     par['x_j'] = self.var_admm['x_j']
+        #     par['t'] = current_time
+        #     par['T'] = horizon_time
+        #     par['rho'] = rho
+        #     par['par'] = self.set_parameters_upd_z(current_time)
+        #     lb, ub = self.lb_updz, self.ub_updz
+        #     result = self.problem_upd_z(p=par, lbg=lb, ubg=ub)
+        #     out = result['x']
+        #     out = self._var_struct_updz(out)
+        #     z_i, z_ij = out['z_i'], out['z_ij']
         self.var_admm['z_i'] = self.q_i_struct(z_i)
         self.var_admm['z_ij'] = self.q_ij_struct(z_ij)
         t1 = time.time()
@@ -559,6 +557,11 @@ class ADMMProblem(DualProblem):
         self.options.update({'nesterov_acceleration': False, 'eta': 0.999,
                              'nesterov_reset': False})
 
+    def reinitialize(self):
+        for updater in self.updaters:
+            updater.problem.reinitialize(father=updater.father_updx)
+            updater.init_var_admm()
+
     def get_stacked_x_var_it(self):
         stacked_x_var = np.zeros((0, 1))
         for updater in self.updaters:
@@ -592,8 +595,8 @@ class ADMMProblem(DualProblem):
                 updater.accelerate(c_res)
         for updater in self.updaters:
             updater.communicate()
-        if self.options['verbose'] >= 1:
-            self.iteration += 1
+        self.iteration += 1
+        if self.options['verbose'] >= 2:
             if ((self.iteration - 1) % 20 == 0):
                 print('----|------|----------|----------|'
                       '----------|----------|----------|----------')

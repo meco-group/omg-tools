@@ -46,8 +46,12 @@ class Dubins(Vehicle):
 
     def __init__(self, shapes=Circle(0.1), options=None, bounds=None):
         bounds = bounds or {}
+        if options is not None and 'degree' in options:
+            degree = options['degree']
+        else:
+            degree = 3
         Vehicle.__init__(
-            self, n_spl=2, degree=3, shapes=shapes, options=options)
+            self, n_spl=2, degree=degree, shapes=shapes, options=options)
         self.vmax = bounds['vmax'] if 'vmax' in bounds else 0.5
         self.amax = bounds['amax'] if 'amax' in bounds else 1.
         self.wmin = bounds['wmin'] if 'wmin' in bounds else -30.  # in deg/s
@@ -85,7 +89,7 @@ class Dubins(Vehicle):
         self.define_constraint(-v_til, -inf, 0)  # positive v_tilde
 
 
-    def get_fleet_center(self, splines, rel_pos):
+    def get_fleet_center(self, splines, rel_pos, substitute=True):
         T = self.define_symbol('T')
         t = self.define_symbol('t')
         pos0 = self.define_parameter('pos0', 2)
@@ -100,7 +104,21 @@ class Dubins(Vehicle):
         center = self.define_spline_variable('formation_center', self.n_dim)
         self.define_constraint((x-center[0])*(1+tg_ha**2) + rel_pos[0]*2*tg_ha + rel_pos[1]*(1-tg_ha**2), -eps, eps)
         self.define_constraint((y-center[1])*(1+tg_ha**2) + rel_pos[1]*2*tg_ha - rel_pos[0]*(1-tg_ha**2), -eps, eps)
+        for d in range(1, self.degree+1):
+            for c in center:
+                self.define_constraint(c.derivative(d)(1.), 0., 0.)
         return center
+        # center = []
+        # if substitute:
+        #     center_tf = [x*(1+tg_ha**2) + rel_pos[0]*2*tg_ha + rel_pos[1]*(1-tg_ha**2), y*(1+tg_ha**2) + rel_pos[1]*2*tg_ha - rel_pos[0]*(1-tg_ha**2)]
+        #     center = self.define_substitute('fleet_center', center_tf)
+        #     center.append(tg_ha)
+        #     return center
+        # else:
+        #     if splines[0] is (MX, SX):
+        #         center_tf = [x*(1+tg_ha**2) + rel_pos[0]*2*tg_ha + rel_pos[1]*(1-tg_ha**2), y*(1+tg_ha**2) + rel_pos[1]*2*tg_ha - rel_pos[0]*(1-tg_ha**2)]
+        #         center_tf.append(tg_ha)
+        #         return center_tf
 
     def get_initial_constraints(self, splines):
         # these make sure you get continuity along different iterations
@@ -116,17 +134,14 @@ class Dubins(Vehicle):
     def get_terminal_constraints(self, splines):
         posT = self.define_parameter('posT', 2)
         tg_haT = self.define_parameter('tg_haT', 1)
-        v_tilT = self.define_parameter('v_tilT', 1)
-        dtg_haT = self.define_parameter('dtg_haT', 1)
         v_til, tg_ha = splines
-        dtg_ha = tg_ha.derivative(1)
         dx = v_til*(1-tg_ha**2)
         dy = v_til*(2*tg_ha)
         x_int, y_int = self.T*running_integral(dx), self.T*running_integral(dy)
         x = x_int-evalspline(x_int, self.t/self.T) + self.pos0[0]  # self.pos0 was already defined in init
         y = y_int-evalspline(y_int, self.t/self.T) + self.pos0[1]
         term_con = [(x, posT[0]), (y, posT[1]), (tg_ha, tg_haT)]
-        term_con_der = [(v_til, v_tilT), (dtg_ha, self.T*dtg_haT)]
+        term_con_der = [(v_til, 0.), (tg_ha.derivative(), 0.)]
         return [term_con, term_con_der]
 
     def set_initial_conditions(self, pose, input=np.zeros(2)):
@@ -169,8 +184,6 @@ class Dubins(Vehicle):
         parameters['pos0'] = self.prediction['state'][:2]
         parameters['posT'] = self.poseT[:2]  # x,y
         parameters['tg_haT'] = np.tan(self.poseT[2]/2.)
-        parameters['dtg_haT'] = 0.
-        parameters['v_tilT'] = 0.
         return parameters
 
     def define_collision_constraints(self, hyperplanes, environment, splines):
@@ -198,14 +211,17 @@ class Dubins(Vehicle):
             dx_int, dy_int = running_integral(dx), running_integral(dy)  # current state
             x = dx_int - dx_int(time[0]) + self.signals['state'][0, -1]
             y = dy_int - dy_int(time[0]) + self.signals['state'][1, -1]
-        theta = 2*np.arctan2(sample_splines([tg_ha], time),1)
-        dtheta = 2*np.array(sample_splines([dtg_ha],time))/(1.+np.array(sample_splines([tg_ha], time))**2)
-        input = np.c_[sample_splines([v_til*(1+tg_ha**2)], time)]
-        input = np.r_[input, dtheta]
-        signals['state'] = np.c_[sample_splines([x, y], time)]
-        signals['state'] = np.r_[signals['state'], theta]
-        signals['input'] = input
-        signals['v_tot'] = input[0, :]
+        x_s, y_s, v_til_s, tg_ha_s, dtg_ha_s = sample_splines([x, y, v_til, tg_ha, dtg_ha], time)
+        den = sample_splines([(1+tg_ha**2)], time)[0]
+        theta = 2*np.arctan2(tg_ha_s,1)
+        dtheta = 2*np.array(dtg_ha_s)/(1.+np.array(tg_ha_s)**2)
+        v_s = v_til_s*den
+        signals['state'] = np.c_[x_s, y_s, theta.T].T
+        signals['input'] = np.c_[v_s, dtheta.T].T
+        if hasattr(self, 'rel_pos_c'):
+            x_c = x_s + sample_splines([self.rel_pos_c[0]*2*tg_ha + self.rel_pos_c[1]*(1-tg_ha**2)], time)[0]/den
+            y_c = y_s + sample_splines([self.rel_pos_c[1]*2*tg_ha - self.rel_pos_c[0]*(1-tg_ha**2)], time)[0]/den
+            signals['fleet_center'] = np.c_[x_c, y_c].T
         return signals
 
     def state2pose(self, state):

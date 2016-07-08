@@ -18,32 +18,35 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from omgtools import *
+import numpy as np
 
 # create fleet
-N = 3
-vehicles = [Dubins(options={'degree': 2}, bounds={'vmax': 1., 'wmax': 30., 'wmin': -30.}) for l in range(N)]
-for vehicle in vehicles:
-    vehicle.define_knots(knot_intervals=10)
+N = 4
+vehicles = [Quadrotor(0.2) for l in range(N)]
 
 fleet = Fleet(vehicles)
-configuration = RegularPolyhedron(0.2, N, np.pi).vertices.T
-init_positions = [-0.5, -1.5] + configuration
-terminal_positions = [0.5, 1.5] + configuration
-init_pose = np.c_[init_positions, 90.*np.ones(N)]
-terminal_pose = np.c_[terminal_positions, 90.*np.ones(N)]
+configuration = RegularPolyhedron(0.5, N, orientation=np.pi).vertices.T
+init_positions = [-4., -5.] + configuration
+terminal_positions = [4., 5.] + configuration
 
 fleet.set_configuration(configuration.tolist())
-fleet.set_initial_conditions(init_pose.tolist())
-fleet.set_terminal_conditions(terminal_pose.tolist())
+fleet.set_initial_conditions(init_positions.tolist())
+fleet.set_terminal_conditions(terminal_positions.tolist())
 
 # create environment
-environment = Environment(room={'shape': Square(4.)})
-beam1 = Beam(width=3., height=0.2, orientation=np.pi/2)
-environment.add_obstacle(Obstacle({'position': [0., -2.2]}, shape=beam1))
-environment.add_obstacle(Obstacle({'position': [0., 2.2]}, shape=beam1))
+environment = Environment(room={'shape': Square(12.)})
+beam1 = Beam(width=4., height=0.2)
+environment.add_obstacle(Obstacle({'position': [-4., 0.]}, shape=beam1))
+environment.add_obstacle(Obstacle({'position': [4., 0.]}, shape=beam1))
+
+beam2 = Beam(width=3., height=0.2)
+horizon_time = 5.
+omega = 0.2*(2*np.pi/horizon_time)
+environment.add_obstacle(Obstacle({'position': [0., 0.], 'angular_velocity': omega},
+    shape=beam2, simulation={}, options={'horizon_time': horizon_time}))
 
 # create a formation point-to-point problem
-options = {'rho': 5., 'horizon_time': 5., 'hard_term_con': True}
+options = {'horizon_time': horizon_time, 'rho': 0.3}
 problem = FormationPoint2point(fleet, environment, options=options)
 problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem.init()
@@ -51,10 +54,9 @@ problem.init()
 # create simulator
 simulator = Simulator(problem)
 problem.plot('scene')
-fleet.plot('input', knots=True, labels=['v (m/s)', 'w (rad/s)'])
-fleet.plot('state', knots=True, labels=['x', 'y', 'theta'])
-fleet.plot('fleet_center')
+fleet.plot('input', knots=True, labels=['Thrust force (N/kg)',
+                                        'Pitch rate (rad/s)'])
 
 # run it!
 simulator.run()
-problem.plot_movie('scene', number_of_frames=100)
+problem.plot_movie('scene')
