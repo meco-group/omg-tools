@@ -42,10 +42,6 @@ class Fleet(PlotLayer):
         self.interconnection = interconnection
         self.set_neighbors()
 
-    def add_vehicle(self, vehicles):
-        self.vehicles.extend(vehicles)
-        self.set_neighbors()
-
     def get_neighbors(self, vehicle):
         return self.nghb_list[vehicle]
 
@@ -101,12 +97,26 @@ class Fleet(PlotLayer):
         return self.rel_config[vehicle]
 
     def set_initial_conditions(self, conditions):
-        for l, vehicle in enumerate(self.vehicles):
-            vehicle.set_initial_conditions(conditions[l])
+        for condition, vehicle in zip(conditions, self.vehicles):
+            vehicle.set_initial_conditions(condition)
 
     def set_terminal_conditions(self, conditions):
-        for l, vehicle in enumerate(self.vehicles):
-            vehicle.set_terminal_conditions(conditions[l])
+        for condition, vehicle in zip(conditions, self.vehicles):
+            vehicle.set_terminal_conditions(condition)
+
+    def overrule_state(self, states):
+        for state, vehicle in zip(states, self.vehicles):
+            vehicle.overrule_state(state)
+
+    def overrule_input(self, inputs):
+        for input, vehicle in zip(inputs, self.vehicles):
+            vehicle.overrule_input(input)
+
+    def reinit_splines(self, problem, values=None):
+        if values is None:
+            values = [None for veh in self.vehicles]
+        for vehicle, value in zip(self.vehicles, values):
+            vehicle.reinit_splines(problem, value)
 
     # ========================================================================
     # Plot related functions
