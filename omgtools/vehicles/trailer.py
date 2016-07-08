@@ -30,7 +30,7 @@ class Trailer(Vehicle):
     def __init__(self, lead_veh=None, shapes=Circle(0.2), l_hitch=0.2, options=None, bounds=None):
         bounds = bounds or {}
         Vehicle.__init__(
-            self, n_spl=1 + lead_veh.n_spl, degree=3, shapes=shapes, options=options)
+            self, n_spl=1 + lead_veh.n_spl, degree=2, shapes=shapes, options=options)
         # n_spl contains all splines of lead_veh and trailer
         # being: tg_ha_trailer, v_til_veh, tg_ha_veh
         self.lead_veh = Dubins(Circle(0.2)) if (lead_veh is None) else lead_veh  # vehicle which pulls the trailer
