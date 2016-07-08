@@ -265,8 +265,8 @@ class Vehicle(OptiChild, PlotLayer):
         self.trajectories['pose'] = self._state2pose(self.trajectories['state'])
         self.trajectories['splines'] = np.c_[
             sample_splines(splines, time_axis)]
-        if hasattr(self, 'rel_pos_c'):
-            self.trajectories['fleet_center'] = np.c_[sample_splines(self.get_fleet_center(splines, self.rel_pos_c, substitute=False), time_axis)]
+        if hasattr(self, 'rel_pos_c') and ('fleet_center' not in self.trajectories):
+            self.trajectories['fleet_center'] = np.c_[sample_splines([s+rp for s, rp in zip(splines, self.rel_pos_c)], time_axis)]
         knots = splines[0].basis.knots
         time_axis_kn = np.r_[knots[self.degree] + time_axis[0], [k for k in knots[
         self.degree+1:-self.degree] if k > (knots[self.degree]+time_axis[0])]]

@@ -167,7 +167,7 @@ class DualUpdater(Problem):
                             sl_min = l*len(basis)
                             sl_max = (l+1)*len(basis)
                             if set(range(sl_min, sl_max)) <= set(ind):
-                                sl = slice(sl_min, sl_max)
+                                sl = slice(sl_min-ind[0], sl_max-ind[0])
                                 v = var[child.label][name][sl]
                                 v = tf(v, basis)
                                 var[child.label][name][sl] = v

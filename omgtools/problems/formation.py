@@ -54,14 +54,14 @@ class FormationPoint2point(ADMMProblem):
                     pos_c_nghb = centra[nghb]
                     for ind_v, ind_n in zip(ind_veh, ind_nghb):
                         self.define_constraint(pos_c_veh[ind_v] - pos_c_nghb[ind_n], 0., 0.)
-        # terminal constraints (stability issue)
-        for veh in self.vehicles:
-            for spline in centra[veh]:
-                for d in range(1, spline.basis.degree+1):
-                    # constraints imposed on distributedproblem instance will be
-                    # invoked on the z-variables (because it is interpreted as
-                    # 'interconnection constraint')
-                    self.define_constraint(spline.derivative(d)(1.), 0., 0.)
+        # # terminal constraints (stability issue)
+        # for veh in self.vehicles:
+        #     for spline in centra[veh]:
+        #         for d in range(1, spline.basis.degree+1):
+        #             # constraints imposed on distributedproblem instance will be
+        #             # invoked on the z-variables (because it is interpreted as
+        #             # 'interconnection constraint')
+        #             self.define_constraint(spline.derivative(d)(1.), 0., 0.)
 
     def get_interaction_error(self):
         error = 0.

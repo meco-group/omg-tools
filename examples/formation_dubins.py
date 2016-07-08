@@ -20,34 +20,30 @@
 from omgtools import *
 
 # create fleet
-N = 4
-vehicles = [Dubins(bounds={'vmax': 1., 'wmax': 60., 'wmin': -60.}) for l in range(N)]
+N = 3
+vehicles = [Dubins(bounds={'vmax': 1., 'wmax': 30., 'wmin': -30.}) for l in range(N)]
 for vehicle in vehicles:
     vehicle.define_knots(knot_intervals=10)
 
 fleet = Fleet(vehicles)
-configuration = RegularPolyhedron(0.2, N, np.pi/4).vertices.T
-# configuration = np.array([[-0.2, 0.0], [0.2, 0.0]])
-# configuration2 = np.array([[0., 0.2], [0., -0.2]])
-init_positions = [-1.5, -1.5] + configuration
-terminal_positions = [1.5, 1.5] + configuration
+configuration = RegularPolyhedron(0.2, N, np.pi).vertices.T
+init_positions = [-0.5, -1.5] + configuration
+terminal_positions = [0.5, 1.5] + configuration
 init_pose = np.c_[init_positions, 90.*np.ones(N)]
-terminal_pose = np.c_[terminal_positions, 0.*np.ones(N)]
-
-configuration = configuration
+terminal_pose = np.c_[terminal_positions, 90.*np.ones(N)]
 
 fleet.set_configuration(configuration.tolist())
 fleet.set_initial_conditions(init_pose.tolist())
 fleet.set_terminal_conditions(terminal_pose.tolist())
 
 # create environment
-environment = Environment(room={'shape': Square(5.)})
-rectangle = Rectangle(width=3., height=0.2)
-# environment.add_obstacle(Obstacle({'position': [-2.1, -0.5]}, shape=rectangle))
-# environment.add_obstacle(Obstacle({'position': [1.7, -0.5]}, shape=rectangle))
+environment = Environment(room={'shape': Square(4.)})
+beam1 = Beam(width=3., height=0.2, orientation=np.pi/2)
+environment.add_obstacle(Obstacle({'position': [0., -2.2]}, shape=beam1))
+environment.add_obstacle(Obstacle({'position': [0., 2.2]}, shape=beam1))
 
 # create a formation point-to-point problem
-options = {'rho': 1., 'horizon_time': 10, 'hard_term_con': False}
+options = {'rho': 5., 'horizon_time': 5., 'hard_term_con': True}
 problem = FormationPoint2point(fleet, environment, options=options)
 problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem.init()
@@ -56,6 +52,10 @@ problem.init()
 simulator = Simulator(problem)
 problem.plot('scene')
 fleet.plot('input', knots=True, labels=['v (m/s)', 'w (rad/s)'])
+fleet.plot('state', knots=True, labels=['x', 'y', 'theta'])
+fleet.plot('fleet_center')
 
 # run it!
-# simulator.run()
+simulator.run()
+problem.plot_movie('scene', number_of_frames=100)
+
