@@ -21,7 +21,7 @@ from omgtools import *
 
 # create fleet
 N = 3
-vehicles = [Dubins(bounds={'vmax': 1., 'wmax': 30., 'wmin': -30.}) for l in range(N)]
+vehicles = [Dubins(options={'degree': 2}, bounds={'vmax': 1., 'wmax': 30., 'wmin': -30.}) for l in range(N)]
 for vehicle in vehicles:
     vehicle.define_knots(knot_intervals=10)
 

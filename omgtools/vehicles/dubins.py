@@ -46,8 +46,12 @@ class Dubins(Vehicle):
 
     def __init__(self, shapes=Circle(0.1), options=None, bounds=None):
         bounds = bounds or {}
+        if options is not None and 'degree' in options:
+            degree = options['degree']
+        else:
+            degree = 3
         Vehicle.__init__(
-            self, n_spl=2, degree=2, shapes=shapes, options=options)
+            self, n_spl=2, degree=degree, shapes=shapes, options=options)
         self.vmax = bounds['vmax'] if 'vmax' in bounds else 0.5
         self.amax = bounds['amax'] if 'amax' in bounds else 1.
         self.wmin = bounds['wmin'] if 'wmin' in bounds else -30.  # in deg/s
