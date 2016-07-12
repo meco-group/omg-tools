@@ -274,6 +274,7 @@ class PlotLayer(object):
             number_of_frames = len(t)-1
         subsample = (len(t)-1)/(number_of_frames-1)
         indices = range(0, len(t)-1, subsample)
+        indices.extend([len(t)-1 for k in range(number_of_frames-len(indices))])
         kwargs['no_update'] = True
         plot = self.plot(argument, **kwargs)
         while True:
@@ -294,6 +295,7 @@ class PlotLayer(object):
             interval = 10./(number_of_frames-1)
         subsample = (len(t)-1)/(number_of_frames-1)
         indices = range(0, len(t)-1, subsample)
+        indices.extend([len(t)-1 for k in range(number_of_frames-len(indices))])
         kwargs['no_update'] = True
         plot = self.plot(argument, **kwargs)
         directory = path+'/'+name
