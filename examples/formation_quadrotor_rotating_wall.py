@@ -59,4 +59,3 @@ fleet.plot('input', knots=True, labels=['Thrust force (N/kg)',
 
 # run it!
 simulator.run()
-problem.plot_movie('scene')

@@ -18,6 +18,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 import os
+import shutil
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib import animation
@@ -251,7 +252,7 @@ class PlotLayer(object):
             warnings.warn('3D plotting is not supported by matplotlib2tikz. ' +
                           'Saving to pdf instead.')
             path = directory+'/'+name+'.pdf'
-            plt.savefig(path, bbox_inches=0)
+            plt.savefig(path, bbox_inches='tight', pad_inches=0)
         else:
             figurewidth = kwargs[
                 'figurewidth'] if 'figurewidth' in kwargs else '8cm'
@@ -288,26 +289,29 @@ class PlotLayer(object):
         else:
             number_of_frames = len(t)-1
         if 'movie_time' in kwargs:
-            interval = kwargs['movie_time']*1000./(number_of_frames-1)
+            interval = kwargs['movie_time']/(number_of_frames-1)
         else:
-            interval = 10000./(number_of_frames-1)
+            interval = 10./(number_of_frames-1)
         subsample = (len(t)-1)/(number_of_frames-1)
         indices = range(0, len(t)-1, subsample)
         kwargs['no_update'] = True
         plot = self.plot(argument, **kwargs)
+        directory = path+'/'+name
+        if not os.path.isdir(directory):
+            os.makedirs(directory)
+        cnt = 0
         if format == 'gif':
-            animate = lambda k: self.update_plots(plot, k)
-            anim = animation.FuncAnimation(plot['figure'], animate, frames=indices, interval=interval)
-            directory = path
-            if not os.path.isdir(directory):
-                os.makedirs(directory)
-            path = directory+'/'+name+'.gif'
-            anim.save(path, writer='imagemagick')
+            for k in indices:
+                self.update_plots(plot, k)
+                output = os.path.join(directory, name+'_'+str(cnt)+'.png')
+                cnt += 1
+                plt.savefig(output, bbox_inches='tight', pad_inches=0)
+            filenames = [os.path.join(directory, name+'_'+str(k)+'.png') for k in range(cnt)]
+            output = os.path.join(path, name+'.gif')
+            os.system('convert -delay %f %s %s' % (interval, ' '.join(filenames), output))
+            shutil.rmtree(directory)
         elif format == 'tikz':
             from matplotlib2tikz import save as tikz_save
-            directory = path+'/'+name
-            if not os.path.isdir(directory):
-                os.makedirs(directory)
             root = kwargs['root'] if 'root' in kwargs else None
             figurewidth = kwargs[
                 'figurewidth'] if 'figurewidth' in kwargs else '8cm'
@@ -328,7 +332,7 @@ class PlotLayer(object):
                                       'Saving to pdf instead.')
                 if proj_3d:
                     path = directory+'/'+name+'_'+str(cnt)+'.pdf'
-                    plt.savefig(path, bbox_inches=0)
+                    plt.savefig(path, bbox_inches='tight', pad_inches=0)
                 else:
                     path = directory+'/'+name+'_'+str(cnt)+'.tikz'
                     if figureheight is None:

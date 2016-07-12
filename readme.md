@@ -12,6 +12,33 @@ If these approaches help you with your research, please cite us!
 
 Any questions can be addressed to the developers: ruben[dot]vanparys[at]kuleuven[dot]be and tim[dot]mercy[at]kuleuven[dot]be.
 
+<table style="border: none; border-collapse: collapse;" border="0" cellspacing="0" cellpadding="0" width="100%" align="center">
+<tr>
+<td align="center" valign="center">
+<img src="./examples/movies/p2p_holonomic.gif" alt="Point-to-point motion of holonomic vehicle" style="width: 300px;"/>
+</td>
+<td align="center" valign="center">
+<img src="./examples/movies/p2p_holonomic.gif" alt="Point-to-point motion of holonomic vehicle" style="width: 300px;"/>
+</td>
+<td align="center" valign="center">
+<img src="./examples/movies/p2p_holonomic.gif" alt="Point-to-point motion of holonomic vehicle" style="width: 300px;"/>
+</td>
+</tr>
+<tr>
+<td align="center" valign="center">
+<img src="./examples/movies/quads_rotatingwall.gif" alt="Point-to-point motion of holonomic vehicle" style="width: 300px;"/>
+</td>
+<td align="center" valign="center">
+<img src="./examples/movies/quads_rotatingwall.gif" alt="Point-to-point motion of holonomic vehicle" style="width: 300px;"/>
+</td>
+<td align="center" valign="center">
+<img src="./examples/movies/quads_rotatingwall.gif" alt="Point-to-point motion of holonomic vehicle" style="width: 300px;"/>
+</td>
+</tr>
+
+</table>
+
+
 ## Installation
 OMG-tools is written in Python 2.7 and depends on the packages numpy, scipy and matplotlib:
 
