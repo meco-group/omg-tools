@@ -19,12 +19,14 @@
 
 from problem import Problem
 from casadi import symvar, Function, sum1
+import collections as col
+import numpy as np
 
 
 def get_dependency(expression):
     sym = symvar(expression)
     f = Function('f', sym, [expression])
-    dep = {}
+    dep = col.OrderedDict()
     for index, sym in enumerate(sym):
         J = f.sparsity_jac(index, 0)
         dep[sym] = sorted(sum1(J).find())
@@ -63,12 +65,14 @@ class DistributedProblem(Problem):
         self.interprete_constraints(self.updaters)
         vehicle_types = self.fleet.sort_vehicles()
 
+        buildtime = []
         if self.options['separate_build']:
             for updater in self.updaters:
-                updater.init()
+                _, bt = updater.init()
+                buildtime.append(bt)
         else:
             for veh_type, vehicles in vehicle_types.items():
-                nghb_nr = {}
+                nghb_nr = col.OrderedDict()
                 for veh in vehicles:
                     nr = len(self.fleet.get_neighbors(veh))
                     if nr not in nghb_nr:
@@ -77,27 +81,29 @@ class DistributedProblem(Problem):
                 for nr, vehicles in nghb_nr.items():
                     if self.options['verbose'] >= 2:
                         print('*Construct problem for type %s with %d neighbor(s):' % (veh_type, nr))
-                    problems = self.updaters[vehicles[0]._index].init()
+                    problems, bt = self.updaters[vehicles[0]._index].init()
+                    buildtime.append(bt)
                     for veh in vehicles[1:]:
                         self.updaters[veh._index].init(problems)
+        return np.mean(buildtime)
 
     def interprete_constraints(self, updaters):
         for upd in updaters:
-            upd.q_i, upd.q_ij, upd.q_ji = {}, {}, {}
+            upd.q_i, upd.q_ij, upd.q_ji = col.OrderedDict(), col.OrderedDict(), col.OrderedDict()
             upd.constraints = []
-            upd.par_i = {}
+            upd.par_i = col.OrderedDict()
 
         symbol_dict = self._compose_dictionary()
 
         for constraint in self._constraints.values():
-            dep = {}
-            par = {}
+            dep = col.OrderedDict()
+            par = col.OrderedDict()
             for sym, indices in get_dependency(constraint[0]).items():
                 symname = sym.name()
                 if symname in symbol_dict:
                     child, name = symbol_dict[sym.name()]
                     if child not in dep:
-                        dep[child] = {}
+                        dep[child] = col.OrderedDict()
                     dep[child][name] = indices
                 elif symname in self.symbol_dict:
                     name = self.symbol_dict[symname][1]
@@ -112,7 +118,7 @@ class DistributedProblem(Problem):
                     if name not in upd.par_i:
                         upd.par_i[name] = sym
                 if child not in upd.q_i:
-                    upd.q_i[child] = {}
+                    upd.q_i[child] = col.OrderedDict()
                 for name, indices in dic.items():
                     if name not in upd.q_i[child]:
                         upd.q_i[child][name] = []
@@ -120,14 +126,15 @@ class DistributedProblem(Problem):
                         if i not in upd.q_i[child][name]:
                             upd.q_i[child][name].append(i)
                     upd.q_i[child][name].sort()
+
                 # q_ij: structure of remote variables j seen from local i
                 for ch, dic_ch in dep.items():
                     if not (child == ch):
                         upd2 = updaters[ch._index]
                         if upd2 not in upd.q_ij:
-                            upd.q_ij[upd2] = {}
+                            upd.q_ij[upd2] = col.OrderedDict()
                         if ch not in upd.q_ij[upd2]:
-                            upd.q_ij[upd2][ch] = {}
+                            upd.q_ij[upd2][ch] = col.OrderedDict()
                         for name, indices in dic_ch.items():
                             if name not in upd.q_ij[upd2][ch]:
                                 upd.q_ij[upd2][ch][name] = []
@@ -145,7 +152,7 @@ class DistributedProblem(Problem):
         children.extend(self.problems)
         children.append(self.environment)
         children.extend(self.environment.obstacles)
-        symbol_dict = {}
+        symbol_dict = col.OrderedDict()
         for child in children:
             symbol_dict.update(child.symbol_dict)
         return symbol_dict
