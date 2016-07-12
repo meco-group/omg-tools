@@ -74,5 +74,3 @@ plt.subplot(312)
 plt.semilogy(time, dual_res[5:], '*')
 plt.subplot(313)
 plt.semilogy(time, comb_res[5:], '*')
-
-problem.plot_movie('scene', number_of_frames=100, repeat=False)
