@@ -147,7 +147,7 @@ class Vehicle(OptiChild, PlotLayer):
                     if ((isinstance(environment.room['shape'], (Rectangle, Square)) and
                         environment.room['shape'].orientation == 0.0) and
                         (isinstance(shape, Circle) or (isinstance(shape, (Rectangle, Square)) and
-                         shape.orientation == 0 and (isinstance(tg_ha, (int, float, long)) and tg_ha == 0.)))):
+                         shape.orientation == 0)) and (isinstance(tg_ha, (int, float, long)) and tg_ha == 0.)):
                         room_limits = environment.get_canvas_limits()
                         for chck in checkpoints:
                             for k in range(2):
