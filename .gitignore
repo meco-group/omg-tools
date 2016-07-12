@@ -9,6 +9,7 @@
 *.c
 *.so
 *.csv
+*.p
 todo*
 build/*
 dist/*
