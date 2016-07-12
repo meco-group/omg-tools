@@ -35,10 +35,14 @@ fleet.set_terminal_conditions(terminal_positions.tolist())
 
 # create environment
 environment = Environment(room={'shape': Square(9.3)})
-environment.add_obstacle(Obstacle({'position': [-0.6, 3.7]},
+environment.add_obstacle(Obstacle({'position': [0., 3.7]},
                                   shape=Rectangle(width=0.2, height=3.)))
-environment.add_obstacle(Obstacle({'position': [-0.6, -5.4]},
+environment.add_obstacle(Obstacle({'position': [0., -5.4]},
                                   shape=Rectangle(width=0.2, height=10.)))
+trajectory = {'velocity': {'time': [1.3], 'values': [[-5., 0.]]}}
+environment.add_obstacle(
+    Obstacle({'position': [5.5, 1.]}, UFO(1.5, 0.6), {'trajectories': trajectory}))
+
 
 # create a formation point-to-point problem
 options = {'horizon_time': 5., 'rho': 0.3}
@@ -54,3 +58,21 @@ fleet.plot('input', knots=True, labels=['Thrust force (N/kg)',
 
 # run it!
 simulator.run()
+
+residuals = problem.residuals
+comb_res = residuals['combined']
+prim_res = residuals['primal']
+dual_res = residuals['dual']
+n_it = len(comb_res) - problem.options['init_iter']
+t_upd = simulator.update_time
+time = np.linspace(0., (n_it-1)*t_upd, n_it)
+import matplotlib.pyplot as plt
+plt.figure()
+plt.subplot(311)
+plt.semilogy(time, prim_res[5:], '*')
+plt.subplot(312)
+plt.semilogy(time, dual_res[5:], '*')
+plt.subplot(313)
+plt.semilogy(time, comb_res[5:], '*')
+
+problem.plot_movie('scene', number_of_frames=100, repeat=False)
