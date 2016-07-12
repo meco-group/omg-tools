@@ -138,12 +138,13 @@ class DDUpdater(DualUpdater):
             lb, ub = con[1], con[2]
             self.define_constraint(c, lb, ub)
         # construct problem
-        prob, _ = self.father_updx.construct_problem(
+        prob, buildtime = self.father_updx.construct_problem(
             self.options, str(self._index), problem)
         self.problem_upd_xz = prob
         self.father_updx.init_transformations(self.problem.init_primal_transform,
                                          self.problem.init_dual_transform)
         self.init_var_dd()
+        return buildtime
 
     def construct_upd_l(self, problem=None):
         if problem is not None:
@@ -161,8 +162,9 @@ class DDUpdater(DualUpdater):
         l_ij_new = self.q_ij_struct(l_ij.cat + rho*(x_j.cat - z_ij.cat))
         out = [l_ij_new]
         # create problem
-        prob, _ = create_function('upd_l_'+str(self._index), inp, out, self.options)
+        prob, buildtime = create_function('upd_l_'+str(self._index), inp, out, self.options)
         self.problem_upd_l = prob
+        return buildtime
 
     # ========================================================================
     # Methods related to solving the problem
