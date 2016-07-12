@@ -50,9 +50,10 @@ class DDUpdater(DualUpdater):
             self.var_dd[key] = self.q_ij_struct(0)
         for key in ['l_ji']:
             self.var_dd[key] = self.q_ji_struct(0)
-        self.construct_upd_xz(problems['upd_xz'])
-        self.construct_upd_l(problems['upd_l'])
-        return {'upd_xz': self.problem_upd_xz, 'upd_l': self.problem_upd_l}
+        time_buildxz = self.construct_upd_xz(problems['upd_xz'])
+        time_buildl = self.construct_upd_l(problems['upd_l'])
+        buildtime = time_buildxz + time_buildl
+        return {'upd_xz': self.problem_upd_xz, 'upd_l': self.problem_upd_l}, buildtime
 
     def construct_upd_xz(self, problem=None):
         # construct optifather & give reference to problem
