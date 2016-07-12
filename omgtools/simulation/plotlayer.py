@@ -212,7 +212,7 @@ class PlotLayer(object):
         for plot in plots:
             if 'info' not in plot:
                 self._init_plot(plot)
-            return self._update_plot(plot, t)
+            self._update_plot(plot, t)
 
     def _update_plot(self, plot, t=-1):
         argument, kwargs = plot['argument'], plot['kwargs']
