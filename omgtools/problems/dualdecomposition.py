@@ -149,7 +149,7 @@ class DDUpdater(DualUpdater):
     def construct_upd_l(self, problem=None):
         if problem is not None:
             self.problem_upd_l = problem
-            return
+            return 0.
         # create parameters
         z_ij = struct_symMX(self.q_ij_struct)
         l_ij = struct_symMX(self.q_ij_struct)
