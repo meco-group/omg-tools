@@ -17,21 +17,15 @@ Any questions can be addressed to the developers: ruben[dot]vanparys[at]kuleuven
 <tr>
 <td align="center" valign="center">
 <img src="./doc/gifs/bicycle.gif" alt="Point-to-point motion of holonomic vehicle"/>
-<br>
-Bicycle model avoiding an obstacle
 </td>
 <td align="center" valign="center">
 <img src="./doc/gifs/warehouse.gif" alt="Point-to-point motion of holonomic vehicle"/>
-<br>
-Holonomic vehicle finding its way in a warehouse
 </td>
 </tr>
 
 <tr>
 <td align="center" valign="center">
 <img src="./doc/gifs/revolving_door.gif" alt="Point-to-point motion of holonomic vehicle"/>
-<br>
-Holonomic vehicle passing through a revolving door
 </td>
 <td align="center" valign="center">
 <img src="./doc/gifs/formation_quad_rotatingwall.gif" alt="Point-to-point motion of holonomic vehicle"/>
@@ -41,13 +35,9 @@ Holonomic vehicle passing through a revolving door
 <tr>
 <td align="center" valign="center">
 <img src="./doc/gifs/formation_dubins.gif" alt="Point-to-point motion of holonomic vehicle"/>
-<br>
-Formation of Dubins vehicles
 </td>
 <td align="center" valign="center">
 <img src="./doc/gifs/trailer.gif" alt="Point-to-point motion of holonomic vehicle"/>
-<br>
-Dubins vehicle with a trailer
 </td>
 </tr>
 </table>
