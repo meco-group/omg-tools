@@ -20,7 +20,7 @@
 from omgtools import *
 import pickle
 
-fleet_sizes = range(2, 22, 2)
+# fleet_sizes = range(2, 22, 2)
 fleet_sizes = [2, 4]
 
 obj_admm = {}
@@ -34,6 +34,8 @@ form_err = {}
 for N in fleet_sizes:
     fleet = Fleet([Quadrotor(0.2) for k in range(N)])
     configuration = RegularPolyhedron(0.4, N, orientation=np.pi/2).vertices.T
+    if N == 2:
+        configuration = np.array([[-0.4, 0.], [0.4, 0.]])
     init_positions = [-4., -4.] + configuration
     terminal_positions = [4., 4.] + configuration
     fleet.set_configuration(configuration.tolist())
@@ -60,6 +62,8 @@ for N in fleet_sizes:
 for N in fleet_sizes:
     fleet = Fleet([Quadrotor(0.2) for k in range(N)])
     configuration = RegularPolyhedron(0.4, N, orientation=np.pi/2).vertices.T
+    if N == 2:
+        configuration = np.array([[-0.4, 0.], [0.4, 0.]])
     init_positions = [-4., -4.] + configuration
     terminal_positions = [4., 4.] + configuration
     environment = Environment(room={'shape': Square(9.3)})

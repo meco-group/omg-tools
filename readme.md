@@ -22,7 +22,6 @@ Any questions can be addressed to the developers: ruben[dot]vanparys[at]kuleuven
 <img src="./doc/gifs/warehouse.gif" alt="Point-to-point motion of holonomic vehicle"/>
 </td>
 </tr>
-
 <tr>
 <td align="center" valign="center">
 <img src="./doc/gifs/revolving_door.gif" alt="Point-to-point motion of holonomic vehicle"/>
@@ -31,13 +30,20 @@ Any questions can be addressed to the developers: ruben[dot]vanparys[at]kuleuven
 <img src="./doc/gifs/formation_quad_rotatingwall.gif" alt="Point-to-point motion of holonomic vehicle"/>
 </td>
 </tr>
-
 <tr>
 <td align="center" valign="center">
 <img src="./doc/gifs/formation_dubins.gif" alt="Point-to-point motion of holonomic vehicle"/>
 </td>
 <td align="center" valign="center">
 <img src="./doc/gifs/trailer.gif" alt="Point-to-point motion of holonomic vehicle"/>
+</td>
+</tr>
+<tr>
+<td align="center" valign="center">
+<img src="./doc/gifs/platform_landing.gif" alt="Point-to-point motion of holonomic vehicle"/>
+</td>
+<td align="center" valign="center">
+<img src="./doc/gifs/formation_quad_ufo.gif" alt="Point-to-point motion of holonomic vehicle"/>
 </td>
 </tr>
 </table>
@@ -80,7 +86,8 @@ environment.add_obstacle(Obstacle({'position': [ 1.7, -0.5]}, shape=rectangle))
 traj = {'velocity': {'time': [3., 4.],
                      'values': [[-0.15, 0.0], [0., 0.15]]}}
 # add moving obstacle to environment
-environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),simulation={'trajectories': traj}))
+environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
+    simulation={'trajectories': traj}))
 
 # give problem settings and create problem
 problem = Point2point(vehicle, environment)
