@@ -18,12 +18,15 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 import os
+import shutil
 import matplotlib
 import matplotlib.pyplot as plt
+from matplotlib import animation
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 import warnings
 matplotlib.use('TKAgg')
+
 
 def mix_with_white(color, perc_white=80.):
     r, g, b = color[0], color[1], color[2]
@@ -41,7 +44,7 @@ def _init_axis_2d(axis, info):
     if 'ylim' in info and info['ylim'] is not None:
         axis.set_ylim(info['ylim'][0], info['ylim'][1])
     for line in info['lines']:
-        axis.plot([], [], **line)
+        axis.plot([], [], **line)[0]
 
 
 def _init_axis_3d(axis, info, view=None):
@@ -106,32 +109,32 @@ def _cleanup_rubbish(path, info, root=None):
     # cleanup rubbish due to bugs in matplotlib2tikz
     with open(path, 'r+') as f:
         body = f.read()
-        if body.find('\path [draw=black, fill opacity=0]') >= 0:
-            # make lines invisible
-            body = body.replace('fill opacity=0', 'opacity=0')
-        else:
-            # For some reason, matplotlib2tikz does not add lines for getting
-            # the limits right. We add them ourselves, but invisible.
-            index = 0
-            ax_r, ax_c = len(info), len(info[0])
-            for k in range(ax_r):
-                for l in range(ax_c):
-                    insert = ''
-                    index = body.find('\end{axis}', index)
-                    if 'xlim' in info[k][l] and info[k][l]['xlim'] is not None:
-                        x_min = info[k][l]['xlim'][0]
-                        x_max = info[k][l]['xlim'][1]
-                        insert += ('\n\path [draw=black, opacity=0] ' +
-                                   '(axis cs:'+str(x_min)+',0)--' +
-                                   '(axis cs:'+str(x_max)+',0);')
-                    if 'ylim' in info[k][l] and info[k][l]['ylim'] is not None:
-                        y_min = info[k][l]['ylim'][0]
-                        y_max = info[k][l]['ylim'][1]
-                        insert += ('\n\path [draw=black, opacity=0] ' +
-                                   '(axis cs:0,'+str(y_min)+')--' +
-                                   '(axis cs:0,'+str(y_max)+');')
-                    insert += '\n'
-                    body = body[:index] + insert + body[index:]
+        # matplotlib2tikz's \path lines are buggy and comprise errors.
+        # Let's remove them and replace them with our own.
+        index = body.find('\path [draw=black, fill opacity=0]')
+        while index >= 0:
+            body = body.replace(body[index:].split(';')[0]+';', '')
+            index = body.find('\path [draw=black, fill opacity=0]')
+        index = 0
+        ax_r, ax_c = len(info), len(info[0])
+        for k in range(ax_r):
+            for l in range(ax_c):
+                insert = ''
+                index = body.find('\end{axis}', index)
+                if 'xlim' in info[k][l] and info[k][l]['xlim'] is not None:
+                    x_min = info[k][l]['xlim'][0]
+                    x_max = info[k][l]['xlim'][1]
+                    insert += ('\n\path [draw=black, opacity=0] ' +
+                               '(axis cs:'+str(x_min)+',0)--' +
+                               '(axis cs:'+str(x_max)+',0);')
+                if 'ylim' in info[k][l] and info[k][l]['ylim'] is not None:
+                    y_min = info[k][l]['ylim'][0]
+                    y_max = info[k][l]['ylim'][1]
+                    insert += ('\n\path [draw=black, opacity=0] ' +
+                               '(axis cs:0,'+str(y_min)+')--' +
+                               '(axis cs:0,'+str(y_max)+');')
+                insert += '\n'
+                body = body[:index] + insert + body[index:]
         # add root at beginning of tikz file
         if root is not None:
             body = '%root=' + root + '\n' + body
@@ -162,7 +165,7 @@ class PlotLayer(object):
     # ========================================================================
 
     def plot(self, argument=None, **kwargs):
-        plot = {'argument': argument, 'kwargs': kwargs}
+        plot = {'argument': argument, 'kwargs': kwargs, 'figure': plt.figure()}
         self.plots.append(plot)
         if 'time' in kwargs:
             index = self.__class__.simulator.time2index(kwargs['time'])
@@ -181,7 +184,7 @@ class PlotLayer(object):
         if info is None:
             return
         ax_r, ax_c = len(info), len(info[0])
-        figure = plt.figure()
+        figure = plot['figure']
         for k in range(ax_r):
             for l in range(ax_c):
                 if 'projection' in info[k][l] and info[k][l]['projection'] == '3d':
@@ -197,7 +200,7 @@ class PlotLayer(object):
                     _init_axis_2d(axis, info[k][l])
                 if 'aspect_equal' in info[k][l] and info[k][l]['aspect_equal']:
                     axis.set_aspect('equal')
-        plot.update({'figure': figure, 'info': info})
+        plot.update({'info': info})
 
     # ========================================================================
     # Plot update
@@ -207,7 +210,7 @@ class PlotLayer(object):
         plots = plots or self.plots
         plots = plots if isinstance(plots, list) else [plots]
         for plot in plots:
-            if 'figure' not in plot:
+            if 'info' not in plot:
                 self._init_plot(plot)
             self._update_plot(plot, t)
 
@@ -249,7 +252,7 @@ class PlotLayer(object):
             warnings.warn('3D plotting is not supported by matplotlib2tikz. ' +
                           'Saving to pdf instead.')
             path = directory+'/'+name+'.pdf'
-            plt.savefig(path, bbox_inches=0)
+            plt.savefig(path, bbox_inches='tight', pad_inches=0)
         else:
             figurewidth = kwargs[
                 'figurewidth'] if 'figurewidth' in kwargs else '8cm'
@@ -270,54 +273,74 @@ class PlotLayer(object):
         else:
             number_of_frames = len(t)-1
         subsample = (len(t)-1)/(number_of_frames-1)
+        indices = range(0, len(t)-1, subsample)
+        indices.extend([len(t)-1 for k in range(number_of_frames-len(indices))])
         kwargs['no_update'] = True
         plot = self.plot(argument, **kwargs)
         while True:
-            for k in range(0, len(t)-1, subsample):
+            for k in indices:
                 self.update_plots(plot, k)
             if not repeat:
                 break
 
-    def save_movie(self, argument=None, name='movie', path='movies/', **kwargs):
-        from matplotlib2tikz import save as tikz_save
-        directory = path + name
-        if not os.path.isdir(directory):
-            os.makedirs(directory)
+    def save_movie(self, argument=None, name='movie', path='movies/', format='tikz', **kwargs):
         t = self.__class__.simulator.time
         if ('number_of_frames' in kwargs and kwargs['number_of_frames'] <= (len(t)-1)):
             number_of_frames = kwargs['number_of_frames']
         else:
             number_of_frames = len(t)-1
-        root = kwargs['root'] if 'root' in kwargs else None
-        subsample = (len(t)-2)/(number_of_frames-1)
+        if 'movie_time' in kwargs:
+            interval = kwargs['movie_time']/(number_of_frames-1)
+        else:
+            interval = 10./(number_of_frames-1)
+        subsample = (len(t)-1)/(number_of_frames-1)
+        indices = range(0, len(t)-1, subsample)
+        indices.extend([len(t)-1 for k in range(number_of_frames-len(indices))])
         kwargs['no_update'] = True
         plot = self.plot(argument, **kwargs)
-        figurewidth = kwargs[
-            'figurewidth'] if 'figurewidth' in kwargs else '8cm'
-        figureheight = kwargs[
-            'figureheight'] if 'figureheight' in kwargs else None
+        directory = path+'/'+name
+        if not os.path.isdir(directory):
+            os.makedirs(directory)
         cnt = 0
-        proj_3d = False
-        for k in range(0, len(t)-1, subsample):
-            self.update_plots(plot, k)
-            info = plot['info']
-            if not proj_3d:
-                for inf in info:
-                    for i in inf:
-                        if 'projection' in i and i['projection'] == '3d':
-                            proj_3d = True
+        if format == 'gif':
+            for k in indices:
+                self.update_plots(plot, k)
+                output = os.path.join(directory, name+'_'+str(cnt)+'.png')
+                cnt += 1
+                plt.savefig(output, bbox_inches='tight', pad_inches=0)
+            filenames = [os.path.join(directory, name+'_'+str(k)+'.png') for k in range(cnt)]
+            output = os.path.join(path, name+'.gif')
+            os.system('convert -delay %f %s %s' % (interval, ' '.join(filenames), output))
+            shutil.rmtree(directory)
+        elif format == 'tikz':
+            from matplotlib2tikz import save as tikz_save
+            root = kwargs['root'] if 'root' in kwargs else None
+            figurewidth = kwargs[
+                'figurewidth'] if 'figurewidth' in kwargs else '8cm'
+            figureheight = kwargs[
+                'figureheight'] if 'figureheight' in kwargs else None
+            cnt = 0
+            proj_3d = False
+            for k in range(0, len(t)-1, subsample):
+                self.update_plots(plot, k)
+                info = plot['info']
+                if not proj_3d:
+                    for inf in info:
+                        for i in inf:
+                            if 'projection' in i and i['projection'] == '3d':
+                                proj_3d = True
+                    if proj_3d:
+                        warnings.warn('3D plotting is not supported by matplotlib2tikz. ' +
+                                      'Saving to pdf instead.')
                 if proj_3d:
-                    warnings.warn('3D plotting is not supported by matplotlib2tikz. ' +
-                                  'Saving to pdf instead.')
-            if proj_3d:
-                path = directory+'/'+name+'_'+str(cnt)+'.pdf'
-                plt.savefig(path, bbox_inches=0)
-            else:
-                path = directory+'/'+name+'_'+str(cnt)+'.tikz'
-                if figureheight is None:
-                    tikz_save(path, figurewidth=figurewidth)
+                    path = directory+'/'+name+'_'+str(cnt)+'.pdf'
+                    plt.savefig(path, bbox_inches='tight', pad_inches=0)
                 else:
-                    tikz_save(
-                        path, figurewidth=figurewidth, figureheight=figureheight)
-                _cleanup_rubbish(path, info, root)
-            cnt += 1
+                    path = directory+'/'+name+'_'+str(cnt)+'.tikz'
+                    if figureheight is None:
+                        tikz_save(path, figurewidth=figurewidth)
+                    else:
+                        tikz_save(
+                            path, figurewidth=figurewidth, figureheight=figureheight)
+                    _cleanup_rubbish(path, info, root)
+                cnt += 1

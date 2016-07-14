@@ -132,7 +132,7 @@ class Beam(Polyhedron):
                             orientation=orientation, radius=0.5*height)
 
     def _prepare_draw(self):
-        s = np.linspace(0, 1, 25)
+        s = np.linspace(0, 1-1./24, 24)
         a = [0.5*self.width+0.5*self.height*np.cos(s*np.pi - 0.5*np.pi),
              0.5*self.height*np.sin(s*np.pi - 0.5*np.pi)]
         b = [-0.5*self.width+0.5*self.height*np.cos(s*np.pi + 0.5*np.pi),

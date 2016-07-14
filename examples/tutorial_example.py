@@ -140,9 +140,11 @@ simulator.run()
 # Show scene plot at some time (no time argument means 'at the end')
 problem.plot('scene', time=2.)
 # Show movie (you can make a movie of all possible plot data)
-problem.plot_movie('scene', repeat=False)
+problem.plot_movie('scene', number_of_frames=100, repeat=False)
 # Save a plot as Tikz: you need matplotlib2tikz for this!
 vehicle.save_plot('state', name='state')
 # Save a movie as multiple Tikz: you need matplotlib2tikz for this!
 vehicle.save_movie('input', number_of_frames=4, knots=True, prediction=True, axis=False)
 problem.save_movie('scene', number_of_frames=4, name='holonomic', axis=False)
+# Save a movie as gif: you need imagemagick for this!
+problem.save_movie('scene', format='gif', name='holonomic', number_of_frames=100, movie_time=5, axis=False)

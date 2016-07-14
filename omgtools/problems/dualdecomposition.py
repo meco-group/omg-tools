@@ -50,9 +50,10 @@ class DDUpdater(DualUpdater):
             self.var_dd[key] = self.q_ij_struct(0)
         for key in ['l_ji']:
             self.var_dd[key] = self.q_ji_struct(0)
-        self.construct_upd_xz(problems['upd_xz'])
-        self.construct_upd_l(problems['upd_l'])
-        return {'upd_xz': self.problem_upd_xz, 'upd_l': self.problem_upd_l}
+        time_buildxz = self.construct_upd_xz(problems['upd_xz'])
+        time_buildl = self.construct_upd_l(problems['upd_l'])
+        buildtime = time_buildxz + time_buildl
+        return {'upd_xz': self.problem_upd_xz, 'upd_l': self.problem_upd_l}, buildtime
 
     def construct_upd_xz(self, problem=None):
         # construct optifather & give reference to problem
@@ -137,17 +138,18 @@ class DDUpdater(DualUpdater):
             lb, ub = con[1], con[2]
             self.define_constraint(c, lb, ub)
         # construct problem
-        prob, _ = self.father_updx.construct_problem(
+        prob, buildtime = self.father_updx.construct_problem(
             self.options, str(self._index), problem)
         self.problem_upd_xz = prob
         self.father_updx.init_transformations(self.problem.init_primal_transform,
                                          self.problem.init_dual_transform)
         self.init_var_dd()
+        return buildtime
 
     def construct_upd_l(self, problem=None):
         if problem is not None:
             self.problem_upd_l = problem
-            return
+            return 0.
         # create parameters
         z_ij = struct_symMX(self.q_ij_struct)
         l_ij = struct_symMX(self.q_ij_struct)
@@ -160,8 +162,9 @@ class DDUpdater(DualUpdater):
         l_ij_new = self.q_ij_struct(l_ij.cat + rho*(x_j.cat - z_ij.cat))
         out = [l_ij_new]
         # create problem
-        prob, _ = create_function('upd_l_'+str(self._index), inp, out, self.options)
+        prob, buildtime = create_function('upd_l_'+str(self._index), inp, out, self.options)
         self.problem_upd_l = prob
+        return buildtime
 
     # ========================================================================
     # Methods related to solving the problem

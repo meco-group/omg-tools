@@ -16,8 +16,7 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
-import sys, os
-sys.path.insert(0, os.getcwd()+'/..')
+
 from omgtools import *
 
 # create vehicle
@@ -30,10 +29,10 @@ vehicle.set_terminal_conditions([3., 3., 0.])
 # create environment
 environment = Environment(room={'shape': Square(5.), 'position': [1.5, 1.5]})
 
-# trajectories = {'velocity': {'time': [0.5],
-#                              'values': [[0.25, 0.0]]}}
-# environment.add_obstacle(Obstacle({'position': [1., 1.]}, shape=Circle(0.5),
-#                                   simulation={'trajectories': trajectories}))
+trajectories = {'velocity': {'time': [0.5],
+                             'values': [[0.25, 0.0]]}}
+environment.add_obstacle(Obstacle({'position': [1., 1.]}, shape=Circle(0.5),
+                                  simulation={'trajectories': trajectories}))
 
 # create a point-to-point problem
 problem = Point2point(vehicle, environment, freeT=False)

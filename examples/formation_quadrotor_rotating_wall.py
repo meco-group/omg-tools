@@ -21,31 +21,32 @@ from omgtools import *
 import numpy as np
 
 # create fleet
-N = 3
+N = 4
 vehicles = [Quadrotor(0.2) for l in range(N)]
 
 fleet = Fleet(vehicles)
-configuration = RegularPolyhedron(0.4, N, orientation=np.pi/2).vertices.T
-init_positions = [-4., -4.] + configuration
-terminal_positions = [4., 4.] + configuration
+configuration = RegularPolyhedron(0.5, N, orientation=np.pi).vertices.T
+init_positions = [-4., -5.] + configuration
+terminal_positions = [4., 5.] + configuration
 
 fleet.set_configuration(configuration.tolist())
 fleet.set_initial_conditions(init_positions.tolist())
 fleet.set_terminal_conditions(terminal_positions.tolist())
 
 # create environment
-environment = Environment(room={'shape': Square(9.3)})
-environment.add_obstacle(Obstacle({'position': [0., 3.7]},
-                                  shape=Rectangle(width=0.2, height=3.)))
-environment.add_obstacle(Obstacle({'position': [0., -5.4]},
-                                  shape=Rectangle(width=0.2, height=10.)))
-trajectory = {'velocity': {'time': [1.3], 'values': [[-5., 0.]]}}
-environment.add_obstacle(
-    Obstacle({'position': [5.5, 1.]}, UFO(1.5, 0.6), {'trajectories': trajectory}))
+environment = Environment(room={'shape': Square(12.)})
+beam1 = Beam(width=4., height=0.2)
+environment.add_obstacle(Obstacle({'position': [-4., 0.]}, shape=beam1))
+environment.add_obstacle(Obstacle({'position': [4., 0.]}, shape=beam1))
 
+beam2 = Beam(width=3., height=0.2)
+horizon_time = 5.
+omega = 0.2*(2*np.pi/horizon_time)
+environment.add_obstacle(Obstacle({'position': [0., 0.], 'angular_velocity': omega},
+    shape=beam2, simulation={}, options={'horizon_time': horizon_time}))
 
 # create a formation point-to-point problem
-options = {'horizon_time': 5., 'rho': 0.3}
+options = {'horizon_time': horizon_time, 'rho': 0.3}
 problem = FormationPoint2point(fleet, environment, options=options)
 problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem.init()
@@ -58,19 +59,3 @@ fleet.plot('input', knots=True, labels=['Thrust force (N/kg)',
 
 # run it!
 simulator.run()
-
-residuals = problem.residuals
-comb_res = residuals['combined']
-prim_res = residuals['primal']
-dual_res = residuals['dual']
-n_it = len(comb_res) - problem.options['init_iter']
-t_upd = simulator.update_time
-time = np.linspace(0., (n_it-1)*t_upd, n_it)
-import matplotlib.pyplot as plt
-plt.figure()
-plt.subplot(311)
-plt.semilogy(time, prim_res[5:], '*')
-plt.subplot(312)
-plt.semilogy(time, dual_res[5:], '*')
-plt.subplot(313)
-plt.semilogy(time, comb_res[5:], '*')

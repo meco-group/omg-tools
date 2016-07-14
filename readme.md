@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/meco-group/omg-tools.svg?branch=develop)](https://travis-ci.org/meco-group/omg-tools) [![Coverage Status](https://coveralls.io/repos/github/meco-group/omg-tools/badge.svg?branch=develop)](https://coveralls.io/github/meco-group/omg-tools?branch=develop)
+[![Build Status](https://travis-ci.org/meco-group/omg-tools.svg?branch=master)](https://travis-ci.org/meco-group/omg-tools) [![Coverage Status](https://coveralls.io/repos/github/meco-group/omg-tools/badge.svg?branch=master)](https://coveralls.io/github/meco-group/omg-tools?branch=master)
 [![Codacy Badge](https://api.codacy.com/project/badge/grade/a44dd52c358e4cd09b12585915738627)](https://www.codacy.com/app/joris-gillis42/omg-tools)
 
 # OMG-tools
@@ -11,6 +11,42 @@ Motion planning approaches implemented in OMG-tools are described in the followi
 If these approaches help you with your research, please cite us!
 
 Any questions can be addressed to the developers: ruben[dot]vanparys[at]kuleuven[dot]be and tim[dot]mercy[at]kuleuven[dot]be.
+
+## Examples
+<table style="border: none; border-collapse: collapse;" border="0" cellspacing="0" cellpadding="0" width="100%" align="center">
+<tr>
+<td align="center" valign="center">
+<img src="./doc/gifs/bicycle.gif" alt="Point-to-point motion of holonomic vehicle"/>
+</td>
+<td align="center" valign="center">
+<img src="./doc/gifs/warehouse.gif" alt="Point-to-point motion of holonomic vehicle"/>
+</td>
+</tr>
+<tr>
+<td align="center" valign="center">
+<img src="./doc/gifs/revolving_door.gif" alt="Point-to-point motion of holonomic vehicle"/>
+</td>
+<td align="center" valign="center">
+<img src="./doc/gifs/formation_quad_rotatingwall.gif" alt="Point-to-point motion of holonomic vehicle"/>
+</td>
+</tr>
+<tr>
+<td align="center" valign="center">
+<img src="./doc/gifs/formation_dubins.gif" alt="Point-to-point motion of holonomic vehicle"/>
+</td>
+<td align="center" valign="center">
+<img src="./doc/gifs/trailer.gif" alt="Point-to-point motion of holonomic vehicle"/>
+</td>
+</tr>
+<tr>
+<td align="center" valign="center">
+<img src="./doc/gifs/platform_landing.gif" alt="Point-to-point motion of holonomic vehicle"/>
+</td>
+<td align="center" valign="center">
+<img src="./doc/gifs/formation_quad_ufo.gif" alt="Point-to-point motion of holonomic vehicle"/>
+</td>
+</tr>
+</table>
 
 ## Installation
 OMG-tools is written in Python 2.7 and depends on the packages numpy, scipy and matplotlib:
@@ -50,7 +86,8 @@ environment.add_obstacle(Obstacle({'position': [ 1.7, -0.5]}, shape=rectangle))
 traj = {'velocity': {'time': [3., 4.],
                      'values': [[-0.15, 0.0], [0., 0.15]]}}
 # add moving obstacle to environment
-environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),simulation={'trajectories': traj}))
+environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
+    simulation={'trajectories': traj}))
 
 # give problem settings and create problem
 problem = Point2point(vehicle, environment)

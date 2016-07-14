@@ -41,15 +41,20 @@ class FormationPoint2pointCentral(FixedTPoint2point):
         # formation constraints
         couples = {veh: [] for veh in self.vehicles}
         for veh in self.vehicles:
-            ind_veh = sorted(config[veh].keys())
-            pos_c_veh = centra[veh]
             for nghb in self.fleet.get_neighbors(veh):
                 if veh not in couples[nghb] and nghb not in couples[veh]:
                     couples[veh].append(nghb)
-                    ind_nghb = sorted(config[nghb].keys())
-                    pos_c_nghb = centra[nghb]
-                    for ind_v, ind_n in zip(ind_veh, ind_nghb):
-                        self.define_constraint(pos_c_veh[ind_v] - pos_c_nghb[ind_n], 0., 0.)
+        if self.fleet.interconnection == 'circular':
+            couples.pop(self.vehicles[-1], None)
+            couples.pop(self.vehicles[-2], None)
+        for veh, nghbs in couples.items():
+            ind_veh = sorted(config[veh].keys())
+            pos_c_veh = centra[veh]
+            for nghb in nghbs:
+                ind_nghb = sorted(config[nghb].keys())
+                pos_c_nghb = centra[nghb]
+                for ind_v, ind_n in zip(ind_veh, ind_nghb):
+                    self.define_constraint(pos_c_veh[ind_v] - pos_c_nghb[ind_n], 0., 0.)
 
     def update(self, current_time, update_time, sample_time):
         FixedTPoint2point.update(self, current_time, update_time, sample_time)

@@ -83,9 +83,10 @@ class Problem(OptiChild, PlotLayer):
     def init(self):
         self.father.reset()
         self.construct()
-        self.problem, _ = self.father.construct_problem(self.options)
+        self.problem, buildtime = self.father.construct_problem(self.options)
         self.father.init_transformations(self.init_primal_transform,
                                          self.init_dual_transform)
+        return buildtime
 
     def reinitialize(self, father=None):
         if father is None:

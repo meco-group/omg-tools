@@ -64,25 +64,27 @@ class FormationPoint2point(ADMMProblem):
                     self.define_constraint(spline.derivative(d)(1.), 0., 0.)
 
     def get_interaction_error(self):
-        error = 0.
+        # compute average deviation of an agent's fleet center wrt to the real center
+        pos_c_veh = []
         for veh in self.vehicles:
-            pos_c_veh = veh.signals['fleet_center']
+            pos_c_veh.append(veh.signals['fleet_center'])
             n_samp = veh.signals['time'].shape[1]
             end_time = veh.signals['time'][:, -1]
             Ts = veh.signals['time'][0, 1] - veh.signals['time'][0, 0]
-            nghbs = self.fleet.get_neighbors(veh)
-            for nghb in nghbs:
-                pos_c_nghb = nghb.signals['fleet_center']
-                Dspl = pos_c_veh - pos_c_nghb
-                err_rel = np.zeros(n_samp)
-                for k in range(n_samp):
-                    err_rel[k] = np.linalg.norm(Dspl[:, k])**2
-                err_rel_int = 0.
-                for k in range(n_samp-1):
-                    err_rel_int += 0.5*(err_rel[k+1] + err_rel[k])*Ts
-                error += np.sqrt(err_rel_int/end_time)/len(nghbs)
+        center = np.zeros((pos_c_veh[0].shape))
+        for k in range(n_samp):
+            for l in range(pos_c_veh[0].shape[0]):
+                center[l, k] = np.mean([pos[l, k] for pos in pos_c_veh])
+        error = np.zeros(n_samp)
+        for pos_c in pos_c_veh:
+            deviation = center - pos_c
+            for k in range(n_samp):
+                error[k] += np.linalg.norm(deviation[:, k])
         error /= self.fleet.N
-        return error
+        error_int = 0.
+        for k in range(n_samp-1):
+            error_int += 0.5*(error[k+1]+error[k])*Ts
+        return np.sqrt(error_int/end_time)
 
     def final(self):
         ADMMProblem.final(self)

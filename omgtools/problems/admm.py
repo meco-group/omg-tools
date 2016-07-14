@@ -51,13 +51,14 @@ class ADMM(DualUpdater):
             self.var_admm[key] = self.q_ij_struct(0)
         for key in ['z_ji', 'l_ji']:
             self.var_admm[key] = self.q_ji_struct(0)
-        self.construct_upd_x(problems['upd_x'])
-        self.construct_upd_z(problems['upd_z'], problems['lineq_updz'])
-        self.construct_upd_l(problems['upd_l'])
-        self.construct_upd_res(problems['upd_res'])
+        time_buildx = self.construct_upd_x(problems['upd_x'])
+        time_buildz = self.construct_upd_z(problems['upd_z'], problems['lineq_updz'])
+        time_buildl = self.construct_upd_l(problems['upd_l'])
+        time_buildres = self.construct_upd_res(problems['upd_res'])
+        buildtime = time_buildx + time_buildz + time_buildl + time_buildres
         return {'upd_x': self.problem_upd_x, 'upd_z': self.problem_upd_z,
                 'lineq_updz': self._lineq_updz, 'upd_l': self.problem_upd_l,
-                'upd_res': self.problem_upd_res}
+                'upd_res': self.problem_upd_res}, buildtime
 
     def construct_upd_x(self, problem=None):
         # construct optifather & give reference to problem
@@ -99,20 +100,21 @@ class ADMM(DualUpdater):
                         obj += mtimes(l.T, x-z) + 0.5*rho*mtimes((x-z).T, (x-z))
             self.define_objective(obj)
             # construct problem
-            prob, _ = self.father_updx.construct_problem(
+            prob, buildtime = self.father_updx.construct_problem(
                 self.options, str(self._index))
         else:
-            prob, _ = self.father_updx.construct_problem(self.options, str(self._index), problem)
+            prob, buildtime = self.father_updx.construct_problem(self.options, str(self._index), problem)
         self.problem_upd_x = prob
         self.father_updx.init_transformations(self.problem.init_primal_transform,
             self.problem.init_dual_transform)
         self.init_var_admm()
+        return buildtime
 
     def construct_upd_z(self, problem=None, lineq_updz=True):
         if problem is not None:
             self.problem_upd_z = problem
             self._lineq_updz = lineq_updz
-            return
+            return 0.
         # check if we have linear equality constraints
         self._lineq_updz, A, b = self._check_for_lineq()
         if not self._lineq_updz:
@@ -157,8 +159,9 @@ class ADMM(DualUpdater):
         self._transform_spline(z_ij_new, tf, self.q_ij)
         out = [z_i_new.cat, z_ij_new.cat]
         # create problem
-        prob, _ = create_function('upd_z_'+str(self._index), inp, out, self.options)
+        prob, buildtime = create_function('upd_z_'+str(self._index), inp, out, self.options)
         self.problem_upd_z = prob
+        return buildtime
 
     # def _construct_upd_z_nlp(self, problem=None):
     #     warnings.warn('Your z update is not an equality constrained QP. ' +
@@ -241,7 +244,7 @@ class ADMM(DualUpdater):
     def construct_upd_l(self, problem=None):
         if problem is not None:
             self.problem_upd_l = problem
-            return
+            return 0.
         # create parameters
         x_i = struct_symMX(self.q_i_struct)
         z_i = struct_symMX(self.q_i_struct)
@@ -256,13 +259,14 @@ class ADMM(DualUpdater):
         l_ij_new = self.q_ij_struct(l_ij.cat + rho*(x_j.cat - z_ij.cat))
         out = [l_i_new, l_ij_new]
         # create problem
-        prob, _ = create_function('upd_l_'+str(self._index), inp, out, self.options)
+        prob, buildtime = create_function('upd_l_'+str(self._index), inp, out, self.options)
         self.problem_upd_l = prob
+        return buildtime
 
     def construct_upd_res(self, problem=None):
         if problem is not None:
             self.problem_upd_res = problem
-            return
+            return 0.
         # create parameters
         x_i = struct_symMX(self.q_i_struct)
         z_i = struct_symMX(self.q_i_struct)
@@ -294,8 +298,9 @@ class ADMM(DualUpdater):
         cr = rho*pr + dr
         out = [pr, dr, cr]
         # create problem
-        prob, _ = create_function('upd_res_'+str(self._index), inp, out, self.options)
+        prob, buildtime = create_function('upd_res_'+str(self._index), inp, out, self.options)
         self.problem_upd_res = prob
+        return buildtime
 
     # ========================================================================
     # Auxiliary methods
