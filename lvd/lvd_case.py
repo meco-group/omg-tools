@@ -8,13 +8,13 @@ from lvd_fap import FAP
 
 # simulation
 go_forward = True
-hard_stop = True
-go_back = True
+hard_stop = False
+go_back = False
 
 # results
 save_figures = False
-plot_figures = True
-plot_movies = True
+plot_figures = False
+plot_movies = False
 
 
 def reinit_after_hard_stop(problem, stop_time=None):
@@ -155,7 +155,7 @@ if go_forward:
     else:
         trajectories = simulator.run_once()
         # save_trajectories(trajectories, 'go_forward')
-
+# problem.save_movie('scene', 'plate', format='gif', number_of_frames=100, movie_time=5, axis=False, view=[30, 60])
 # from machine to final stack
 if go_back:
     if not go_forward:
