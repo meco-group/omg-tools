@@ -58,4 +58,8 @@ problem.plot('scene')
 fleet.plot('input', knots=True, labels=['v (m/s)', 'w (rad/s)'])
 
 # run it!
-simulator.run()
+trajectories, signals = simulator.run()
+
+# import pickle
+# save = {'trajectories': trajectories, 'signals': signals}
+# pickle.dump(save, open('formation_quad.p', 'wb'))

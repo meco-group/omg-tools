@@ -57,20 +57,9 @@ fleet.plot('input', knots=True, labels=['Thrust force (N/kg)',
                                         'Pitch rate (rad/s)'])
 
 # run it!
-simulator.run()
+trajectories, signals = simulator.run()
 
-residuals = problem.residuals
-comb_res = residuals['combined']
-prim_res = residuals['primal']
-dual_res = residuals['dual']
-n_it = len(comb_res) - problem.options['init_iter']
-t_upd = simulator.update_time
-time = np.linspace(0., (n_it-1)*t_upd, n_it)
-import matplotlib.pyplot as plt
-plt.figure()
-plt.subplot(311)
-plt.semilogy(time, prim_res[5:], '*')
-plt.subplot(312)
-plt.semilogy(time, dual_res[5:], '*')
-plt.subplot(313)
-plt.semilogy(time, comb_res[5:], '*')
+# import pickle
+# residuals = problem.residuals
+# save = {'trajectories': trajectories, 'signals': signals, 'residuals': residuals}
+# pickle.dump(save, open('formation_quad.p', 'wb'))
