@@ -51,7 +51,7 @@ options = {'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57', 'ipopt.to
 problem = FormationPoint2pointCentral(fleet, environment, options=options)
 problem.init()
 simulator = Simulator(problem)
-simulator.run_once(update=True)
+simulator.run_once(update=False)
 var_central = np.zeros((0, 1))
 for vehicle in vehicles:
     splines = problem.father.get_variables(vehicle, 'splines0')
@@ -67,6 +67,16 @@ problem.init()
 simulator = Simulator(problem)
 simulator.run_once(update=False)
 var_admm = problem.get_stacked_x()
+
+# create & solve AMA problem
+options = {'rho': 0.006, 'horizon_time': 5., 'init_iter': number_of_iterations-1,
+           'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57', 'ipopt.tol': 1e-8}},
+           'AMA': True}
+problem = FormationPoint2point(fleet, environment, options=options)
+problem.init()
+simulator = Simulator(problem)
+simulator.run_once(update=False)
+var_ama = problem.get_stacked_x()
 
 # create & solve Fast ADMM problem
 options = {'rho': 0.03, 'horizon_time': 5., 'init_iter': number_of_iterations-1,
@@ -89,18 +99,20 @@ var_dualdec = problem.get_stacked_x()
 
 # compare convergence
 err_admm = [np.linalg.norm(v - var_central)/np.linalg.norm(var_central) for v in var_admm]
+err_ama = [np.linalg.norm(v - var_central)/np.linalg.norm(var_central) for v in var_ama]
 err_fastadmm = [np.linalg.norm(v - var_central)/np.linalg.norm(var_central) for v in var_fastadmm]
 err_dualdec = [np.linalg.norm(v - var_central)/np.linalg.norm(var_central) for v in var_dualdec]
 iterations = np.linspace(0, number_of_iterations, number_of_iterations+1)
 
 # import pickle
-# data = {'err_admm': err_admm, 'err_fastadmm': err_fastadmm, 'err_dualdec': err_dualdec, 'iterations': iterations}
+# data = {'err_admm': err_admm, 'err_fastadmm': err_fastadmm, 'err_ama': err_ama, 'err_dualdec': err_dualdec, 'iterations': iterations}
 # pickle.dump(data, open('compare_distr_opt.p', 'wb'))
 
 plt.figure()
 plt.hold(True)
 plt.semilogy(iterations, err_dualdec, label='Dual decomposition')
+plt.semilogy(iterations, err_ama, label='AMA')
 plt.semilogy(iterations, err_admm, label='ADMM')
 plt.semilogy(iterations, err_fastadmm, label='Fast ADMM')
 plt.legend()
-plt.show(block=True)
+plt.show()
