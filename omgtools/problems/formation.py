@@ -66,15 +66,17 @@ class FormationPoint2point(ADMMProblem):
     def get_interaction_error(self):
         # compute average deviation of an agent's fleet center wrt to the real center
         pos_c_veh = []
+        center_veh = []
         for veh in self.vehicles:
             pos_c_veh.append(veh.signals['fleet_center'])
+            center_veh.append(veh.signals['pose'][:veh.n_dim])
             n_samp = veh.signals['time'].shape[1]
             end_time = veh.signals['time'][:, -1]
             Ts = veh.signals['time'][0, 1] - veh.signals['time'][0, 0]
-        center = np.zeros((pos_c_veh[0].shape))
+        center = np.zeros((center_veh[0].shape))
         for k in range(n_samp):
-            for l in range(pos_c_veh[0].shape[0]):
-                center[l, k] = np.mean([pos[l, k] for pos in pos_c_veh])
+            for l in range(center_veh[0].shape[0]):
+                center[l, k] = np.mean([pos[l, k] for pos in center_veh])
         error = np.zeros(n_samp)
         for pos_c in pos_c_veh:
             deviation = center - pos_c
