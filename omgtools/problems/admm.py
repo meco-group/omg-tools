@@ -596,11 +596,11 @@ class ADMMProblem(DualProblem):
             t_upd_z = max(t_upd_z, t1)
             t_upd_l = max(t_upd_l, t2)
             t_res = max(t_res, t3)
-            p_res += pr**2
-            d_res += dr**2
-            c_res += cr**2
+            p_res += pr #pr, dr, cr represent squared values
+            d_res += dr
+            c_res += cr
         p_res, d_res, c_res = np.sqrt(
-            p_res), np.sqrt(d_res), np.sqrt(c_res)
+            p_res), np.sqrt(d_res), c_res # following definition [Goldstein]
         if self.options['nesterov_acceleration']:
             for updater in self.updaters:
                 updater.accelerate(c_res)
