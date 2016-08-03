@@ -27,10 +27,10 @@ for vehicle in vehicles:
 
 fleet = Fleet(vehicles)
 configuration = RegularPolyhedron(0.2, N, np.pi).vertices.T
-# init_positions = [-0.5, -1.5] + configuration
-# terminal_positions = [0.5, 1.5] + configuration
-init_positions = [-0.7, -1.5] + configuration
-terminal_positions = [0.7, 1.5] + configuration
+init_positions = [-0.5, -1.5] + configuration
+terminal_positions = [0.5, 1.5] + configuration
+# init_positions = [-0.7, -1.5] + configuration
+# terminal_positions = [0.7, 1.5] + configuration
 init_pose = np.c_[init_positions, 90.*np.ones(N)]
 terminal_pose = np.c_[terminal_positions, 90.*np.ones(N)]
 
@@ -40,14 +40,16 @@ fleet.set_terminal_conditions(terminal_pose.tolist())
 
 # create environment
 environment = Environment(room={'shape': Square(4.)})
-# beam0 = Beam(width=3., height=0.2, orientation=np.pi/2)
-beam1 = Beam(width=2.6, height=0.6, orientation=np.pi/2)
-environment.add_obstacle(Obstacle({'position': [0., -2.2]}, shape=beam1))
-environment.add_obstacle(Obstacle({'position': [0., 2.2]}, shape=beam1))
+beam0 = Beam(width=3., height=0.2, orientation=np.pi/2)
+environment.add_obstacle(Obstacle({'position': [0., -2.2]}, shape=beam0))
+environment.add_obstacle(Obstacle({'position': [0., 2.2]}, shape=beam0))
+# beam1 = Beam(width=2.6, height=0.6, orientation=np.pi/2)
+# environment.add_obstacle(Obstacle({'position': [0., -2.2]}, shape=beam1))
+# environment.add_obstacle(Obstacle({'position': [0., 2.2]}, shape=beam1))
 
 # create a formation point-to-point problem
-# options = {'rho': 5., 'horizon_time': 5., 'hard_term_con': True}
 options = {'rho': 3., 'horizon_time': 5., 'hard_term_con': True}
+# options = {'rho': 5., 'horizon_time': 5., 'hard_term_con': True}
 problem = FormationPoint2point(fleet, environment, options=options)
 problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem.init()
@@ -58,8 +60,4 @@ problem.plot('scene')
 fleet.plot('input', knots=True, labels=['v (m/s)', 'w (rad/s)'])
 
 # run it!
-trajectories, signals = simulator.run()
-
-# import pickle
-# save = {'trajectories': trajectories, 'signals': signals}
-# pickle.dump(save, open('formation_quad.p', 'wb'))
+simulator.run()

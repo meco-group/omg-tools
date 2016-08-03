@@ -47,7 +47,8 @@ environment.add_obstacle(Obstacle({'position': [0., -5.4]},
                                   shape=Rectangle(width=0.2, height=10.)))
 
 # create & solve central problem
-options = {'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57', 'ipopt.tol': 1e-8}}, 'horizon_time': 5}
+options = {'solver_options': {
+    'ipopt': {'ipopt.linear_solver': 'ma57', 'ipopt.tol': 1e-8}}, 'horizon_time': 5}
 problem = FormationPoint2pointCentral(fleet, environment, options=options)
 problem.init()
 simulator = Simulator(problem)
@@ -55,7 +56,8 @@ simulator.run_once(update=False)
 var_central = np.zeros((0, 1))
 for vehicle in vehicles:
     splines = problem.father.get_variables(vehicle, 'splines0')
-    pos_c = vehicle.get_fleet_center(splines, vehicle.rel_pos_c, substitute=False)
+    pos_c = vehicle.get_fleet_center(
+        splines, vehicle.rel_pos_c, substitute=False)
     pos_c = np.hstack([c.coeffs for c in pos_c])
     var_central = np.vstack((var_central, np.c_[pos_c]))
 
@@ -91,22 +93,26 @@ var_fastadmm = problem.get_stacked_x()
 # create & solve Dual decomposition problem
 options = {'rho': 0.003, 'horizon_time': 5., 'init_iter': number_of_iterations-1,
            'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57', 'ipopt.tol': 1e-8}}}
-problem = FormationPoint2pointDualDecomposition(fleet, environment, options=options)
+problem = FormationPoint2pointDualDecomposition(
+    fleet, environment, options=options)
 problem.init()
 simulator = Simulator(problem)
 simulator.run_once()
 var_dualdec = problem.get_stacked_x()
 
 # compare convergence
-err_admm = [np.linalg.norm(v - var_central)/np.linalg.norm(var_central) for v in var_admm]
-err_ama = [np.linalg.norm(v - var_central)/np.linalg.norm(var_central) for v in var_ama]
-err_fastadmm = [np.linalg.norm(v - var_central)/np.linalg.norm(var_central) for v in var_fastadmm]
-err_dualdec = [np.linalg.norm(v - var_central)/np.linalg.norm(var_central) for v in var_dualdec]
+err_admm = [
+    np.linalg.norm(v - var_central)/np.linalg.norm(var_central) for v in var_admm]
+err_ama = [
+    np.linalg.norm(v - var_central)/np.linalg.norm(var_central) for v in var_ama]
+err_fastadmm = [np.linalg.norm(
+    v - var_central)/np.linalg.norm(var_central) for v in var_fastadmm]
+err_dualdec = [np.linalg.norm(
+    v - var_central)/np.linalg.norm(var_central) for v in var_dualdec]
 iterations = np.linspace(0, number_of_iterations, number_of_iterations+1)
 
-# import pickle
-# data = {'err_admm': err_admm, 'err_fastadmm': err_fastadmm, 'err_ama': err_ama, 'err_dualdec': err_dualdec, 'iterations': iterations}
-# pickle.dump(data, open('compare_distr_opt.p', 'wb'))
+data = {'err_admm': err_admm, 'err_fastadmm': err_fastadmm,
+        'err_ama': err_ama, 'err_dualdec': err_dualdec, 'iterations': iterations}
 
 plt.figure()
 plt.hold(True)

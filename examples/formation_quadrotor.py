@@ -23,8 +23,9 @@ import numpy as np
 # create fleet
 N = 3
 vehicles = [Quadrotor(0.2) for l in range(N)]
-
 fleet = Fleet(vehicles)
+for quad in fleet.vehicles:
+    quad.set_options({'safety_distance': 0.1, 'safety_weight': 1.})
 configuration = RegularPolyhedron(0.4, N, orientation=np.pi/2).vertices.T
 init_positions = [-4., -4.] + configuration
 terminal_positions = [4., 4.] + configuration
@@ -39,13 +40,12 @@ environment.add_obstacle(Obstacle({'position': [0., 3.7]},
                                   shape=Rectangle(width=0.2, height=3.)))
 environment.add_obstacle(Obstacle({'position': [0., -5.4]},
                                   shape=Rectangle(width=0.2, height=10.)))
-trajectory = {'velocity': {'time': [1.3], 'values': [[-5., 0.]]}}
+trajectory = {'velocity': {'time': [0.8], 'values': [[-5., 0.]]}}
 environment.add_obstacle(
-    Obstacle({'position': [5.5, 1.]}, UFO(1.5, 0.6), {'trajectories': trajectory}))
-
+    Obstacle({'position': [6., 0.8]}, UFO(1.5, 0.6), {'trajectories': trajectory}))
 
 # create a formation point-to-point problem
-options = {'horizon_time': 5., 'rho': 0.3}
+options = {'horizon_time': 5., 'rho': 0.04}
 problem = FormationPoint2point(fleet, environment, options=options)
 problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem.init()
@@ -53,13 +53,9 @@ problem.init()
 # create simulator
 simulator = Simulator(problem)
 problem.plot('scene')
+problem.plot('residuals')
 fleet.plot('input', knots=True, labels=['Thrust force (N/kg)',
                                         'Pitch rate (rad/s)'])
 
 # run it!
-trajectories, signals = simulator.run()
-
-# import pickle
-# residuals = problem.residuals
-# save = {'trajectories': trajectories, 'signals': signals, 'residuals': residuals}
-# pickle.dump(save, open('formation_quad.p', 'wb'))
+simulator.run()
