@@ -67,9 +67,13 @@ class FormationPoint2pointDualDecomposition(DDProblem):
         # compute average deviation of an agent's fleet center wrt to the real center
         pos_c_veh = []
         center_veh = []
+        rel_pos_c = []
         for veh in self.vehicles:
             pos_c_veh.append(veh.signals['fleet_center'])
             center_veh.append(veh.signals['pose'][:veh.n_dim])
+            config = self.fleet.configuration[veh]
+            ind_veh = sorted(config.keys())
+            rel_pos_c.append(np.array([config[ind_v] for ind_v in ind_veh]))
             n_samp = veh.signals['time'].shape[1]
             end_time = veh.signals['time'][:, -1]
             Ts = veh.signals['time'][0, 1] - veh.signals['time'][0, 0]
@@ -78,17 +82,17 @@ class FormationPoint2pointDualDecomposition(DDProblem):
             for l in range(center_veh[0].shape[0]):
                 center[l, k] = np.mean([pos[l, k] for pos in center_veh])
         error = np.zeros(n_samp)
-        for pos_c in pos_c_veh:
+        for pos_c, rp_c in zip(pos_c_veh, rel_pos_c):
             deviation = center - pos_c
             for k in range(n_samp):
-                error[k] += np.linalg.norm(deviation[:, k])
+                error[k] += np.linalg.norm(deviation[:, k])/np.linalg.norm(rp_c)
         error /= self.fleet.N
         error_int = 0.
         for k in range(n_samp-1):
             error_int += 0.5*(error[k+1]+error[k])*Ts
-        return np.sqrt(error_int/end_time)
+        return error_int/end_time
 
     def final(self):
         DDProblem.final(self)
         err = self.get_interaction_error()
-        print '%-18s %6g m' % ('Formation error:', err)
+        print '%-18s %6g %%' % ('Formation error:', err)
