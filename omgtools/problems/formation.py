@@ -19,6 +19,7 @@
 
 from admm import ADMMProblem
 from point2point import Point2point
+from ..export.export_formation import ExportFormation
 import numpy as np
 
 
@@ -96,3 +97,9 @@ class FormationPoint2point(ADMMProblem):
         ADMMProblem.final(self)
         err = self.get_interaction_error()
         print '%-18s %6g %%' % ('Formation error:', err*100.)
+
+    def export(self, options=None):
+        options = options or {}
+        if not hasattr(self, 'father'):
+            self.init()
+        ExportFormation(self, options)
