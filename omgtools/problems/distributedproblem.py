@@ -63,29 +63,39 @@ class DistributedProblem(Problem):
                                         self.options)
             self.updaters.append(updater)
         self.interprete_constraints(self.updaters)
-        vehicle_types = self.fleet.sort_vehicles()
-
         buildtime = []
         if self.options['separate_build']:
             for updater in self.updaters:
                 _, bt = updater.init()
                 buildtime.append(bt)
         else:
-            for veh_type, vehicles in vehicle_types.items():
-                nghb_nr = col.OrderedDict()
-                for veh in vehicles:
-                    nr = len(self.fleet.get_neighbors(veh))
-                    if nr not in nghb_nr:
-                        nghb_nr[nr] = []
-                    nghb_nr[nr].append(veh)
-                for nr, vehicles in nghb_nr.items():
+            updaters = self.separate_per_build()
+            for veh_type, nghb_nr in updaters.items():
+                for nr, upd in nghb_nr.items():
                     if self.options['verbose'] >= 2:
                         print('*Construct problem for type %s with %d neighbor(s):' % (veh_type, nr))
-                    problems, bt = self.updaters[vehicles[0]._index].init()
+                    problems, bt = upd[0].init()
                     buildtime.append(bt)
-                    for veh in vehicles[1:]:
-                        self.updaters[veh._index].init(problems)
+                    for u in upd[1:]:
+                        u.init(problems)
         return np.mean(buildtime)
+
+    def separate_per_build(self):
+        vehicle_types = self.fleet.sort_vehicles()
+        updaters = {}
+        for veh_type, vehicles in vehicle_types.items():
+            nghb_nr = col.OrderedDict()
+            for veh in vehicles:
+                nr = len(self.fleet.get_neighbors(veh))
+                if nr not in nghb_nr:
+                    nghb_nr[nr] = []
+                nghb_nr[nr].append(veh)
+            updaters[veh_type] = {}
+            for nr, vehicles in nghb_nr.items():
+                updaters[veh_type][nr] = []
+                for vehicle in vehicles:
+                    updaters[veh_type][nr].append(self.updaters[vehicle._index])
+        return updaters
 
     def interprete_constraints(self, updaters):
         for upd in updaters:
