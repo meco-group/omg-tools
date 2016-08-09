@@ -87,6 +87,9 @@ class ExportFormation(Export):
         defines['RHO'] = problem.options['rho']
         defines['N_SHARED'] = problem.q_i_struct(0).cat.size(1)
         defines['N_NGHB'] = len(problem.fleet.get_neighbors(problem.vehicle))
+        defines['UPDZPROBLEM'] = '"' + problem.problem_upd_z.name() + '"'
+        defines['UPDLPROBLEM'] = '"' + problem.problem_upd_l.name() + '"'
+        defines['UPDRESPROBLEM'] = '"' + problem.problem_upd_res.name() + '"'
         data = Export.create_defines(self, father, problem, point2point)
         code = data['defines']
         for name, define in defines.items():
@@ -115,17 +118,18 @@ class ExportFormation(Export):
 
     def create_functions(self, father, problem, point2point):
         code = Export.create_functions(self, father, problem, point2point)
-        code.update(self._create_retrieveXVariables(father, problem))
+        code.update(self._create_retrieveSharedVariables(father, problem))
         return code
 
-    def _create_retrieveXVariables(self, father, problem):
+    def _create_retrieveSharedVariables(self, father, problem):
         code, cnt = '', 0
         code += '\tvector<vector<double>> subst;\n'
+        code += '\tvector<vector<double>> args = {variables, parameters};\n'
         x = problem.q_i_struct(0)
         for child, q_i in problem.q_i.items():
             for name, ind in q_i.items():
                 if name in child._substitutes:
-                    code += '\tsubstitutes["'+name+'"]({var_dict["'+child.label+'"]["'+name+'"]}, subst);\n'
+                    code += '\tsubstitutes["'+name+'"](args, subst);\n'
                     for i in ind:
                         code += '\tvariables_admm["x_i"]['+str(cnt)+'] = subst[0]['+str(i)+'];\n'
                         cnt += 1
@@ -133,7 +137,7 @@ class ExportFormation(Export):
                     for i in ind:
                         code += '\tvariables_admm["x_i"]['+str(cnt)+'] = var_dict["'+child.label+'"]["'+name+'"]['+str(i)+'];\n'
                         cnt += 1
-        return {'retrieveXVariables': code}
+        return {'retrieveSharedVariables': code}
 
     def _create_initSplines(self, father, problem):
         data = Export._create_initSplines(self, father, problem)

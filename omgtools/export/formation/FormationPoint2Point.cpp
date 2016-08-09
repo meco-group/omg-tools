@@ -50,6 +50,17 @@ residuals(3), rho(RHO) {
     args["x0"] = variables;
     args["lbg"] = lbg;
     args["ubg"] = ubg;
+
+    vector<double> zeros1(n_shared);
+    vector<double> zeros2(n_nghb*n_shared);
+    variables_admm["x_i"] = zeros1;
+    variables_admm["z_i"] = zeros1;
+    variables_admm["l_i"] = zeros1;
+    variables_admm["x_j"] = zeros2;
+    variables_admm["z_ij"] = zeros2;
+    variables_admm["l_ij"] = zeros2;
+    variables_admm["z_ji"] = zeros2;
+    variables_admm["l_ji"] = zeros2;
     initSplines();
 }
 
@@ -67,9 +78,9 @@ void FormationPoint2Point::generateProblem(){
     options["ipopt.warm_start_init_point"] = "yes";
     // create problems
     this->updx_problem = nlpsol("upd_x_problem", "ipopt", obj_path+"/updx.so", options);
-    this->updz_problem = external("updz_problem", obj_path+"/updz.so");
-    this->updl_problem = external("updl_problem", obj_path+"/updl.so");
-    this->get_residuals = external("get_residuals", obj_path+"/updres.so");
+    this->updz_problem = external(UPDZPROBLEM, obj_path+"/updz.so");
+    this->updl_problem = external(UPDLPROBLEM, obj_path+"/updl.so");
+    this->get_residuals = external(UPDRESPROBLEM, obj_path+"/updres.so");
 }
 
 void FormationPoint2Point::generateSubstituteFunctions(){
@@ -189,7 +200,7 @@ bool FormationPoint2Point::update2(vector<vector<double>>& x_j_var,
     vector<double>& residuals){
     for (int i=0; i<n_nghb; i++){
         for (int j=0; j<n_shared; j++){
-            variables_admm["x_j"][i*n_shared+j] = x_j_var[j][i];
+            variables_admm["x_j"][i*n_shared+j] = x_j_var[i][j];
         }
     }
     #ifdef DEBUG
@@ -230,8 +241,8 @@ bool FormationPoint2Point::update2(vector<vector<double>>& x_j_var,
     // return z_ij, l_ij, residuals
     for (int i=0; i<n_nghb; i++){
         for (int j=0; j<n_shared; j++){
-            z_ij_var[j][i] = variables_admm["z_ij"][i*n_shared+j];
-            l_ij_var[j][i] = variables_admm["l_ij"][i*n_shared+j];
+            z_ij_var[i][j] = variables_admm["z_ij"][i*n_shared+j];
+            l_ij_var[i][j] = variables_admm["l_ij"][i*n_shared+j];
         }
     }
     residuals = this->residuals;
@@ -318,10 +329,9 @@ void FormationPoint2Point::initVariablesADMM(){
     map<string, map<string, vector<double>>> var_dict;
     getVariableDict(variables, var_dict);
     // init x_i
-    retrieveXVariables(var_dict);
+    retrieveSharedVariables(var_dict);
     // init z variables
     variables_admm["z_i"] = variables_admm["x_i"];
-    vector<double> zeros(n_nghb*n_shared);
     vector<double> z_ji(n_nghb*n_shared);
     for (int i=0; i<n_nghb; i++){
         for (int j=0; j<n_shared; j++){
@@ -329,12 +339,6 @@ void FormationPoint2Point::initVariablesADMM(){
         }
     }
     variables_admm["z_ji"] = z_ji;
-    variables_admm["z_ij"] = zeros;
-    // init l variables
-    vector<double> l_i(n_shared);
-    variables_admm["l_i"] = l_i;
-    variables_admm["l_ji"] = zeros;
-    variables_admm["l_ij"] = zeros;
 }
 
 void FormationPoint2Point::setParameters(vector<obstacle_t>& obstacles, vector<double>& rel_pos_c){
@@ -385,7 +389,7 @@ void FormationPoint2Point::extractData(){
         }
     }
     retrieveTrajectories(spline_coeffs);
-    retrieveXVariables(var_dict);
+    retrieveSharedVariables(var_dict);
 }
 
 void FormationPoint2Point::retrieveTrajectories(vector<vector<double>>& spline_coeffs){
@@ -397,8 +401,8 @@ void FormationPoint2Point::retrieveTrajectories(vector<vector<double>>& spline_c
     vehicle->splines2Input(spline_coeffs, time, input_trajectory);
 }
 
-void FormationPoint2Point::retrieveXVariables(map<string, map<string, vector<double>>>& var_dict){
-@retrieveXVariables@
+void FormationPoint2Point::retrieveSharedVariables(map<string, map<string, vector<double>>>& var_dict){
+@retrieveSharedVariables@
 }
 
 

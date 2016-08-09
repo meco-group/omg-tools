@@ -19,6 +19,7 @@
 
 from omgtools import *
 import os
+import csv
 
 """
 This file demonstrates how to export a point2point problem to c++. It generates
@@ -55,6 +56,7 @@ problem.init()
 
 options = {}
 casadi_path = os.path.join(os.getenv('HOME'), 'casadi-py27-np1.9.1-v3.0.0')
+# casadi_path = os.path.join(os.getenv('HOME'), 'Documents/Work/Repositories/casadi_binary')
 options['directory'] = os.path.join(os.getcwd(), 'export_f/')
 # path to object files of your exported optimization problem
 options['casadiobj'] = os.path.join(options['directory'], 'bin/')
@@ -65,6 +67,24 @@ options['casadilib'] = os.path.join(casadi_path, 'casadi/')
 
 # export the problem
 problem.export(options)
+# simulator = Simulator(problem)
+# trajectories, signals = simulator.run()
+
+# # save results for check in c++
+# testdir = os.path.join(options['directory'], 'test')
+# if not os.path.isdir(testdir):
+#     os.makedirs(os.path.join(options['directory'], 'test'))
+# for vehicle in ['vehicle0', 'vehicle1', 'vehicle2', 'vehicle3']:
+#     with open(os.path.join(testdir, 'data_state_'+vehicle+'.csv'), 'wb') as f:
+#         w = csv.writer(f)
+#         for i in range(0, len(trajectories[vehicle]['state']), int(simulator.update_time/simulator.sample_time)):
+#             for k in range(trajectories[vehicle]['state'][i].shape[0]):
+#                 w.writerow(trajectories[vehicle]['state'][i][k, :])
+#     with open(os.path.join(testdir, 'data_input_'+vehicle+'.csv'), 'wb') as f:
+#         w = csv.writer(f)
+#         for i in range(0, len(trajectories[vehicle]['input']), int(simulator.update_time/simulator.sample_time)):
+#             for k in range(trajectories[vehicle]['input'][i].shape[0]):
+#                 w.writerow(trajectories[vehicle]['input'][i][k, :])
 
 # note: you need to implement your vehicle type in c++. Take a look at
 # Holonomic.cpp and Holonomic.hpp which are also exported as an example.

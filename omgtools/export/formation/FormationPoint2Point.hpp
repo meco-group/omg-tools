@@ -84,7 +84,7 @@ class FormationPoint2Point{
         void updateBounds(double);
         void extractData();
         void retrieveTrajectories(std::vector<std::vector<double>>&);
-        void retrieveXVariables(std::map<std::string, std::map<std::string, std::vector<double>>>&);
+        void retrieveSharedVariables(std::map<std::string, std::map<std::string, std::vector<double>>>&);
         void getParameterVector(std::vector<double>&, std::map<std::string, std::map<std::string, std::vector<double>>>&);
         void getVariableVector(std::vector<double>&, std::map<std::string, std::map<std::string, std::vector<double>>>&);
         void getVariableDict(std::vector<double>&, std::map<std::string, std::map<std::string, std::vector<double>>>&);
