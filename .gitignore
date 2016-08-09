@@ -2,7 +2,7 @@
 *~
 examples/movies/*
 examples/images/*
-examples/export/*
+examples/export*
 examples/data/*
 lvd/*
 .*
