@@ -62,19 +62,20 @@ simulator = Simulator(problem)
 trajectories, signals = simulator.run()
 
 # save results for check in c++
-testdir = os.path.join(options['directory'],'test')
+veh_lbl = vehicle.label
+testdir = os.path.join(options['directory'], 'test')
 if not os.path.isdir(testdir):
-    os.makedirs(os.path.join(options['directory'],'test'))
+    os.makedirs(os.path.join(options['directory'], 'test'))
 with open(os.path.join(testdir, 'data_state.csv'), 'wb') as f:
     w = csv.writer(f)
-    for i in range(0, len(trajectories['vehicle0']['state']), int(simulator.update_time/simulator.sample_time)):
-        for k in range(trajectories['vehicle0']['state'][i].shape[0]):
-            w.writerow(trajectories['vehicle0']['state'][i][k, :])
+    for i in range(0, len(trajectories[veh_lbl]['state']), int(simulator.update_time/simulator.sample_time)):
+        for k in range(trajectories[veh_lbl]['state'][i].shape[0]):
+            w.writerow(trajectories[veh_lbl]['state'][i][k, :])
 with open(os.path.join(testdir, 'data_input.csv'), 'wb') as f:
     w = csv.writer(f)
-    for i in range(0, len(trajectories['vehicle0']['input']), int(simulator.update_time/simulator.sample_time)):
-        for k in range(trajectories['vehicle0']['input'][i].shape[0]):
-            w.writerow(trajectories['vehicle0']['input'][i][k, :])
+    for i in range(0, len(trajectories[veh_lbl]['input']), int(simulator.update_time/simulator.sample_time)):
+        for k in range(trajectories[veh_lbl]['input'][i].shape[0]):
+            w.writerow(trajectories[veh_lbl]['input'][i][k, :])
 
 # note: you need to implement your vehicle type in c++. Take a look at
 # Holonomic.cpp and Holonomic.hpp which are also exported as an example.
