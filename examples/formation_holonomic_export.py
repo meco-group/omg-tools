@@ -55,7 +55,7 @@ problem.init()
 
 options = {}
 casadi_path = os.path.join(os.getenv('HOME'), 'casadi-py27-np1.9.1-v3.0.0')
-options['directory'] = os.path.join(os.getcwd(), 'export/')
+options['directory'] = os.path.join(os.getcwd(), 'export_f/')
 # path to object files of your exported optimization problem
 options['casadiobj'] = os.path.join(options['directory'], 'bin/')
 # your casadi include path
