@@ -32,7 +32,7 @@ FormationPoint2Point::FormationPoint2Point(Vehicle* vehicle, double update_time,
 parameters(N_PAR), variables(N_VAR), lbg(LBG_DEF), ubg(UBG_DEF), time(trajectory_length+1),
 state_trajectory(trajectory_length+1, vector<double>(vehicle->getNState())),
 input_trajectory(trajectory_length+1, vector<double>(vehicle->getNInput())),
-residuals(3) {
+residuals(3), rho(RHO) {
     if (trajectory_length > int(horizon_time/sample_time)){
         cerr << "trajectory_length too large!" << endl;
     }
@@ -45,6 +45,7 @@ residuals(3) {
         time[k] = k*sample_time;
     }
     generateProblem();
+    generateSubstituteFunctions();
     args["p"] = parameters;
     args["x0"] = variables;
     args["lbg"] = lbg;
@@ -68,7 +69,11 @@ void FormationPoint2Point::generateProblem(){
     this->updx_problem = nlpsol("upd_x_problem", "ipopt", obj_path+"/updx.so", options);
     this->updz_problem = external("updz_problem", obj_path+"/updz.so");
     this->updl_problem = external("updl_problem", obj_path+"/updl.so");
-    this->get_residuals = external("get_residuals", obj_path+"/res.so");
+    this->get_residuals = external("get_residuals", obj_path+"/updres.so");
+}
+
+void FormationPoint2Point::generateSubstituteFunctions(){
+@generateSubstituteFunctions@
 }
 
 void FormationPoint2Point::initSplines(){
@@ -86,16 +91,23 @@ void FormationPoint2Point::reset(){
 bool FormationPoint2Point::update1(vector<double>& condition0, vector<double>& conditionT,
     vector<vector<double>>& state_trajectory, vector<vector<double>>& input_trajectory,
     vector<double>& x_var, vector<vector<double>>& z_ji_var, vector<vector<double>>& l_ji_var,
-    vector<obstacle_t>& obstacles){
-    update1(condition0, conditionT, state_trajectory, input_trajectory, x_var, z_ji_var, l_ji_var, consensus_vars, obstacles, 0);
+    vector<obstacle_t>& obstacles, vector<double>& rel_pos_c){
+    update1(condition0, conditionT, state_trajectory, input_trajectory, x_var, z_ji_var, l_ji_var, obstacles, rel_pos_c, 0);
 }
 
-bool FormationPoint2Point::update1(vector<double>& state0, vector<double>& conditionT,
+bool FormationPoint2Point::update1(vector<double>& condition0, vector<double>& conditionT,
     vector<vector<double>>& state_trajectory, vector<vector<double>>& input_trajectory,
     vector<double>& x_var, vector<vector<double>>& z_ji_var, vector<vector<double>>& l_ji_var,
-    vector<obstacle_t>& obstacles, int predict_shift){
-    variables_admm["z_ji"] = z_ji_var;
-    variables_admm["l_ji"] = l_ji_var;
+    vector<obstacle_t>& obstacles, vector<double>& rel_pos_c, int predict_shift){
+    // start with own initial guess
+    if (fabs(current_time)>1.e-6){
+        for (int i=0; i<n_nghb; i++){
+            for (int j=0; j<n_shared; j++){
+                variables_admm["z_ji"][i*n_shared+j] = z_ji_var[j][i];
+                variables_admm["l_ji"][i*n_shared+j] = l_ji_var[j][i];
+            }
+        }
+    }
     #ifdef DEBUG
     double tmeas;
     clock_t begin;
@@ -126,9 +138,9 @@ bool FormationPoint2Point::update1(vector<double>& state0, vector<double>& condi
     begin = clock();
     #endif
     if (fabs(current_time)<=1.e-6){
-        vehicle->setInitialConditions(state0);
+        vehicle->setInitialConditions(condition0);
     } else{
-        vehicle->predict(state0, this->state_trajectory, this->input_trajectory, update_time, sample_time, predict_shift);
+        vehicle->predict(condition0, this->state_trajectory, this->input_trajectory, update_time, sample_time, predict_shift);
     }
     #ifdef DEBUG
     end = clock();
@@ -139,7 +151,7 @@ bool FormationPoint2Point::update1(vector<double>& state0, vector<double>& condi
     #ifdef DEBUG
     begin = clock();
     #endif
-    bool check = solveUpdx(obstacles);
+    bool check = solveUpdx(obstacles, rel_pos_c);
     #ifdef DEBUG
     end = clock();
     tmeas = double(end-begin)/CLOCKS_PER_SEC;
@@ -164,8 +176,8 @@ bool FormationPoint2Point::update1(vector<double>& state0, vector<double>& condi
             input_trajectory[k][j] = this->input_trajectory[k][j];
         }
     }
-    z_ji_var = variables_admm["z_ji"];
-    l_ji_var = variables_admm["l_ji"];
+    // return x_i
+    x_var = variables_admm["x_i"];
     // update current time
     current_time += update_time;
 
@@ -174,8 +186,12 @@ bool FormationPoint2Point::update1(vector<double>& state0, vector<double>& condi
 
 bool FormationPoint2Point::update2(vector<vector<double>>& x_j_var,
     vector<vector<double>>& z_ij_var, vector<vector<double>>& l_ij_var,
-    vector<double> residuals){
-    variables_admm["x_j"] = x_j_var;
+    vector<double>& residuals){
+    for (int i=0; i<n_nghb; i++){
+        for (int j=0; j<n_shared; j++){
+            variables_admm["x_j"][i*n_shared+j] = x_j_var[j][i];
+        }
+    }
     #ifdef DEBUG
     double tmeas;
     clock_t begin;
@@ -205,31 +221,36 @@ bool FormationPoint2Point::update2(vector<vector<double>>& x_j_var,
     #ifdef DEBUG
     begin = clock();
     #endif
-    compute_residuals();
+    computeResiduals();
     #ifdef DEBUG
     end = clock();
     tmeas = double(end-begin)/CLOCKS_PER_SEC;
     cout << "time in compute_residuals: " << tmeas << "s" << endl;
     #endif
-    z_ij_var = variables_admm["z_ij"];
-    l_ij_var = variables_admm["l_ij"];
+    // return z_ij, l_ij, residuals
+    for (int i=0; i<n_nghb; i++){
+        for (int j=0; j<n_shared; j++){
+            z_ij_var[j][i] = variables_admm["z_ij"][i*n_shared+j];
+            l_ij_var[j][i] = variables_admm["l_ij"][i*n_shared+j];
+        }
+    }
     residuals = this->residuals;
     return true;
 }
 
-
-bool FormationPoint2Point::solveUpdx(vector<obstacle_t>& obstacles){
+bool FormationPoint2Point::solveUpdx(vector<obstacle_t>& obstacles, vector<double>& rel_pos_c){
     // init variables if first time
     if(fabs(current_time)<=1.e-6){
         initVariables();
+        initVariablesADMM();
     }
-    setParameters(obstacles);
+    setParameters(obstacles, rel_pos_c);
     args["p"] = parameters;
     args["x0"] = variables;
     args["lbg"] = lbg;
     args["ubg"] = ubg;
-    sol = problem(args);
-    solver_output = string(problem.stats().at("return_status"));
+    sol = updx_problem(args);
+    solver_output = string(updx_problem.stats().at("return_status"));
     vector<double> var(sol.at("x"));
     for (int k=0; k<n_var; k++){
         variables[k] = var[k];
@@ -243,15 +264,38 @@ bool FormationPoint2Point::solveUpdx(vector<obstacle_t>& obstacles){
 }
 
 bool FormationPoint2Point::solveUpdz(){
-
+    variables_admm["z_i_p"] = variables_admm["z_i"];
+    variables_admm["z_ij_p"] = variables_admm["z_ij"];
+    vector<vector<double>> res;
+    updz_problem({variables_admm["x_i"], variables_admm["l_i"],
+        variables_admm["l_ij"], variables_admm["x_j"],
+        {fmod(round(current_time*1000.)/1000., horizon_time/(vehicle->getKnotIntervals()))},
+        {horizon_time}, {rho}, {}}, res);
+    variables_admm["z_i"] = res.at(0);
+    variables_admm["z_ij"] = res.at(1);
 }
 
 bool FormationPoint2Point::solveUpdl(){
-
+    variables_admm["l_i_p"] = variables_admm["l_i"];
+    variables_admm["l_ij_p"] = variables_admm["l_ij_p"];
+    vector<vector<double>> res;
+    updl_problem({variables_admm["x_i"], variables_admm["z_i"],
+        variables_admm["z_ij"], variables_admm["l_i"], variables_admm["l_ij"],
+        variables_admm["x_j"], {rho}}, res);
+    variables_admm["l_i"] = res.at(0);
+    variables_admm["l_ij"] = res.at(1);
 }
 
 bool FormationPoint2Point::computeResiduals(){
-
+    vector<vector<double>> res;
+    get_residuals({variables_admm["x_i"], variables_admm["z_i"],
+        variables_admm["z_i_p"], variables_admm["z_ij"], variables_admm["z_ij_p"],
+        variables_admm["x_j"],
+        {fmod(round(current_time*1000.)/1000., horizon_time/(vehicle->getKnotIntervals()))},
+        {horizon_time}, {rho}}, res);
+    residuals[0] = res.at(0).at(0);
+    residuals[1] = res.at(1).at(0);
+    residuals[2] = res.at(2).at(0);
 }
 
 void FormationPoint2Point::initVariables(){
@@ -270,17 +314,46 @@ void FormationPoint2Point::initVariables(){
     getVariableVector(variables, var_dict);
 }
 
-void FormationPoint2Point::setParameters(vector<obstacle_t>& obstacles){
+void FormationPoint2Point::initVariablesADMM(){
+    map<string, map<string, vector<double>>> var_dict;
+    getVariableDict(variables, var_dict);
+    // init x_i
+    retrieveXVariables(var_dict);
+    // init z variables
+    variables_admm["z_i"] = variables_admm["x_i"];
+    vector<double> zeros(n_nghb*n_shared);
+    vector<double> z_ji(n_nghb*n_shared);
+    for (int i=0; i<n_nghb; i++){
+        for (int j=0; j<n_shared; j++){
+            z_ji[i*n_shared+j] = variables_admm["x_i"][j];
+        }
+    }
+    variables_admm["z_ji"] = z_ji;
+    variables_admm["z_ij"] = zeros;
+    // init l variables
+    vector<double> l_i(n_shared);
+    variables_admm["l_i"] = l_i;
+    variables_admm["l_ji"] = zeros;
+    variables_admm["l_ij"] = zeros;
+}
+
+void FormationPoint2Point::setParameters(vector<obstacle_t>& obstacles, vector<double>& rel_pos_c){
     map<string, map<string, vector<double>>> par_dict;
     map<string, vector<double>> par_dict_veh;
     vehicle->setParameters(par_dict_veh);
     par_dict[VEHICLELBL] = par_dict_veh;
+    par_dict[VEHICLELBL]["rel_pos_c"] = rel_pos_c;
     if (!freeT){
-        par_dict[PROBLEMLBL]["t"] = {fmod(round(current_time*1000.)/1000., horizon_time/(vehicle->getKnotIntervals()))};
-        par_dict[PROBLEMLBL]["T"] = {horizon_time};
+        par_dict[P2PLBL]["t"] = {fmod(round(current_time*1000.)/1000., horizon_time/(vehicle->getKnotIntervals()))};
+        par_dict[P2PLBL]["T"] = {horizon_time};
     } else{
-        par_dict[PROBLEMLBL]["t"] = {0.0};
+        par_dict[P2PLBL]["t"] = {0.0};
     }
+    par_dict[ADMMLBL]["z_i"] = variables_admm["z_i"];
+    par_dict[ADMMLBL]["z_ji"] = variables_admm["z_ji"];
+    par_dict[ADMMLBL]["l_i"] = variables_admm["l_i"];
+    par_dict[ADMMLBL]["l_ji"] = variables_admm["l_ji"];
+    par_dict[ADMMLBL]["rho"] = {rho};
     for (int k=0; k<n_obs; k++){
         vector<double> x_obs(n_dim);
         vector<double> v_obs(n_dim);
@@ -312,7 +385,7 @@ void FormationPoint2Point::extractData(){
         }
     }
     retrieveTrajectories(spline_coeffs);
-    retrieveXVariables(spline_coeffs);
+    retrieveXVariables(var_dict);
 }
 
 void FormationPoint2Point::retrieveTrajectories(vector<vector<double>>& spline_coeffs){
@@ -324,7 +397,7 @@ void FormationPoint2Point::retrieveTrajectories(vector<vector<double>>& spline_c
     vehicle->splines2Input(spline_coeffs, time, input_trajectory);
 }
 
-void FormationPoint2Point::retrieveXVariables(vector<vector<double>>& spline_coeffs){
+void FormationPoint2Point::retrieveXVariables(map<string, map<string, vector<double>>>& var_dict){
 @retrieveXVariables@
 }
 

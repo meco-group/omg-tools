@@ -19,6 +19,7 @@
 
 from omgtools import *
 import os
+import csv
 
 """
 This file demonstrates how to export a point2point problem to c++. It generates
@@ -31,14 +32,14 @@ options = {'room_constraint': None}
 vehicle = Holonomic(shapes=Circle(0.1), options=options)
 
 vehicle.set_initial_conditions([0.0, 0.0])
-vehicle.set_terminal_conditions([4.0, 4.0])
+vehicle.set_terminal_conditions([3.5, 3.5])
 
 # create environment
-environment = Environment(room={'shape': Square(6.)})
+environment = Environment(room={'shape': Square(5.), 'position': [1.5, 1.5]})
 rectangle = Rectangle(width=3., height=0.2)
 
-environment.add_obstacle(Obstacle({'position': [0.5, 2.0]}, shape=rectangle))
-environment.add_obstacle(Obstacle({'position': [4.2, 2.0]}, shape=rectangle))
+environment.add_obstacle(Obstacle({'position': [-0.6, 1.0]}, shape=rectangle))
+environment.add_obstacle(Obstacle({'position': [3.2, 1.0]}, shape=rectangle))
 
 # create a point-to-point problem
 problem = Point2point(vehicle, environment, freeT=False)
@@ -57,6 +58,23 @@ options['casadilib'] = os.path.join(casadi_path, 'casadi/')
 
 # export the problem
 problem.export(options)
+simulator = Simulator(problem)
+trajectories, signals = simulator.run()
+
+# save results for check in c++
+testdir = os.path.join(options['directory'],'test')
+if not os.path.isdir(testdir):
+    os.makedirs(os.path.join(options['directory'],'test'))
+with open(os.path.join(testdir, 'data_state.csv'), 'wb') as f:
+    w = csv.writer(f)
+    for i in range(0, len(trajectories['vehicle0']['state']), int(simulator.update_time/simulator.sample_time)):
+        for k in range(trajectories['vehicle0']['state'][i].shape[0]):
+            w.writerow(trajectories['vehicle0']['state'][i][k, :])
+with open(os.path.join(testdir, 'data_input.csv'), 'wb') as f:
+    w = csv.writer(f)
+    for i in range(0, len(trajectories['vehicle0']['input']), int(simulator.update_time/simulator.sample_time)):
+        for k in range(trajectories['vehicle0']['input'][i].shape[0]):
+            w.writerow(trajectories['vehicle0']['input'][i][k, :])
 
 # note: you need to implement your vehicle type in c++. Take a look at
 # Holonomic.cpp and Holonomic.hpp which are also exported as an example.

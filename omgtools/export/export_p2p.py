@@ -40,6 +40,7 @@ class ExportP2P(Export):
         self.options['executable'] = 'Point2Point'
 
     def export_casadi_problems(self, destination, father, problem):
+        filenames = Export.export_casadi_problems(self, destination, father, problem)
         obj = father.problem_description['obj']
         con = father.problem_description['con']
         var = father.problem_description['var']
@@ -54,3 +55,5 @@ class ExportP2P(Export):
         solver.generate_dependencies('nlp.c')
         cwd = os.getcwd()
         shutil.move(cwd+'/nlp.c', destination+'src/nlp.c')
+        filenames.append('nlp.c')
+        return filenames

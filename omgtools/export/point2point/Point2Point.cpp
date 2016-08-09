@@ -67,6 +67,10 @@ void Point2Point::generateProblem(){
     this->problem = nlpsol("problem", "ipopt", obj_path+"/nlp.so", options);
 }
 
+void Point2Point::generateSubstituteFunctions(){
+@generateSubstituteFunctions@
+}
+
 void Point2Point::initSplines(){
 @initSplines@
 }
@@ -83,7 +87,7 @@ bool Point2Point::update(vector<double>& condition0, vector<double>& conditionT,
     update(condition0, conditionT, state_trajectory, input_trajectory, obstacles, 0);
 }
 
-bool Point2Point::update(vector<double>& state0, vector<double>& conditionT, vector<vector<double>>& state_trajectory, vector<vector<double>>& input_trajectory, vector<obstacle_t>& obstacles, int predict_shift){
+bool Point2Point::update(vector<double>& condition0, vector<double>& conditionT, vector<vector<double>>& state_trajectory, vector<vector<double>>& input_trajectory, vector<obstacle_t>& obstacles, int predict_shift){
     #ifdef DEBUG
     double tmeas;
     clock_t begin;
@@ -114,9 +118,9 @@ bool Point2Point::update(vector<double>& state0, vector<double>& conditionT, vec
     begin = clock();
     #endif
     if (fabs(current_time)<=1.e-6){
-        vehicle->setInitialConditions(state0);
+        vehicle->setInitialConditions(condition0);
     } else{
-        vehicle->predict(state0, this->state_trajectory, this->input_trajectory, update_time, sample_time, predict_shift);
+        vehicle->predict(condition0, this->state_trajectory, this->input_trajectory, update_time, sample_time, predict_shift);
     }
     #ifdef DEBUG
     end = clock();
@@ -137,11 +141,11 @@ bool Point2Point::update(vector<double>& state0, vector<double>& conditionT, vec
     #ifdef DEBUG
     begin = clock();
     #endif
-    retrieveTrajectories();
+    extractData();
     #ifdef DEBUG
     end = clock();
     tmeas = double(end-begin)/CLOCKS_PER_SEC;
-    cout << "time in retrieveTrajectories: " << tmeas << "s" << endl;
+    cout << "time in extractData: " << tmeas << "s" << endl;
     #endif
     // ref state and input for system are one sample shorter!!
     for (int k=0; k<time.size()-1; k++){
@@ -204,10 +208,10 @@ void Point2Point::setParameters(vector<obstacle_t>& obstacles){
     vehicle->setParameters(par_dict_veh);
     par_dict[VEHICLELBL] = par_dict_veh;
     if (!freeT){
-        par_dict[PROBLEMLBL]["t"] = {fmod(round(current_time*1000.)/1000., horizon_time/(vehicle->getKnotIntervals()))};
-        par_dict[PROBLEMLBL]["T"] = {horizon_time};
+        par_dict[P2PLBL]["t"] = {fmod(round(current_time*1000.)/1000., horizon_time/(vehicle->getKnotIntervals()))};
+        par_dict[P2PLBL]["T"] = {horizon_time};
     } else{
-        par_dict[PROBLEMLBL]["t"] = {0.0};
+        par_dict[P2PLBL]["t"] = {0.0};
     }
     for (int k=0; k<n_obs; k++){
         vector<double> x_obs(n_dim);
@@ -226,12 +230,13 @@ void Point2Point::setParameters(vector<obstacle_t>& obstacles){
     getParameterVector(parameters, par_dict);
 }
 
-void Point2Point::retrieveTrajectories(){
+void Point2Point::extractData(){
     map<string, map<string, vector<double>>> var_dict;
     getVariableDict(variables, var_dict);
     vector<double> spline_coeffs_vec(var_dict[VEHICLELBL]["splines0"]);
+    vehicle->setKnotHorizon(horizon_time);
     if (freeT){
-        horizon_time = var_dict[PROBLEMLBL]["T"][0];
+        horizon_time = var_dict[P2PLBL]["T"][0];
     }
     vehicle->setKnotHorizon(horizon_time);
     int n_spl = vehicle->getNSplines();
@@ -242,6 +247,10 @@ void Point2Point::retrieveTrajectories(){
             spline_coeffs[k][j] = spline_coeffs_vec[k*len_basis+j];
         }
     }
+    retrieveTrajectories(spline_coeffs);
+}
+
+void Point2Point::retrieveTrajectories(vector<vector<double>>& spline_coeffs){
     vector<double> time(this->time);
     if (!freeT){
         for (int k=0; k<time.size(); k++){
@@ -251,7 +260,6 @@ void Point2Point::retrieveTrajectories(){
     vehicle->splines2State(spline_coeffs, time, state_trajectory);
     vehicle->splines2Input(spline_coeffs, time, input_trajectory);
 }
-
 
 void Point2Point::getParameterVector(vector<double>& par_vect, map<string, map<string, vector<double>>>& par_dict){
 @getParameterVector@

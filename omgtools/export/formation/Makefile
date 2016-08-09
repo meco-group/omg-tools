@@ -35,7 +35,7 @@ LIBDIR = $(CASADILIB)
 CXXFLAGS = -I$(INCDIR) -DUSE_CXX11 -std=c++11 -fPIC -std=c++11 -DCASADIOBJ="\"$(CASADIOBJ)\""
 CFLAGS = -fPIC -shared -std=c99
 LDFLAGS = -L$(LIBDIR) -lcasadi -lstdc++ -lcasadi -Wl,-rpath $(LIBDIR)
-PROBSOURCES = updx.c updz.c updl.c updres.c
+PROBSOURCES = @probsources@
 PROBOBJECTS = $(PROBSOURCES:.c=.so)
 SOURCES = $(SOURCEFILES) FormationPoint2Point.cpp Vehicle.cpp
 OBJECTS = $(SOURCES:.cpp=.o)

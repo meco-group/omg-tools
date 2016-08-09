@@ -34,7 +34,7 @@ class Export(object):
         self.options['casadilib'] = '/usr/local/lib/'
         self.options['casadiinc'] = '/usr/local/include/casadi/'
         self.options['casadiobj'] = '.'
-        self.options['sourcefiles'] = 'example.cpp Holonomic.cpp'
+        self.options['sourcefiles'] = 'test.cpp Holonomic.cpp'
         self.options['executable'] = 'Executable'
 
     def set_options(self, options):
@@ -49,10 +49,10 @@ class Export(object):
         # copy files
         files = self.copy_files(source_dirs, export_dir)
         # export casadi problem(s)
-        self.export_casadi_problems(export_dir, father, problem)
+        probsrc = self.export_casadi_problems(export_dir, father, problem)
         # create data to fill in in c++ template
         data = {}
-        data.update(self.get_make_options())
+        data.update(self.get_make_options(probsrc))
         data.update(self.create_defines(father, problem, point2point))
         data.update(self.create_types())
         data.update(self.create_functions(father, problem, point2point))
@@ -96,8 +96,19 @@ class Export(object):
                     raise ValueError('File '+os.path.join(self.src_dir, fil) +
                                      ' does not exist!')
 
-    def get_make_options(self):
-        make_opt = {}
+    def export_casadi_problems(self, destination, father, problem):
+        cwd = os.getcwd()
+        filenames = []
+        # substitutes
+        for child, subst in father.substitutes.items():
+            for name, fun in subst.items():
+                filenames.append('subst_'+name+'.c')
+                fun.generate(filenames[-1])
+                shutil.move(cwd+'/'+filenames[-1], destination+'src/'+filenames[-1])
+        return filenames
+
+    def get_make_options(self, probsrc):
+        make_opt = {'probsources': ' '.join(probsrc)}
         for key, option in self.options.items():
             make_opt[key] = option
         return make_opt
@@ -124,6 +135,15 @@ class Export(object):
         else:
             raise ValueError('This type of point2point problem is not ' +
                              'supported for export')
+        defines.update(self._create_spline_tf(father, problem))
+        defines.update(self._create_lb_ub(father, problem))
+        code = ''
+        for name, define in defines.items():
+            code += '#define ' + str(name) + ' ' + str(define) + '\n'
+        return {'defines': code}
+
+    def _create_spline_tf(self, father, problem):
+        defines = {}
         for child in father.children.values():
             for name, spl in child._splines_prim.items():
                 if name in child._variables:
@@ -134,7 +154,10 @@ class Export(object):
                                                 for t in spl['init'][k].tolist()])+'},'
                         tf = tf[:-1]+'}'
                         defines.update({('%s_TF') % name.upper(): tf})
-        # lbg & ubg
+        return defines
+
+    def _create_lb_ub(self, father, problem):
+        defines = {}
         lb, ub, cnt = '{', '{', 0
         for child in father.children.values():
             for name, con in child._constraints.items():
@@ -149,37 +172,43 @@ class Export(object):
         lb = lb[:-1]+'}'
         ub = ub[:-1]+'}'
         defines.update({'LBG_DEF': lb, 'UBG_DEF': ub})
-        code = ''
-        for name, define in defines.items():
-            code += '#define ' + str(name) + ' ' + str(define) + '\n'
-        return {'defines': code}
+        return defines
 
     def create_types(self):
         return {}
 
     def create_functions(self, father, problem, point2point):
         code = {}
+        code.update(self._create_generateSubstituteFunctions(father))
         code.update(self._create_getParameterVector(father))
         code.update(self._create_getVariableVector(father))
         code.update(self._create_getVariableDict(father))
         code.update(self._create_updateBounds(father))
-        code.update(self._create_initSplines(father))
-        code.update(self._create_transformSplines(father, point2point))
+        code.update(self._create_initSplines(father, problem))
+        code.update(self._create_transformSplines(father, problem, point2point))
         return code
+
+    def _create_generateSubstituteFunctions(self, father):
+        code = '\tstring obj_path = CASADIOBJ;\n'
+        for child, subst in father.substitutes.items():
+            for name, fun in subst.items():
+                filename = 'subst_'+name+'.so'
+                code += '\tsubstitutes["'+name+'"] = external("'+name+'", obj_path+"/'+filename+'");\n'
+        return {'generateSubstituteFunctions': code}
 
     def _create_getParameterVector(self, father):
         code, cnt = '', 0
         for label, child in father.children.items():
             for name, par in child._parameters.items():
                 if par.size(1) > 1:
-                    code += '\tfor (int i=0; i<'+str(par.size(1))+'; i++){\n'
+                    code += '\tfor (int i=0; i<'+str(par.size(1)*par.size(2))+'; i++){\n'
                     code += ('\t\tpar_vect['+str(cnt) +
                              '+i] = par_dict["'+label+'"]["'+name+'"][i];\n')
                     code += '\t}\n'
                 else:
                     code += '\tpar_vect['+str(cnt) + \
                         '] = par_dict["'+label+'"]["'+name+'"][0];\n'
-                cnt += par.size(1)
+                cnt += par.size(1)*par.size(2)
         return {'getParameterVector': code}
 
     def _create_getVariableVector(self, father):
@@ -191,7 +220,7 @@ class Export(object):
                     name+'") != var_dict["'+label+'"].end()){\n'
                 if var.size(1) > 1:
                     code += '\t\t\tfor (int i=0; i<' + \
-                        str(var.size(1))+'; i++){\n'
+                        str(var.size(1)*var.size(2))+'; i++){\n'
                     code += ('\t\t\t\tvar_vect['+str(cnt) +
                              '+i] = var_dict["'+label+'"]["'+name+'"][i];\n')
                     code += '\t\t\t}\n'
@@ -199,7 +228,7 @@ class Export(object):
                     code += '\t\t\tvar_vect[' + \
                         str(cnt)+'] = var_dict["'+label+'"]["'+name+'"][0];\n'
                 code += '\t\t}\n'
-                cnt += var.size(1)
+                cnt += var.size(1)*var.size(2)
             code += '\t}\n'
         return {'getVariableVector': code}
 
@@ -209,15 +238,15 @@ class Export(object):
         for label, child in father.children.items():
             for name, var in child._variables.items():
                 if var.size(1) > 1:
-                    code += '\tvec.resize('+str(var.size(1))+');\n'
-                    code += '\tfor (int i=0; i<'+str(var.size(1))+'; i++){\n'
+                    code += '\tvec.resize('+str(var.size(1)*var.size(2))+');\n'
+                    code += '\tfor (int i=0; i<'+str(var.size(1)*var.size(2))+'; i++){\n'
                     code += '\t\tvec[i] = var_vect['+str(cnt)+'+i];\n'
                     code += '\t}\n'
                     code += '\tvar_dict["'+label+'"]["'+name+'"] = vec;\n'
                 else:
                     code += '\tvar_dict["'+label+'"]["' + \
                         name+'"] = var_vect['+str(cnt)+'];\n'
-                cnt += var.size(1)
+                cnt += var.size(1)*var.size(2)
         return {'getVariableDict': code}
 
     def _create_updateBounds(self, father):
@@ -243,14 +272,15 @@ class Export(object):
                 cnt += con[0].size(1)
         return {'updateBounds': code}
 
-    def _create_initSplines(self, father):
+    def _create_initSplines(self, father, problem):
         code = ''
         for label, child in father.children.items():
             for name in child._splines_prim:
-                code += '\tsplines_tf["'+name+'"] = '+name.upper()+'_TF;\n'
+                if name in child._variables:
+                    code += '\tsplines_tf["'+name+'"] = '+name.upper()+'_TF;\n'
         return {'initSplines': code}
 
-    def _create_transformSplines(self, father, point2point):
+    def _create_transformSplines(self, father, problem, point2point):
         code, cnt = '', 0
         if point2point.__class__.__name__ == 'FixedTPoint2point':
             code += ('\tif(((current_time > 0) and ' +
@@ -282,15 +312,8 @@ class Export(object):
                         code += '\t\t\t}\n'
                         code += '\t\t}\n'
                     cnt += var.size(1)
-            code += '\t}'
+            code += '\t}\n'
         elif point2point.__class__.__name__ == 'FreeTPoint2point':
             raise Warning('Initialization for free time problem ' +
                           'not implemented (yet?).')
         return {'transformSplines': code}
-
-    # ========================================================================
-    # Methods required to override
-    # ========================================================================
-
-    def export_casadi_problems(self, destination, father, problem):
-        raise NotImplementedError('Please implement this method!')

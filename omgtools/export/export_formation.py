@@ -49,6 +49,13 @@ class ExportFormation(Export):
 
     def export_casadi_problems(self, destination, father, problem):
         cwd = os.getcwd()
+        filenames = []
+        # substitutes
+        for child, subst in father.substitutes.items():
+            for name, fun in subst.items():
+                filenames.append('subst_'+name+'.c')
+                fun.generate(filenames[-1])
+                shutil.move(cwd+'/'+filenames[-1], destination+'src/'+filenames[-1])
         # updx
         obj = father.problem_description['obj']
         con = father.problem_description['con']
@@ -66,8 +73,117 @@ class ExportFormation(Export):
         problem.problem_upd_z.generate('updz.c')
         problem.problem_upd_l.generate('updl.c')
         problem.problem_upd_res.generate('updres.c')
+        filenames.extend(['updx.c', 'updz.c', 'updl.c', 'updres.c'])
         # move files
         shutil.move(cwd+'/updx.c', destination+'src/updx.c')
         shutil.move(cwd+'/updz.c', destination+'src/updz.c')
         shutil.move(cwd+'/updl.c', destination+'src/updl.c')
         shutil.move(cwd+'/updres.c', destination+'src/updres.c')
+        return filenames
+
+    def create_defines(self, father, problem, point2point):
+        defines = {}
+        defines['ADMMLBL'] = '"' + problem.label + '"'
+        defines['RHO'] = problem.options['rho']
+        defines['N_SHARED'] = problem.q_i_struct(0).cat.size(1)
+        defines['N_NGHB'] = len(problem.fleet.get_neighbors(problem.vehicle))
+        data = Export.create_defines(self, father, problem, point2point)
+        code = data['defines']
+        for name, define in defines.items():
+            code += '#define ' + str(name) + ' ' + str(define) + '\n'
+        return {'defines': code}
+
+    def _create_spline_tf(self, father, problem):
+        defines = Export._create_spline_tf(self, father, problem)
+        for child, q_i in problem.q_i.items():
+            for name, ind in q_i.items():
+                if name in child._splines_prim:
+                    basis = child._splines_prim[name]['basis']
+                    for l in range(len(basis)):
+                        sl_min = l*len(basis)
+                        sl_max = (l+1)*len(basis)
+                        if set(range(sl_min, sl_max)) <= set(ind):
+                            spl = child._splines_prim[name]
+                            if spl['init'] is not None:
+                                tf = '{'
+                                for k in range(spl['init'].shape[0]):
+                                    tf += '{'+','.join([str(t) for t in spl['init'][k].tolist()])+'},'
+                                tf = tf[:-1]+'}'
+                                defines.update({('XVAR_%s_TF') % name.upper(): tf})
+                            break
+        return defines
+
+    def create_functions(self, father, problem, point2point):
+        code = Export.create_functions(self, father, problem, point2point)
+        code.update(self._create_retrieveXVariables(father, problem))
+        return code
+
+    def _create_retrieveXVariables(self, father, problem):
+        code, cnt = '', 0
+        code += '\tvector<vector<double>> subst;\n'
+        x = problem.q_i_struct(0)
+        for child, q_i in problem.q_i.items():
+            for name, ind in q_i.items():
+                if name in child._substitutes:
+                    code += '\tsubstitutes["'+name+'"]({var_dict["'+child.label+'"]["'+name+'"]}, subst);\n'
+                    for i in ind:
+                        code += '\tvariables_admm["x_i"]['+str(cnt)+'] = subst[0]['+str(i)+'];\n'
+                        cnt += 1
+                else:
+                    for i in ind:
+                        code += '\tvariables_admm["x_i"]['+str(cnt)+'] = var_dict["'+child.label+'"]["'+name+'"]['+str(i)+'];\n'
+                        cnt += 1
+        return {'retrieveXVariables': code}
+
+    def _create_initSplines(self, father, problem):
+        data = Export._create_initSplines(self, father, problem)
+        code = data['initSplines']
+        for child, q_i in problem.q_i.items():
+            for name, ind in q_i.items():
+                if name in child._splines_prim:
+                    basis = child._splines_prim[name]['basis']
+                    for l in range(len(basis)):
+                        sl_min = l*len(basis)
+                        sl_max = (l+1)*len(basis)
+                        if set(range(sl_min, sl_max)) <= set(ind):
+                            code += '\tsplines_tf["xvar_'+name+'"] = XVAR_'+name.upper()+'_TF;\n'
+        return {'initSplines': code}
+
+    def _create_transformSplines(self, father, problem, point2point):
+        data = Export._create_transformSplines(self, father, problem, point2point)
+        code = data['transformSplines']
+        if point2point.__class__.__name__ == 'FixedTPoint2point':
+            code += ('\tif(((current_time > 0) and ' +
+                     'fabs(fmod(round(current_time*1000.)/1000., ' +
+                     'horizon_time/' +
+                     str(point2point.vehicles[0].knot_intervals)+')) <1.e-6)){\n')
+            code += '\t\tvector<double> x_i_tf(n_shared);\n'
+            code += '\t\tvector<double> z_i_tf(n_shared);\n'
+            code += '\t\tvector<double> l_i_tf(n_shared);\n'
+            code += '\t\tvector<double> z_ji_tf(n_nghb*n_shared);\n'
+            code += '\t\tvector<double> l_ji_tf(n_nghb*n_shared);\n'
+            cnt = 0
+            for child, q_i in problem.q_i.items():
+                for name, ind in q_i.items():
+                    if name in child._splines_prim:
+                        basis = child._splines_prim[name]['basis']
+                        for l in range(len(basis)):
+                            sl_min = l*len(basis)
+                            sl_max = (l+1)*len(basis)
+                            if set(range(sl_min, sl_max)) <= set(ind):
+                                code += ('\t\tfor(int i=0; i<' + str(len(basis)) + '; i++){\n')
+                                code += ('\t\t\tfor(int j=0; j<' + str(len(basis)) + '; j++){\n')
+                                for var in ['x_i', 'z_i', 'l_i']:
+                                    code += ('\t\t\t\t'+var+'_tf['+str(cnt)+'+i] += splines_tf["xvar_'+name+'"][i][j]*variables_admm["'+var+'"]['+str(cnt)+'+j];\n')
+                                code += ('\t\t\t\tfor(int k=0; k<n_nghb; k++){\n')
+                                for var in ['z_ji', 'l_ji']:
+                                    code += ('\t\t\t\t\t'+var+'_tf['+str(cnt)+'+i+k*n_shared] += splines_tf["xvar_'+name+'"][i][j]*variables_admm["'+var+'"]['+str(cnt)+'+j+k*n_shared];\n')
+                                code += '\t\t\t\t}\n'
+                                code += '\t\t\t}\n'
+                                code += '\t\t}\n'
+                    cnt += len(ind)
+            code += '\t}\n'
+        elif point2point.__class__.__name__ == 'FreeTPoint2point':
+            raise Warning('Initialization for free time problem ' +
+                          'not implemented (yet?).')
+        return {'transformSplines': code}

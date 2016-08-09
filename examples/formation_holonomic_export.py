@@ -17,8 +17,6 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-# import sys, os
-# sys.path.insert(0, os.getcwd()+'/..')
 from omgtools import *
 import os
 
@@ -36,18 +34,18 @@ vehicles = [Holonomic(shapes=Circle(0.1), options=options) for l in range(N)]
 fleet = Fleet(vehicles)
 configuration = RegularPolyhedron(0.2, N, np.pi/4.).vertices.T
 init_positions = [0.0, 0.0] + configuration
-terminal_positions = [4.0, 4.0] + configuration
+terminal_positions = [3.5, 3.5] + configuration
 
 fleet.set_configuration(configuration.tolist())
 fleet.set_initial_conditions(init_positions.tolist())
 fleet.set_terminal_conditions(terminal_positions.tolist())
 
 # create environment
-environment = Environment(room={'shape': Square(6.)})
+environment = Environment(room={'shape': Square(5.), 'position': [1.5, 1.5]})
 rectangle = Rectangle(width=3., height=0.2)
 
-environment.add_obstacle(Obstacle({'position': [0.5, 2.0]}, shape=rectangle))
-environment.add_obstacle(Obstacle({'position': [4.2, 2.0]}, shape=rectangle))
+environment.add_obstacle(Obstacle({'position': [-0.6, 1.0]}, shape=rectangle))
+environment.add_obstacle(Obstacle({'position': [3.2, 1.0]}, shape=rectangle))
 
 # create a formation point-to-point problem
 options = {'rho': 2., 'horizon_time': 10}

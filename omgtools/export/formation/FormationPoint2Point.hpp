@@ -50,10 +50,11 @@ class FormationPoint2Point{
         casadi::Function updz_problem;
         casadi::Function updl_problem;
         casadi::Function get_residuals;
+        std::map<std::string, casadi::Function> substitutes;
         std::map<std::string, casadi::DM> args, sol;
         std::vector<double> parameters;
         std::vector<double> variables;
-        std::map<string, std::vector<double>> variables_admm;
+        std::map<std::string, std::vector<double>> variables_admm;
         std::vector<double> lbg;
         std::vector<double> ubg;
         std::vector<double> time;
@@ -62,19 +63,28 @@ class FormationPoint2Point{
         std::map<std::string, std::vector<std::vector<double>>> splines_tf;
         std::string solver_output;
         std::vector<double> residuals;
+        double rho;
 
         const int n_var = N_VAR;
         const int n_par = N_PAR;
         const int n_con = N_CON;
         const int freeT = FREET;
+        const int n_nghb = N_NGHB;
 
         void generateProblem();
+        void generateSubstituteFunctions();
+        bool solveUpdx(std::vector<obstacle_t>&, std::vector<double>&);
+        bool solveUpdz();
+        bool solveUpdl();
+        bool computeResiduals();
         void initSplines();
-        bool solve(std::vector<obstacle_t>&);
-        void setParameters(std::vector<obstacle_t>&);
+        void setParameters(std::vector<obstacle_t>&, std::vector<double>&);
         void initVariables();
+        void initVariablesADMM();
         void updateBounds(double);
-        void retrieveTrajectories();
+        void extractData();
+        void retrieveTrajectories(std::vector<std::vector<double>>&);
+        void retrieveXVariables(std::map<std::string, std::map<std::string, std::vector<double>>>&);
         void getParameterVector(std::vector<double>&, std::map<std::string, std::map<std::string, std::vector<double>>>&);
         void getVariableVector(std::vector<double>&, std::map<std::string, std::map<std::string, std::vector<double>>>&);
         void getVariableDict(std::vector<double>&, std::map<std::string, std::map<std::string, std::vector<double>>>&);
@@ -83,12 +93,14 @@ class FormationPoint2Point{
     public:
         const int n_dim = N_DIM;
         const int n_obs = N_OBS;
+        const int n_shared = N_SHARED;
 
         FormationPoint2Point(Vehicle* vehicle, double update_time, double sample_time, double horizon_time);
         FormationPoint2Point(Vehicle* vehicle, double update_time, double sample_time, double horizon_time, int trajectory_length);
         void reset();
-        bool update(std::vector<double>&, std::vector<double>&, std::vector<std::vector<double>>&, std::vector<std::vector<double>>&, std::vector<obstacle_t>&);
-        bool update(std::vector<double>&, std::vector<double>&, std::vector<std::vector<double>>&, std::vector<std::vector<double>>&, std::vector<obstacle_t>&, int);
+        bool update1(std::vector<double>&, std::vector<double>&, std::vector<std::vector<double>>&, std::vector<std::vector<double>>&, std::vector<double>&, std::vector<std::vector<double>>&, std::vector<std::vector<double>>&, std::vector<obstacle_t>&, std::vector<double> &);
+        bool update1(std::vector<double>&, std::vector<double>&, std::vector<std::vector<double>>&, std::vector<std::vector<double>>&, std::vector<double>&, std::vector<std::vector<double>>&, std::vector<std::vector<double>>&, std::vector<obstacle_t>&, std::vector<double> &, int);
+        bool update2(std::vector<std::vector<double>>&, std::vector<std::vector<double>>&, std::vector<std::vector<double>>&, std::vector<double>&);
     };
 }
 
