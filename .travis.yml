@@ -28,7 +28,7 @@ script:
   - ./Point2Point
   - popd
   - popd
-  - pusd export_f
+  - pushd export_f
   - make && pushd bin
   - ./FormationPoint2Point
 #  - valgrind ./Point2Point
