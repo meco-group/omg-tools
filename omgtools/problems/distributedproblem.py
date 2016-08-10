@@ -157,6 +157,12 @@ class DistributedProblem(Problem):
             for upd2 in upd1.q_ij.keys():
                 upd2.q_ji[upd1] = upd1.q_ij[upd2]
 
+        # sort dics for logical order of neighbors
+        # (not necessary, but easier for debugging)
+        for upd in updaters:
+            upd.q_ij = self._sort_dict(upd._index, upd.q_ij)
+            upd.q_ji = self._sort_dict(upd._index, upd.q_ji)
+
     def _compose_dictionary(self):
         children = [veh for veh in self.vehicles]
         children.extend(self.problems)
@@ -166,6 +172,9 @@ class DistributedProblem(Problem):
         for child in children:
             symbol_dict.update(child.symbol_dict)
         return symbol_dict
+
+    def _sort_dict(self, ref, dic):
+        return col.OrderedDict(sorted(dic.iteritems(), key=lambda x: x[0]._index if(x[0]._index > ref) else x[0]._index + self.fleet.N))
 
     # ========================================================================
     # Methods required for simulation

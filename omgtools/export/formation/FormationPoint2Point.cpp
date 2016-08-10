@@ -28,7 +28,7 @@ using namespace casadi;
 
 namespace omg{
 
-FormationPoint2Point::FormationPoint2Point(Vehicle* vehicle, double update_time, double sample_time, double horizon_time, int trajectory_length):
+FormationPoint2Point::FormationPoint2Point(Vehicle* vehicle, double update_time, double sample_time, double horizon_time, int init_iter, int trajectory_length):
 parameters(N_PAR), variables(N_VAR), lbg(LBG_DEF), ubg(UBG_DEF), time(trajectory_length+1),
 state_trajectory(trajectory_length+1, vector<double>(vehicle->getNState())),
 input_trajectory(trajectory_length+1, vector<double>(vehicle->getNInput())),
@@ -36,6 +36,10 @@ residuals(3), rho(RHO) {
     if (trajectory_length > int(horizon_time/sample_time)){
         cerr << "trajectory_length too large!" << endl;
     }
+    else if(trajectory_length < int(update_time/sample_time)){
+        cerr << "trajectory_length too short!" << endl;
+    }
+    this->init_iter = init_iter;
     this->vehicle = vehicle;
     this->update_time = update_time;
     this->sample_time = sample_time;
@@ -64,7 +68,7 @@ residuals(3), rho(RHO) {
     initSplines();
 }
 
-FormationPoint2Point::FormationPoint2Point(Vehicle* vehicle, double update_time, double sample_time, double horizon_time):FormationPoint2Point(vehicle, update_time, sample_time, horizon_time, int(update_time/sample_time)){
+FormationPoint2Point::FormationPoint2Point(Vehicle* vehicle, double update_time, double sample_time, double horizon_time):FormationPoint2Point(vehicle, update_time, sample_time, horizon_time, 5, int(update_time/sample_time)){
 }
 
 void FormationPoint2Point::generateProblem(){
@@ -99,6 +103,10 @@ void FormationPoint2Point::reset(){
     }
 }
 
+void FormationPoint2Point::resetTime(){
+    current_time = 0.0;
+}
+
 bool FormationPoint2Point::update1(vector<double>& condition0, vector<double>& conditionT,
     vector<vector<double>>& state_trajectory, vector<vector<double>>& input_trajectory,
     vector<double>& x_var, vector<vector<double>>& z_ji_var, vector<vector<double>>& l_ji_var,
@@ -111,11 +119,11 @@ bool FormationPoint2Point::update1(vector<double>& condition0, vector<double>& c
     vector<double>& x_var, vector<vector<double>>& z_ji_var, vector<vector<double>>& l_ji_var,
     vector<obstacle_t>& obstacles, vector<double>& rel_pos_c, int predict_shift){
     // start with own initial guess
-    if (fabs(current_time)>1.e-6){
+    if (iteration > 0){
         for (int i=0; i<n_nghb; i++){
             for (int j=0; j<n_shared; j++){
-                variables_admm["z_ji"][i*n_shared+j] = z_ji_var[j][i];
-                variables_admm["l_ji"][i*n_shared+j] = l_ji_var[j][i];
+                variables_admm["z_ji"][i*n_shared+j] = z_ji_var[i][j];
+                variables_admm["l_ji"][i*n_shared+j] = l_ji_var[i][j];
             }
         }
     }
@@ -190,8 +198,10 @@ bool FormationPoint2Point::update1(vector<double>& condition0, vector<double>& c
     // return x_i
     x_var = variables_admm["x_i"];
     // update current time
-    current_time += update_time;
-
+    if (iteration >= init_iter){
+        current_time += update_time;
+    }
+    iteration++;
     return check;
 }
 
@@ -250,12 +260,15 @@ bool FormationPoint2Point::update2(vector<vector<double>>& x_j_var,
 }
 
 bool FormationPoint2Point::solveUpdx(vector<obstacle_t>& obstacles, vector<double>& rel_pos_c){
+    // first set parameter rel_pos_c before initVariablesADMM!
+    setParameters(obstacles, rel_pos_c);
     // init variables if first time
-    if(fabs(current_time)<=1.e-6){
+    if(iteration == 0){
         initVariables();
         initVariablesADMM();
+        // set parameters again with init admm variables
+        setParameters(obstacles, rel_pos_c);
     }
-    setParameters(obstacles, rel_pos_c);
     args["p"] = parameters;
     args["x0"] = variables;
     args["lbg"] = lbg;

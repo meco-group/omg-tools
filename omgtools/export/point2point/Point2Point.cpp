@@ -35,6 +35,9 @@ input_trajectory(trajectory_length+1, vector<double>(vehicle->getNInput())) {
     if (trajectory_length > int(horizon_time/sample_time)){
         cerr << "trajectory_length too large!" << endl;
     }
+    else if(trajectory_length < int(update_time/sample_time)){
+        cerr << "trajectory_length too short!" << endl;
+    }
     this->vehicle = vehicle;
     this->update_time = update_time;
     this->sample_time = sample_time;
@@ -81,6 +84,10 @@ void Point2Point::reset(){
             input_trajectory[k][j] = 0.0;
         }
     }
+}
+
+void Point2Point::resetTime(){
+    current_time = 0.0;
 }
 
 bool Point2Point::update(vector<double>& condition0, vector<double>& conditionT, vector<vector<double>>& state_trajectory, vector<vector<double>>& input_trajectory, vector<obstacle_t>& obstacles){

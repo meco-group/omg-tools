@@ -42,10 +42,12 @@ class FormationPoint2Point{
     private:
         Vehicle* vehicle;
         double current_time=0.0;
+        int iteration=0;
         double horizon_time;
         double update_time;
         double sample_time;
         int trajectory_length;
+        int init_iter;
         casadi::Function updx_problem;
         casadi::Function updz_problem;
         casadi::Function updl_problem;
@@ -96,8 +98,9 @@ class FormationPoint2Point{
         const int n_shared = N_SHARED;
 
         FormationPoint2Point(Vehicle* vehicle, double update_time, double sample_time, double horizon_time);
-        FormationPoint2Point(Vehicle* vehicle, double update_time, double sample_time, double horizon_time, int trajectory_length);
+        FormationPoint2Point(Vehicle* vehicle, double update_time, double sample_time, double horizon_time, int init_iter, int trajectory_length);
         void reset();
+        void resetTime();
         bool update1(std::vector<double>&, std::vector<double>&, std::vector<std::vector<double>>&, std::vector<std::vector<double>>&, std::vector<double>&, std::vector<std::vector<double>>&, std::vector<std::vector<double>>&, std::vector<obstacle_t>&, std::vector<double> &);
         bool update1(std::vector<double>&, std::vector<double>&, std::vector<std::vector<double>>&, std::vector<std::vector<double>>&, std::vector<double>&, std::vector<std::vector<double>>&, std::vector<std::vector<double>>&, std::vector<obstacle_t>&, std::vector<double> &, int);
         bool update2(std::vector<std::vector<double>>&, std::vector<std::vector<double>>&, std::vector<std::vector<double>>&, std::vector<double>&);

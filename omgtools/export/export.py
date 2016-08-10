@@ -282,16 +282,19 @@ class Export(object):
 
     def _create_transformSplines(self, father, problem, point2point):
         code, cnt = '', 0
+        tf_len = len(problem.vehicles[0].basis)
         if point2point.__class__.__name__ == 'FixedTPoint2point':
             code += ('\tif(((current_time > 0) and ' +
                      'fabs(fmod(round(current_time*1000.)/1000., ' +
                      'horizon_time/' +
                      str(point2point.vehicles[0].knot_intervals)+')) <1.e-6)){\n')
-            code += ('\t\tvector<double> spline_tf(' +
-                     str(len(point2point.vehicles[0].basis))+');\n')
+            code += ('\t\tvector<double> spline_tf(' + str(len(problem.vehicles[0].basis)) + ');\n')
             for label, child in father.children.items():
                 for name, var in child._variables.items():
                     if name in child._splines_prim:
+                        if (len(child._splines_prim[name]['basis']) > tf_len):
+                            tf_len = len(child._splines_prim[name]['basis'])
+                            code += ('\t\tspline_tf.resize(' + str(tf_len)+');\n')
                         tf = 'splines_tf["'+name+'"]'
                         code += ('\t\tfor(int k=0; k<' +
                                  str(var.shape[1])+'; k++){\n')

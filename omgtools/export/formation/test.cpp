@@ -28,7 +28,8 @@ using namespace std;
 
 int main()
 {
-    int n_iter = 1;
+    int n_iter = 50;
+    int init_iter = 5;
     int N = 4;
     double horizon_time = 10;
     double sample_time = 0.01;
@@ -42,12 +43,12 @@ int main()
     vector<vector<vector<double>>> input_trajectory(N, vector<vector<double>>(trajectory_length, vector<double>(2)));
     vector<vector<vector<double>>> state_trajectory(N, vector<vector<double>>(trajectory_length, vector<double>(2)));
     vector<vector<double>> rel_pos_c(N, vector<double>(2));
-    // ideal update: prediction of initial state based on spline extrapolation
-    // non-ideal update: prediction based on current state0 and model integration
     for (int v=0; v<N; v++){
         vehicles[v] = new omg::Holonomic();
+        // ideal update: prediction of initial state based on spline extrapolation
+        // non-ideal update: prediction based on current state0 and model integration
         vehicles[v]->setIdealPrediction(true);
-        problems[v] = new omg::FormationPoint2Point(vehicles[0], update_time, sample_time, horizon_time, trajectory_length);
+        problems[v] = new omg::FormationPoint2Point(vehicles[0], update_time, sample_time, horizon_time, init_iter, trajectory_length);
     }
     int n_shared = problems[0]->n_shared;
 
@@ -90,39 +91,38 @@ int main()
     vector<vector<vector<double>>> l_ij_var(N, vector<vector<double>>(2, vector<double>(n_shared)));
     vector<vector<double>> residuals(N, vector<double>(3));
 
-    // // compare with solution from Python
-    // vector<vector<vector<vector<double>>>> data_state(N, vector<vector<vector<double>>>(n_iter, vector<vector<double>>(trajectory_length, vector<double>(2))));
-    // vector<vector<vector<vector<double>>>> data_input(N, vector<vector<vector<double>>>(n_iter, vector<vector<double>>(trajectory_length, vector<double>(2))));
-    // vector<string> file_data_state = {"../test/data_state_vehicle0", "../test/data_state_vehicle1", "../test/data_state_vehicle2", "../test/data_state_vehicle3"};
-    // vector<string> file_data_input = {"../test/input_state_vehicle0", "../test/data_input_vehicle1", "../test/data_input_vehicle2", "../test/data_input_vehicle3"};
-    // for (int v=0; v<N; v++){
-    //     ifstream file_state, file_input;
-    //     file_state.open(file_data_state[v]);
-    //     file_input.open(file_data_input[v]);
-    //     int k = 0;
-    //     for (int i=0; i<2*n_iter; i++){
-    //         string line_state, line_input;
-    //         getline(file_state, line_state);
-    //         getline(file_input, line_input);
-    //         stringstream iss_state(line_state);
-    //         stringstream iss_input(line_input);
-    //         for (int j=0; j<trajectory_length; j++){
-    //             string val_state;
-    //             string val_input;
-    //             getline(iss_state, val_state, ',');
-    //             getline(iss_input, val_input, ',');
-    //             stringstream converter_state(val_state);
-    //             stringstream converter_input(val_input);
-    //             converter_state >> data_state[v][i/2][j][k];
-    //             converter_input >> data_input[v][i/2][j][k];
-    //         }
-    //         k++;
-    //         if (k == 2){
-    //             k = 0;
-    //         }
-    //     }
+    // compare with solution from Python
+    vector<vector<vector<vector<double>>>> data_state(N, vector<vector<vector<double>>>(n_iter, vector<vector<double>>(trajectory_length, vector<double>(2))));
+    vector<vector<vector<vector<double>>>> data_input(N, vector<vector<vector<double>>>(n_iter, vector<vector<double>>(trajectory_length, vector<double>(2))));
 
-    // }
+    ifstream file_state, file_input;
+    file_state.open("../test/data_state.csv");
+    file_input.open("../test/data_input.csv");
+
+    for (int v=0; v<N; v++){
+        int k = 0;
+        for (int i=0; i<2*n_iter; i++){
+            string line_state, line_input;
+            getline(file_state, line_state);
+            getline(file_input, line_input);
+            stringstream iss_state(line_state);
+            stringstream iss_input(line_input);
+            for (int j=0; j<trajectory_length; j++){
+                string val_state;
+                string val_input;
+                getline(iss_state, val_state, ',');
+                getline(iss_input, val_input, ',');
+                stringstream converter_state(val_state);
+                stringstream converter_input(val_input);
+                converter_state >> data_state[v][i/2][j][k];
+                converter_input >> data_input[v][i/2][j][k];
+            }
+            k++;
+            if (k == 2){
+                k = 0;
+            }
+        }
+    }
 
     double time;
     double err;
@@ -137,12 +137,12 @@ int main()
                 time = double(end-begin)/CLOCKS_PER_SEC;
             }
         }
-        cout << "it: " << i << " upd1, " << "time: " << time << "s" << endl;
+        cout << "it: " << i << " upd1, " << "time: " << time << "s, ";
 
         // communicate x_var
         for (int v=0; v<N; v++){
-            x_j_var[v][0] = x_var[(v+1)%N];
-            x_j_var[v][1] = x_var[(v-1)%N];
+            x_j_var[v][0] = x_var[(N+v+1)%N];
+            x_j_var[v][1] = x_var[(N+v-1)%N];
         }
 
         // everyone executes update2
@@ -155,37 +155,39 @@ int main()
                 time = double(end-begin)/CLOCKS_PER_SEC;
             }
         }
-        cout << "it: " << i << " upd2, " << "time: " << time << "s" << endl;
+        cout << "upd2, " << "time: " << time << "s" << endl;
 
-        // // communicate z_ij_var, l_ij_var
-        // for (int v=0; v<N; v++){
-        //     z_ji_var[v][0] = z_ij_var[(v+1)%N][0];
-        //     z_ji_var[v][1] = z_ij_var[(v-1)%N][1];
-        //     l_ji_var[v][0] = l_ij_var[(v+1)%N][0];
-        //     l_ji_var[v][1] = l_ij_var[(v-1)%N][1];
-        // }
+        // communicate z_ij_var, l_ij_var
+        for (int v=0; v<N; v++){
+            z_ji_var[v][0] = z_ij_var[(N+v+1)%N][1];
+            z_ji_var[v][1] = z_ij_var[(N+v-1)%N][0];
+            l_ji_var[v][0] = l_ij_var[(N+v+1)%N][1];
+            l_ji_var[v][1] = l_ij_var[(N+v-1)%N][0];
+        }
 
-        // // check with solution
-        // for (int v=0; v<N; v++){
-        //     for (int k=0; k<2; k++){
-        //         for (int j=0; j<trajectory_length; j++){
-        //             if (data_state[v][i][j][k] < 1e-14){
-        //                 err = (data_state[v][i][j][k] - state_trajectory[v][j][k]);
-        //             }
-        //             else {
-        //                 err = (data_state[v][i][j][k] - state_trajectory[v][j][k])/data_state[v][i][j][k];
-        //             }
-        //             assert(err < 1e-4);
-        //             if (data_input[v][i][j][k] < 1e-14){
-        //                 err = (data_input[v][i][j][k] - input_trajectory[v][j][k]);
-        //             }
-        //             else {
-        //                 err = (data_input[v][i][j][k] - input_trajectory[v][j][k])/data_input[v][i][j][k];
-        //             }
-        //             assert(err < 1e-4);
-        //         }
-        //     }
-        // }
+        if (i >= init_iter) {
+            // check with solution
+            for (int v=0; v<N; v++){
+                for (int k=0; k<2; k++){
+                    for (int j=0; j<trajectory_length; j++){
+                        if (data_state[v][i-init_iter][j][k] < 1e-14){
+                            err = (data_state[v][i-init_iter][j][k] - state_trajectory[v][j][k]);
+                        }
+                        else {
+                            err = (data_state[v][i-init_iter][j][k] - state_trajectory[v][j][k])/data_state[v][i-init_iter][j][k];
+                        }
+                        assert(err < 5e-3);
+                        if (data_input[v][i-init_iter][j][k] < 1e-14){
+                            err = (data_input[v][i-init_iter][j][k] - input_trajectory[v][j][k]);
+                        }
+                        else {
+                            err = (data_input[v][i-init_iter][j][k] - input_trajectory[v][j][k])/data_input[v][i-init_iter][j][k];
+                        }
+                        assert(err < 5e-3);
+                    }
+                }
+            }
+        }
     }
 }
 

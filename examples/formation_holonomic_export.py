@@ -49,7 +49,7 @@ environment.add_obstacle(Obstacle({'position': [-0.6, 1.0]}, shape=rectangle))
 environment.add_obstacle(Obstacle({'position': [3.2, 1.0]}, shape=rectangle))
 
 # create a formation point-to-point problem
-options = {'rho': 2., 'horizon_time': 10}
+options = {'rho': 2., 'horizon_time': 10, 'init_iter': 5}
 problem = FormationPoint2point(fleet, environment, options=options)
 problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem.init()
@@ -67,24 +67,26 @@ options['casadilib'] = os.path.join(casadi_path, 'casadi/')
 
 # export the problem
 problem.export(options)
-# simulator = Simulator(problem)
-# trajectories, signals = simulator.run()
+simulator = Simulator(problem)
+trajectories, signals = simulator.run()
 
-# # save results for check in c++
-# testdir = os.path.join(options['directory'], 'test')
-# if not os.path.isdir(testdir):
-#     os.makedirs(os.path.join(options['directory'], 'test'))
-# for vehicle in ['vehicle0', 'vehicle1', 'vehicle2', 'vehicle3']:
-#     with open(os.path.join(testdir, 'data_state_'+vehicle+'.csv'), 'wb') as f:
-#         w = csv.writer(f)
-#         for i in range(0, len(trajectories[vehicle]['state']), int(simulator.update_time/simulator.sample_time)):
-#             for k in range(trajectories[vehicle]['state'][i].shape[0]):
-#                 w.writerow(trajectories[vehicle]['state'][i][k, :])
-#     with open(os.path.join(testdir, 'data_input_'+vehicle+'.csv'), 'wb') as f:
-#         w = csv.writer(f)
-#         for i in range(0, len(trajectories[vehicle]['input']), int(simulator.update_time/simulator.sample_time)):
-#             for k in range(trajectories[vehicle]['input'][i].shape[0]):
-#                 w.writerow(trajectories[vehicle]['input'][i][k, :])
+# save results for check in c++
+testdir = os.path.join(options['directory'], 'test')
+if not os.path.isdir(testdir):
+    os.makedirs(os.path.join(options['directory'], 'test'))
+jump = int(simulator.update_time/simulator.sample_time)
+with open(os.path.join(testdir, 'data_state.csv'), 'wb') as f:
+    w = csv.writer(f)
+    for v in range(len(vehicles)):
+        for i in range(0, 50*jump, jump):
+            for k in range(trajectories['vehicle'+str(v)]['state'][i].shape[0]):
+                w.writerow(trajectories['vehicle'+str(v)]['state'][i][k, :])
+with open(os.path.join(testdir, 'data_input.csv'), 'wb') as f:
+    w = csv.writer(f)
+    for v in range(len(vehicles)):
+        for i in range(0, 50*jump, jump):
+            for k in range(trajectories['vehicle'+str(v)]['input'][i].shape[0]):
+                w.writerow(trajectories['vehicle'+str(v)]['input'][i][k, :])
 
 # note: you need to implement your vehicle type in c++. Take a look at
 # Holonomic.cpp and Holonomic.hpp which are also exported as an example.

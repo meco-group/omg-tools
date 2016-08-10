@@ -161,11 +161,8 @@ class ExportFormation(Export):
                      'fabs(fmod(round(current_time*1000.)/1000., ' +
                      'horizon_time/' +
                      str(point2point.vehicles[0].knot_intervals)+')) <1.e-6)){\n')
-            code += '\t\tvector<double> x_i_tf(n_shared);\n'
-            code += '\t\tvector<double> z_i_tf(n_shared);\n'
-            code += '\t\tvector<double> l_i_tf(n_shared);\n'
-            code += '\t\tvector<double> z_ji_tf(n_nghb*n_shared);\n'
-            code += '\t\tvector<double> l_ji_tf(n_nghb*n_shared);\n'
+            for var in ['x_i', 'z_i', 'l_i', 'z_ji', 'l_ji', 'z_ij', 'l_ij']:
+                code += '\t\tvector<double> ' + var + '_tf(variables_admm["' + var + '"]);\n'
             cnt = 0
             for child, q_i in problem.q_i.items():
                 for name, ind in q_i.items():
@@ -176,16 +173,24 @@ class ExportFormation(Export):
                             sl_max = (l+1)*len(basis)
                             if set(range(sl_min, sl_max)) <= set(ind):
                                 code += ('\t\tfor(int i=0; i<' + str(len(basis)) + '; i++){\n')
+                                for var in ['x_i', 'z_i', 'l_i']:
+                                    code += ('\t\t\t' + var + '_tf['+str(cnt)+'+i] = 0;\n')
+                                code += ('\t\t\tfor(int k=0; k<n_nghb; k++){\n')
+                                for var in ['z_ji', 'l_ji', 'z_ij', 'l_ij']:
+                                    code += ('\t\t\t\t' + var + '_tf['+str(cnt)+'+i+k*n_shared] = 0;\n')
+                                code += '\t\t\t}\n'
                                 code += ('\t\t\tfor(int j=0; j<' + str(len(basis)) + '; j++){\n')
                                 for var in ['x_i', 'z_i', 'l_i']:
                                     code += ('\t\t\t\t'+var+'_tf['+str(cnt)+'+i] += splines_tf["xvar_'+name+'"][i][j]*variables_admm["'+var+'"]['+str(cnt)+'+j];\n')
                                 code += ('\t\t\t\tfor(int k=0; k<n_nghb; k++){\n')
-                                for var in ['z_ji', 'l_ji']:
+                                for var in ['z_ji', 'l_ji', 'z_ij', 'l_ij']:
                                     code += ('\t\t\t\t\t'+var+'_tf['+str(cnt)+'+i+k*n_shared] += splines_tf["xvar_'+name+'"][i][j]*variables_admm["'+var+'"]['+str(cnt)+'+j+k*n_shared];\n')
                                 code += '\t\t\t\t}\n'
                                 code += '\t\t\t}\n'
                                 code += '\t\t}\n'
                     cnt += len(ind)
+            for var in ['x_i', 'z_i', 'l_i', 'z_ji', 'l_ji', 'z_ij', 'l_ij']:
+                code += '\t\tvariables_admm["' + var + '"] = ' + var + '_tf;\n'
             code += '\t}\n'
         elif point2point.__class__.__name__ == 'FreeTPoint2point':
             raise Warning('Initialization for free time problem ' +
