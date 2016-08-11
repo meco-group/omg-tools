@@ -20,7 +20,10 @@ setup(
     packages=['omgtools', 'omgtools/basics', 'omgtools/environment',
               'omgtools/problems', 'omgtools/simulation', 'omgtools/vehicles',
               'omgtools/export'],
-    package_data={'': ['export/point2point/*', 'export/formation/*', 'export/vehicles/*']},
+    package_data={'': ['export/point2point/*', 'export/vehicles/*',
+                       'export/point2point/admm/*', 'export/point2point/admm/formation/*',
+                       'export/point2point/admm/rendezvous/*', 'export/tests/point2point/*'
+                       'export/tests/formation/*', 'export/tests/rendezvous/*']},
     long_description=read('readme.md'),
     classifiers=[
         "Development Status :: 3 - Alpha",
