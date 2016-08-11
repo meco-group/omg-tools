@@ -34,7 +34,7 @@ class ExportP2P(Export):
                               'problems is supported.'))
         self.vehicle = problem.vehicles[0]
         src_files = ['Point2Point.cpp', 'Vehicle.cpp']
-        self.export(['point2point', 'vehicles'], self.options['directory'], src_files, problem.father, problem)
+        self.export(['point2point', 'vehicles', 'tests/point2point'], self.options['directory'], src_files, problem.father, problem)
 
     def set_default_options(self):
         Export.set_default_options(self)
