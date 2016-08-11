@@ -77,16 +77,16 @@ if not os.path.isdir(testdir):
 jump = int(simulator.update_time/simulator.sample_time)
 with open(os.path.join(testdir, 'data_state.csv'), 'wb') as f:
     w = csv.writer(f)
-    for v in range(len(vehicles)):
+    for vehicle in vehicles:
         for i in range(0, 50*jump, jump):
-            for k in range(trajectories['vehicle'+str(v)]['state'][i].shape[0]):
-                w.writerow(trajectories['vehicle'+str(v)]['state'][i][k, :])
+            for k in range(trajectories[vehicle.label]['state'][i].shape[0]):
+                w.writerow(trajectories[vehicle.label]['state'][i][k, :])
 with open(os.path.join(testdir, 'data_input.csv'), 'wb') as f:
     w = csv.writer(f)
-    for v in range(len(vehicles)):
+    for vehicle in vehicles:
         for i in range(0, 50*jump, jump):
-            for k in range(trajectories['vehicle'+str(v)]['input'][i].shape[0]):
-                w.writerow(trajectories['vehicle'+str(v)]['input'][i][k, :])
+            for k in range(trajectories[vehicle.label]['input'][i].shape[0]):
+                w.writerow(trajectories[vehicle.label]['input'][i][k, :])
 
 # note: you need to implement your vehicle type in c++. Take a look at
 # Holonomic.cpp and Holonomic.hpp which are also exported as an example.
