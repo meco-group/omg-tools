@@ -7,7 +7,7 @@ def read(fname):
 
 
 setup(
-    name="OMG-tools",
+    name="omg-tools",
     version="0.1",
     author="Ruben Van Parys",
     author_email="ruben.vanparys@kuleuven.be",
@@ -20,10 +20,12 @@ setup(
     packages=['omgtools', 'omgtools/basics', 'omgtools/environment',
               'omgtools/problems', 'omgtools/simulation', 'omgtools/vehicles',
               'omgtools/export'],
-    package_data={'': ['export/point2point/*', 'export/vehicles/*',
-                       'export/point2point/admm/*', 'export/point2point/admm/formation/*',
-                       'export/point2point/admm/rendezvous/*', 'export/tests/point2point/*'
-                       'export/tests/formation/*', 'export/tests/rendezvous/*']},
+    package_data={'': ['export/point2point/Makefile',
+                       'export/point2point/instructions.txt',
+                       'export/*.cpp', 'export/*.hpp',
+                       'export/*/*.cpp', 'export/*/*.hpp',
+                       'export/*/*/*.cpp', 'export/*/*/*.hpp',
+                       'export/*/*/*/*.cpp', 'export/*/*/*/*.hpp']},
     long_description=read('readme.md'),
     classifiers=[
         "Development Status :: 3 - Alpha",
