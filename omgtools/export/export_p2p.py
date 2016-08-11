@@ -33,7 +33,8 @@ class ExportP2P(Export):
             raise ValueError(('Only export for single vehicle ' +
                               'problems is supported.'))
         self.vehicle = problem.vehicles[0]
-        self.export(['point2point', 'vehicles'], self.options['directory'], problem.father, problem)
+        src_files = ['Point2Point.cpp', 'Vehicle.cpp']
+        self.export(['point2point', 'vehicles'], self.options['directory'], src_files, problem.father, problem)
 
     def set_default_options(self):
         Export.set_default_options(self)

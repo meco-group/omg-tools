@@ -32,7 +32,7 @@ int main()
     double horizon_time = 10;
     double sample_time = 0.01;
     double update_time = 0.1;
-    int trajectory_length = 20;
+    int trajectory_length = 5;
     omg::Holonomic* vehicle = new omg::Holonomic();
     // ideal update: prediction of initial state based on spline extrapolation
     // non-ideal update: prediction based on current state0 and model integration

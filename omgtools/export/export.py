@@ -42,7 +42,7 @@ class Export(object):
         if not os.path.isdir(self.options['directory']):
             os.makedirs(self.options['directory'])
 
-    def export(self, source_dirs, export_dir, father, problem, point2point=None):
+    def export(self, source_dirs, export_dir, src_files, father, problem, point2point=None):
         if point2point is None:
             point2point = problem
         print 'Exporting ...',
@@ -52,7 +52,7 @@ class Export(object):
         probsrc = self.export_casadi_problems(export_dir, father, problem)
         # create data to fill in in c++ template
         data = {}
-        data.update(self.get_make_options(probsrc))
+        data.update(self.get_make_options(src_files, probsrc))
         data.update(self.create_defines(father, problem, point2point))
         data.update(self.create_types())
         data.update(self.create_functions(father, problem, point2point))
@@ -67,7 +67,7 @@ class Export(object):
         no_src = ['Makefile', 'instructions.txt']
         for directory in source_dirs:
             dir_path = os.path.join(this_path, directory)
-            sourcedir_files = os.listdir(dir_path)
+            sourcedir_files = [f for f in os.listdir(dir_path) if not os.path.isdir(os.path.join(dir_path, f))]
             for f in sourcedir_files:
                 if f in no_src:
                     files[os.path.join(dir_path, f)] = os.path.join(export_dir, f)
@@ -107,8 +107,9 @@ class Export(object):
                 shutil.move(cwd+'/'+filenames[-1], destination+'src/'+filenames[-1])
         return filenames
 
-    def get_make_options(self, probsrc):
-        make_opt = {'probsources': ' '.join(probsrc)}
+    def get_make_options(self, src_files, probsrc):
+        make_opt = {'sourcefiles2' : ' '.join(src_files),
+                    'probsources': ' '.join(probsrc)}
         for key, option in self.options.items():
             make_opt[key] = option
         return make_opt
@@ -130,7 +131,7 @@ class Export(object):
             for o in problem.environment.obstacles]) + '}'
         if point2point.__class__.__name__ == 'FreeTPoint2point':
             defines['FREET'] = 'true'
-        elif point2point.__class__.__name__ == 'FixedTPoint2point':
+        elif point2point.__class__.__name__ in ('FixedTPoint2point', 'FreeEndPoint2point'):
             defines['FREET'] = 'false'
         else:
             raise ValueError('This type of point2point problem is not ' +

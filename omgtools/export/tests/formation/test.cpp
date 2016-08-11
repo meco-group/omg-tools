@@ -23,6 +23,7 @@
 #include <iostream>
 #include <fstream>
 #include <assert.h>
+#include <math.h>
 
 using namespace std;
 
@@ -48,7 +49,7 @@ int main()
         // ideal update: prediction of initial state based on spline extrapolation
         // non-ideal update: prediction based on current state0 and model integration
         vehicles[v]->setIdealPrediction(true);
-        problems[v] = new omg::FormationPoint2Point(vehicles[0], update_time, sample_time, horizon_time, init_iter, trajectory_length);
+        problems[v] = new omg::FormationPoint2Point(vehicles[0], update_time, sample_time, horizon_time, trajectory_length);
     }
     int n_shared = problems[0]->n_shared;
 
@@ -90,6 +91,7 @@ int main()
     vector<vector<vector<double>>> z_ij_var(N, vector<vector<double>>(2, vector<double>(n_shared)));
     vector<vector<vector<double>>> l_ij_var(N, vector<vector<double>>(2, vector<double>(n_shared)));
     vector<vector<double>> residuals(N, vector<double>(3));
+    vector<double> total_residuals(3);
 
     // compare with solution from Python
     vector<vector<vector<vector<double>>>> data_state(N, vector<vector<vector<double>>>(n_iter, vector<vector<double>>(trajectory_length, vector<double>(2))));
@@ -99,34 +101,35 @@ int main()
     file_state.open("../test/data_state.csv");
     file_input.open("../test/data_input.csv");
 
-    for (int v=0; v<N; v++){
-        int k = 0;
-        for (int i=0; i<2*n_iter; i++){
-            string line_state, line_input;
-            getline(file_state, line_state);
-            getline(file_input, line_input);
-            stringstream iss_state(line_state);
-            stringstream iss_input(line_input);
-            for (int j=0; j<trajectory_length; j++){
-                string val_state;
-                string val_input;
-                getline(iss_state, val_state, ',');
-                getline(iss_input, val_input, ',');
-                stringstream converter_state(val_state);
-                stringstream converter_input(val_input);
-                converter_state >> data_state[v][i/2][j][k];
-                converter_input >> data_input[v][i/2][j][k];
-            }
-            k++;
-            if (k == 2){
-                k = 0;
+    for (int i=0; i<n_iter; i++){
+        for (int v=0; v<N; v++){
+            for (int k=0; k<2; k++){
+                string line_state, line_input;
+                getline(file_state, line_state);
+                getline(file_input, line_input);
+                stringstream iss_state(line_state);
+                stringstream iss_input(line_input);
+                for (int j=0; j<trajectory_length; j++){
+                    string val_state;
+                    string val_input;
+                    getline(iss_state, val_state, ',');
+                    getline(iss_input, val_input, ',');
+                    stringstream converter_state(val_state);
+                    stringstream converter_input(val_input);
+                    converter_state >> data_state[v][i][j][k];
+                    converter_input >> data_input[v][i][j][k];
+                }
             }
         }
     }
 
+
     double time;
     double err;
     for (int i=0; i<n_iter; i++){
+        total_residuals[0] = 0.0;
+        total_residuals[1] = 0.0;
+        total_residuals[2] = 0.0;
         // everyone executes update1
         time = 0;
         for (int v=0; v<N; v++){
@@ -154,8 +157,12 @@ int main()
             if (time < double(end-begin)/CLOCKS_PER_SEC){
                 time = double(end-begin)/CLOCKS_PER_SEC;
             }
+            total_residuals[0] += residuals[v][0];
+            total_residuals[1] += residuals[v][1];
+            total_residuals[2] += residuals[v][2];
         }
-        cout << "upd2, " << "time: " << time << "s" << endl;
+        cout << "upd2, " << "time: " << time << "s";
+        cout << " prim r: " << sqrt(total_residuals[0]) << ", dual r: " << sqrt(total_residuals[1]) << endl;
 
         // communicate z_ij_var, l_ij_var
         for (int v=0; v<N; v++){

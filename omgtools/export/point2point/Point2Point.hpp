@@ -40,13 +40,18 @@ typedef struct obstacle {
 
 class Point2Point{
     private:
+        casadi::Function problem;
+        bool solve(std::vector<obstacle_t>&);
+        void generateSubstituteFunctions();
+        void initSplines();
+
+    protected:
         Vehicle* vehicle;
         double current_time=0.0;
         double horizon_time;
         double update_time;
         double sample_time;
         int trajectory_length;
-        casadi::Function problem;
         std::map<std::string, casadi::Function> substitutes;
         std::map<std::string, casadi::DM> args, sol;
         std::vector<double> parameters;
@@ -64,19 +69,19 @@ class Point2Point{
         const int n_con = N_CON;
         const int freeT = FREET;
 
-        void generateProblem();
-        void generateSubstituteFunctions();
-        void initSplines();
-        bool solve(std::vector<obstacle_t>&);
         void setParameters(std::vector<obstacle_t>&);
         void initVariables();
         void updateBounds(double);
-        void extractData();
         void retrieveTrajectories(std::vector<std::vector<double>>&);
         void getParameterVector(std::vector<double>&, std::map<std::string, std::map<std::string, std::vector<double>>>&);
         void getVariableVector(std::vector<double>&, std::map<std::string, std::map<std::string, std::vector<double>>>&);
         void getVariableDict(std::vector<double>&, std::map<std::string, std::map<std::string, std::vector<double>>>&);
         void transformSplines(double);
+
+        virtual void generateProblem();
+        virtual void fillParameterDict(std::vector<obstacle_t>&, std::map<std::string, std::map<std::string, std::vector<double>>>&);
+        virtual void extractData();
+        virtual void initialize();
 
     public:
         const int n_dim = N_DIM;
@@ -84,8 +89,9 @@ class Point2Point{
 
         Point2Point(Vehicle* vehicle, double update_time, double sample_time, double horizon_time);
         Point2Point(Vehicle* vehicle, double update_time, double sample_time, double horizon_time, int trajectory_length);
-        void reset();
-        void resetTime();
+        Point2Point(Vehicle* vehicle, double update_time, double sample_time, double horizon_time, int trajectory_length, bool initialize);
+        virtual void reset();
+        virtual void resetTime();
         bool update(std::vector<double>&, std::vector<double>&, std::vector<std::vector<double>>&, std::vector<std::vector<double>>&, std::vector<obstacle_t>&);
         bool update(std::vector<double>&, std::vector<double>&, std::vector<std::vector<double>>&, std::vector<std::vector<double>>&, std::vector<obstacle_t>&, int);
     };
