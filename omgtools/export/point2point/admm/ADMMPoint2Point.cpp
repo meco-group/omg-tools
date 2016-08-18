@@ -90,6 +90,10 @@ void ADMMPoint2Point::resetTime(){
     iteration = 0;
 }
 
+int ADMMPoint2Point::getIteration(){
+    return iteration;
+}
+
 bool ADMMPoint2Point::update1(vector<double>& condition0, vector<double>& conditionT,
     vector<vector<double>>& state_trajectory, vector<vector<double>>& input_trajectory,
     vector<double>& x_var, vector<vector<double>>& z_ji_var, vector<vector<double>>& l_ji_var,

@@ -50,6 +50,9 @@ all: dir $(OUTDIR)/$(EXECUTABLE)
 
 lib: dir $(OUTDIR)/$(LIB)
 
+libdebug: DEBUG = -DDEBUG
+libdebug: lib
+
 debug: DEBUG = -DDEBUG
 debug: all
 

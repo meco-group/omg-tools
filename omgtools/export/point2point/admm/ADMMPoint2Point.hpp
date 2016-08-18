@@ -63,6 +63,7 @@ class ADMMPoint2Point: public Point2Point{
         ADMMPoint2Point(Vehicle* vehicle, double update_time, double sample_time, double horizon_time, int trajectory_length, int init_iter, double rho);
         virtual void reset();
         virtual void resetTime();
+        int getIteration();
     };
 }
 
