@@ -72,7 +72,6 @@ class Dubins(Vehicle):
         self.define_constraint(
             v_til*(1+tg_ha**2) - self.vmax, -inf, 0.)
         # self.define_constraint(-v_til*(1+tg_ha**2) - self.vmax, -inf, 0)
-        self.define_constraint(- self.vmax, -inf, 0) # only forward driving
         # self.define_constraint(
         #     dv_til*(1+tg_ha**2) + 2*v_til*tg_ha*dtg_ha - self.T*self.amax, -inf, 0.)
 
