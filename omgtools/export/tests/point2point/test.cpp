@@ -95,6 +95,8 @@ int main()
             k = 0;
         }
     }
+    file_state.close();
+    file_input.close();
     double time;
     double err;
     for (int i=0; i<n_iter; i++){

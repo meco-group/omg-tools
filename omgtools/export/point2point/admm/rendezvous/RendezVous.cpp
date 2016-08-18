@@ -26,22 +26,27 @@ namespace omg{
 
 RendezVous::RendezVous(Vehicle* vehicle,
     double update_time, double sample_time, double horizon_time,
-    int trajectory_length, int init_iter):
-ADMMPoint2Point(vehicle, update_time, sample_time, horizon_time, trajectory_length, init_iter) {
+    int trajectory_length, int init_iter, double rho):
+ADMMPoint2Point(vehicle, update_time, sample_time, horizon_time, trajectory_length, init_iter, rho) {
 
 }
 
 RendezVous::RendezVous(Vehicle* vehicle,
     double update_time, double sample_time, double horizon_time):
-ADMMPoint2Point(vehicle, update_time, sample_time, horizon_time, int(update_time/sample_time), INITITER){
+ADMMPoint2Point(vehicle, update_time, sample_time, horizon_time){
 }
 
 RendezVous::RendezVous(Vehicle* vehicle,
     double update_time, double sample_time, double horizon_time,
     int trajectory_length):
-ADMMPoint2Point(vehicle, update_time, sample_time, horizon_time, trajectory_length, INITITER){
+ADMMPoint2Point(vehicle, update_time, sample_time, horizon_time, trajectory_length){
 }
 
+RendezVous::RendezVous(Vehicle* vehicle,
+    double update_time, double sample_time, double horizon_time,
+    int trajectory_length, int init_iter):
+ADMMPoint2Point(vehicle, update_time, sample_time, horizon_time, trajectory_length, init_iter){
+}
 
 bool RendezVous::update1(vector<double>& condition0, vector<double>& conditionT,
     vector<vector<double>>& state_trajectory, vector<vector<double>>& input_trajectory,

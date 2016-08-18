@@ -49,7 +49,7 @@ int main()
         // ideal update: prediction of initial state based on spline extrapolation
         // non-ideal update: prediction based on current state0 and model integration
         vehicles[v]->setIdealPrediction(true);
-        problems[v] = new omg::FormationPoint2Point(vehicles[0], update_time, sample_time, horizon_time, trajectory_length);
+        problems[v] = new omg::FormationPoint2Point(vehicles[v], update_time, sample_time, horizon_time, trajectory_length, init_iter);
     }
     int n_shared = problems[0]->n_shared;
 
@@ -122,8 +122,8 @@ int main()
             }
         }
     }
-
-
+    file_state.close();
+    file_input.close();
     double time;
     double err;
     for (int i=0; i<n_iter; i++){

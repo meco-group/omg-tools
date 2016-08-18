@@ -30,10 +30,11 @@ namespace omg{
 
 ADMMPoint2Point::ADMMPoint2Point(Vehicle* vehicle,
     double update_time, double sample_time, double horizon_time,
-    int trajectory_length, int init_iter):
+    int trajectory_length, int init_iter, double rho):
 Point2Point(vehicle, update_time, sample_time, horizon_time, trajectory_length, false),
-residuals(3), rho(RHO) {
+residuals(3) {
     this->init_iter = init_iter;
+    this->rho = rho;
     vector<double> zeros1(n_shared);
     vector<double> zeros2(n_nghb*n_shared);
     variables_admm["x_i"] = zeros1;
@@ -49,13 +50,19 @@ residuals(3), rho(RHO) {
 
 ADMMPoint2Point::ADMMPoint2Point(Vehicle* vehicle,
     double update_time, double sample_time, double horizon_time):
-ADMMPoint2Point(vehicle, update_time, sample_time, horizon_time, int(update_time/sample_time), INITITER){
+ADMMPoint2Point(vehicle, update_time, sample_time, horizon_time, int(update_time/sample_time), INITITER, RHO){
 }
 
 ADMMPoint2Point::ADMMPoint2Point(Vehicle* vehicle,
     double update_time, double sample_time, double horizon_time,
     int trajectory_length):
-ADMMPoint2Point(vehicle, update_time, sample_time, horizon_time, trajectory_length, INITITER){
+ADMMPoint2Point(vehicle, update_time, sample_time, horizon_time, trajectory_length, INITITER, RHO){
+}
+
+ADMMPoint2Point::ADMMPoint2Point(Vehicle* vehicle,
+    double update_time, double sample_time, double horizon_time,
+    int trajectory_length, int init_iter):
+ADMMPoint2Point(vehicle, update_time, sample_time, horizon_time, trajectory_length, init_iter, RHO){
 }
 
 void ADMMPoint2Point::generateProblem(){
