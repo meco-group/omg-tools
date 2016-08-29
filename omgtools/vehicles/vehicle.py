@@ -122,7 +122,7 @@ class Vehicle(OptiChild, PlotLayer):
                     a, b = hyperplane['a'], hyperplane['b']
                     if safety_distance > 0.:
                         eps = self.define_spline_variable(
-                            'eps_'+str(shape)+str(k))[0]
+                            'eps_'+str(s)+str(k))[0]
                         obj = safety_weight*definite_integral(eps, t/T, 1.)
                         self.define_objective(obj)
                         self.define_constraint(eps - safety_distance, -inf, 0.)
@@ -188,7 +188,7 @@ class Vehicle(OptiChild, PlotLayer):
                         t = self.define_symbol('t')
                         T = self.define_symbol('T')
                         eps = self.define_spline_variable(
-                            'eps_'+str(shape)+str(k))[0]
+                            'eps_'+str(s)+str(k))[0]
                         obj = safety_weight*definite_integral(eps, t/T, 1.)
                         self.define_objective(obj)
                         self.define_constraint(eps - safety_distance, -inf, 0.)
