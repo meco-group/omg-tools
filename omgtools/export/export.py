@@ -37,6 +37,7 @@ class Export(object):
         self.options['casadiobj'] = '.'
         self.options['sourcefiles'] = ' '.join(self.add_label(['test.cpp', 'Holonomic.cpp']))
         self.options['executable'] = 'Executable'
+        self.options['namespace'] = 'omg'
 
     def set_options(self, options):
         self.options.update(options)
@@ -61,6 +62,8 @@ class Export(object):
         self.fill_template(data, files.values())
         # change including filenames with label
         self.change_includes(export_dir)
+        # set the namespace
+        self.set_namespace(export_dir)
         print 'done.'
         print 'Check out instructions.txt for build and usage instructions.'
 
@@ -100,6 +103,25 @@ class Export(object):
                     raise ValueError('File '+ file +
                                      ' does not exist!')
 
+    def set_namespace(self, directory):
+        src_dir = os.path.join(directory, 'src')
+        src_files = []
+        for f in os.listdir(src_dir):
+            if not os.path.isdir(os.path.join(src_dir, f)) and f.split('.')[-1] in ['cpp', 'hpp']:
+                src_files.append(f)
+        for file in src_files:
+            fil = os.path.join(src_dir, file)
+            with open(fil, 'r+') as f:
+                if f is not None:
+                    body = f.read()
+                    body = body.replace('namespace omg', 'namespace ' + self.options['namespace'])
+                    body = body.replace('omg::', self.options['namespace'] + '::')
+                    f.seek(0)
+                    f.truncate()
+                    f.write(body)
+                else:
+                    raise ValueError('File '+ file +
+                                     ' does not exist!')
     def copy_files(self, source_dirs, export_dir):
         this_path = os.path.dirname(os.path.realpath(__file__))
         files = {}
