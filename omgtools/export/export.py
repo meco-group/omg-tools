@@ -23,7 +23,8 @@ import shutil
 
 class Export(object):
 
-    def __init__(self, problem, options):
+    def __init__(self, label, problem, options):
+        self.label = label
         self.set_default_options()
         self.set_options(options)
 
@@ -34,7 +35,7 @@ class Export(object):
         self.options['casadilib'] = '/usr/local/lib/'
         self.options['casadiinc'] = '/usr/local/include/casadi/'
         self.options['casadiobj'] = '.'
-        self.options['sourcefiles'] = 'test.cpp Holonomic.cpp'
+        self.options['sourcefiles'] = ' '.join(self.add_label(['test.cpp', 'Holonomic.cpp']))
         self.options['executable'] = 'Executable'
 
     def set_options(self, options):
@@ -52,14 +53,52 @@ class Export(object):
         probsrc = self.export_casadi_problems(export_dir, father, problem)
         # create data to fill in in c++ template
         data = {}
-        data.update(self.get_make_options(src_files, probsrc))
+        data.update(self.get_make_options(self.add_label(src_files), probsrc))
         data.update(self.create_defines(father, problem, point2point))
         data.update(self.create_types())
         data.update(self.create_functions(father, problem, point2point))
         # write data to template files
         self.fill_template(data, files.values())
+        # change including filenames with label
+        self.change_includes(export_dir)
         print 'done.'
         print 'Check out instructions.txt for build and usage instructions.'
+
+    def add_label(self, file):
+        if isinstance(file, list):
+            return [self.add_label(f) for f in file]
+        else:
+            split = file.split('.')
+            file_new = split[-2]+'_'+self.label+'.'+split[-1]
+            return file_new
+
+    def rmv_label(self, file):
+        if isinstance(file, list):
+            return [self.rmv_label(f) for f in file]
+        else:
+            split = file.split('.')
+            file_new = split[0].split('_')[-2] + '.' + split[-1]
+            return file_new
+
+    def change_includes(self, directory):
+        src_dir = os.path.join(directory, 'src')
+        src_files = []
+        for f in os.listdir(src_dir):
+            if not os.path.isdir(os.path.join(src_dir, f)) and f.split('.')[-1] in ['cpp', 'hpp']:
+                src_files.append(f)
+        for file in src_files:
+            fil = os.path.join(src_dir, file)
+            with open(fil, 'r+') as f:
+                if f is not None:
+                    body = f.read()
+                    for src in self.rmv_label(src_files):
+                        body = body.replace(src, self.add_label(src))
+                    f.seek(0)
+                    f.truncate()
+                    f.write(body)
+                else:
+                    raise ValueError('File '+ file +
+                                     ' does not exist!')
 
     def copy_files(self, source_dirs, export_dir):
         this_path = os.path.dirname(os.path.realpath(__file__))
@@ -72,7 +111,7 @@ class Export(object):
                 if f in no_src:
                     files[os.path.join(dir_path, f)] = os.path.join(export_dir, f)
                 else:
-                    files[os.path.join(dir_path, f)] = os.path.join(export_dir, 'src/', f)
+                    files[os.path.join(dir_path, f)] = self.add_label(os.path.join(export_dir, 'src/', f))
         for src, des in files.items():
             des_dir = os.path.dirname(des)
             if not os.path.isdir(des_dir):
@@ -109,7 +148,8 @@ class Export(object):
 
     def get_make_options(self, src_files, probsrc):
         make_opt = {'sourcefiles2' : ' '.join(src_files),
-                    'probsources': ' '.join(probsrc)}
+                    'probsources': ' '.join(probsrc),
+                    'libname': 'libomg_'+self.label+'.so'}
         for key, option in self.options.items():
             make_opt[key] = option
         return make_opt

@@ -26,7 +26,7 @@ from export import Export
 class ExportP2P(Export):
 
     def __init__(self, problem, options):
-        Export.__init__(self, problem, options)
+        Export.__init__(self, 'p2p', problem, options)
         self.father = problem.father
         self.problem = problem
         if len(problem.vehicles) > 1:

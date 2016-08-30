@@ -23,7 +23,7 @@ from export_admm import ExportADMM
 class ExportRendezVous(ExportADMM):
 
     def __init__(self, problem, options):
-        ExportADMM.__init__(self, problem, options,
+        ExportADMM.__init__(self, 'p2prv', problem, options,
             ['point2point/admm/rendezvous', 'tests/rendezvous'], ['RendezVous.cpp'])
 
     def set_default_options(self):

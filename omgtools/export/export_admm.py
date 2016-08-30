@@ -25,8 +25,9 @@ from export import Export
 
 class ExportADMM(Export):
 
-    def __init__(self, problem, options, src_dir=[], src_files=[]):
-        Export.__init__(self, problem, options)
+    def __init__(self, label, problem, options, src_dir=[], src_files=[]):
+        Export.__init__(self, label, problem, options)
+
         source_dirs = ['point2point', 'point2point/admm', 'vehicles'] + src_dir
         src_files = src_files + ['ADMMPoint2Point.cpp', 'Point2Point.cpp', 'Vehicle.cpp']
         if problem.options['separate_build']:

@@ -39,7 +39,7 @@ PROBSOURCES = @probsources@
 PROBOBJECTS = $(PROBSOURCES:.c=.so)
 SOURCES = $(SOURCEFILES) @sourcefiles2@
 OBJECTS = $(SOURCES:.cpp=.o)
-LIB = libomg.so
+LIB = @libname@
 SRCDIR = src
 OBJDIR = obj
 OUTDIR = bin
