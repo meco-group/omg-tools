@@ -122,7 +122,7 @@ class Vehicle(OptiChild, PlotLayer):
                     a, b = hyperplane['a'], hyperplane['b']
                     if safety_distance > 0.:
                         eps = self.define_spline_variable(
-                            'eps_'+str(shape)+str(k))[0]
+                            'eps_'+str(s)+str(k))[0]
                         obj = safety_weight*definite_integral(eps, t/T, 1.)
                         self.define_objective(obj)
                         self.define_constraint(eps - safety_distance, -inf, 0.)
@@ -151,8 +151,8 @@ class Vehicle(OptiChild, PlotLayer):
                         room_limits = environment.get_canvas_limits()
                         for chck in checkpoints:
                             for k in range(2):
-                                self.define_constraint(-(chck[k]+position[k]) + room_limits[k][0], -inf, 0.)
-                                self.define_constraint((chck[k]+position[k]) - room_limits[k][1], -inf, 0.)
+                                self.define_constraint(-(chck[k]+position[k]) + room_limits[k][0] + rad[0], -inf, 0.)
+                                self.define_constraint((chck[k]+position[k]) - room_limits[k][1] + rad[0], -inf, 0.)
                     else:
                         hyp_room = environment.room['shape'].get_hyperplanes(position = environment.room['position'])
                         for l, chck in enumerate(checkpoints):
@@ -188,7 +188,7 @@ class Vehicle(OptiChild, PlotLayer):
                         t = self.define_symbol('t')
                         T = self.define_symbol('T')
                         eps = self.define_spline_variable(
-                            'eps_'+str(shape)+str(k))[0]
+                            'eps_'+str(s)+str(k))[0]
                         obj = safety_weight*definite_integral(eps, t/T, 1.)
                         self.define_objective(obj)
                         self.define_constraint(eps - safety_distance, -inf, 0.)

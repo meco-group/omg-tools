@@ -430,7 +430,7 @@ class OptiFather(object):
         _init_tf = {}
         for child in self.children.values():
             for name, spl in child._splines_prim.items():
-                if name in child._variables:
+                if name in child._variables or name in child._substitutes:
                     basis = spl['basis']
                     if basis not in _init_tf:
                         _init_tf[basis] = init_primal_transform(basis)

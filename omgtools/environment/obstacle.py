@@ -99,7 +99,7 @@ class ObstaclexD(OptiChild):
         # simulation model
         A = np.kron(
             np.array([[0., 1., 0.], [0., 0., 1.], [0., 0., 0.]]), np.eye(self.n_dim))
-        B = np.zeros((3*self.n_dim, 1.))
+        B = np.zeros((3*self.n_dim, 1))
         self.simulation_model = {'A': A, 'B': B}
         if 'model' in simulation:
             if 'A' in simulation['model']:
@@ -125,7 +125,7 @@ class ObstaclexD(OptiChild):
                                      trajectories['input']['values'],
                                      kind='linear', bounds_error=False,
                                      fill_value=trajectories['input']['values'][:, -1])
-        state = np.zeros((3*self.n_dim, 1.))
+        state = np.zeros((3*self.n_dim, 1))
         time_state = np.array([0.])
         for l, key in enumerate(['position', 'velocity', 'acceleration']):
             for k, time in enumerate(trajectories[key]['time']):

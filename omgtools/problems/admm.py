@@ -93,11 +93,15 @@ class ADMM(DualUpdater):
                     x = x_i[child.label][name]
                     z = z_i[child.label, name]
                     l = l_i[child.label, name]
-                    obj += mtimes(l.T, x-z) + 0.5*rho*mtimes((x-z).T, (x-z))
+                    obj += mtimes(l.T, x-z)
+                    if not self.options['AMA']:
+                        obj += 0.5*rho*mtimes((x-z).T, (x-z))
                     for nghb in self.q_ji.keys():
                         z = z_ji[str(nghb), child.label, name]
                         l = l_ji[str(nghb), child.label, name]
-                        obj += mtimes(l.T, x-z) + 0.5*rho*mtimes((x-z).T, (x-z))
+                        obj += mtimes(l.T, x-z)
+                        if not self.options['AMA']:
+                            obj += 0.5*rho*mtimes((x-z).T, (x-z))
             self.define_objective(obj)
             # construct problem
             prob, buildtime = self.father_updx.construct_problem(
@@ -519,8 +523,9 @@ class ADMM(DualUpdater):
             if c_res <= eta*self.c_res_p:
                 alpha_p = self.alpha
                 self.alpha = 0.5*(1. + np.sqrt(1 + 4.*alpha_p**2))
-                z_i = z_i + ((alpha_p - 1)/self.alpha)*(z_i - z_i_p)
-                z_ij = z_ij + ((alpha_p - 1)/self.alpha)*(z_ij - z_ij_p)
+                if not self.options['AMA']:
+                    z_i = z_i + ((alpha_p - 1)/self.alpha)*(z_i - z_i_p)
+                    z_ij = z_ij + ((alpha_p - 1)/self.alpha)*(z_ij - z_ij_p)
                 l_i = l_i + ((alpha_p - 1)/self.alpha)*(l_i - l_i_p)
                 l_ij = l_ij + ((alpha_p - 1)/self.alpha)*(l_ij - l_ij_p)
                 self.c_res_p = c_res
@@ -535,8 +540,9 @@ class ADMM(DualUpdater):
         else:
             alpha_p = self.alpha
             self.alpha = 0.5*(1. + np.sqrt(1 + 4.*alpha_p**2))
-            z_i = z_i + ((alpha_p - 1)/self.alpha)*(z_i - z_i_p)
-            z_ij = z_ij + ((alpha_p - 1)/self.alpha)*(z_ij - z_ij_p)
+            if not self.options['AMA']:
+                z_i = z_i + ((alpha_p - 1)/self.alpha)*(z_i - z_i_p)
+                z_ij = z_ij + ((alpha_p - 1)/self.alpha)*(z_ij - z_ij_p)
             l_i = l_i + ((alpha_p - 1)/self.alpha)*(l_i - l_i_p)
             l_ij = l_ij + ((alpha_p - 1)/self.alpha)*(l_ij - l_ij_p)
             self.c_res_p = c_res
@@ -560,7 +566,7 @@ class ADMMProblem(DualProblem):
     def set_default_options(self):
         DualProblem.set_default_options(self)
         self.options.update({'nesterov_acceleration': False, 'eta': 0.999,
-                             'nesterov_reset': False})
+                             'nesterov_reset': False, 'AMA': False})
 
     def reinitialize(self):
         for updater in self.updaters:
@@ -590,11 +596,11 @@ class ADMMProblem(DualProblem):
             t_upd_z = max(t_upd_z, t1)
             t_upd_l = max(t_upd_l, t2)
             t_res = max(t_res, t3)
-            p_res += pr**2
-            d_res += dr**2
-            c_res += cr**2
+            p_res += pr #pr, dr, cr represent squared values
+            d_res += dr
+            c_res += cr
         p_res, d_res, c_res = np.sqrt(
-            p_res), np.sqrt(d_res), np.sqrt(c_res)
+            p_res), np.sqrt(d_res), c_res # following definition [Goldstein]
         if self.options['nesterov_acceleration']:
             for updater in self.updaters:
                 updater.accelerate(c_res)

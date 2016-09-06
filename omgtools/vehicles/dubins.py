@@ -71,6 +71,7 @@ class Dubins(Vehicle):
         dv_til, dtg_ha = v_til.derivative(), tg_ha.derivative()
         self.define_constraint(
             v_til*(1+tg_ha**2) - self.vmax, -inf, 0.)
+        # self.define_constraint(-v_til*(1+tg_ha**2) - self.vmax, -inf, 0)
         # self.define_constraint(
         #     dv_til*(1+tg_ha**2) + 2*v_til*tg_ha*dtg_ha - self.T*self.amax, -inf, 0.)
 
@@ -86,7 +87,6 @@ class Dubins(Vehicle):
         # add constraints on change in orientation
         self.define_constraint(2*dtg_ha - (1+tg_ha**2)*self.T*np.radians(self.wmax), -inf, 0.)
         self.define_constraint(-2*dtg_ha + (1+tg_ha**2)*self.T*np.radians(self.wmin), -inf, 0.)
-        self.define_constraint(-v_til, -inf, 0)  # positive v_tilde
 
 
     def get_fleet_center(self, splines, rel_pos, substitute=True):

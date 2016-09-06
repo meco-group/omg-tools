@@ -44,6 +44,13 @@ class Simulator:
             else:
                 self.update_timing()
         self.problem.final()
+        # return trajectories and signals
+        trajectories = {}
+        signals = {}
+        for vehicle in self.problem.vehicles:
+            trajectories[str(vehicle)] = vehicle.traj_storage
+            signals[str(vehicle)] = vehicle.signals
+        return trajectories, signals
 
     def reset_timing(self):
         self.current_time = 0.

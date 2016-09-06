@@ -29,6 +29,8 @@ N = 3
 vehicles = [Quadrotor(0.2) for l in range(N)]
 
 fleet = Fleet(vehicles)
+for quad in fleet.vehicles:
+    quad.set_options({'safety_distance': 0.1, 'safety_weight': 1.})
 configuration = RegularPolyhedron(0.4, N, orientation=np.pi/2).vertices.T
 init_positions = [-4., -4.] + configuration
 terminal_positions = [4., 4.] + configuration
@@ -45,7 +47,8 @@ environment.add_obstacle(Obstacle({'position': [0., -5.4]},
                                   shape=Rectangle(width=0.2, height=10.)))
 
 # create & solve central problem
-options = {'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57', 'ipopt.tol': 1e-8}}, 'horizon_time': 5}
+options = {'solver_options': {
+    'ipopt': {'ipopt.linear_solver': 'ma57', 'ipopt.tol': 1e-8}}, 'horizon_time': 5}
 problem = FormationPoint2pointCentral(fleet, environment, options=options)
 problem.init()
 simulator = Simulator(problem)
@@ -53,18 +56,29 @@ simulator.run_once(update=False)
 var_central = np.zeros((0, 1))
 for vehicle in vehicles:
     splines = problem.father.get_variables(vehicle, 'splines0')
-    pos_c = vehicle.get_fleet_center(splines, vehicle.rel_pos_c, substitute=False)
+    pos_c = vehicle.get_fleet_center(
+        splines, vehicle.rel_pos_c, substitute=False)
     pos_c = np.hstack([c.coeffs for c in pos_c])
     var_central = np.vstack((var_central, np.c_[pos_c]))
 
 # create & solve ADMM problem
-options = {'rho': 0.03, 'horizon_time': 5., 'init_iter': number_of_iterations-1,
+options = {'rho': 0.04, 'horizon_time': 5., 'init_iter': number_of_iterations-1,
            'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57', 'ipopt.tol': 1e-8}}}
 problem = FormationPoint2point(fleet, environment, options=options)
 problem.init()
 simulator = Simulator(problem)
 simulator.run_once(update=False)
 var_admm = problem.get_stacked_x()
+
+# create & solve AMA problem
+options = {'rho': 0.006, 'horizon_time': 5., 'init_iter': number_of_iterations-1,
+           'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57', 'ipopt.tol': 1e-8}},
+           'AMA': True}
+problem = FormationPoint2point(fleet, environment, options=options)
+problem.init()
+simulator = Simulator(problem)
+simulator.run_once(update=False)
+var_ama = problem.get_stacked_x()
 
 # create & solve Fast ADMM problem
 options = {'rho': 0.03, 'horizon_time': 5., 'init_iter': number_of_iterations-1,
@@ -76,27 +90,35 @@ simulator = Simulator(problem)
 simulator.run_once(update=False)
 var_fastadmm = problem.get_stacked_x()
 
-
 # create & solve Dual decomposition problem
-options = {'rho': 0.002, 'horizon_time': 5., 'init_iter': number_of_iterations-1,
+options = {'rho': 0.003, 'horizon_time': 5., 'init_iter': number_of_iterations-1,
            'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57', 'ipopt.tol': 1e-8}}}
-problem = FormationPoint2pointDualDecomposition(fleet, environment, options=options)
+problem = FormationPoint2pointDualDecomposition(
+    fleet, environment, options=options)
 problem.init()
 simulator = Simulator(problem)
 simulator.run_once()
 var_dualdec = problem.get_stacked_x()
 
 # compare convergence
-
-err_admm = [np.linalg.norm(v - var_central)/np.linalg.norm(var_central) for v in var_admm]
-err_fastadmm = [np.linalg.norm(v - var_central)/np.linalg.norm(var_central) for v in var_fastadmm]
-err_dualdec = [np.linalg.norm(v - var_central)/np.linalg.norm(var_central) for v in var_dualdec]
+err_admm = [
+    np.linalg.norm(v - var_central)/np.linalg.norm(var_central) for v in var_admm]
+err_ama = [
+    np.linalg.norm(v - var_central)/np.linalg.norm(var_central) for v in var_ama]
+err_fastadmm = [np.linalg.norm(
+    v - var_central)/np.linalg.norm(var_central) for v in var_fastadmm]
+err_dualdec = [np.linalg.norm(
+    v - var_central)/np.linalg.norm(var_central) for v in var_dualdec]
 iterations = np.linspace(0, number_of_iterations, number_of_iterations+1)
+
+data = {'err_admm': err_admm, 'err_fastadmm': err_fastadmm,
+        'err_ama': err_ama, 'err_dualdec': err_dualdec, 'iterations': iterations}
 
 plt.figure()
 plt.hold(True)
 plt.semilogy(iterations, err_dualdec, label='Dual decomposition')
+plt.semilogy(iterations, err_ama, label='AMA')
 plt.semilogy(iterations, err_admm, label='ADMM')
 plt.semilogy(iterations, err_fastadmm, label='Fast ADMM')
 plt.legend()
-plt.show(block=True)
+plt.show()

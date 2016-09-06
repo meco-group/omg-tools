@@ -19,6 +19,7 @@
 
 from admm import ADMMProblem
 from point2point import FreeEndPoint2point
+from ..export.export_rendezvous import ExportRendezVous
 import numpy as np
 
 
@@ -74,3 +75,9 @@ class RendezVous(ADMMProblem):
         if np.sqrt(res) > 5.e-2:
             return False
         return True
+
+    def export(self, options=None):
+        options = options or {}
+        if not hasattr(self, 'father'):
+            self.init()
+        ExportRendezVous(self, options)

@@ -135,7 +135,7 @@ vehicle.plot('input', labels=['v_x (m/s)', 'v_y (m/s)'], knots=True)
 problem.plot('scene')
 
 # Run the simulator!
-simulator.run()
+trajectories, signals = simulator.run()
 
 # Show scene plot at some time (no time argument means 'at the end')
 problem.plot('scene', time=2.)

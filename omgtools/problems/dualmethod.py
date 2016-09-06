@@ -22,7 +22,6 @@ from distributedproblem import DistributedProblem
 from casadi import SX, MX, DM
 from casadi.tools import struct, entry, structure
 import collections as col
-import pickle
 
 
 def _create_struct_from_dict(dictionary):
@@ -197,7 +196,7 @@ class DualProblem(DistributedProblem):
     def set_default_options(self):
         DistributedProblem.set_default_options(self)
         self.options.update({'max_iter': None, 'max_iter_per_update': 1,
-                             'rho': 2., 'init_iter': 5, 'save_residuals': None})
+                             'rho': 2., 'init_iter': 5})
 
     # ========================================================================
     # Perform dual update sequence
@@ -241,6 +240,3 @@ class DualProblem(DistributedProblem):
 
     def final(self):
         DistributedProblem.final(self)
-        if self.options['save_residuals']:
-            pickle.dump(
-                self.residuals, open(self.options['save_residuals'], 'wb'))

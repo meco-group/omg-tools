@@ -1,9 +1,10 @@
 *.pyc
 *~
-*/movies/*
-*/images/*
-*/export/*
-*/data/*
+examples/movies/*
+examples/images/*
+examples/export*
+examples/data/*
+lvd/*
 .*
 !.gitignore
 *.c
