@@ -136,7 +136,7 @@ class Problem(OptiChild, PlotLayer):
                 v.label, str.isalpha)][-1]) % n_colors for v in self.vehicles]
             for v in range(len(self.vehicles)):
                 info[0][0]['lines'].append(
-                    {'color': self.colors_w[indices[v]]})
+                    {'linestyle': '-', 'color': self.colors_w[indices[v]]})
             for v in range(len(self.vehicles)):
                 info[0][0]['lines'].append({'color': self.colors[indices[v]]})
             for v, vehicle in enumerate(self.vehicles):
