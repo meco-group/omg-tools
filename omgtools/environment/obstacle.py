@@ -80,6 +80,10 @@ class ObstaclexD(OptiChild):
         # pos spline over time horizon
         self.pos_spline = [BSpline(self.basis, vertcat(x0[k], 0.5*v0[k]*self.T + x0[k], x0[k] + v0[k]*self.T + 0.5*a0[k]*(self.T**2)))
                            for k in range(self.n_dim)]
+        # checkpoints + radii
+        checkpoints, _ = self.shape.get_checkpoints()
+        self.checkpoints = self.define_parameter('checkpoints', len(checkpoints)*self.n_dim)
+        self.rad = self.define_parameter('rad', len(checkpoints))
 
     def define_collision_constraints(self, hyperplanes):
         raise ValueError('Please implement this method.')
@@ -89,6 +93,9 @@ class ObstaclexD(OptiChild):
         parameters['x'] = self.signals['position'][:, -1]
         parameters['v'] = self.signals['velocity'][:, -1]
         parameters['a'] = self.signals['acceleration'][:, -1]
+        checkpoints, rad = self.shape.get_checkpoints()
+        parameters['checkpoints'] = np.reshape(checkpoints, (len(checkpoints)*self.n_dim, ))
+        parameters['rad'] = rad
         return parameters
 
     # ========================================================================
@@ -257,14 +264,13 @@ class Obstacle2D(ObstaclexD):
     def define_collision_constraints(self, hyperplanes):
         for hyperplane in hyperplanes:
             a, b = hyperplane['a'], hyperplane['b']
-            checkpoints, rad = self.shape.get_checkpoints()
-            for l, chck in enumerate(checkpoints):
+            for l in range(self.checkpoints.shape[0]/self.n_dim):
                 xpos = self.pos_spline[
-                    0]*self.gon_weight + chck[0]*self.cos - chck[1]*self.sin
+                    0]*self.gon_weight + self.checkpoints[l*self.n_dim+0]*self.cos - self.checkpoints[l*self.n_dim+1]*self.sin
                 ypos = self.pos_spline[
-                    1]*self.gon_weight + chck[0]*self.sin + chck[1]*self.cos
+                    1]*self.gon_weight + self.checkpoints[l*self.n_dim+0]*self.sin + self.checkpoints[l*self.n_dim+1]*self.cos
                 self.define_constraint(-(a[0]*xpos + a[1] *
-                                         ypos) + self.gon_weight*(b+rad[l]), -inf, 0.)
+                                         ypos) + self.gon_weight*(b+self.rad[l]), -inf, 0.)
 
     def set_parameters(self, current_time):
         parameters = ObstaclexD.set_parameters(self, current_time)
@@ -318,7 +324,6 @@ class Obstacle3D(ObstaclexD):
     def define_collision_constraints(self, hyperplanes):
         for hyperplane in hyperplanes:
             a, b = hyperplane['a'], hyperplane['b']
-            checkpoints, rad = self.shape.get_checkpoints()
-            for l, chck in enumerate(checkpoints):
-                self.define_constraint(-sum([a[k]*(chck[k]+self.pos_spline[k])
-                                             for k in range(self.n_dim)]) + b + rad[l], -inf, 0.)
+            for l in range(self.checkpoints.shape[0]/self.n_dim):
+                self.define_constraint(-sum([a[k]*(self.checkpoints[l*self.shape.n_dim+k]+self.pos_spline[k])
+                                             for k in range(self.n_dim)]) + b + self.rad[l], -inf, 0.)

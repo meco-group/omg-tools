@@ -16,7 +16,8 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
-
+import sys, os
+sys.path.insert(0, os.getcwd()+'/..')
 from omgtools import *
 import os
 import csv
@@ -55,6 +56,8 @@ problem.init()
 
 options = {}
 casadi_path = os.path.join(os.getenv('HOME'), 'casadi-py27-np1.9.1-v3.0.0')
+casadi_path = os.path.join('/home/ruben/Documents/Work/Repositories/casadi_binary/')
+
 options['directory'] = os.path.join(os.getcwd(), 'export_r/')
 # path to object files of your exported optimization problem
 options['casadiobj'] = os.path.join(options['directory'], 'bin/')

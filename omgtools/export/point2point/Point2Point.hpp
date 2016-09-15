@@ -32,11 +32,12 @@
 namespace omg{
 
 typedef struct obstacle {
-    double position[N_DIM];
-    double velocity[N_DIM];
-    double acceleration[N_DIM];
-} __attribute__((packed)) obstacle_t;
-
+    std::vector<double> position;
+    std::vector<double> velocity;
+    std::vector<double> acceleration;
+    std::vector<double> checkpoints;
+    std::vector<double> radii;
+} obstacle_t;
 
 class Point2Point{
     private:
