@@ -136,7 +136,12 @@ class Fleet(PlotLayer):
                     lines = []
                     for v in range(len(vehicles)):
                         lines += infos[v][k][l]['lines']
-                    inf.append({'labels': labels, 'lines': lines})
+                    dic = {'labels': labels, 'lines': lines}
+                    if 'xlim' in kwargs:
+                        dic['xlim'] = kwargs['xlim']
+                    if 'ylim' in kwargs:
+                        dic['ylim'] = kwargs['ylim']
+                    inf.append(dic)
                 info.append(inf)
         return info
 

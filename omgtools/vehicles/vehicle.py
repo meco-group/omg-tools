@@ -440,7 +440,12 @@ class Vehicle(OptiChild, PlotLayer):
                 if 'prediction' in kwargs and kwargs['prediction']:
                     lines.append(
                         {'linestyle': 'None', 'marker': 'o', 'color': self.colors[index]})
-                inf.append({'labels': ['t (s)', labels[k]], 'lines': lines})
+                dic = {'labels': ['t (s)', labels[k]], 'lines': lines}
+                if 'xlim' in kwargs:
+                    dic['xlim'] = kwargs['xlim']
+                if 'ylim' in kwargs:
+                    dic['ylim'] = kwargs['ylim']
+                inf.append(dic)
             info.append(inf)
         return info
 
