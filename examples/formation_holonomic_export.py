@@ -63,6 +63,7 @@ options['casadiobj'] = os.path.join(options['directory'], 'bin/')
 options['casadiinc'] = os.path.join(casadi_path, 'include/')
 # your casadi library path
 options['casadilib'] = os.path.join(casadi_path, 'casadi/')
+options['namespace'] = 'omgf'
 
 # export the problem
 problem.export(options)
