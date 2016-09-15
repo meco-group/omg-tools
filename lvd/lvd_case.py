@@ -6,15 +6,17 @@ import numpy as np
 from omgtools import *
 from lvd_fap import FAP
 
+import csv
+
 # simulation
 go_forward = True
 hard_stop = False
-go_back = False
+go_back = True
 
 # results
 save_figures = False
-plot_figures = False
-plot_movies = False
+plot_figures = True
+plot_movies = True
 
 
 def reinit_after_hard_stop(problem, stop_time=None):
@@ -42,6 +44,24 @@ def save_trajectories(trajectories, name):
     data = np.r_[time, state].T
     np.savetxt(name+'.csv', data, delimiter=',')
 
+
+def save_trajectory_lvd_format(trajectories, name):
+    time = np.copy(trajectories['vehicle0']['time'])
+    state = np.copy(trajectories['vehicle0']['state'])
+    for k in range(3):
+        # transform to machine frame
+        state[k, :] = state[k, :] - 0.5*plate['dim'][k]
+    data = np.r_[time, state].T
+    with open(name + '.csv', 'wb') as csvfile:
+        csv_writer = csv.writer(csvfile, delimiter = ';')
+        for pos in data:
+            row_data = []
+            row_data.append("{0:.3f}".format(pos[0]))
+            row_data.append("{0:.5f}".format(1000.0*pos[1]))
+            row_data.append("{0:.5f}".format(1000.0*pos[2]))
+            row_data.append("{0:.5f}".format(1000.0*pos[3]))
+            csv_writer.writerow(row_data)
+
 """modeling parameters"""
 
 # obstacles (defined wrt machine frame)
@@ -54,18 +74,23 @@ pilar = {'pos': [3.05, -2.15, 0.], 'dim': [0.3, 0.45, 1.5]}
 measure = {'pos': [6.8, -1.4, 0.], 'dim': [0.15, 0.15, 1.15]}
 
 # plate (defined wrt machine frame)
-plate = {'start': [7., -1.5, 0.4], 'end': [0., -1.3, 1.01], 'end2': [3.5, -1.5, 0.4],
-         'dim': [3., 1.5, 0.01]}
+# chrm :
+# modified sheet dimensions 2000x1000x1
+# modified start position to [7.417, -1.556 , 0.066 ]
+# modified end position [-0.0295, -1.536 , 1.004 ]
+
+plate = {'start': [7.417, -1.556 , 0.066 ], 'end': [-0.0295, -1.536 , 1.004 ], 'end2': [4., -1.4, 0.4],
+         'dim': [2.0, 1.0, 0.001]}
 
 # room limits (should prevent collisions with beam & pillar)
-room = {'min': [-0.1, -1.6, plate['start'][2]], 'max': [7.1, 0.4, 1.15]}
+room = {'min': [-0.1, -1.6, 0.99*plate['start'][2]], 'max': [7.5, 0.4, 1.15]}
 
 # some case specific settings
-table_tolerance = 0.002
-plate_deflection = 0.003 # (plate_deflection + table_tolerance < diff table and end pos plate)
+table_tolerance = 0.001
+plate_deflection = 0.002 # (plate_deflection + table_tolerance < diff table and end pos plate)
 cover_tolerance = 0.01
 cover_front_tolerance = 0.1
-measure_tolerance = 0.01
+measure_tolerance = 0.05
 
 # table + leg
 obstacle1 = {'label': 'tableleg', 'pos': table['pos'][:], 'dim': table['dim'][:]}
@@ -93,13 +118,16 @@ shape_plate = Plate(Rectangle(plate['dim'][0], plate['dim'][1]), plate['dim'][2]
 bounds = {'smin': [room['min'][k]+0.5*plate['dim'][k] for k in range(3)],
           'smax': [room['max'][k]+0.5*plate['dim'][k] for k in range(3)]}
 bounds['smax'][1] = -0.1
+# reduce the speed
+bounds['vmin'] = [-0.5, -0.25, -0.15]
+bounds['vmax'] = [0.5,  0.25,  0.15]
+
 # shutdown room constraints (we use constraints on position)
 options = {'room_constraints': False}
-fap = FAP(shape_plate, options=options, bounds=bounds)
+fap = FAP(shape_plate, options=options, bounds=bounds, jerk_penalty=1e-5)
 fap.define_knots(knot_intervals=10)
 fap.set_initial_conditions([plate['start'][k]+0.5*plate['dim'][k] for k in range(3)])
 fap.set_terminal_conditions([plate['end'][k]+0.5*plate['dim'][k] for k in range(3)])
-
 # 2. create obstacles
 obstacles = []
 # create obstacles for drawing
@@ -122,18 +150,19 @@ for obst in obstacles_avoid:
             vert_ind = [[1, -1, -1], [1, 1, -1], [1, -1, 1], [1, 1, 1], [-1, -1, 1], [-1, 1, 1]]
         vert_obst = np.zeros((3, len(vert_ind)))
         for k, ind in enumerate(vert_ind):
-            vert_obst[:, k] = 0.5*np.array(obst['dim'])*ind
+            vert_obst[:, k] = 0.5*np.array(obst['dim'])*ind # pointwise multiply
         shape_obst = Polyhedron3D(vert_obst, obst['radius'])
     obstacles.append(Obstacle({'position': pos_obst}, shape_obst, {}, {'draw': False}))
 
 # 3. create environment
-environment = Environment(room={'shape': Cuboid(10., 3.7, 2.3), 'position': [5., -0.35, 1.15]})
+environment = Environment(room={'shape': Cuboid(10., 3.7, 2.3), 'position': [5., -0.35, 1.15]}) # room is just for drawing purposes
 environment.add_obstacle(obstacles)
 
 # 4. create problem
 problem = Point2point(fap, environment, freeT=True)
-problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
+# problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}, 'horizon_time': 10.})
 problem.init()
+
 
 """simulation with omg-tools"""
 
@@ -154,8 +183,9 @@ if go_forward:
         trajectories = simulator.run_once()
     else:
         trajectories = simulator.run_once()
-        # save_trajectories(trajectories, 'go_forward')
-# problem.save_movie('scene', 'plate', format='gif', number_of_frames=100, movie_time=5, axis=False, view=[30, 60])
+        save_trajectories(trajectories, 'go_forward')
+        save_trajectory_lvd_format(trajectories, 'load_sheet')
+
 # from machine to final stack
 if go_back:
     if not go_forward:
@@ -186,3 +216,4 @@ if save_figures:
     problem.save_movie('scene', 'scene3', number_of_frames=40, view=[90, 0], axis=False)
 
 matplotlib.pyplot.show(block=True)
+

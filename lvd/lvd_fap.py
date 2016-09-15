@@ -2,14 +2,14 @@
 # questions: ruben.vanparys@kuleuven.be
 
 from omgtools.vehicles.vehicle import Vehicle
-from omgtools.basics.spline_extra import sample_splines, shift_spline
+from omgtools.basics.spline_extra import sample_splines, shift_spline, definite_integral
 from casadi import inf
 import numpy as np
 
 
 class FAP(Vehicle):
 
-    def __init__(self, shapes, options={}, bounds={}):
+    def __init__(self, shapes, options={}, bounds={}, jerk_penalty=1e-5):
         Vehicle.__init__(
             self, n_spl=3, degree=3, shapes=shapes, options=options)
         self.smin = bounds['smin'] if 'smin' in bounds else [None, None, None]
@@ -20,6 +20,7 @@ class FAP(Vehicle):
         self.amax = bounds['amax'] if 'amax' in bounds else [2.0,  2.0,  1.0]
         self.jmin = bounds['jmin'] if 'jmin' in bounds else [-4.0, -100.0, -5.0]
         self.jmax = bounds['jmax'] if 'jmax' in bounds else [4.0,  100.0,  5.0]
+        self.jerk_penalty = jerk_penalty
 
     def init(self):
         # time horizon
@@ -45,6 +46,9 @@ class FAP(Vehicle):
         for k, ddds in enumerate(dddsplines):
             self.define_constraint(-ddds + (self.T**3)*self.jmin[k], -inf, 0.)
             self.define_constraint(ddds - (self.T**3)*self.jmax[k], -inf, 0.)
+
+        if self.jerk_penalty > 0. :
+            self.define_objective(self.jerk_penalty*sum([definite_integral(ddds*ddds, 0, 1) for ddds in dddsplines]))
 
     def get_initial_constraints(self, splines):
         state0 = self.define_parameter('state0', 3)
@@ -80,45 +84,22 @@ class FAP(Vehicle):
         init_value = np.zeros((len(self.basis), 3))
         pos0 = self.prediction['state']
         posT = self.positionT
-        breakpoint = self.knot_intervals/3 + 1
-        end_cont = 2
-        init_value[:, 0] = np.r_[pos0[0]*np.ones(2+breakpoint), np.linspace(
-            pos0[0], posT[0], len(self.basis) - end_cont - 2 - breakpoint), posT[0]*np.ones(end_cont)]
-        init_value[:, 1] = np.r_[pos0[1]*np.ones(2), np.linspace(
-            pos0[1], posT[1], len(self.basis) - end_cont - 2), posT[1]*np.ones(end_cont)]
-        init_value[:, 2] = np.r_[pos0[2]*np.ones(2), np.linspace(pos0[2], 1.2*posT[2], breakpoint), np.linspace(
-            1.2*posT[2], posT[2], len(self.basis)-breakpoint - end_cont - 2), posT[2]*np.ones(end_cont)]
+        if False:
+            breakpoint = self.knot_intervals/3 + 1
+            end_cont = 2
+            init_value[:, 0] = np.r_[pos0[0]*np.ones(2+breakpoint), np.linspace(
+                pos0[0], posT[0], len(self.basis) - end_cont - 2 - breakpoint), posT[0]*np.ones(end_cont)]
+            init_value[:, 1] = np.r_[pos0[1]*np.ones(2), np.linspace(
+                pos0[1], posT[1], len(self.basis) - end_cont - 2), posT[1]*np.ones(end_cont)]
+            init_value[:, 2] = np.r_[pos0[2]*np.ones(2), np.linspace(pos0[2], 1.2*posT[2], breakpoint), np.linspace(
+                1.2*posT[2], posT[2], len(self.basis)-breakpoint - end_cont - 2), posT[2]*np.ones(end_cont)]
+        if False:
+            for k in range(3):
+                init_value[:, k] = np.linspace(pos0[k], posT[k], len(self.basis))
+        if True:
+            for k in range(3):
+                init_value[:, k] = np.r_[pos0[k]*np.ones(self.degree), np.linspace(pos0[k], posT[k], len(self.basis) - 2*self.degree), posT[k]*np.ones(self.degree)]
         return init_value
-
-    # def recover_hard_stop(self, problem, stop_time=None):
-    #     pos0 = self.signals['state'][:, -1]
-    #     posT = self.positionT
-    #     # search time of stop
-    #     if not stop_time:
-    #         stop_time = 0.
-    #         dist = np.inf
-    #         for k in range(self.trajectories['splines'].shape[1]):
-    #             value = self.trajectories['splines'][:, k]
-    #             _dist = np.linalg.norm(value - pos0)
-    #             if _dist < dist:
-    #                 dist = _dist
-    #                 stop_time = self.trajectories['time'][:, k]
-    #     # retrieve previous spline result
-    #     splines = self.result_splines
-    #     horizon_time = splines[0].basis.knots[-1]
-    #     # define stop_time in spline basis time axis
-    #     sample_time = self.trajectories['time'][:, 1] - self.trajectories['time'][:, 0]
-    #     n_samp = int(horizon_time/sample_time)
-    #     horizon_time = n_samp*sample_time
-    #     t0 = stop_time - (self.trajectories['time'][:, -1] - horizon_time)
-    #     # get future piece of spline in equidistant basis
-    #     init_value = np.zeros((len(self.basis), 3))
-    #     for k, spline in enumerate(splines):
-    #         init_value[:, k] = shift_spline(spline.coeffs, t0, spline.basis)
-    #     self.reinit_splines(problem, init_value)
-    #     # change time variable
-    #     problem.father.set_variables(horizon_time - t0, problem, 'T')
-    #     print stop_time
 
     def check_terminal_conditions(self):
         if (np.linalg.norm(self.signals['state'][:, -1] - self.positionT) > 1.e-3 or
