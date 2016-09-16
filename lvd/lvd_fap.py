@@ -47,6 +47,24 @@ class FAP(Vehicle):
             self.define_constraint(-ddds + (self.T**3)*self.jmin[k], -inf, 0.)
             self.define_constraint(ddds - (self.T**3)*self.jmax[k], -inf, 0.)
 
+        state0 = self.define_symbol('state0', 3)
+        positionT = self.define_symbol('positionT', 3)
+
+        self.define_constraint(z(1.5/10.) - (state0[2]+0.01), 0, np.inf)
+        self.define_constraint(x(1.5/10.) - state0[0], 0, 0)
+        self.define_constraint(y(1.5/10.) - state0[1], 0, 0)
+
+        self.define_constraint(z(8.5/10.) - (positionT[2]+0.01), 0, np.inf)
+        self.define_constraint(x(8.5/10.) - positionT[0], 0, 0)
+        self.define_constraint(y(8.5/10.) - positionT[1], 0, 0)
+
+        # print z.coeffs.shape
+        for k in range(4, 10):
+            self.define_constraint(z.coeffs[k] - 1.02, 0, np.inf)
+
+
+
+
         if self.jerk_penalty > 0. :
             self.define_objective(self.jerk_penalty*sum([definite_integral(ddds*ddds, 0, 1) for ddds in dddsplines]))
 
@@ -56,10 +74,13 @@ class FAP(Vehicle):
         x, y, z = splines
         dx, dy, dz = x.derivative(), y.derivative(), z.derivative()
         ddx, ddy, ddz = x.derivative(2), y.derivative(2), z.derivative(2)
+        dddx, dddy, dddz = x.derivative(3), y.derivative(3), z.derivative(3)
+
+
         return [(x, state0[0]), (y, state0[1]), (z, state0[2]),
                 (dx, self.T*input0[0]), (dy, self.T*input0[1]),
                 (dz, self.T*input0[2]), (ddx, 0.),
-                (ddy, 0.), (ddz, 0.)]
+                (ddy, 0.), (ddz, 0.), (dddx, 0.), (dddy, 0.)]
 
     def get_terminal_constraints(self, splines):
         position = self.define_parameter('positionT', 3)
@@ -111,6 +132,7 @@ class FAP(Vehicle):
     def set_parameters(self, current_time):
         parameters = {}
         parameters['state0'] = self.prediction['state']
+        print self.prediction['state'][2]
         parameters['input0'] = self.prediction['input']
         parameters['positionT'] = self.positionT
         return parameters
