@@ -2,7 +2,8 @@
 # questions: ruben.vanparys@kuleuven.be
 
 from omgtools.vehicles.vehicle import Vehicle
-from omgtools.basics.spline_extra import sample_splines, shift_spline, definite_integral
+from omgtools.basics.spline_extra import sample_splines, shift_spline
+from omgtools.basics.spline_extra import definite_integral, crop_spline
 from casadi import inf
 import numpy as np
 
@@ -47,24 +48,19 @@ class FAP(Vehicle):
             self.define_constraint(-ddds + (self.T**3)*self.jmin[k], -inf, 0.)
             self.define_constraint(ddds - (self.T**3)*self.jmax[k], -inf, 0.)
 
-        state0 = self.define_symbol('state0', 3)
-        positionT = self.define_symbol('positionT', 3)
+        # state0 = self.define_symbol('state0', 3)
+        # positionT = self.define_symbol('positionT', 3)
 
-        self.define_constraint(z(1.5/10.) - (state0[2]+0.01), 0, np.inf)
-        self.define_constraint(x(1.5/10.) - state0[0], 0, 0)
-        self.define_constraint(y(1.5/10.) - state0[1], 0, 0)
-
-        self.define_constraint(z(8.5/10.) - (positionT[2]+0.01), 0, np.inf)
-        self.define_constraint(x(8.5/10.) - positionT[0], 0, 0)
-        self.define_constraint(y(8.5/10.) - positionT[1], 0, 0)
-
-        # print z.coeffs.shape
-        for k in range(4, 10):
-            self.define_constraint(z.coeffs[k] - 1.02, 0, np.inf)
-
-
-
-
+        # # eerst stijgen in z voordat x,y bewegen
+        # self.define_constraint(z(1.5/10.) - (state0[2]+0.01), 0, np.inf)
+        # self.define_constraint(x(1.5/10.) - state0[0], 0, 0)
+        # self.define_constraint(y(1.5/10.) - state0[1], 0, 0)
+        # # dalen in z nadat x,y gestopt zijn
+        # self.define_constraint(z(8.5/10.) - (positionT[2]+0.01), 0, np.inf)
+        # self.define_constraint(x(8.5/10.) - positionT[0], 0, 0)
+        # self.define_constraint(y(8.5/10.) - positionT[1], 0, 0)
+        # # tussen 30% en 70% van eindtijd moet z > 1.02
+        # self.define_constraint(crop_spline(z, 0.3, 0.7) - 1.02, 0., np.inf)
         if self.jerk_penalty > 0. :
             self.define_objective(self.jerk_penalty*sum([definite_integral(ddds*ddds, 0, 1) for ddds in dddsplines]))
 
@@ -75,12 +71,10 @@ class FAP(Vehicle):
         dx, dy, dz = x.derivative(), y.derivative(), z.derivative()
         ddx, ddy, ddz = x.derivative(2), y.derivative(2), z.derivative(2)
         dddx, dddy, dddz = x.derivative(3), y.derivative(3), z.derivative(3)
-
-
         return [(x, state0[0]), (y, state0[1]), (z, state0[2]),
                 (dx, self.T*input0[0]), (dy, self.T*input0[1]),
                 (dz, self.T*input0[2]), (ddx, 0.),
-                (ddy, 0.), (ddz, 0.), (dddx, 0.), (dddy, 0.)]
+                (ddy, 0.), (ddz, 0.)]
 
     def get_terminal_constraints(self, splines):
         position = self.define_parameter('positionT', 3)
