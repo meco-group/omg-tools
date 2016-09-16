@@ -88,6 +88,7 @@ int main()
         obstacles[k].checkpoints[5] = -0.5*height;
         obstacles[k].checkpoints[6] = -0.5*width;
         obstacles[k].checkpoints[7] = 0.5*height;
+        obstacles[k].avoid = true;
         for (int i=0; i<4; i++){
             obstacles[k].radii[i] = radius;
         }

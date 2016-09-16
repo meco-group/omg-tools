@@ -37,12 +37,13 @@ typedef struct obstacle {
     std::vector<double> acceleration;
     std::vector<double> checkpoints;
     std::vector<double> radii;
+    bool avoid;
 } obstacle_t;
 
 class Point2Point{
     private:
         casadi::Function problem;
-        bool solve(std::vector<obstacle_t>&);
+        bool solve(double, std::vector<obstacle_t>&);
         void generateSubstituteFunctions();
         void initSplines();
 
@@ -72,7 +73,7 @@ class Point2Point{
 
         void setParameters(std::vector<obstacle_t>&);
         void initVariables();
-        void updateBounds(double);
+        void updateBounds(double, std::vector<obstacle_t>&);
         void retrieveTrajectories(std::vector<std::vector<double>>&);
         void getParameterVector(std::vector<double>&, std::map<std::string, std::map<std::string, std::vector<double>>>&);
         void getVariableVector(std::vector<double>&, std::map<std::string, std::map<std::string, std::vector<double>>>&);

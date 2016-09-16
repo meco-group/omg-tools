@@ -161,7 +161,7 @@ bool Point2Point::update(vector<double>& condition0, vector<double>& conditionT,
     #ifdef DEBUG
     begin = clock();
     #endif
-    bool check = solve(obstacles);
+    bool check = solve(current_time, obstacles);
     #ifdef DEBUG
     end = clock();
     tmeas = double(end-begin)/CLOCKS_PER_SEC;
@@ -192,11 +192,12 @@ bool Point2Point::update(vector<double>& condition0, vector<double>& conditionT,
     return check;
 }
 
-bool Point2Point::solve(vector<obstacle_t>& obstacles){
+bool Point2Point::solve(double current_time, vector<obstacle_t>& obstacles){
     // init variables if first time
     if(fabs(current_time)<=1.e-6){
         initVariables();
     }
+    updateBounds(current_time, obstacles);
     setParameters(obstacles);
     args["p"] = parameters;
     args["x0"] = variables;
@@ -301,7 +302,7 @@ void Point2Point::getVariableDict(vector<double>& var_vect, map<string, map<stri
 @getVariableDict@
 }
 
-void Point2Point::updateBounds(double current_time){
+void Point2Point::updateBounds(double current_time, vector<obstacle_t>& obstacles){
 @updateBounds@
 }
 

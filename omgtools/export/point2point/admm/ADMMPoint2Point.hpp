@@ -38,7 +38,7 @@ class ADMMPoint2Point: public Point2Point{
 
         const int n_nghb = N_NGHB;
 
-        bool solveUpdx(std::vector<obstacle_t>&);
+        bool solveUpdx(double, std::vector<obstacle_t>&);
         bool solveUpdz();
         bool solveUpdl();
         bool computeResiduals();

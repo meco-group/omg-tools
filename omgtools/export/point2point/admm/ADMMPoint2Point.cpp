@@ -158,7 +158,7 @@ bool ADMMPoint2Point::update1(vector<double>& condition0, vector<double>& condit
     #ifdef DEBUG
     begin = clock();
     #endif
-    bool check = solveUpdx(obstacles);
+    bool check = solveUpdx(current_time, obstacles);
     #ifdef DEBUG
     end = clock();
     tmeas = double(end-begin)/CLOCKS_PER_SEC;
@@ -247,7 +247,7 @@ bool ADMMPoint2Point::update2(vector<vector<double>>& x_j_var,
     return true;
 }
 
-bool ADMMPoint2Point::solveUpdx(vector<obstacle_t>& obstacles){
+bool ADMMPoint2Point::solveUpdx(double current_time, vector<obstacle_t>& obstacles){
     // first set parameters before initVariablesADMM!
     Point2Point::setParameters(obstacles);
     // init variables if first time
@@ -257,6 +257,7 @@ bool ADMMPoint2Point::solveUpdx(vector<obstacle_t>& obstacles){
         // set parameters again with init admm variables
         Point2Point::setParameters(obstacles);
     }
+    Point2Point::updateBounds(current_time, obstacles);
     args["p"] = parameters;
     args["x0"] = variables;
     args["lbg"] = lbg;

@@ -602,10 +602,10 @@ class OptiChild(object):
         if isinstance(expr, (float, int)):
             return
         if name is None:
-            name = 'c'+str(self._constraint_cnt)
-            self._constraint_cnt += 1
-        if name in self._constraints:
-            raise ValueError('Name %s already used for constraint!' % (name))
+            name = 'c_'+str(self._constraint_cnt)
+        else:
+            name = name + '_' + str(self._constraint_cnt)
+        self._constraint_cnt += 1
         if isinstance(expr, BSpline):
             self._constraints[name] = (
                 expr.coeffs, lb*np.ones(expr.coeffs.shape[0]),
