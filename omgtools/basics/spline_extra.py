@@ -293,7 +293,10 @@ def get_interval_T(basis, min_value, max_value):
 
 def crop_spline(spline, min_value, max_value):
     T, knots2 = get_interval_T(spline.basis, min_value, max_value)
-    coeffs2 = T.dot(spline.coeffs)
+    if isinstance(spline.coeffs, (SX, MX)):
+        coeffs2 = mtimes(T, spline.coeffs)
+    else:
+        coeffs2 = T.dot(spline.coeffs)
     basis2 = BSplineBasis(knots2, spline.basis.degree)
     return BSpline(basis2, coeffs2)
 
