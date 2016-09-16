@@ -291,6 +291,13 @@ def get_interval_T(basis, min_value, max_value):
     return T[jmin:jmax-degree-1, :], knots2[jmin:jmax]
 
 
+def crop_spline(spline, min_value, max_value):
+    T, knots2 = get_interval_T(spline.basis, min_value, max_value)
+    coeffs2 = T.dot(spline.coeffs)
+    basis2 = BSplineBasis(knots2, spline.basis.degree)
+    return BSpline(basis2, coeffs2)
+
+
 def concat_splines(segments, segment_times):
     spl0 = segments[0]
     knots = [s.basis.knots*segment_times[0] for s in spl0]
