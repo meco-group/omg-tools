@@ -158,10 +158,10 @@ class ExportADMM(Export):
         return {'initSplines': code}
 
     def _create_transformSharedSplines(self, father, problem, point2point):
-        code = ('\tif(((current_time > 0) and ' +
-                'fabs(fmod(round(current_time*1000.)/1000., ' +
-                'horizon_time/' +
-                str(point2point.vehicles[0].knot_intervals)+')) <1.e-6)){\n')
+        code = ''
+        code += '\tint interval_prev = (int)(current_time_prev*(vehicle->getKnotIntervals())/horizon_time);\n'
+        code += '\tint interval_now = (int)(current_time*(vehicle->getKnotIntervals())/horizon_time);\n'
+        code += '\tif(interval_now > interval_prev){\n'
         for var in ['x_i', 'z_i', 'l_i', 'z_ji', 'l_ji', 'z_ij', 'l_ij']:
             code += '\t\tvector<double> ' + var + '_tf(variables_admm["' + var + '"]);\n'
         cnt = 0

@@ -50,6 +50,7 @@ class Point2Point{
     protected:
         Vehicle* vehicle;
         double current_time=0.0;
+        double current_time_prev=0.0;
         double horizon_time;
         double update_time;
         double sample_time;
@@ -78,7 +79,7 @@ class Point2Point{
         void getParameterVector(std::vector<double>&, std::map<std::string, std::map<std::string, std::vector<double>>>&);
         void getVariableVector(std::vector<double>&, std::map<std::string, std::map<std::string, std::vector<double>>>&);
         void getVariableDict(std::vector<double>&, std::map<std::string, std::map<std::string, std::vector<double>>>&);
-        void transformSplines(double);
+        void transformSplines(double, double);
 
         virtual void generateProblem();
         virtual void fillParameterDict(std::vector<obstacle_t>&, std::map<std::string, std::map<std::string, std::vector<double>>>&);

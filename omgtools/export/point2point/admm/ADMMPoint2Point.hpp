@@ -45,7 +45,7 @@ class ADMMPoint2Point: public Point2Point{
         void initVariablesADMM();
         void extractData();
         void retrieveSharedVariables(std::map<std::string, std::map<std::string, std::vector<double>>>&);
-        void transformSharedSplines(double);
+        void transformSharedSplines(double, double);
         void setParameters(std::vector<obstacle_t>&);
         virtual void generateProblem();
 

@@ -368,10 +368,9 @@ class Export(object):
         code, cnt = '', 0
         tf_len = len(problem.vehicles[0].basis)
         if point2point.__class__.__name__ == 'FixedTPoint2point':
-            code += ('\tif(((current_time > 0) and ' +
-                     'fabs(fmod(round(current_time*1000.)/1000., ' +
-                     'horizon_time/' +
-                     str(point2point.vehicles[0].knot_intervals)+')) <1.e-6)){\n')
+            code += '\tint interval_prev = (int)(current_time_prev*(vehicle->getKnotIntervals())/horizon_time);\n'
+            code += '\tint interval_now = (int)(current_time*(vehicle->getKnotIntervals())/horizon_time);\n'
+            code += '\tif(interval_now > interval_prev){\n'
             code += ('\t\tvector<double> spline_tf(' + str(len(problem.vehicles[0].basis)) + ');\n')
             for label, child in father.children.items():
                 for name, var in child._variables.items():
