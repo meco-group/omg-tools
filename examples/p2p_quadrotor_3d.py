@@ -22,16 +22,16 @@ sys.path.insert(0, os.getcwd()+"/..")
 from omgtools import *
 
 # create vehicle
-vehicle = Quadrotor3D(shapes=RegularPrisma(0.4, 0.15, 8))
+vehicle = Quadrotor3D(0.5)
 
 vehicle.set_initial_conditions([-3., -3., -3])
-vehicle.set_terminal_conditions([3., 3., -3])
+vehicle.set_terminal_conditions([4., 3., -3])
 vehicle.set_options({'stop_tol': 5e-1})
 
 # create environment
 environment = Environment(room={'shape': Cube(10.)})
 environment.add_obstacle(Obstacle(
-    {'position': [1., 0., -2.5]}, shape=Cuboid(width=0.25, depth=10, height=5.)))
+    {'position': [0., 0., -3.5]}, shape=Cuboid(width=0.25, depth=10, height=5.)))
 
 # create a point-to-point problem
 problem = Point2point(vehicle, environment, freeT=False)
@@ -41,13 +41,20 @@ problem.init()
 
 # create simulator
 simulator = Simulator(problem)
-problem.plot('scene', view=[30, -30])  # elevation and azimuth of cam
-vehicle.plot('state', knots=True)
+# problem.plot('scene', view=[30, -30])  # elevation and azimuth of cam
+# vehicle.plot('state', knots=True)
 vehicle.plot('input', knots=True)
-vehicle.plot('ddspl', knots=True)
+# vehicle.plot('ddspl', knots=True)
 
 # run it!
-simulator.run()
+simulator.run_once()
+
+problem.plot_movie('scene', number_of_frames=50)
+problem.plot('scene', time=1)
+problem.plot('scene', time=4)
+
+import matplotlib.pyplot as plt
+plt.show(block=True)
 
 # Save a movie as gif: you need imagemagick for this!
 #problem.save_movie('scene', format='gif', name='quadrotor_2', number_of_frames=100, movie_time=5, axis=False)

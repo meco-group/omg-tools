@@ -22,7 +22,7 @@ from omgtools import *
 
 #create fleet
 N = 4
-vehicles = [Quadrotor3D(shapes=RegularPrisma(0.4, 0.15, 8)) for l in range(N)]
+vehicles = [Quadrotor3D(0.4) for l in range(N)]
 
 for vehicle in vehicles:
     vehicle.set_options({'stop_tol': 5e-1})
