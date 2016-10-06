@@ -18,14 +18,14 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from vehicle import Vehicle
-from ..basics.shape import RegularPrisma
+from ..basics.shape import Sphere
 from ..basics.spline_extra import sample_splines
 from casadi import inf
 import numpy as np
 
 # Vehicle model:
-# ddx = -(F/m)*cos(phi)*sin(theta)
-# ddy = (F/m)*sin(theta)
+# ddx = (F/m)*cos(phi)*sin(theta)
+# ddy = -(F/m)*sin(theta)
 # ddz = (F/m)*cos(phi)*cos(theta) - g
 # dphi = omega_phi
 # dtheta = omega_theta
@@ -42,10 +42,10 @@ import numpy as np
 
 class Quadrotor3D(Vehicle):
 
-    def __init__(self, shapes=RegularPrisma(0.4, 0.15, 8), options=None, bounds=None):
+    def __init__(self, radius=0.2, options=None, bounds=None):
         bounds = bounds or {}
         Vehicle.__init__(
-            self, n_spl=3, degree=4, shapes=shapes, options=options)
+            self, n_spl=3, degree=4, shapes=Sphere(radius), options=options)
 
         self.vmin = bounds['vmin'] if 'vmin' in bounds else -4
         self.vmax = bounds['vmax'] if 'vmax' in bounds else 4
@@ -61,6 +61,7 @@ class Quadrotor3D(Vehicle):
         self.u3min = bounds['u3min'] if 'u3min' in bounds else -8.
         self.u3max = bounds['u3max'] if 'u3max' in bounds else 8.
         self.g = 9.81
+        self.radius = radius
 
     def set_default_options(self):
         Vehicle.set_default_options(self)
@@ -77,18 +78,21 @@ class Quadrotor3D(Vehicle):
         ddx, ddy, ddz = x.derivative(2), y.derivative(2), z.derivative(2)
         dddx, dddy, dddz = x.derivative(3), y.derivative(3), z.derivative(3)
         g_tf = self.g*(self.T**2)
-      ### u1 constraints (F/m)
+
+        # u1 constraints (F/m)
         self.define_constraint(-(ddx**2 + ddy**2 + (ddz + g_tf)**2) + (self.T**4)*self.u1min**2, -inf, 0.)
         self.define_constraint((ddx**2 + ddy**2 + (ddz + g_tf)**2) - (self.T**4)*self.u1max**2, -inf, 0.)
 
-      ### u2 constraints (omega_phi)
-#	self.define_constraint((dddy*(ddx**2 + ddy**2 + (ddz + g_tf)**2) - ddy*(ddx*dddx + ddy*dddy + dddz*(ddz + g_tf)))**2 - (self.T**2)*(self.u2max**2)*((ddx**2 + ddy**2 + (ddz + g_tf)**2)**2)*(ddx**2 + (ddz + g_tf)**2), -inf, 0.)
+        # u2 constraints (omega_phi)
+        # wrong???? self.define_constraint((dddy*(ddx**2 + ddy**2 + (ddz + g_tf)**2) - ddy*(ddx*dddx + ddy*dddy + dddz*(ddz + g_tf)))**2 - (self.T**2)*(self.u2max**2)*((ddx**2 + ddy**2 + (ddz + g_tf)**2)**2)*(ddx**2 + (ddz + g_tf)**2), -inf, 0.)
+        # self.define_constraint((-dddy*(ddx**2 + (ddz + g_tf)**2) + ddy*(ddx*dddx + dddz*(ddz + g_tf)))**2 - (self.T**2)*(self.u2max**2)*((ddx**2 + ddy**2 + (ddz + g_tf)**2)**2)*(ddx**2 + (ddz + g_tf)**2), -inf, 0.)
 
-      ### u3 constraints (omega_theta)
-#        self.define_constraint(-(ddx*dddz - dddx*(ddz + g_tf)) + (ddx**2 + (ddz + g_tf)**2)*(self.T*self.u2min), -inf, 0.)
-#        self.define_constraint((ddx*dddz - dddx*(ddz + g_tf)) - (ddx**2 + (ddz + g_tf)**2)*(self.T*self.u2max), -inf, 0.)
+        # u3 constraints (omega_theta)
+        # self.define_constraint(-(-ddx*dddz + dddx*(ddz + g_tf)) + (ddx**2 + (ddz + g_tf)**2)*(self.T*self.u2min), -inf, 0.)
+        # self.define_constraint((-ddx*dddz + dddx*(ddz + g_tf)) - (ddx**2 + (ddz + g_tf)**2)*(self.T*self.u2max), -inf, 0.)
 
-      ### velocity constraints 
+
+      ### velocity constraints
 #        self.define_constraint(-dx + self.T*self.vmin, -inf, 0.)
 #        self.define_constraint(-dy + self.T*self.vmin, -inf, 0.)
 #        self.define_constraint(-dz + self.T*self.vmin, -inf, 0.)
@@ -131,7 +135,7 @@ class Quadrotor3D(Vehicle):
         return [term_con, term_con_der]
 
     def set_initial_conditions(self, position):
-        self.prediction['state'] = np.r_[position, np.zeros(3)].T
+        self.prediction['state'] = np.r_[position, np.zeros(5)].T
         self.prediction['dspl'] = np.zeros(3)
         self.prediction['ddspl'] = np.zeros(3)
 
@@ -179,17 +183,17 @@ class Quadrotor3D(Vehicle):
         ddx_s, ddy_s, ddz_s = sample_splines([ddx, ddy, ddz], time)
         dddx_s, dddy_s, dddz_s = sample_splines([dddx, dddy, dddz], time)
 
-        phi = np.arcsin(ddy_s, np.sqrt(ddx_s**2 + ddy_s**2 + (ddz_s + self.g)**2))
+        # phi = np.arcsin(-ddy_s, np.sqrt(ddx_s**2 + ddy_s**2 + (ddz_s + self.g)**2))
+        phi = np.arctan2(-ddy_s, np.sqrt(ddx_s**2 + (ddz_s + self.g)**2))
 
-        theta = -np.arctan2(ddx_s, ddz_s + self.g)
+        theta = np.arctan2(ddx_s, ddz_s + self.g)
 
         u1 = np.sqrt(ddx_s**2 + ddy_s**2 + (ddz_s + self.g)**2)
 
-        u2 = (dddy_s*(ddx_s**2 + ddy_s**2 + (ddz_s + self.g)**2) - ddy_s*(ddx_s*dddx_s + ddy_s*dddy_s + dddz_s*(ddz_s + self.g))) / \
+        u2 = (-dddy_s*(ddx_s**2 + (ddz_s + self.g)**2) + ddy_s*(ddx_s*dddx_s + dddz_s*(ddz_s + self.g))) / \
              ((ddx_s**2 + ddy_s**2 + (ddz_s + self.g)**2)*np.sqrt(ddx_s**2 + (ddz_s + self.g)**2))
 
-        u3 = (-(ddz_s + self.g)*dddx_s + ddx_s*dddz_s) / \
-             (((ddz_s + self.g)**2) + ddx_s**2)
+        u3 = ((ddz_s + self.g)*dddx_s - ddx_s*dddz_s) / (((ddz_s + self.g)**2) + ddx_s**2)
 
         signals['state'] = np.c_[x_s, y_s, z_s, dx_s, dy_s, dz_s, phi, theta].T
         signals['input'] = np.c_[u1, u2, u3].T
@@ -198,24 +202,43 @@ class Quadrotor3D(Vehicle):
         return signals
 
     def state2pose(self, state):
-        return np.r_[state[0], state[1], state[2]]
+        return np.r_[state[0], state[1], state[2], state[6], state[7], 0.]
 
     def ode(self, state, input):
         phi = state[6]
         theta = state[7]
         u1, u2, u3 = input[0], input[1], input[2]
-        return np.r_[state[3:6], -u1*np.sin(theta)*np.cos(phi), u1*np.sin(phi), -self.g + u1*np.cos(phi)*np.cos(theta), u2, u3].T
+        return np.r_[state[3:6], u1*np.sin(theta)*np.cos(phi), -u1*np.sin(phi), -self.g + u1*np.cos(phi)*np.cos(theta), u2, u3].T
 
- #   def draw(self, t=-1):
- #       theta = self.signals['pose'][2, t]
- #       cth, sth = np.cos(theta), np.sin(theta)
- #       rot = np.array([[cth, -sth], [sth, cth]])
- #       r = self.radius
- #       h, rw = 0.2*r, (1./3.)*r
- #       plt_x = [r, r-2*rw, r-rw, r-rw, -r+rw, -r+rw, -r, -r+2*rw]
- #       plt_y = [h, h, h, 0, 0, h, h, h]
- #       points = np.vstack((plt_x, plt_y))
- #       n_points = points.shape[1]
- #       lines = [np.c_[points[:, l], points[:, l+1]]
- #                for l in range(n_points-1)]
- #       return [np.c_[self.signals['pose'][:2, t]] + rot.dot(line) for line in lines]
+    def draw(self, t=-1):
+        phi, theta = self.signals['pose'][3, t], self.signals['pose'][4, t]
+        cth, sth = np.cos(theta), np.sin(theta)
+        cphi, sphi = np.cos(phi), np.sin(phi)
+        rot = np.array([[cth, sphi*sth, cphi*sth],
+                        [0, cphi, -sphi],
+                        [-sth, sphi*cth, cphi*cth]])
+
+        r = self.radius
+        h, rw = 0.2*r, (1./3.)*r
+        s = np.linspace(0, 1-1./48, 48)
+
+        # frame
+        plt_xy = [r-rw, r-rw, -r+rw, -r+rw]
+        plt_z = [h, 0, 0, h]
+        points = np.vstack((plt_xy, np.zeros(len(plt_xy)), plt_z))
+        points = rot.dot(points) + np.c_[self.signals['pose'][:3, t]]
+        n_points = points.shape[1]
+        lines = [np.c_[points[:, l], points[:, l+1]] for l in range(n_points-1)]
+
+        points = np.vstack((np.zeros(len(plt_xy)), plt_xy, plt_z))
+        points = rot.dot(points) + np.c_[self.signals['pose'][:3, t]]
+        n_points = points.shape[1]
+        lines += [np.c_[points[:, l], points[:, l+1]] for l in range(n_points-1)]
+
+        # rotors
+        circle_h = np.vstack((rw*np.cos(s*2*np.pi), rw*np.sin(s*2*np.pi), np.zeros(len(s)), ))
+        for i, j in zip([r-rw, 0, -r+rw, 0], [0, r-rw, 0, -r+rw]):
+            points = rot.dot(circle_h + np.vstack((i, j, h))) + np.c_[self.signals['pose'][:3, t]]
+            n_points = points.shape[1]
+            lines += [np.c_[points[:, l], points[:, l+1]] for l in range(n_points-1)]
+        return lines
