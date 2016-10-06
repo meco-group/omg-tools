@@ -218,14 +218,31 @@ class Shape3D(Shape):
     def draw(self, pose=np.zeros(6)):
         return [np.c_[pose[:3]] + line for line in self.plt_lines]
 
+    def rotate(self, orientation, coordinate):
+        if len(orientation) != 3:
+            raise ValueError('Orientation is a list with 3 elements: roll, pitch, yaw!')
+        roll, pitch, yaw = orientation
+        cpsi, spsi = np.cos(yaw), np.sin(yaw)
+        cth, sth = np.cos(pitch), np.sin(pitch)
+        cphi, sphi = np.cos(roll), np.sin(roll)
+        rot = np.array([[cth*cpsi, sphi*sth*cpsi-cphi*spsi, cphi*sth*cpsi+sphi*spsi],
+                        [cth*spsi, sphi*sth*spsi+cphi*cpsi, cphi*sth*spsi-sphi*cpsi],
+                        [-sth, sphi*cth, cphi*cth]])
+        return rot.dot(coordinate)
+
+
 
 class Polyhedron3D(Shape3D):
 
-    def __init__(self, vertices, radius=1e-3):
+    def __init__(self, vertices, orientation=[0,0,0], radius=1e-3):
         self.vertices = vertices
         self.n_vert = vertices.shape[1]
         self.radius = radius
         Shape3D.__init__(self)
+        self.orientation = orientation
+        self.plt_lines = [self.rotate(orientation, line)
+                          for line in self.plt_lines]
+        self.vertices = self.rotate(orientation, self.vertices)
 
     def get_checkpoints(self):
         chck = [[self.vertices[0, l], self.vertices[1, l], self.vertices[2, l]]
@@ -251,12 +268,12 @@ class Polyhedron3D(Shape3D):
 
 class RegularPrisma(Polyhedron3D):
 
-    def __init__(self, radius, height, n_faces):
+    def __init__(self, radius, height, n_faces, orientation=[0, 0, 0]):
         # radius of outer circle of surface (the one through the vertices)
         self.radius = radius
         self.height = height
         self.n_faces = n_faces
-        Polyhedron3D.__init__(self, self.get_vertices())
+        Polyhedron3D.__init__(self, self.get_vertices(), orientation)
 
     def get_sides(self, vertices):
         sides = []
@@ -292,11 +309,11 @@ class RegularPrisma(Polyhedron3D):
 
 class Cuboid(Polyhedron3D):
 
-    def __init__(self, width, depth, height):
+    def __init__(self, width, depth, height, orientation=[0,0,0]):
         self.width = width
         self.depth = depth
         self.height = height
-        Polyhedron3D.__init__(self, self.get_vertices())
+        Polyhedron3D.__init__(self, self.get_vertices(), orientation)
 
     def get_sides(self, vertices):
         sides = []
@@ -331,17 +348,17 @@ class Cuboid(Polyhedron3D):
 
 class Cube(Cuboid):
 
-    def __init__(self, side):
-        Cuboid.__init__(self, side, side, side)
+    def __init__(self, side, orientation=[0,0,0]):
+        Cuboid.__init__(self, side, side, side, orientation)
 
 
 class Plate(Polyhedron3D):
 
-    def __init__(self, shape2d, height):
+    def __init__(self, shape2d, height, orientation=[0,0,0]):
         self.shape2d = shape2d
         vertices = np.r_[
             shape2d.vertices, np.zeros((1, shape2d.vertices.shape[1]))]
-        Polyhedron3D.__init__(self, vertices, 0.5*height)
+        Polyhedron3D.__init__(self, vertices, orientation, 0.5*height)
 
     def _prepare_draw(self):
         lines2d = self.shape2d.plt_lines
