@@ -35,6 +35,7 @@ class Vehicle{
         int len_basis;
         int knot_intervals;
         bool ideal_prediction;
+        bool provide_prediction;
         double horizon_time;
         std::vector<double> knots;
         std::vector<double> predicted_state;
@@ -68,6 +69,7 @@ class Vehicle{
         void predict(std::vector<double>& state0, std::vector<std::vector<double>>& state_trajectory, std::vector<std::vector<double>>& input_trajectory, double predict_time, double sample_time, int predict_shift);
         void setKnotHorizon(double horizon_time);
         void setIdealPrediction(bool ideal_prediction);
+        void setProvidePrediction(bool provide_prediction);
         int getNSplines();
         int getNState();
         int getNInput();

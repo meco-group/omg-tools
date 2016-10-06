@@ -24,7 +24,7 @@ using namespace std;
 namespace omg{
 
 Vehicle::Vehicle(int n_st, int n_in, int n_spl, int degree, int knot_intervals):
-ideal_prediction(false), predicted_state(n_st), predicted_input(n_in){
+ideal_prediction(false), provide_prediction(false), predicted_state(n_st), predicted_input(n_in){
     this->n_st = n_st;
     this->n_in = n_in;
     this->n_spl = n_spl;
@@ -64,7 +64,10 @@ void Vehicle::predict(vector<double>& state0, vector<vector<double>>& state_traj
         vector<double> stateT = state_trajectory[int(predict_time/sample_time)+predict_shift];
         vector<double> inputT = input_trajectory[int(predict_time/sample_time)+predict_shift];
         setPrediction(stateT, inputT);
-    } else{
+    } else if (provide_prediction){
+        vector<double> inputT = input_trajectory[int(predict_time/sample_time)+predict_shift];
+        setPrediction(state0, inputT);
+    } else {
         int steps = int(predict_time/sample_time);
         vector<vector<double>> input(steps+1, vector<double>(input_trajectory[0].size()));
         for (int k=0; k<steps+1; k++){
@@ -192,6 +195,10 @@ void Vehicle::setKnotHorizon(double horizon_time){
 
 void Vehicle::setIdealPrediction(bool ideal_prediction){
     this->ideal_prediction = ideal_prediction;
+}
+
+void Vehicle::setProvidePrediction(bool provide_prediction){
+    this->provide_prediction = provide_prediction;
 }
 
 int Vehicle::getNSplines(){
