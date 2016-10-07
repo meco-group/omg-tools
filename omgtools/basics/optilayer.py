@@ -37,6 +37,7 @@ import os
 import shutil
 import collections as col
 
+
 def evalf(fun, x):
     x = x if isinstance(x, list) else [x]
     return fun.call(x)

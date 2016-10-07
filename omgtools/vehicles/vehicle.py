@@ -255,7 +255,6 @@ class Vehicle(OptiChild, PlotLayer):
         self.store(update_time, sample_time)
         self.update_plots()
 
-
     def get_trajectories(self, splines, time_axis, current_time):
         self.trajectories = self.splines2signals(splines, time_axis)
         if not set(['state', 'input']).issubset(self.trajectories):
