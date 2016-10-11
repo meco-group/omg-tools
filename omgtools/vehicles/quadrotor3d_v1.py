@@ -47,19 +47,21 @@ class Quadrotor3D(Vehicle):
         Vehicle.__init__(
             self, n_spl=3, degree=4, shapes=Sphere(radius), options=options)
 
-        self.vmin = bounds['vmin'] if 'vmin' in bounds else -4
-        self.vmax = bounds['vmax'] if 'vmax' in bounds else 4
-        self.amin = bounds['amin'] if 'amin' in bounds else -4.
-        self.amax = bounds['amax'] if 'amax' in bounds else 4.
-        self.jmin = bounds['jmin'] if 'jmin' in bounds else -4.
-        self.jmax = bounds['jmax'] if 'jmax' in bounds else 4.
+        self.vmin = bounds['vmin'] if 'vmin' in bounds else -1
+        self.vmax = bounds['vmax'] if 'vmax' in bounds else 1
+        self.amin = bounds['amin'] if 'amin' in bounds else -1.
+        self.amax = bounds['amax'] if 'amax' in bounds else 1.
+        self.jmin = bounds['jmin'] if 'jmin' in bounds else -1.
+        self.jmax = bounds['jmax'] if 'jmax' in bounds else 1.
+        self.anglemin = bounds['anglemin'] if 'anglemin' in bounds else -np.pi/12.
+        self.anglemax = bounds['anglemax'] if 'anglemax' in bounds else np.pi/12.
 
         self.u1min = bounds['u1min'] if 'u1min' in bounds else 1.
         self.u1max = bounds['u1max'] if 'u1max' in bounds else 30.
-        self.u2min = bounds['u2min'] if 'u2min' in bounds else -8.
-        self.u2max = bounds['u2max'] if 'u2max' in bounds else 8.
-        self.u3min = bounds['u3min'] if 'u3min' in bounds else -8.
-        self.u3max = bounds['u3max'] if 'u3max' in bounds else 8.
+        self.u2min = bounds['u2min'] if 'u2min' in bounds else -1.
+        self.u2max = bounds['u2max'] if 'u2max' in bounds else 1.
+        self.u3min = bounds['u3min'] if 'u3min' in bounds else -1.
+        self.u3max = bounds['u3max'] if 'u3max' in bounds else 1.
         self.g = 9.81
         self.radius = radius
 
@@ -83,36 +85,29 @@ class Quadrotor3D(Vehicle):
         self.define_constraint(-(ddx**2 + ddy**2 + (ddz + g_tf)**2) + (self.T**4)*self.u1min**2, -inf, 0.)
         self.define_constraint((ddx**2 + ddy**2 + (ddz + g_tf)**2) - (self.T**4)*self.u1max**2, -inf, 0.)
 
-        # u2 constraints (omega_phi)
-        # wrong???? self.define_constraint((dddy*(ddx**2 + ddy**2 + (ddz + g_tf)**2) - ddy*(ddx*dddx + ddy*dddy + dddz*(ddz + g_tf)))**2 - (self.T**2)*(self.u2max**2)*((ddx**2 + ddy**2 + (ddz + g_tf)**2)**2)*(ddx**2 + (ddz + g_tf)**2), -inf, 0.)
-        # self.define_constraint((-dddy*(ddx**2 + (ddz + g_tf)**2) + ddy*(ddx*dddx + dddz*(ddz + g_tf)))**2 - (self.T**2)*(self.u2max**2)*((ddx**2 + ddy**2 + (ddz + g_tf)**2)**2)*(ddx**2 + (ddz + g_tf)**2), -inf, 0.)
+        # phi constraints (cos(angle)=1, sin(angle)=angle)
+        self.define_constraint(-ddy - (ddz+g_tf)*(self.anglemax), -inf, 0.)
+        self.define_constraint(ddy + (ddz+g_tf)*(self.anglemin), -inf, 0.)
 
-        # u3 constraints (omega_theta)
-        # self.define_constraint(-(-ddx*dddz + dddx*(ddz + g_tf)) + (ddx**2 + (ddz + g_tf)**2)*(self.T*self.u2min), -inf, 0.)
-        # self.define_constraint((-ddx*dddz + dddx*(ddz + g_tf)) - (ddx**2 + (ddz + g_tf)**2)*(self.T*self.u2max), -inf, 0.)
+        # theta constraints (cos(angle)=1, sin(angle)=angle)
+        self.define_constraint(ddx - (ddz+g_tf)*(self.anglemax), -inf, 0.)
+        self.define_constraint(-ddx + (ddz+g_tf)*(self.anglemin), -inf, 0.)
 
+        # u2 constraints (omega_phi) (cos(angle)=1, sin(angle)=angle)
+        self.define_constraint(-dddy*(ddz+g_tf) + dddz*ddy - ((ddz+g_tf)**2)*(self.T)*(self.u2max), -inf, 0.)
+        self.define_constraint(dddy*(ddz+g_tf) - dddz*ddy + ((ddz+g_tf)**2)*(self.T)*(self.u2min), -inf, 0.)
 
-      ### velocity constraints
-#        self.define_constraint(-dx + self.T*self.vmin, -inf, 0.)
-#        self.define_constraint(-dy + self.T*self.vmin, -inf, 0.)
-#        self.define_constraint(-dz + self.T*self.vmin, -inf, 0.)
-#        self.define_constraint(dx - self.T*self.vmax, -inf, 0.)
-#        self.define_constraint(dy - self.T*self.vmax, -inf, 0.)
-#        self.define_constraint(dz - self.T*self.vmax, -inf, 0.)
-      ### acceleration constraints
+        # u3 constraints (omega_theta) (cos(angle)=1, sin(angle)=angle)
+        self.define_constraint(dddx*(ddz+g_tf) - dddz*ddx - ((ddz+g_tf)**2)*(self.T)*(self.u2max), -inf, 0.)
+        self.define_constraint(-dddx*(ddz+g_tf) + dddz*ddx + ((ddz+g_tf)**2)*(self.T)*(self.u2min), -inf, 0.)
+
+        # acceleration constraints
         self.define_constraint(-ddx + (self.T**2)*self.amin, -inf, 0.)
         self.define_constraint(-ddy + (self.T**2)*self.amin, -inf, 0.)
         self.define_constraint(-ddz + (self.T**2)*self.amin, -inf, 0.)
         self.define_constraint(ddx - (self.T**2)*self.amax, -inf, 0.)
         self.define_constraint(ddy - (self.T**2)*self.amax, -inf, 0.)
         self.define_constraint(ddz - (self.T**2)*self.amax, -inf, 0.)
-      ### jerk constraints
-#        self.define_constraint(-dddx + (self.T**3)*self.jmin, -inf, 0.)
-#        self.define_constraint(-dddy + (self.T**3)*self.jmin, -inf, 0.)
-#        self.define_constraint(-dddz + (self.T**3)*self.jmin, -inf, 0.)
-#        self.define_constraint(dddx - (self.T**3)*self.jmax, -inf, 0.)
-#        self.define_constraint(dddy - (self.T**3)*self.jmax, -inf, 0.)
-#        self.define_constraint(dddz - (self.T**3)*self.jmax, -inf, 0.)
 
     def get_initial_constraints(self, splines):
         spl0 = self.define_parameter('spl0', 3)
