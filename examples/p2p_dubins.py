@@ -38,6 +38,7 @@ environment.add_obstacle(Obstacle({'position': [1., 1.]}, shape=Circle(0.5),
 problem = Point2point(vehicle, environment, freeT=False)
 # extra solver settings which may improve performance
 problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
+problem.set_options({'hard_term_con': True, 'horizon_time': 12})
 problem.init()
 
 # create simulator
