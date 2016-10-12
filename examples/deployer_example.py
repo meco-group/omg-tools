@@ -28,6 +28,8 @@ import numpy as np
 vehicle = Holonomic()
 vehicle.set_options({'safety_distance': 0.1})
 vehicle.set_options({'ideal_prediction': False})
+vehicle.set_initial_conditions([0., 0.]) # dummy: required for problem.init()
+vehicle.set_terminal_conditions([0., 0.]) # dummy: required for problem.init()
 
 # create environment
 environment = Environment(room={'shape': Square(5.)})

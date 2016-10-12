@@ -48,11 +48,13 @@ class Simulator:
                 self.update_timing()
         self.problem.final()
         # return trajectories and signals
-        trajectories = {}
-        signals = {}
-        for vehicle in self.problem.vehicles:
-            trajectories[str(vehicle)] = vehicle.traj_storage
-            signals[str(vehicle)] = vehicle.signals
+        trajectories, signals = {}, {}
+        if len(self.problem.vehicles) == 1:
+            return self.problem.vehicles[0].traj_storage, self.problem.vehicles[0].signals
+        else:
+            for vehicle in self.problem.vehicles:
+                trajectories[str(vehicle)] = vehicle.traj_storage
+                signals[str(vehicle)] = vehicle.signals
         return trajectories, signals
 
     def update(self):
@@ -94,9 +96,13 @@ class Simulator:
         self.update_timing(update_time)
         # return trajectories
         trajectories = {}
-        for vehicle in self.problem.vehicles:
-            trajectories[str(vehicle)] = vehicle.trajectories
+        if len(self.problem.vehicles) == 1:
+            return self.problem.vehicles[0].trajectories
+        else:
+            for vehicle in self.problem.vehicles:
+                trajectories[str(vehicle)] = vehicle.trajectories
         return trajectories
+
 
     def hard_stop(self, current_time, stop_time, perturbation):
         self.problem.simulate(current_time, stop_time, self.sample_time)
