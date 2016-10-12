@@ -18,7 +18,7 @@ setup(
     keywords="optimization motion planning splines distributed multi-agent",
     url="https://github.com/meco-group/omg-tools",
     packages=['omgtools', 'omgtools/basics', 'omgtools/environment',
-              'omgtools/problems', 'omgtools/simulation', 'omgtools/vehicles',
+              'omgtools/problems', 'omgtools/execution', 'omgtools/vehicles',
               'omgtools/export'],
     package_data={'': ['export/point2point/Makefile',
                        'export/point2point/instructions.txt',
