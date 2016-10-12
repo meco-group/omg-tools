@@ -35,24 +35,40 @@ fleet.set_terminal_conditions(terminal_positions.tolist())
 # create environment
 environment = Environment(room={'shape': Square(5.)})
 rectangle = Rectangle(width=3., height=0.2)
-environment.add_obstacle(Obstacle({'position': [-2.1, -0.5]}, shape=rectangle))
-environment.add_obstacle(Obstacle({'position': [1.7, -0.5]}, shape=rectangle))
+
+obstacle1 = Obstacle({'position': [-2.1, -0.5]}, shape=rectangle)
+obstacle2 = Obstacle({'position': [1.7, -0.5]}, shape=rectangle)
 trajectories = {'velocity': {'time': [3., 4.],
                              'values': [[-0.15, 0.0], [0., 0.15]]}}
-environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
-                                  simulation={'trajectories': trajectories}))
+obstacle3 = Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
+    simulation={'trajectories': trajectories})
 
-# create a formation point-to-point problem
+environment.add_obstacle([obstacle1, obstacle2, obstacle3])
+
+# create problems
 options = {'rho': 1., 'horizon_time': 10}
-problem = FormationPoint2point(fleet, environment, options=options)
-problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
-problem.init()
+problem1 = FormationPoint2point(fleet, environment, options=options)
+problem1.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
+problem1.init()
+obstacle3.set_options({'avoid': False})
+problem2 = FormationPoint2point(fleet, environment, options=options)
+problem2.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
+problem2.init()
 
-# create simulator
-simulator = Simulator(problem)
-fleet.plot('input', knots=True, predict=True, labels=['v_x (m/s)', 'v_y (m/s)'])
-problem.plot('scene')
-problem.plot('residuals')
-
-# run it!
+# create simulator & plots
+simulator = Simulator(problem1)
+fleet.plot('input', knots=True, prediction=True, labels=['v_x (m/s)', 'v_y (m/s)'])
+problem1.plot('scene')
+# 1st task
 simulator.run()
+# 2nd task
+fleet.set_terminal_conditions(([2., 0.0]+configuration).tolist())
+simulator.run()
+# 3th task (we can neglect circular obstacle), but first sleep 2 seconds
+simulator.sleep(2.)
+simulator.set_problem(problem2)
+fleet.set_terminal_conditions(([0.0, 1.0]+configuration).tolist())
+simulator.run()
+
+# plot movie
+problem2.plot_movie('scene', number_of_frames=100, repeat=False)

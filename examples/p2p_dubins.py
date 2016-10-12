@@ -20,10 +20,10 @@
 from omgtools import *
 
 # create vehicle
-vehicle = Dubins(bounds={'vmax': 0.7, 'wmax': 60., 'wmin': -60.})  # in deg
+vehicle = Dubins(bounds={'vmax': 0.7, 'wmax': np.pi/3., 'wmin': -np.pi/3.})  # in rad/s
 vehicle.define_knots(knot_intervals=5)  # choose lower amount of knot intervals
 
-vehicle.set_initial_conditions([0., 0., 0.])  # input orientation in deg
+vehicle.set_initial_conditions([0., 0., 0.])  # input orientation in rad
 vehicle.set_terminal_conditions([3., 3., 0.])
 
 # create environment

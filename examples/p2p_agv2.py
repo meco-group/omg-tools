@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+import sys, os
+sys.path.insert(0, os.getcwd()+'/..')
 
 from omgtools import *
 
@@ -23,7 +25,7 @@ from omgtools import *
 vehicle = AGV(length=0.8, options={'plot_type': 'agv'})
 vehicle.define_knots(knot_intervals=5)  # choose lower amount of knot intervals
 
-vehicle.set_initial_conditions([-1., -0.5, 0.], [0.])  # x, y, theta, delta
+vehicle.set_initial_conditions([-1., -0.5, 0., 0.])  # x, y, theta, delta
 vehicle.set_terminal_conditions([4., 2., 0.])  # x, y, theta
 
 # create environment

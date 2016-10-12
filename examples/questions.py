@@ -16,7 +16,8 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
-
+import sys, os
+sys.path.insert(0, os.getcwd()+'/..')
 from omgtools import *
 
 # create fleet
@@ -30,7 +31,7 @@ init_positions = RegularPolyhedron(4., N, np.pi/4).vertices.T.tolist()
 terminal_positions = np.zeros((N, 2)).tolist()
 
 fleet.set_configuration(configuration)
-fleet.set_initial_conditions(init_positions)
+fleet.set_initial_conditions([np.r_[pos, np.zeros(3)] for pos in init_positions])
 fleet.set_terminal_conditions(terminal_positions)
 
 # create environment
