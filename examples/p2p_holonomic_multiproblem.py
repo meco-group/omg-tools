@@ -62,4 +62,4 @@ vehicle.set_terminal_conditions([0.0, 1.0])
 simulator.run()
 
 # plot movie
-problem2.plot_movie('scene', number_of_frames=100, repeat=False)
+# problem2.plot_movie('scene', number_of_frames=100, repeat=False)

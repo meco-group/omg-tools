@@ -38,6 +38,7 @@ class Deployer:
         self.problem.reinitialize()
 
     def update(self, current_time, states=None, update_time=None):
+        current_time = float(current_time)
         if not update_time:
             update_time = self.update_time
         if (self.iteration0):

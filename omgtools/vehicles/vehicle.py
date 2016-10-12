@@ -411,7 +411,8 @@ class Vehicle(OptiChild, PlotLayer):
         for key in dictionary.keys():
             if not (key in memory):
                 memory[key] = []
-            memory[key].extend([np.c_[dictionary[key]] for k in range(repeat)])
+            # memory[key].extend([np.c_[dictionary[key]] for k in range(repeat)])
+            memory[key].extend([dictionary[key] for k in range(repeat)])
 
     def draw(self, t=-1):
         ret = []

@@ -325,13 +325,13 @@ class FreeTPoint2point(Point2pointProblem):
             rel_current_time = 0.0
         else:
             rel_current_time = self.init_time
-        self.compute_partial_objective(current_time+simulation_time-self.start_time)
         if horizon_time < sample_time: # otherwise interp1d() crashes
             return
         if horizon_time < simulation_time:
             simulation_time = horizon_time
         if horizon_time - rel_current_time < simulation_time:
             simulation_time = horizon_time - rel_current_time
+        self.compute_partial_objective(current_time+simulation_time-self.start_time)
         Problem.simulate(self, current_time, simulation_time, sample_time)
 
     def stop_criterium(self, current_time, update_time):

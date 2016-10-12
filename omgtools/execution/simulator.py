@@ -81,13 +81,13 @@ class Simulator:
         else:
             hard_stop = None
         self.deployer.reset()
-        self.deployer.update(0., None, np.inf)
+        self.deployer.update(self.current_time, None, np.inf)
         if not simulate:
             return None
         if hard_stop:
-            self.hard_stop(0., hard_stop['time'], hard_stop['perturbation'])
+            self.hard_stop(self.current_time, hard_stop['time'], hard_stop['perturbation'])
         else:
-            self.problem.simulate(0., np.inf, self.sample_time)
+            self.problem.simulate(self.current_time, np.inf, self.sample_time)
         self.problem.final()
         # determine timing
         update_time = self.problem.vehicles[0].signals['time'][:, -1] - self.current_time

@@ -71,4 +71,4 @@ fleet.set_terminal_conditions(([0.0, 1.0]+configuration).tolist())
 simulator.run()
 
 # plot movie
-problem2.plot_movie('scene', number_of_frames=100, repeat=False)
+# problem2.plot_movie('scene', number_of_frames=100, repeat=False)
