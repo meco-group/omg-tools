@@ -54,7 +54,6 @@ via_points = [[2., -1.5], [2., 2.], [-1.5, 2.]]
 obstacle_positions = [[0., 0.], [1.5, 0.], [1., 2.]]
 
 current_time = 0.
-current_state = [-1.5, -1.5]
 state_traj = np.c_[[-1.5, -1.5]]
 input_traj = np.c_[[0.0, 0.0]]
 
