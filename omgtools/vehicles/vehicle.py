@@ -21,7 +21,7 @@ from ..basics.optilayer import OptiChild
 from ..basics.spline import BSplineBasis
 from ..basics.spline_extra import concat_splines, definite_integral, sample_splines
 from ..basics.shape import Rectangle, Square, Circle
-from ..simulation.plotlayer import PlotLayer
+from ..execution.plotlayer import PlotLayer
 from casadi import inf
 from scipy.signal import filtfilt, butter
 from scipy.interpolate import interp1d
@@ -100,13 +100,17 @@ class Vehicle(OptiChild, PlotLayer):
                 init = self.init_spline_value
                 self.init_spline_value = None
             else:
-                init = self.get_init_spline_value()
+                try:
+                    init = self.get_init_spline_value()
+                except AttributeError as exc:
+                    init = None
             spline = self.define_spline_variable(
                 'splines'+str(k), self.n_spl, value=init)
             self.splines.append(spline)
         return self.splines
 
-    def define_collision_constraints_2d(self, hyperplanes, environment, positions, tg_ha=0, offset=0):
+    def define_collision_constraints_2d(self, hyperplanes,
+        environment, positions, tg_ha=0, offset=0):
         t = self.define_symbol('t')
         T = self.define_symbol('T')
         safety_distance = self.options['safety_distance']
@@ -133,21 +137,27 @@ class Vehicle(OptiChild, PlotLayer):
                         con = 0
                         con += (a[0]*chck[0] + a[1]*chck[1])*(1.-tg_ha**2)
                         con += (-a[0]*chck[1] + a[1]*chck[0])*(2*tg_ha)
-                        pos = [0, 0]  # next part gives an offset to input position e.g. for trailer position
-                        pos[0] = position[0]*(1+tg_ha**2) + offset*(1-tg_ha**2)  # = real_pos*(1+tg_ha**2)
-                        pos[1] = position[1]*(1+tg_ha**2) + offset*(2*tg_ha)  # = real_pos*(1+tg_ha**2)
+                        pos = [0, 0]
+                        # next part gives an offset to input position
+                        # e.g. for trailer position
+                        pos[0] = position[0]*(1+tg_ha**2) + offset*(1-tg_ha**2)
+                        pos[1] = position[1]*(1+tg_ha**2) + offset*(2*tg_ha)
                         con += (a[0]*pos[0] + a[1]*pos[1])
                         con += (-b+rad[l]+safety_distance-eps)*(1+tg_ha**2)
                         self.define_constraint(con, -inf, 0)
             # room constraints
-            # check room shape and orientation, check vehicle shape and orientation
-            # then decide on type of constraints to use: room_limits or hyperplanes
+            # check room shape and orientation,
+            # check vehicle shape and orientation
+            # then decide on type of constraints to use:
+            # room_limits or hyperplanes
             if self.options['room_constraints']:
                 for shape in self.shapes:  # loop over vehicle shapes
                     if ((isinstance(environment.room['shape'], (Rectangle, Square)) and
                         environment.room['shape'].orientation == 0.0) and
-                        (isinstance(shape, Circle) or (isinstance(shape, (Rectangle, Square)) and
-                         shape.orientation == 0)) and (isinstance(tg_ha, (int, float, long)) and tg_ha == 0.)):
+                        (isinstance(shape, Circle) or
+                        (isinstance(shape, (Rectangle, Square)) and
+                         shape.orientation == 0)) and
+                        (isinstance(tg_ha, (int, float, long)) and tg_ha == 0.)):
                         room_limits = environment.get_canvas_limits()
                         for chck in checkpoints:
                             for k in range(2):
@@ -222,40 +232,18 @@ class Vehicle(OptiChild, PlotLayer):
         return parameters
 
     # ========================================================================
-    # Simulation and prediction related functions
+    # Deploying related functions
     # ========================================================================
 
-    def overrule_state(self, state):
-        state = np.array(state)
-        self.signals['state'][:, -1] = state
-        self.signals['pose'][:, -1] = self._state2pose(state)
-        self.prediction['state'] = state
-        self.prediction['pose'] = self._state2pose(state)
-
-    def overrule_input(self, input):
-        input = np.array(input)
-        self.signals['input'][:, -1] = input
-        self.prediction['input'] = input
-
-    def update(self, current_time, update_time, sample_time, spline_segments, segment_times, time_axis=None):
+    def store(self, current_time, sample_time, spline_segments, segment_times, time_axis=None):
         if not isinstance(segment_times, list):
             segment_times = [segment_times]
         splines = concat_splines(spline_segments, segment_times)
         self.result_splines = splines
         horizon_time = sum(segment_times)
         if time_axis is None:
-            n_samp = int(
-                round(horizon_time/sample_time, 3)) + 1
+            n_samp = int(round(horizon_time/sample_time, 6)) + 1
             time_axis = np.linspace(0., (n_samp-1)*sample_time, n_samp)
-        self.get_trajectories(splines, time_axis, current_time)
-        if not hasattr(self, 'signals'):
-            self.init_signals()
-        self.predict(update_time, sample_time)
-        self.simulate(update_time, sample_time)
-        self.store(update_time, sample_time)
-        self.update_plots()
-
-    def get_trajectories(self, splines, time_axis, current_time):
         self.trajectories = self.splines2signals(splines, time_axis)
         if not set(['state', 'input']).issubset(self.trajectories):
             raise ValueError(
@@ -265,7 +253,8 @@ class Vehicle(OptiChild, PlotLayer):
         self.trajectories['splines'] = np.c_[
             sample_splines(splines, time_axis)]
         if hasattr(self, 'rel_pos_c') and ('fleet_center' not in self.trajectories):
-            self.trajectories['fleet_center'] = np.c_[sample_splines([s+rp for s, rp in zip(splines, self.rel_pos_c)], time_axis)]
+            self.trajectories['fleet_center'] = np.c_[sample_splines(
+                [s+rp for s, rp in zip(splines, self.rel_pos_c)], time_axis)]
         knots = splines[0].basis.knots
         time_axis_kn = np.r_[knots[self.degree] + time_axis[0], [k for k in knots[
         self.degree+1:-self.degree] if k > (knots[self.degree]+time_axis[0])]]
@@ -286,25 +275,55 @@ class Vehicle(OptiChild, PlotLayer):
                 self.trajectories_kn[key] = self.trajectories_kn[
                     key].reshape(1, shape[0])
 
-    def predict(self, predict_time, sample_time):
-        n_samp = int(predict_time/sample_time)
+    def predict(self, current_time, predict_time, sample_time, state0=None, delay=0, enforce=False):
+        if enforce:
+            if state0 is not None:
+                self.set_initial_conditions(state0)
+            else:
+                if hasattr(self, 'signals'):
+                    self.set_initial_conditions(
+                        self.signals['state'][:, -1], self.signals['input'][:, -1])
+            return
+        n_samp = int(np.round(predict_time/sample_time, 6))
         if self.options['ideal_prediction']:
             for key in self.trajectories:
-                self.prediction[key] = self.trajectories[key][:, n_samp]
+                self.prediction[key] = self.trajectories[key][:, n_samp+delay]
         else:
             for key in self.trajectories:
                 if key not in ['state', 'input', 'pose']:
-                    self.prediction[key] = self.trajectories[key][:, n_samp]
-            input = self.trajectories['input']
-            state0 = self.signals['state'][:, -1]  # current state
+                    self.prediction[key] = self.trajectories[key][:, n_samp+delay]
+            input = self.trajectories['input'][delay:]
+            if state0 is None:
+                state0 = self.signals['state'][:, -n_samp-1]  # current state
             state = self.integrate_ode(
                 state0, input, predict_time, sample_time)
             self.prediction['state'] = state[:, -1]
-            self.prediction['input'] = self.trajectories['input'][:, n_samp]
+            self.prediction['input'] = self.trajectories['input'][:, n_samp+delay]
             self.prediction['pose'] = self._state2pose(state[:, -1])
 
+
+    # ========================================================================
+    # Simulation related functions
+    # ========================================================================
+
+    def overrule_state(self, state):
+        state = np.array(state)
+        self.signals['state'][:, -1] = state
+        self.signals['pose'][:, -1] = self._state2pose(state)
+        self.prediction['state'] = state
+        self.prediction['pose'] = self._state2pose(state)
+
+    def overrule_input(self, input):
+        input = np.array(input)
+        self.signals['input'][:, -1] = input
+        self.prediction['input'] = input
+
     def simulate(self, simulation_time, sample_time):
-        n_samp = int(simulation_time/sample_time)
+        if not hasattr(self, 'signals'):
+            self.signals = {}
+            for key in self.trajectories:
+                self.signals[key] = np.c_[self.trajectories[key][:, 0]]
+        n_samp = int(np.round(simulation_time/sample_time, 6))
         if self.options['ideal_update']:
             for key in self.trajectories:
                 self.signals[key] = np.c_[
@@ -328,22 +347,19 @@ class Vehicle(OptiChild, PlotLayer):
                 self.signals['input'], input[:, 1:n_samp+1]]
             self.signals['state'] = np.c_[
                 self.signals['state'], state[:, 1:n_samp+1]]
-            self.signals['pose'] = np.c_[self.signals['pose'], self._state2pose(state[:, 1:n_samp+1])]
-
-    def store(self, update_time, sample_time):
+            self.signals['pose'] = np.c_[
+            self.signals['pose'], self._state2pose(state[:, 1:n_samp+1])]
+        # store trajectories
         if not hasattr(self, 'traj_storage'):
             self.traj_storage = {}
             self.traj_storage_kn = {}
             self.pred_storage = {}
-        repeat = int(update_time/sample_time)
+        repeat = int(simulation_time/sample_time)
         self._add_to_memory(self.traj_storage, self.trajectories, repeat)
         self._add_to_memory(self.traj_storage_kn, self.trajectories_kn, repeat)
         self._add_to_memory(self.pred_storage, self.prediction, repeat)
-
-    def init_signals(self):
-        self.signals = {}
-        for key in self.trajectories:
-            self.signals[key] = np.c_[self.trajectories[key][:, 0]]
+        # update plots
+        self.update_plots()
 
     def _state2pose(self, state):
         if len(state.shape) <= 1:
@@ -398,6 +414,7 @@ class Vehicle(OptiChild, PlotLayer):
         for key in dictionary.keys():
             if not (key in memory):
                 memory[key] = []
+            # memory[key].extend([np.c_[dictionary[key]] for k in range(repeat)])
             memory[key].extend([dictionary[key] for k in range(repeat)])
 
     def draw(self, t=-1):
@@ -470,8 +487,7 @@ class Vehicle(OptiChild, PlotLayer):
                     lines.append(
                         [self.traj_storage_kn['time'][t], self.traj_storage_kn[signal][t][k, :]])
                 if 'prediction' in kwargs and kwargs['prediction']:
-                    lines.append(
-                        [self.signals['time'][:, t], self.pred_storage[signal][t][k]])
+                    lines.append([self.traj_storage['time'][t][:, 0], self.pred_storage[signal][t][k]])
                 dat.append(lines)
             data.append(dat)
         return data
@@ -486,7 +502,7 @@ class Vehicle(OptiChild, PlotLayer):
     def define_trajectory_constraints(self, splines):
         raise NotImplementedError('Please implement this method!')
 
-    def get_initial_constraints(self, splines):
+    def get_initial_constraints(self, state, input=None):
         raise NotImplementedError('Please implement this method!')
 
     def get_terminal_constraints(self, splines):

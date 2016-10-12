@@ -80,8 +80,8 @@ class Quadrotor(Vehicle):
             term_con_der.extend([(x.derivative(d), 0.), (y.derivative(d), 0.)])
         return [term_con, term_con_der]
 
-    def set_initial_conditions(self, position):
-        self.prediction['state'] = np.r_[position, np.zeros(3)].T
+    def set_initial_conditions(self, state, input=None):
+        self.prediction['state'] = np.r_[state[:2], np.zeros(3)].T
         self.prediction['dspl'] = np.zeros(2)
         self.prediction['ddspl'] = np.zeros(2)
 
