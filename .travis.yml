@@ -22,25 +22,22 @@ before_script:
 script:
   - cd examples
   - chmod 644 *.py # nose doesnt match executable files
-  # - "nosetests -s --verbosity=4 -i '\\.py$' . --with-xcoverage --cover-package=omgtools --cover-tests 2> >(grep -v -P 'DEBUG: (?!wantFile)')"
-
-  - python deployer_example.py
-
-  # - pushd export
-  # - make && pushd bin
-  # - ./Point2Point
-  # - popd
-  # - popd
-  # - pushd export_f
-  # - make && pushd bin
-  # - ./FormationPoint2Point
-  # - popd
-  # - popd
-  # - pushd export_r
-  # - make && pushd bin
-  # - ./RendezVous
-  # - popd
-  # - popd
+  - "nosetests -s --verbosity=4 -i '\\.py$' . --with-xcoverage --cover-package=omgtools --cover-tests 2> >(grep -v -P 'DEBUG: (?!wantFile)')"
+  - pushd export
+  - make && pushd bin
+  - ./Point2Point
+  - popd
+  - popd
+  - pushd export_f
+  - make && pushd bin
+  - ./FormationPoint2Point
+  - popd
+  - popd
+  - pushd export_r
+  - make && pushd bin
+  - ./RendezVous
+  - popd
+  - popd
 
 after_success:
   - coveralls
