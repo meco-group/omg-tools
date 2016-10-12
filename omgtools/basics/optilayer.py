@@ -192,7 +192,7 @@ class OptiFather(object):
         else:
             buildtime = 0.
         self.init_variables()
-        self.init_parameters()
+        # self.init_parameters()
         return problem, buildtime
 
     def compose_dictionary(self):

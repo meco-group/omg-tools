@@ -92,6 +92,17 @@ class ObstaclexD(OptiChild):
         return parameters
 
     # ========================================================================
+    # Deploying related functions
+    # ========================================================================
+
+    def set_state(self, dictionary):
+        for key in ['position', 'velocity', 'acceleration']:
+            if key in dictionary:
+                self.signals[key] = np.c_[dictionary[key]]
+            else:
+                self.signals[key] = np.zeros((self.n_dim, 1))
+
+    # ========================================================================
     # Simulation related functions
     # ========================================================================
 
@@ -270,6 +281,18 @@ class Obstacle2D(ObstaclexD):
         parameters = ObstaclexD.set_parameters(self, current_time)
         parameters['theta'] = self.signals['orientation'][:, -1]
         return parameters
+
+    # ========================================================================
+    # Deploying related functions
+    # ========================================================================
+
+    def set_state(self, dictionary):
+        ObstaclexD.set_state(self, dictionary)
+        for key in ['orientation', 'angular_velocity']:
+            if key in dictionary:
+                self.signals[key] = np.c_[dictionary[key]]
+            else:
+                self.signals[key] = np.zeros((1, 1))
 
     # ========================================================================
     # Simulation related functions

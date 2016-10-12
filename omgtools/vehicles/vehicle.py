@@ -100,7 +100,9 @@ class Vehicle(OptiChild, PlotLayer):
                 init = self.init_spline_value
                 self.init_spline_value = None
             else:
-                init = self.get_init_spline_value()
+                init = None
+            # else:
+            #     init = self.get_init_spline_value()
             spline = self.define_spline_variable(
                 'splines'+str(k), self.n_spl, value=init)
             self.splines.append(spline)
@@ -290,7 +292,7 @@ class Vehicle(OptiChild, PlotLayer):
                 if key not in ['state', 'input', 'pose']:
                     self.prediction[key] = self.trajectories[key][:, n_samp+delay]
             input = self.trajectories['input'][delay:]
-            if not state0:
+            if state0 is None:
                 state0 = self.signals['state'][:, -n_samp-1]  # current state
             state = self.integrate_ode(
                 state0, input, predict_time, sample_time)
