@@ -16,6 +16,4 @@ build/*
 dist/*
 omg_tools.egg-info/*
 OMG_tools.egg-info/*
-lvd/*.csv
-lvd/movies/*
-lvd/images/*
+lvd/*
