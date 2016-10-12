@@ -26,8 +26,8 @@ vehicle = HolonomicOrient()
 # By default no regularization is added.
 vehicle.set_options({'reg_type': 'norm_1', 'reg_weight': 10})
 
-vehicle.set_initial_conditions([-1.5, -1.5, 45.])  # input orientation in deg
-vehicle.set_terminal_conditions([2., 2., 90.])
+vehicle.set_initial_conditions([-1.5, -1.5, np.pi/4.])  # input orientation in deg
+vehicle.set_terminal_conditions([2., 2., np.pi/2.])
 
 # create environment
 environment = Environment(room={'shape': Square(5.)})

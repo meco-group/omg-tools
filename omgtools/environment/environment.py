@@ -19,7 +19,7 @@
 
 from ..basics.optilayer import OptiChild
 from ..basics.spline import BSplineBasis
-from ..simulation.plotlayer import PlotLayer
+from ..execution.plotlayer import PlotLayer
 from obstacle import Obstacle
 from casadi import inf
 import numpy as np
@@ -118,12 +118,12 @@ class Environment(OptiChild, PlotLayer):
             obstacle.init()
 
     # ========================================================================
-    # Update environment
+    # Simulate environment
     # ========================================================================
 
-    def update(self, update_time, sample_time):
+    def simulate(self, simulation_time, sample_time):
         for obstacle in self.obstacles:
-            obstacle.update(update_time, sample_time)
+            obstacle.simulate(simulation_time, sample_time)
         self.update_plots()
 
     def draw(self, t=-1):

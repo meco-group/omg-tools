@@ -22,7 +22,7 @@ from omgtools import *
 # create vehicle
 vehicle = Quadrotor()
 vehicle.set_options({'safety_distance': 0.1})
-vehicle.set_initial_conditions([-4., -4.])
+vehicle.set_initial_conditions([-4., -4., 0., 0., 0.])
 vehicle.set_terminal_conditions([4., 4.])
 
 # create environment

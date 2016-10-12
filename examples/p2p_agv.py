@@ -20,10 +20,10 @@
 from omgtools import *
 
 # create vehicle
-vehicle = AGV(length=0.8, options={'plot_type': 'agv'})
+vehicle = AGV(length=0.8, options={'plot_type': 'agv', 'stop_tol': 0.2})
 vehicle.define_knots(knot_intervals=5)  # choose lower amount of knot intervals
 
-vehicle.set_initial_conditions([0.8, -0.1, 0.], [0.])  # x, y, theta, delta
+vehicle.set_initial_conditions([0.8, -0.1, 0., 0.])  # x, y, theta, delta
 vehicle.set_terminal_conditions([2.45, -0.35, 0.])  # x, y, theta
 
 # create environment
@@ -42,9 +42,6 @@ problem.init()
 # create simulator
 simulator = Simulator(problem)
 problem.plot('scene')
-vehicle.plot('input', knots=True, labels=['v (m/s)', 'ddelta (rad/s)'])
-vehicle.plot('state', knots=True, labels=[
-             'x (m)', 'y (m)', 'theta (rad)', 'delta (rad)'])
 
 # run it!
 simulator.run()
