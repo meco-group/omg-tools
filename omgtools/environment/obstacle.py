@@ -166,8 +166,8 @@ class ObstaclexD(OptiChild):
         B = self.simulation_model['B']
         return A.dot(state) + B.dot(input)
 
-    def update(self, update_time, sample_time):
-        n_samp = int(update_time/sample_time)+1
+    def simulate(self, simulation_time, sample_time):
+        n_samp = int(np.round(simulation_time/sample_time, 6))+1
         time0 = self.signals['time'][-1]
         time_axis = np.linspace(time0, (n_samp-1)*sample_time+time0, n_samp)
         state0 = np.r_[self.signals['position'][:, -1],
@@ -284,9 +284,9 @@ class Obstacle2D(ObstaclexD):
             else:
                 self.signals[key] = np.zeros((1, 1))
 
-    def update(self, update_time, sample_time):
-        ObstaclexD.update(self, update_time, sample_time)
-        n_samp = int(update_time/sample_time)
+    def simulate(self, simulation_time, sample_time):
+        ObstaclexD.simulate(self, simulation_time, sample_time)
+        n_samp = int(np.round(simulation_time/sample_time, 6))
         for _ in range(n_samp):
             theta0 = self.signals['orientation'][:, -1][0]
             omega0 = self.signals['angular_velocity'][:, -1][0]
