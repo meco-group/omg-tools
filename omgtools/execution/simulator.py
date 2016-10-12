@@ -85,7 +85,7 @@ class Simulator:
         if not simulate:
             return None
         if hard_stop:
-            self.hard_stop(hard_stop['time'], hard_stop['perturbation'])
+            self.hard_stop(0., hard_stop['time'], hard_stop['perturbation'])
         else:
             self.problem.simulate(0., np.inf, self.sample_time)
         self.problem.final()
@@ -98,8 +98,8 @@ class Simulator:
             trajectories[str(vehicle)] = vehicle.trajectories
         return trajectories
 
-    def hard_stop(self, stop_time, perturbation):
-        self.problem.simulate(stop_time, self.sample_time)
+    def hard_stop(self, current_time, stop_time, perturbation):
+        self.problem.simulate(current_time, stop_time, self.sample_time)
         for k, vehicle in enumerate(self.problem.vehicles):
             vehicle.overrule_state(vehicle.signals['state'][:, -1] + np.array(perturbation[k]))
             vehicle.overrule_input(np.zeros(len(vehicle.prediction['input'])))
