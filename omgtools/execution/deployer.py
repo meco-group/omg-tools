@@ -51,3 +51,11 @@ class Deployer:
         self.problem.solve(current_time, update_time)
         self.problem.store(current_time, update_time, self.sample_time)
         self.current_time = current_time
+        # return trajectories
+        trajectories = {}
+        if len(self.problem.vehicles) == 1:
+            return self.problem.vehicles[0].trajectories
+        else:
+            for vehicle in self.problem.vehicles:
+                trajectories[str(vehicle)] = vehicle.trajectories
+        return trajectories
