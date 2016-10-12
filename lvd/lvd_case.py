@@ -10,7 +10,7 @@ import csv
 
 # simulation
 go_forward = True
-hard_stop = False
+hard_stop = True
 go_back = True
 
 # results
@@ -191,8 +191,6 @@ if go_back:
     if not go_forward:
         fap.set_initial_conditions([plate['end'][k]+0.5*plate['dim'][k] for k in range(3)])
     fap.set_terminal_conditions([plate['end2'][k]+0.5*plate['dim'][k] for k in range(3)])
-    # re-initialize
-    problem.reinitialize()
     trajectories = simulator.run_once()
     # save_trajectories(trajectories, 'go_back')
 
