@@ -155,12 +155,12 @@ class Quadrotor3Dv2(Vehicle):
         term_con_der = [(q_phi, q_phiT), (q_theta, q_thetaT), (f_til, self.g), (q_phi.derivative(), 0.), (q_theta.derivative(), 0.), (dx, 0.), (dy, 0.), (dz, 0.)]
         return [term_con, term_con_der]
 
-    def set_initial_conditions(self, position, roll=0, pitch=0, input=None):
+    def set_initial_conditions(self, state, input=None):
         if input is None:
             input = np.array([self.g, 0., 0.])
-        self.prediction['state'] = np.r_[position, np.zeros(3), roll, pitch].T
-        self.pose0 = np.r_[position, roll, pitch, 0.].T
+        self.prediction['state'] = state
         self.prediction['input'] = input
+        self.pose0 = np.r_[state[:3], state[6:], 0.]
 
     def set_terminal_conditions(self, position, roll=0, pitch=0):
         self.poseT = np.r_[position, roll, pitch, 0.].T

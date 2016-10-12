@@ -16,8 +16,7 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
-import sys, os
-sys.path.insert(0, os.getcwd()+"/..")
+
 from omgtools import *
 
 #create fleet
@@ -32,7 +31,7 @@ init_positions = [-2., -2., -2.] + configuration
 terminal_positions = [3., 3.,-3.] + configuration
 
 fleet.set_configuration(configuration.tolist())
-fleet.set_initial_conditions(init_positions.tolist())
+fleet.set_initial_conditions([np.r_[pos, np.zeros(5)] for pos in init_positions.tolist()])
 fleet.set_terminal_conditions(terminal_positions.tolist())
 
 # create environment
@@ -52,7 +51,7 @@ problem.plot('scene', view=[20, -35])  # elevation and azimuth of cam
 fleet.plot('state', knots=True)
 fleet.plot('input', knots=True)
 # run it!
-simulator.run()
+# simulator.run()
 
 # Save a movie as gif: you need imagemagick for this!
 #problem.save_movie('scene', format='gif', name='QUAD_FORM_3D', number_of_frames=100, movie_time=5, axis=False)

@@ -17,14 +17,12 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-import sys, os
-sys.path.insert(0, os.getcwd()+"/..")
 from omgtools import *
 
 # create vehicle
 vehicle = Quadrotor3Dv2(0.5)
 
-vehicle.set_initial_conditions([-5., -5., -3])
+vehicle.set_initial_conditions([-5., -5., -3, 0., 0., 0., 0., 0.])
 vehicle.set_terminal_conditions([5., 5., 3])
 vehicle.set_options({'safety_distance': 0.1})
 vehicle.set_options({'substitution': True, 'exact_substitution': False})
@@ -66,7 +64,7 @@ vehicle.plot('input', knots=True)
 # run it!
 simulator.run()
 
-problem.plot_movie('scene', number_of_frames=100, repeat=False, view=[30, 60])
+# problem.plot_movie('scene', number_of_frames=100, repeat=False, view=[30, 60])
 
 # Save a movie as gif: you need imagemagick for this!
 # problem.save_movie('scene', format='gif', name='quad2', view=[25, 60], number_of_frames=100, movie_time=5, axis=False)
