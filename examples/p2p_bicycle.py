@@ -23,7 +23,7 @@ from omgtools import *
 vehicle = Bicycle(length=0.4, options={'plot_type': 'car'})
 vehicle.define_knots(knot_intervals=5)  # choose lower amount of knot intervals
 
-vehicle.set_initial_conditions([0., 0., 0.], [0.])  # x, y, theta, delta
+vehicle.set_initial_conditions([0., 0., 0., 0.])  # x, y, theta, delta
 vehicle.set_terminal_conditions([3., 3., 0.])  # x, y, theta
 
 # create environment

@@ -52,7 +52,7 @@ options = {'solver_options': {
 problem = FormationPoint2pointCentral(fleet, environment, options=options)
 problem.init()
 simulator = Simulator(problem)
-simulator.run_once(update=False)
+simulator.run_once(simulate=False)
 var_central = np.zeros((0, 1))
 for vehicle in vehicles:
     splines = problem.father.get_variables(vehicle, 'splines0')
@@ -67,7 +67,7 @@ options = {'rho': 0.04, 'horizon_time': 5., 'init_iter': number_of_iterations-1,
 problem = FormationPoint2point(fleet, environment, options=options)
 problem.init()
 simulator = Simulator(problem)
-simulator.run_once(update=False)
+simulator.run_once(simulate=False)
 var_admm = problem.get_stacked_x()
 
 # create & solve AMA problem
@@ -77,7 +77,7 @@ options = {'rho': 0.006, 'horizon_time': 5., 'init_iter': number_of_iterations-1
 problem = FormationPoint2point(fleet, environment, options=options)
 problem.init()
 simulator = Simulator(problem)
-simulator.run_once(update=False)
+simulator.run_once(simulate=False)
 var_ama = problem.get_stacked_x()
 
 # create & solve Fast ADMM problem
@@ -87,7 +87,7 @@ options = {'rho': 0.03, 'horizon_time': 5., 'init_iter': number_of_iterations-1,
 problem = FormationPoint2point(fleet, environment, options=options)
 problem.init()
 simulator = Simulator(problem)
-simulator.run_once(update=False)
+simulator.run_once(simulate=False)
 var_fastadmm = problem.get_stacked_x()
 
 # create & solve Dual decomposition problem

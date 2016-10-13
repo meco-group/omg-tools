@@ -19,8 +19,9 @@
 
 from ..basics.optilayer import OptiFather, OptiChild
 from ..vehicles.fleet import get_fleet_vehicles
-from ..simulation.plotlayer import PlotLayer
+from ..execution.plotlayer import PlotLayer
 from itertools import groupby
+import numpy as np
 import time
 
 
@@ -72,7 +73,7 @@ class Problem(OptiChild, PlotLayer):
                 self.options[key] = options[key]
 
     # ========================================================================
-    # Create and solve problem
+    # Create problem
     # ========================================================================
 
     def construct(self):
@@ -87,6 +88,10 @@ class Problem(OptiChild, PlotLayer):
         self.father.init_transformations(self.init_primal_transform,
                                          self.init_dual_transform)
         return buildtime
+
+    # ========================================================================
+    # Deploying related functions
+    # ========================================================================
 
     def reinitialize(self, father=None):
         if father is None:
@@ -119,6 +124,40 @@ class Problem(OptiChild, PlotLayer):
                 print "----|------------|------------"
             print "%3d | %.4e | %.4e " % (self.iteration, t_upd, current_time)
         self.update_times.append(t_upd)
+
+    def predict(self, current_time, predict_time, sample_time, states=None, delay=0):
+        if states is None:
+            states = [None for k in range(len(self.vehicles))]
+        if not isinstance(states, list):
+            states = [states]
+        enforce = True if (current_time == self.start_time) else False
+        for k, vehicle in enumerate(self.vehicles):
+            vehicle.predict(current_time, predict_time, sample_time, states[k], delay, enforce)
+
+    # ========================================================================
+    # Simulation related functions
+    # ========================================================================
+
+    def simulate(self, current_time, simulation_time, sample_time):
+        for vehicle in self.vehicles:
+            vehicle.simulate(simulation_time, sample_time)
+        self.environment.simulate(simulation_time, sample_time)
+        self.update_plots()
+
+    def sleep(self, current_time, sleep_time, sample_time):
+        # update vehicles
+        for vehicle in self.vehicles:
+            spline_segments = [self.father.get_variables(
+                vehicle, 'splines'+str(k)) for k in range(vehicle.n_seg)]
+            spline_values = vehicle.signals['splines'][:, -1]
+            spline_values = [self.father.get_variables(
+                vehicle, 'splines'+str(k), spline=False)[-1, :] for k in range(vehicle.n_seg)]
+            for segment, values in zip(spline_segments, spline_values):
+                for spl, value in zip(segment, values):
+                    spl.coeffs = value*np.ones(len(spl.basis))
+            vehicle.store(current_time, sample_time, spline_segments, sleep_time)
+        # no correction for update time!
+        Problem.simulate(self, current_time, sleep_time, sample_time)
 
     # ========================================================================
     # Plot related functions
@@ -197,6 +236,9 @@ class Problem(OptiChild, PlotLayer):
     # ========================================================================
 
     def update(self, current_time, update_time, sample_time):
+        raise NotImplementedError('Please implement this method!')
+
+    def store(self, current_time, update_time, sample_time):
         raise NotImplementedError('Please implement this method!')
 
     def stop_criterium(self, current_time, update_time):

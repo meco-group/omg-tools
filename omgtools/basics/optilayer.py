@@ -22,10 +22,7 @@ try:
 except:
     from casadi import Importer
     Compiler = Importer
-
 from casadi import DM, MX, inf, Function, nlpsol, external
-
-
 from casadi import symvar, substitute
 from casadi.tools import struct, struct_MX, struct_symMX, entry
 from spline import BSpline
@@ -36,6 +33,7 @@ import copy
 import os
 import shutil
 import collections as col
+
 
 def evalf(fun, x):
     x = x if isinstance(x, list) else [x]

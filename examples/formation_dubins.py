@@ -21,7 +21,7 @@ from omgtools import *
 
 # create fleet
 N = 3
-vehicles = [Dubins(options={'degree': 2}, bounds={'vmax': 1., 'wmax': 30., 'wmin': -30.}) for l in range(N)]
+vehicles = [Dubins(options={'degree': 2}, bounds={'vmax': 1., 'wmax': np.pi/6., 'wmin': -np.pi/6.}) for l in range(N)]
 for vehicle in vehicles:
     vehicle.define_knots(knot_intervals=10)
 
@@ -31,8 +31,8 @@ init_positions = [-0.5, -1.5] + configuration
 terminal_positions = [0.5, 1.5] + configuration
 # init_positions = [-0.7, -1.5] + configuration
 # terminal_positions = [0.7, 1.5] + configuration
-init_pose = np.c_[init_positions, 90.*np.ones(N)]
-terminal_pose = np.c_[terminal_positions, 90.*np.ones(N)]
+init_pose = np.c_[init_positions, (np.pi/2.)*np.ones(N)]
+terminal_pose = np.c_[terminal_positions, (np.pi/2.)*np.ones(N)]
 
 fleet.set_configuration(configuration.tolist())
 fleet.set_initial_conditions(init_pose.tolist())
