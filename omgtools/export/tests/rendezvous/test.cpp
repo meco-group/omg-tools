@@ -29,7 +29,7 @@ using namespace std;
 
 int main()
 {
-    int n_iter = 30;
+    int n_iter = 20;
     int init_iter = 5;
     int N = 4;
     double horizon_time = 10;
@@ -195,7 +195,6 @@ int main()
                         else {
                             err = (data_state[v][i-init_iter][j][k] - state_trajectory[v][j][k])/data_state[v][i-init_iter][j][k];
                         }
-                        std::cout << err << std::endl;
                         assert(err < 1e-2);
                         if (data_input[v][i-init_iter][j][k] < 1e-14){
                             err = (data_input[v][i-init_iter][j][k] - input_trajectory[v][j][k]);
@@ -203,7 +202,6 @@ int main()
                         else {
                             err = (data_input[v][i-init_iter][j][k] - input_trajectory[v][j][k])/data_input[v][i-init_iter][j][k];
                         }
-                        std::cout << err << std::endl;
                         assert(err < 1e-2);
                     }
                 }
