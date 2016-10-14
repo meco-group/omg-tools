@@ -26,6 +26,8 @@ import numpy as np
 
 # create vehicle
 vehicle = Holonomic()
+vehicle.set_options({'safety_distance': 0.1})
+vehicle.set_options({'ideal_prediction': False})
 vehicle.set_initial_conditions([0., 0.]) # dummy: required for problem.init()
 vehicle.set_terminal_conditions([0., 0.]) # dummy: required for problem.init()
 
@@ -51,20 +53,22 @@ deployer = Deployer(problem, sample_time, update_time)
 via_points = [[2., -1.5], [2., 2.], [-1.5, 2.]]
 obstacle_positions = [[0., 0.], [1.5, 0.], [1., 2.]]
 
-current_time = 0.
-state_traj = np.c_[[-1.5, -1.5]]
+current_time = 0
+current_state = [-1.5, -1.5]
+state_traj = np.c_[current_state]
 input_traj = np.c_[[0.0, 0.0]]
 
 n_samp = int(np.round(update_time/sample_time, 6))
+t00 = time.time()
 
 for via_point, obstacle_pos in zip(via_points, obstacle_positions):
     vehicle.set_terminal_conditions(via_point)
     target_reached = False
     obstacle.set_state({'position': obstacle_pos})
     vehicle.set_initial_conditions(via_point) # for init guess
-    deployer.reset()
+    deployer.reset() # let's start from new initial guess
     while not target_reached:
-        t0 = time.time()
+        t0 = time.time() - t00
         if (t0-current_time-update_time) >= 0.:
             current_time = t0
             # 'measure' current state (here ideal trajectory following is simulated)
