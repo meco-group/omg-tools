@@ -16,7 +16,8 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
-
+import sys, os
+sys.path.insert(0, os.getcwd()+'/..')
 from omgtools import *
 import time
 import matplotlib.pyplot as plt
@@ -53,21 +54,23 @@ deployer = Deployer(problem, sample_time, update_time)
 via_points = [[2., -1.5], [2., 2.], [-1.5, 2.]]
 obstacle_positions = [[0., 0.], [1.5, 0.], [1., 2.]]
 
-current_time = 0.
+current_time = 0
 current_state = [-1.5, -1.5]
-state_traj = np.c_[[-1.5, -1.5]]
+state_traj = np.c_[current_state]
 input_traj = np.c_[[0.0, 0.0]]
 
 n_samp = int(np.round(update_time/sample_time, 6))
+
+t00 = time.time()
 
 for via_point, obstacle_pos in zip(via_points, obstacle_positions):
     vehicle.set_terminal_conditions(via_point)
     target_reached = False
     obstacle.set_state({'position': obstacle_pos})
     vehicle.set_initial_conditions(via_point) # for init guess
-    deployer.reset()
+    deployer.reset() # let's start from new initial guess
     while not target_reached:
-        t0 = time.time()
+        t0 = time.time() - t00
         if (t0-current_time-update_time) >= 0.:
             current_time = t0
             # 'measure' current state (here ideal trajectory following is simulated)
