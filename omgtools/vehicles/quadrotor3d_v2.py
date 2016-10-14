@@ -21,7 +21,7 @@ from vehicle import Vehicle
 from ..basics.shape import Sphere
 from ..basics.spline import BSplineBasis
 from ..basics.spline_extra import sample_splines
-from ..basics.spline_extra import evalspline, running_integral
+from ..basics.spline_extra import evalspline, running_integral, concat_splines, definite_integral
 from casadi import inf, SX, MX
 import numpy as np
 import time
@@ -76,7 +76,6 @@ class Quadrotor3Dv2(Vehicle):
         self.pos0 = self.define_parameter('pos0', 3)  # current position
         self.dpos0 = self.define_parameter('dpos0', 3)  # current velocity
 
-
     def define_trajectory_constraints(self, splines):
         f_til, q_phi, q_theta = splines
         dq_phi = q_phi.derivative()
@@ -118,9 +117,44 @@ class Quadrotor3Dv2(Vehicle):
             self.define_constraint(self.ddx - ddx, -eps, eps)
             self.define_constraint(self.ddy - ddy, -eps, eps)
             self.define_constraint(self.ddz - ddz, -eps, eps)
+
             self.x, self.dx = self.integrate_twice(self.ddx, self.dpos0[0], self.pos0[0], self.t, self.T)
             self.y, self.dy = self.integrate_twice(self.ddy, self.dpos0[1], self.pos0[1], self.t, self.T)
             self.z, self.dz = self.integrate_twice(self.ddz, self.dpos0[2], self.pos0[2], self.t, self.T)
+
+            x, dx = self.integrate_twice(ddx, self.dpos0[0], self.pos0[0], self.t, self.T)
+            y, dy = self.integrate_twice(ddy, self.dpos0[1], self.pos0[1], self.t, self.T)
+            z, dz = self.integrate_twice(ddz, self.dpos0[2], self.pos0[2], self.t, self.T)
+
+            # self.define_constraint(definite_integral(self.ddx - ddx, 0, 1), 0, 0)
+            # self.define_constraint(definite_integral(self.ddy - ddy, 0, 1), 0, 0)
+            # self.define_constraint(definite_integral(self.ddz - ddz, 0, 1), 0, 0)
+
+            # self.define_constraint(definite_integral(self.dx - dx, 0, 1), 0, 0)
+            # self.define_constraint(definite_integral(self.dy - dy, 0, 1), 0, 0)
+            # self.define_constraint(definite_integral(self.dz - dz, 0, 1), 0, 0)
+
+            # self.define_constraint(definite_integral(self.x - x, 0, 1), 0, 0)
+            # self.define_constraint(definite_integral(self.y - y, 0, 1), 0, 0)
+            # self.define_constraint(definite_integral(self.z - z, 0, 1), 0, 0)
+
+            eps2 = 1e-3
+
+            err_x = self.x-x
+            err_y = self.y-y
+            err_z = self.z-z
+
+            err_dx = self.dx-dx
+            err_dy = self.dy-dy
+            err_dz = self.dz-dz
+
+            self.define_constraint(err_x, -eps2, eps2)
+            self.define_constraint(err_y, -eps2, eps2)
+            self.define_constraint(err_z, -eps2, eps2)
+
+            # self.define_constraint(err_dx, -eps2, eps2)
+            # self.define_constraint(err_dx, -eps2, eps2)
+            # self.define_constraint(err_dx, -eps2, eps2)
 
     def get_initial_constraints(self, splines):
         # inputs are function of f_til, q_phi, dq_phi, q_theta and dq_theta -> impose constraints on these
@@ -253,6 +287,31 @@ class Quadrotor3Dv2(Vehicle):
         f_s = f_til_s*den
         signals['state'] = np.c_[x_s, y_s, z_s, dx_s, dy_s, dz_s, phi, theta].T
         signals['input'] = np.c_[f_s, dphi.T, dtheta.T].T
+
+        # nasty hack
+        ddx2 = self.problem.father.get_variables(self, 'ddx')
+        ddy2 = self.problem.father.get_variables(self, 'ddy')
+        ddz2 = self.problem.father.get_variables(self, 'ddz')
+        ddx2 = concat_splines([ddx2], [5.])[0]
+        ddy2 = concat_splines([ddy2], [5.])[0]
+        ddz2 = concat_splines([ddz2], [5.])[0]
+
+        if not hasattr(self, 'signals'): # first iteration
+            x2, dx2 = self.integrate_twice(ddx2, 0., self.pose0[0], time[0])
+            y2, dy2 = self.integrate_twice(ddy2, 0., self.pose0[1], time[0])
+            z2, dz2 = self.integrate_twice(ddz2, 0., self.pose0[2], time[0])
+        else:
+            x2, dx2 = self.integrate_twice(ddx2, self.signals['state'][3, -1], self.signals['state'][0, -1], time[0])
+            y2, dy2 = self.integrate_twice(ddy2, self.signals['state'][4, -1], self.signals['state'][1, -1], time[0])
+            z2, dz2 = self.integrate_twice(ddz2, self.signals['state'][5, -1], self.signals['state'][2, -1], time[0])
+
+        ddx_s, ddy_s, ddz_s = sample_splines([ddx, ddy, ddz], time)
+        ddx_s2, ddy_s2, ddz_s2 = sample_splines([ddx2, ddy2, ddz2], time)
+        x_s2, y_s2, z_s2, dx_s2, dy_s2, dz_s2 = sample_splines([x2, y2, z2, dx2, dy2, dz2], time)
+
+        signals['dd_err'] = np.c_[ddx_s-ddx_s2, ddy_s-ddy_s2, ddz_s-ddz_s2].T
+        signals['d_err'] = np.c_[dx_s-dx_s2, dy_s-dy_s2, dz_s-dz_s2].T
+        signals['err'] = np.c_[x_s-x_s2, y_s-y_s2, z_s-z_s2].T
         return signals
 
     def state2pose(self, state):
