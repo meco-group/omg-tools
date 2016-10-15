@@ -55,6 +55,8 @@ problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}
 problem.set_options({'hard_term_con': False, 'horizon_time': 5.})
 problem.init()
 
+vehicle.problem = problem
+
 # create simulator
 simulator = Simulator(problem)
 problem.plot('scene', view=[25, 60])  # elevation and azimuth of cam
