@@ -21,7 +21,7 @@ from omgtools import *
 import numpy as np
 
 # create vehicle
-vehicle = Quadrotor3Dv2(0.5)
+vehicle = Quadrotor3D(0.5)
 
 vehicle.set_initial_conditions([-3, -2, -0.5, 0, 0, 0, 0, 0])
 vehicle.set_terminal_conditions([3, 2, 0.5])

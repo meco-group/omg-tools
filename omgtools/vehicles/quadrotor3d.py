@@ -43,7 +43,7 @@ import time
 # y2 = y
 # y3 = z
 
-class Quadrotor3Dv2(Vehicle):
+class Quadrotor3D(Vehicle):
 
     def __init__(self, radius=0.2, options=None, bounds=None):
         bounds = bounds or {}
