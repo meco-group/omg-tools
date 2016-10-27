@@ -46,6 +46,14 @@ The animations below give an overview of typical problems that OMG-tools can han
 <img src="./doc/gifs/formation_quad_ufo.gif" alt="Quadrotors avoiding a UFO"/>
 </td>
 </tr>
+<tr>
+<td align="center" valign="center">
+<img src="./doc/gifs/plate.gif" alt="Plate in and out of machine"/>
+</td>
+<td align="center" valign="center">
+<img src="./doc/gifs/3dquadrotor.gif" alt="3D quadrotor in obstructed environment"/>
+</td>
+</tr>
 </table>
 
 ### Code example
