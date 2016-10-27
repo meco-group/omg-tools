@@ -66,8 +66,10 @@ def running_integral(spline):
     coeffs_int = [0.]
     for i in range(len(basis_int)-1):
         coeffs_int.append(coeffs_int[i]+(knots[degree+i+1]-knots[i])/float(degree_int)*coeffs[i])
-    if isinstance(coeffs,(MX, SX)):
+    if isinstance(coeffs, (MX, SX)):
         coeffs_int = vertcat(*coeffs_int)
+    else:
+        coeffs_int = np.array(coeffs_int)
     spline_int = BSpline(basis_int, coeffs_int)
     return spline_int
 
