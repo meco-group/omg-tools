@@ -18,22 +18,26 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from omgtools import *
+import numpy as np
 
 # create vehicle
 vehicle = Quadrotor3Dv2(0.5)
 
-vehicle.set_initial_conditions([-3, -3, -1, 0, 0, 0, 0, 0])
-vehicle.set_terminal_conditions([3, 3, 1])
+vehicle.set_initial_conditions([-3, -2, -0.5, 0, 0, 0, 0, 0])
+vehicle.set_terminal_conditions([3, 2, 0.5])
 
-vehicle.set_options({'safety_distance': 0.1})
-# vehicle.set_options({'substitution': True, 'exact_substitution': False})
+vehicle.set_options({'safety_distance': 0.1, 'safety_weight': 10})
 
 # create environment
-environment = Environment(room={'shape': Cube(8)})
+environment = Environment(room={'shape': Cuboid(8, 6, 8)})
 
-trajectory = {'velocity': {'time': [2], 'values': [[0, 0, -1]]}}
-obst1 = Obstacle({'position': [-2, 0, -1.5]}, shape=Plate(Rectangle(4., 10.), 0.1, orientation=[0., np.pi/2, 0.]))
-obst2 = Obstacle({'position': [2, 0, 3]}, shape=Plate(Rectangle(4., 10.), 0.1, orientation=[0., np.pi/2, 0.]), simulation={'trajectories': trajectory})
+trajectory = {'velocity': {'time': [1.5], 'values': [[0, 0, -0.6]]}}
+obst1 = Obstacle({'position': [-2, 0, -2]}, shape=Plate(Rectangle(5., 8.), 0.1,
+                 orientation=[0., np.pi/2, 0.]), options={'draw': True})
+obst2 = Obstacle({'position': [2, 0, 3.5]}, shape=Plate(Rectangle(5., 8.), 0.1,
+                 orientation=[0., np.pi/2, 0.]),
+                 simulation={'trajectories': trajectory}, options={'draw': True})
+
 environment.add_obstacle([obst1, obst2])
 
 # create a point-to-point problem
@@ -43,23 +47,9 @@ problem.init()
 
 vehicle.problem = problem
 # create simulator
-simulator = Simulator(problem)
+simulator = Simulator(problem, sample_time=0.01, update_time=0.4)
 vehicle.plot('input', knots=True)
-problem.plot('scene', view=[20, -80], axis=True)  # elevation and azimuth of cam
-
-# vehicle.plot('dd_err', knot=True)
-# vehicle.plot('d_err', knot=True)
-# vehicle.plot('err', knots=True)
+problem.plot('scene', view=[20, -80])
 
 # run it!
-# simulator.run_once()
 simulator.run()
-
-problem.plot_movie('scene', view=[20, -80], number_of_frames=100, repeat=False) # side
-problem.plot_movie('scene', view=[90, -90], number_of_frames=100, repeat=False) # top
-
-# Save a movie as gif: you need imagemagick for this!
-# problem.save_movie('scene', format='gif', name='quad2', view=[25, 60], number_of_frames=100, movie_time=5, axis=False)
-
-import matplotlib.pyplot as plt
-plt.show(block=True)
