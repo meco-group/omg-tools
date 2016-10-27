@@ -84,6 +84,8 @@ for via_point, obstacle_pos in zip(via_points, obstacle_positions):
             # check target
             if (np.linalg.norm(via_point-state_traj[:, -1]) < 1e-2 and np.linalg.norm(input_traj[:, -1]) < 1e-2):
                 target_reached = True
+            if (problem.iteration > 300):
+                target_reached = True
 
 # plot results
 n_t = state_traj.shape[1]
