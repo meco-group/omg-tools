@@ -1,7 +1,8 @@
+<img width=800 src="./doc/logo.svg" alt="oh my god!"/>
+
 [![Build Status](https://travis-ci.org/meco-group/omg-tools.svg?branch=master)](https://travis-ci.org/meco-group/omg-tools) [![Coverage Status](https://coveralls.io/repos/github/meco-group/omg-tools/badge.svg?branch=master)](https://coveralls.io/github/meco-group/omg-tools?branch=master)
 [![Codacy Badge](https://api.codacy.com/project/badge/grade/a44dd52c358e4cd09b12585915738627)](https://www.codacy.com/app/joris-gillis42/omg-tools)
 
-# OMG-tools
 Optimal Motion Generation-tools is a Python software toolbox facilitating the modeling, simulation and embedding of motion planning problems. Its main goal is bringing several research topics concerning (spline-based) motion planning together into a user-friendly package in order to enlarge its visibility towards the scientific and industrial world.
 
 This toolbox focuses on receding horizon control for single-agent systems as well as on distributed control for multi-agent systems. The approaches implemented in OMG-tools are described in the following publications:
@@ -13,7 +14,7 @@ If these methods help you with your research, please cite us!
 ## Examples
 ### Overview
 The animations below give an overview of typical problems that OMG-tools can handle. Different vehicle types find their way in an obstructed environment. Also cooperating multi-vehicle systems, moving in formation or performing a rendez-vous task, are demonstrated.
-<table style="border: none; border-collapse: collapse;" border="0" cellspacing="0" cellpadding="0" width="100%" align="center">
+<!-- <table style="border: none; border-collapse: collapse;" border="0" cellspacing="0" cellpadding="0" width="100%" align="center">
 <tr>
 <td align="center" valign="center">
 <img src="./doc/gifs/bicycle.gif" alt="Point-to-point motion of bicycle model"/>
@@ -54,7 +55,45 @@ The animations below give an overview of typical problems that OMG-tools can han
 <img src="./doc/gifs/3dquadrotor.gif" alt="3D quadrotor in obstructed environment"/>
 </td>
 </tr>
+</table> -->
+
+<table style="border: none; border-collapse: collapse;" border="0" cellspacing="0" cellpadding="0" width="100%" align="center">
+<tr>
+<td align="center" valign="center">
+<img src="./doc/gifs/bicycle.gif" alt="Point-to-point motion of bicycle model"/>
+</td>
+<td align="center" valign="center">
+<img src="./doc/gifs/warehouse.gif" alt="Holonomic vehicle finding its way in a warehouse"/>
+</td>
+<td align="center" valign="center">
+<img src="./doc/gifs/revolving_door.gif" alt="Holonomic vehicle passing through a revolving door"/>
+</td>
+<tr>
+<td align="center" valign="center">
+<img src="./doc/gifs/formation_quad_rotatingwall.gif" alt="Formation of quadrotor with rotating wall"/>
+</td>
+<td align="center" valign="center">
+<img src="./doc/gifs/formation_dubins.gif" alt="Dubins vehicles moving in relative formation"/>
+</td>
+<td align="center" valign="center">
+<img src="./doc/gifs/trailer.gif" alt="Dubins vehicle with trailer"/>
+</td>
+</tr>
+<tr>
+<td align="center" valign="center">
+<img src="./doc/gifs/platform_landing.gif" alt="Quadrotors landing on platform"/>
+</td>
+<td align="center" valign="center">
+<img src="./doc/gifs/formation_quad_ufo.gif" alt="Quadrotors avoiding a UFO"/>
+</td>
+<td aliggn="center" valign="center">
+<img src="./doc/gifs/3dquadrotor.gif" alt="3D quadrotor in obstructed environment"/>
+</td>
+</tr>
 </table>
+
+### Experimental validation
+[![Plate transportation](https://img.youtube.com/vi/8GDlWS1OOOM/0.jpg)](https://www.youtube.com/watch?v=8GDlWS1OOOM)
 
 ### Code example
 This elementary code example illustrates the basic functionality of the toolbox for steering a holonomic vehicle from an initial to terminal pose in a dynamic environment.
@@ -94,9 +133,9 @@ problem.plot('scene')
 simulator.run()
 problem.save_movie('scene')
 ```
-<center>
+<div align="center">
 <img src="./doc/gifs/p2p_holonomic.gif" alt="Point-to-point motion of holonomic vehicle"/>
-</center>
+</div>
 
 ### More examples
 Check out the examples directory for more code examples. There you can find a simple tutorial example which provides a documented overview of the basic functionality of the toolbox.
