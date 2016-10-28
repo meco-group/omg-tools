@@ -8,5 +8,6 @@ from bicycle import Bicycle
 from agv import AGV
 from trailer import Trailer
 from fleet import Fleet
-from quadrotor3d_v1 import Quadrotor3Dv1
 from quadrotor3d import Quadrotor3D
+from quadrotor3d_v1 import Quadrotor3Dv1
+from quadrotor3d_v2 import Quadrotor3Dv2

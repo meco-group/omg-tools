@@ -41,7 +41,7 @@ import numpy as np
 # y2 = y
 # y3 = z
 
-class Quadrotor3D(Vehicle):
+class Quadrotor3Dv1(Vehicle):
 
     def __init__(self, radius=0.2, options=None, bounds=None):
         bounds = bounds or {}
@@ -58,11 +58,11 @@ class Quadrotor3D(Vehicle):
         self.anglemax = bounds['anglemax'] if 'anglemax' in bounds else np.pi/6.
 
         self.u1min = bounds['u1min'] if 'u1min' in bounds else 1.
-        self.u1max = bounds['u1max'] if 'u1max' in bounds else 30.
-        self.u2min = bounds['u2min'] if 'u2min' in bounds else -np.pi/6.
-        self.u2max = bounds['u2max'] if 'u2max' in bounds else np.pi/6.
-        self.u3min = bounds['u3min'] if 'u3min' in bounds else -np.pi/6.
-        self.u3max = bounds['u3max'] if 'u3max' in bounds else np.pi/6.
+        self.u1max = bounds['u1max'] if 'u1max' in bounds else 15.
+        self.u2min = bounds['u2min'] if 'u2min' in bounds else -2.
+        self.u2max = bounds['u2max'] if 'u2max' in bounds else 2.
+        self.u3min = bounds['u3min'] if 'u3min' in bounds else -2.
+        self.u3max = bounds['u3max'] if 'u3max' in bounds else 2.
         self.g = 9.81
         self.radius = radius
 
@@ -104,7 +104,7 @@ class Quadrotor3D(Vehicle):
 
         # acceleration constraints
 
-        self.define_constraint(ddx**2 + ddy**2 + ddz**2 - (self.T**4)*(self.amax)**2, -inf, 0.)
+        # self.define_constraint(ddx**2 + ddy**2 + ddz**2 - (self.T**4)*(self.amax)**2, -inf, 0.)
 
      #   self.define_constraint(-ddx + (self.T**2)*self.amin, -inf, 0.)
      #   self.define_constraint(-ddy + (self.T**2)*self.amin, -inf, 0.)
@@ -134,7 +134,7 @@ class Quadrotor3D(Vehicle):
         return [term_con, term_con_der]
 
     def set_initial_conditions(self, state, input=None):
-        self.prediction['state'] = state*3 
+        self.prediction['state'] = state*3
         self.prediction['dspl'] = np.zeros(3)
         self.prediction['ddspl'] = np.zeros(3)
 

@@ -20,6 +20,7 @@
 from vehicle import Vehicle
 from ..basics.shape import Sphere
 from ..basics.spline_extra import sample_splines
+from ..basics.spline import BSplineBasis
 from casadi import inf
 import numpy as np
 
@@ -40,12 +41,12 @@ import numpy as np
 # y2 = y
 # y3 = z
 
-class Quadrotor3Dv3(Vehicle):
+class Quadrotor3Dv2(Vehicle):
 
     def __init__(self, radius=0.2, options=None, bounds=None):
         bounds = bounds or {}
         Vehicle.__init__(
-            self, n_spl=4, degree=4, shapes=Sphere(radius), options=options)
+            self, n_spl=3, degree=4, shapes=Sphere(radius), options=options)
 
         self.vmin = bounds['vmin'] if 'vmin' in bounds else -1.
         self.vmax = bounds['vmax'] if 'vmax' in bounds else 1.
@@ -57,11 +58,11 @@ class Quadrotor3Dv3(Vehicle):
         self.anglemax = bounds['anglemax'] if 'anglemax' in bounds else np.pi/6.
 
         self.u1min = bounds['u1min'] if 'u1min' in bounds else 1.
-        self.u1max = bounds['u1max'] if 'u1max' in bounds else 30.
-        self.u2min = bounds['u2min'] if 'u2min' in bounds else -np.pi/6.
-        self.u2max = bounds['u2max'] if 'u2max' in bounds else np.pi/6.
-        self.u3min = bounds['u3min'] if 'u3min' in bounds else -np.pi/6.
-        self.u3max = bounds['u3max'] if 'u3max' in bounds else np.pi/6.
+        self.u1max = bounds['u1max'] if 'u1max' in bounds else 15.
+        self.u2min = bounds['u2min'] if 'u2min' in bounds else -2.
+        self.u2max = bounds['u2max'] if 'u2max' in bounds else 2.
+        self.u3min = bounds['u3min'] if 'u3min' in bounds else -2.
+        self.u3max = bounds['u3max'] if 'u3max' in bounds else 2.
         self.g = 9.81
         self.radius = radius
 
@@ -75,8 +76,15 @@ class Quadrotor3Dv3(Vehicle):
         self.T = self.define_symbol('T')
 
     def define_trajectory_constraints(self, splines):
-        x, y, z, xi = splines
-        dx, dy, dz = x.derivative(1), y.derivative(1), z.derivative(1)
+        x, y, z = splines
+
+        degree = 8
+        knots = np.r_[np.zeros(degree), np.linspace(0., 1., 10+1), np.ones(degree)]
+        basis = BSplineBasis(knots, degree)
+        xi = self.define_spline_variable('xi', 1, 1, basis=basis)[0]
+
+
+        dx, dy, dz, dxi = x.derivative(1), y.derivative(1), z.derivative(1), xi.derivative(1)
         ddx, ddy, ddz = x.derivative(2), y.derivative(2), z.derivative(2)
         dddx, dddy, dddz = x.derivative(3), y.derivative(3), z.derivative(3)
         g_tf = self.g*(self.T**2)
@@ -85,43 +93,47 @@ class Quadrotor3Dv3(Vehicle):
         self.define_constraint(-(ddx**2 + ddy**2 + (ddz + g_tf)**2) + (self.T**4)*self.u1min**2, -inf, 0.)
         self.define_constraint((ddx**2 + ddy**2 + (ddz + g_tf)**2) - (self.T**4)*self.u1max**2, -inf, 0.)
 
-        # phi constraints 
+        # phi constraints
         self.define_constraint(-ddy - xi*np.tan(self.anglemax), -inf, 0.)
         self.define_constraint(ddy + xi*np.tan(self.anglemin), -inf, 0.)
 
-        # theta constraints 
-        self.define_constraint(ddx - (ddz+g_tf)*(self.anglemax), -inf, 0.)
-        self.define_constraint(-ddx + (ddz+g_tf)*(self.anglemin), -inf, 0.)
+        # theta constraints
+        self.define_constraint(ddx - (ddz+g_tf)*np.tan(self.anglemax), -inf, 0.)
+        self.define_constraint(-ddx + (ddz+g_tf)*np.tan(self.anglemin), -inf, 0.)
 
-        # u2 constraints (omega_phi) 
-        self.define_constraint(-dddy*(xi**2) + ddy*(ddx*dddx + dddz*(ddz + g_tf)) - xi*((ddx**2) + xi**2)*(self.T)*(self.u2max), -inf, 0.)
-        self.define_constraint(dddy*(xi**2) - ddy*(ddx*dddx + dddz*(ddz + g_tf)) + xi*((ddx**2) + xi**2)*(self.T)*(self.u2min), -inf, 0.)
+        # u2 constraints (omega_phi)
+        # self.define_constraint(-dddy*(xi**2) + ddy*(ddx*dddx + dddz*(ddz + g_tf)) - xi*((ddx**2) + xi**2)*(self.T)*(self.u2max), -inf, 0.)
+        # self.define_constraint(dddy*(xi**2) - ddy*(ddx*dddx + dddz*(ddz + g_tf)) + xi*((ddx**2) + xi**2)*(self.T)*(self.u2min), -inf, 0.)
 
-        # u3 constraints (omega_theta) 
-        self.define_constraint(ddx*dddz - (ddz + g_tf)*dddx - (xi**2)*(self.T)*(self.u3max), -inf, 0.)
-        self.define_constraint(-ddx*dddz + (ddz + g_tf)*dddx + (xi**2)*(self.T)*(self.u3min), -inf, 0.)
+        self.define_constraint(-(dddy*xi - ddy*dxi) - (xi**2 + ddy**2)*(self.T)*(self.u2max), -inf, 0.)
+        self.define_constraint((dddy*xi - ddy*dxi) + (xi**2 + ddy**2)*(self.T)*(self.u2min), -inf, 0.)
+
+        # u3 constraints (omega_theta)
+        self.define_constraint(-ddx*dddz + (ddz + g_tf)*dddx - (xi**2)*(self.T)*(self.u3max), -inf, 0.)
+        self.define_constraint(ddx*dddz - (ddz + g_tf)*dddx + (xi**2)*(self.T)*(self.u3min), -inf, 0.)
 
         # acceleration constraints
-        self.define_constraint(ddx**2 + ddy**2 + ddz**2 - (self.T**4)*self.amax**2, -inf, 0.)
+        # self.define_constraint(ddx**2 + ddy**2 + ddz**2 - (self.T**4)*self.amax**2, -inf, 0.)
 
-        eps = 5e-2
+        eps = 1
         self.define_constraint((xi**2) - (ddx**2 + (ddz + g_tf)**2), -eps, eps)
 
 
     def get_initial_constraints(self, splines):
-        spl0 = self.define_parameter('spl0', 4)
+        spl0 = self.define_parameter('spl0', 3)
         dspl0 = self.define_parameter('dspl0', 3)
         ddspl0 = self.define_parameter('ddspl0', 3)
-        x, y, z, xi = splines
+        x, y, z = splines
         dx, dy, dz = x.derivative(), y.derivative(), z.derivative()
         ddx, ddy, ddz = x.derivative(2), y.derivative(2), z.derivative(2)
-        return [(x, spl0[0]), (y, spl0[1]), (z, spl0[2]), (xi, spl0[3]),
+        return [(x, spl0[0]), (y, spl0[1]), (z, spl0[2]),
+         # (xi, spl0[3]),
                 (dx, self.T*dspl0[0]), (dy, self.T*dspl0[1]), (dz, self.T*dspl0[2]),
                 (ddx, (self.T**2)*ddspl0[0]), (ddy, (self.T**2)*ddspl0[1]), (ddz, (self.T**2)*ddspl0[2])]
 
     def get_terminal_constraints(self, splines):
         position = self.define_parameter('positionT', 3)
-        x, y, z, xi = splines
+        x, y, z = splines
         term_con = [(x, position[0]), (y, position[1]), (z, position[2])]
         term_con_der = []
         for d in range(1, self.degree+1):
@@ -137,7 +149,7 @@ class Quadrotor3Dv3(Vehicle):
         self.positionT = position
 
     def get_init_spline_value(self):
-        init_value = np.zeros((len(self.basis), 4))
+        init_value = np.zeros((len(self.basis), 3))
         pos0 = self.prediction['state'][:3]
         posT = self.positionT
         for k in range(3):
@@ -155,7 +167,7 @@ class Quadrotor3Dv3(Vehicle):
 
     def set_parameters(self, current_time):
         parameters = Vehicle.set_parameters(self, current_time)
-        parameters['spl0'] = self.prediction['state'][:4]
+        parameters['spl0'] = self.prediction['state'][:3]
         parameters['dspl0'] = self.prediction['dspl']
         parameters['ddspl0'] = self.prediction['ddspl']
         parameters['positionT'] = self.positionT
@@ -167,18 +179,17 @@ class Quadrotor3Dv3(Vehicle):
 
     def splines2signals(self, splines, time):
         signals = {}
-        x, y, z, xi = splines[0], splines[1], splines[2], splines[3]
+        x, y, z = splines[0], splines[1], splines[2]
         dx, dy, dz = x.derivative(), y.derivative(), z.derivative()
         ddx, ddy, ddz = x.derivative(2), y.derivative(2), z.derivative(2)
         dddx, dddy, dddz = x.derivative(3), y.derivative(3), z.derivative(3)
 
-    #    xi = np.sqrt(ddx**2 + (ddz + self.g)**2)
-
-
-        x_s, y_s, z_s, xi_s = sample_splines([x, y, z, xi], time)
+        x_s, y_s, z_s = sample_splines([x, y, z], time)
         dx_s, dy_s, dz_s = sample_splines([dx, dy, dz], time)
         ddx_s, ddy_s, ddz_s = sample_splines([ddx, ddy, ddz], time)
         dddx_s, dddy_s, dddz_s = sample_splines([dddx, dddy, dddz], time)
+
+        xi_s = np.sqrt(ddx_s**2 + (ddz_s + self.g)**2)
 
         phi = np.arctan2(-ddy_s, xi_s)
 
@@ -186,11 +197,12 @@ class Quadrotor3Dv3(Vehicle):
 
         u1 = np.sqrt(ddx_s**2 + ddy_s**2 + (ddz_s + self.g)**2)
 
-        u2 = (-dddy_s*(xi_s**2) + ddy_s*(ddx_s*dddx_s + dddz_s*(ddz_s + self.g))) / (xi_s*(ddx_s**2 + xi_s**2)) 
+        u2 = -(dddy_s*(xi_s**2) - ddy_s*(ddx_s*dddx_s + dddz_s*(ddz_s + self.g))) / (xi_s*(ddx_s**2 + xi_s**2))
 
         u3 = ((ddz_s + self.g)*dddx_s - ddx_s*dddz_s) / xi_s**2
 
         signals['state'] = np.c_[x_s, y_s, z_s, dx_s, dy_s, dz_s, phi, theta].T
+        signals['position'] = np.c_[x_s, y_s, z_s].T
         signals['input'] = np.c_[u1, u2, u3].T
         signals['dspl'] = np.c_[dx_s, dy_s, dz_s].T
         signals['ddspl'] = np.c_[ddx_s, ddy_s, ddz_s].T
