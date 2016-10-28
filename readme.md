@@ -50,7 +50,7 @@ The animations below give an overview of typical problems that OMG-tools can han
 <td align="center" valign="center">
 <img src="./doc/gifs/plate.gif" alt="Plate in and out of machine"/>
 </td>
-<td align="center" valign="center">
+<td aliggn="center" valign="center">
 <img src="./doc/gifs/3dquadrotor.gif" alt="3D quadrotor in obstructed environment"/>
 </td>
 </tr>
