@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+import random
 
 from vehicle import Vehicle
 from ..basics.shape import Sphere
@@ -40,28 +41,28 @@ import numpy as np
 # y2 = y
 # y3 = z
 
-class Quadrotor3Dv1(Vehicle):
+class Quadrotor3D(Vehicle):
 
     def __init__(self, radius=0.2, options=None, bounds=None):
         bounds = bounds or {}
         Vehicle.__init__(
             self, n_spl=3, degree=4, shapes=Sphere(radius), options=options)
 
-        self.vmin = bounds['vmin'] if 'vmin' in bounds else -1
-        self.vmax = bounds['vmax'] if 'vmax' in bounds else 1
-        self.amin = bounds['amin'] if 'amin' in bounds else -1.
-        self.amax = bounds['amax'] if 'amax' in bounds else 1.
-        self.jmin = bounds['jmin'] if 'jmin' in bounds else -1.
-        self.jmax = bounds['jmax'] if 'jmax' in bounds else 1.
-        self.anglemin = bounds['anglemin'] if 'anglemin' in bounds else -np.pi/12.
-        self.anglemax = bounds['anglemax'] if 'anglemax' in bounds else np.pi/12.
+        self.vmin = bounds['vmin'] if 'vmin' in bounds else -2.
+        self.vmax = bounds['vmax'] if 'vmax' in bounds else 2.
+        self.amin = bounds['amin'] if 'amin' in bounds else -2.
+        self.amax = bounds['amax'] if 'amax' in bounds else 2.
+        self.jmin = bounds['jmin'] if 'jmin' in bounds else -2.
+        self.jmax = bounds['jmax'] if 'jmax' in bounds else 2.
+        self.anglemin = bounds['anglemin'] if 'anglemin' in bounds else -np.pi/6.
+        self.anglemax = bounds['anglemax'] if 'anglemax' in bounds else np.pi/6.
 
         self.u1min = bounds['u1min'] if 'u1min' in bounds else 1.
         self.u1max = bounds['u1max'] if 'u1max' in bounds else 30.
-        self.u2min = bounds['u2min'] if 'u2min' in bounds else -1.
-        self.u2max = bounds['u2max'] if 'u2max' in bounds else 1.
-        self.u3min = bounds['u3min'] if 'u3min' in bounds else -1.
-        self.u3max = bounds['u3max'] if 'u3max' in bounds else 1.
+        self.u2min = bounds['u2min'] if 'u2min' in bounds else -np.pi/6.
+        self.u2max = bounds['u2max'] if 'u2max' in bounds else np.pi/6.
+        self.u3min = bounds['u3min'] if 'u3min' in bounds else -np.pi/6.
+        self.u3max = bounds['u3max'] if 'u3max' in bounds else np.pi/6.
         self.g = 9.81
         self.radius = radius
 
@@ -102,12 +103,15 @@ class Quadrotor3Dv1(Vehicle):
         self.define_constraint(-dddx*(ddz+g_tf) + dddz*ddx + ((ddz+g_tf)**2)*(self.T)*(self.u2min), -inf, 0.)
 
         # acceleration constraints
-        self.define_constraint(-ddx + (self.T**2)*self.amin, -inf, 0.)
-        self.define_constraint(-ddy + (self.T**2)*self.amin, -inf, 0.)
-        self.define_constraint(-ddz + (self.T**2)*self.amin, -inf, 0.)
-        self.define_constraint(ddx - (self.T**2)*self.amax, -inf, 0.)
-        self.define_constraint(ddy - (self.T**2)*self.amax, -inf, 0.)
-        self.define_constraint(ddz - (self.T**2)*self.amax, -inf, 0.)
+
+        self.define_constraint(ddx**2 + ddy**2 + ddz**2 - (self.T**4)*(self.amax)**2, -inf, 0.)
+
+     #   self.define_constraint(-ddx + (self.T**2)*self.amin, -inf, 0.)
+     #   self.define_constraint(-ddy + (self.T**2)*self.amin, -inf, 0.)
+     #   self.define_constraint(-ddz + (self.T**2)*self.amin, -inf, 0.)
+     #   self.define_constraint(ddx - (self.T**2)*self.amax, -inf, 0.)
+     #   self.define_constraint(ddy - (self.T**2)*self.amax, -inf, 0.)
+     #   self.define_constraint(ddz - (self.T**2)*self.amax, -inf, 0.)
 
     def get_initial_constraints(self, splines):
         spl0 = self.define_parameter('spl0', 3)
@@ -130,7 +134,7 @@ class Quadrotor3Dv1(Vehicle):
         return [term_con, term_con_der]
 
     def set_initial_conditions(self, state, input=None):
-        self.prediction['state'] = state
+        self.prediction['state'] = state*3 
         self.prediction['dspl'] = np.zeros(3)
         self.prediction['ddspl'] = np.zeros(3)
 
