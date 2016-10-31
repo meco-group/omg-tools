@@ -14,48 +14,6 @@ If these methods help you with your research, please cite us!
 ## Examples
 ### Overview
 The animations below give an overview of typical problems that OMG-tools can handle.
-<!-- <table style="border: none; border-collapse: collapse;" border="0" cellspacing="0" cellpadding="0" width="100%" align="center">
-<tr>
-<td align="center" valign="center">
-<img src="./doc/gifs/bicycle.gif" alt="Point-to-point motion of bicycle model"/>
-</td>
-<td align="center" valign="center">
-<img src="./doc/gifs/warehouse.gif" alt="Holonomic vehicle finding its way in a warehouse"/>
-</td>
-</tr>
-<tr>
-<td align="center" valign="center">
-<img src="./doc/gifs/revolving_door.gif" alt="Holonomic vehicle passing through a revolving door"/>
-</td>
-<td align="center" valign="center">
-<img src="./doc/gifs/formation_quad_rotatingwall.gif" alt="Formation of quadrotor with rotating wall"/>
-</td>
-</tr>
-<tr>
-<td align="center" valign="center">
-<img src="./doc/gifs/formation_dubins.gif" alt="Dubins vehicles moving in relative formation"/>
-</td>
-<td align="center" valign="center">
-<img src="./doc/gifs/trailer.gif" alt="Dubins vehicle with trailer"/>
-</td>
-</tr>
-<tr>
-<td align="center" valign="center">
-<img src="./doc/gifs/platform_landing.gif" alt="Quadrotors landing on platform"/>
-</td>
-<td align="center" valign="center">
-<img src="./doc/gifs/formation_quad_ufo.gif" alt="Quadrotors avoiding a UFO"/>
-</td>
-</tr>
-<tr>
-<td align="center" valign="center">
-<img src="./doc/gifs/plate.gif" alt="Plate in and out of machine"/>
-</td>
-<td aliggn="center" valign="center">
-<img src="./doc/gifs/3dquadrotor.gif" alt="3D quadrotor in obstructed environment"/>
-</td>
-</tr>
-</table> -->
 
 <table style="border: none; border-collapse: collapse;" border="0" cellspacing="0" cellpadding="0" width="100%" align="center">
 <tr>
