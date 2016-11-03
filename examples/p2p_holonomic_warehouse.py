@@ -59,3 +59,5 @@ vehicle.plot('input', knots=True, labels=['v (m/s)', 'w (rad/s)'])
 
 # run it!
 simulator.run()
+
+# problem.save_movie('scene', number_of_frames=60, name='warehouse', axis=False)
