@@ -30,7 +30,7 @@ vehicle.set_terminal_conditions([2., 2.])
 environment = Environment(room={'shape': Square(5.)})
 rectangle = Rectangle(width=3., height=0.2)
 
-environment.add_obstacle(Obstacle({'position': [-2.1, -0.5]}, shape=rectangle))
+# environment.add_obstacle(Obstacle({'position': [-2.1, -0.5]}, shape=rectangle))
 environment.add_obstacle(Obstacle({'position': [1.7, -0.5]}, shape=rectangle))
 trajectories = {'velocity': {'time': [3., 4.],
                              'values': [[-0.15, 0.0], [0., 0.15]]}}
@@ -39,13 +39,13 @@ environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
 
 # create a point-to-point problem
 # select solver
-solver = 'ipopt'
+solver = 'knitro'
 if solver is 'ipopt':
     options = {'solver': solver}
     problem = Point2point(vehicle, environment, options, freeT=False)
     problem.set_options(
-        {'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57',
-                                      'ipopt.hessian_approximation': 'limited-memory'}}})
+        {'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'
+                                      }}}) #'ipopt.hessian_approximation': 'limited-memory'
 elif solver is 'worhp':
     options = {'solver': solver}
     worhp_options = {  # 'worhp.qp_ipLsMethod': 'MA57',  # todo: option not found?
@@ -62,10 +62,36 @@ elif solver is 'snopt':
     problem.set_options({'solver_options':
                          {'snopt': {'snopt.Hessian': 'limited memory',
                                     'start': 'warm'}}})
+elif solver is 'blocksqp':
+    options = {'solver': solver}
+    problem = Point2point(vehicle, environment, options, freeT=False)
+    problem.set_options({'solver_options':
+                         {'blocksqp': {'warmstart': True, 'hess_lim_mem': 0}}})
+if solver is 'knitro':
+    options = {'solver': solver}
+    problem = Point2point(vehicle, environment, options, freeT=True)
+    problem.set_options(
+        {'solver_options': {'knitro': {'knitro.bar_initpt': 2, 'knitro.honorbnds': 0, 'knitro.scale': 1}}})
+                               
+
+# {'knitro.algorithm': 1, 'knitro.bar_murule': 5, 'knitro.linsolver': 4, 'knitro:bar_directinterval':0}
+
+#KNITRO automatically shifts the initial starting point in order to improve the performance of its algorithms.
+#To disable this you have to set several parameters:
+#bar_inipt=2
+#honorbnds=0
+#scale=0 (scale can change the expression of the objective function and so its value)
+
+# 'knitro.algorithm': 1 = IP, 2=IP conjugate gradient, 3 = AS, 4=SQP, 5=multiple in parallel
+# 'knitro.bar_murule': 5, 
+# 'knitro.linsolver': 5 #ma57
+# 'knitro.tuner': 1 # finds best combination
+# 'knitro.ms_enable': 1, #multistart with several initial guesses
+# 'knitro.ms_maxsolves': 5}}}) #max amount of initial guesses to use
 else:
     print('You selected solver: ' + solver +
           ' but this solver is not supported. ' +
-          'Choose between ipopt, worhp or snopt.')
+          'Choose between ipopt, worhp, snopt or blocksqp.')
 problem.init()
 
 # create simulator
