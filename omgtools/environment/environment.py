@@ -131,7 +131,11 @@ class Environment(OptiChild, PlotLayer):
         for obstacle in self.obstacles:
             draw.extend(obstacle.draw(t))
         if self.room['draw']:
-            draw.extend(self.room['shape'].draw())
+            roomPoints = []
+            for point in self.room['shape'].draw():
+                roomPoints.append(np.array([point[0]+self.room['position'][0],
+                                            point[1]+self.room['position'][1]]))
+            draw.extend(roomPoints)
         return draw
 
     def get_canvas_limits(self):
