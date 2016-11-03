@@ -18,7 +18,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from vehicle import Vehicle
-from ..simulation.plotlayer import PlotLayer
+from ..execution.plotlayer import PlotLayer
 
 
 def get_fleet_vehicles(var):
@@ -96,9 +96,11 @@ class Fleet(PlotLayer):
     def get_rel_config(self, vehicle):
         return self.rel_config[vehicle]
 
-    def set_initial_conditions(self, conditions):
-        for condition, vehicle in zip(conditions, self.vehicles):
-            vehicle.set_initial_conditions(condition)
+    def set_initial_conditions(self, states, inputs=None):
+        if inputs is None:
+            inputs = [None for _ in range(len(states))]
+        for state, input, vehicle in zip(states, inputs, self.vehicles):
+            vehicle.set_initial_conditions(state, input)
 
     def set_terminal_conditions(self, conditions):
         for condition, vehicle in zip(conditions, self.vehicles):
@@ -136,7 +138,12 @@ class Fleet(PlotLayer):
                     lines = []
                     for v in range(len(vehicles)):
                         lines += infos[v][k][l]['lines']
-                    inf.append({'labels': labels, 'lines': lines})
+                    dic = {'labels': labels, 'lines': lines}
+                    if 'xlim' in kwargs:
+                        dic['xlim'] = kwargs['xlim']
+                    if 'ylim' in kwargs:
+                        dic['ylim'] = kwargs['ylim']
+                    inf.append(dic)
                 info.append(inf)
         return info
 

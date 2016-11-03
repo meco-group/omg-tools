@@ -26,6 +26,16 @@ script:
   - pushd export
   - make && pushd bin
   - ./Point2Point
+  - popd
+  - popd
+  - pushd export_f
+  - make && pushd bin
+  - ./FormationPoint2Point
+  - popd
+  - popd
+  - pushd export_r
+  - make && pushd bin
+  - ./RendezVous
 #  - valgrind ./Point2Point
   - popd
   - popd

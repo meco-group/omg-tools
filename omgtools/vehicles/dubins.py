@@ -54,8 +54,8 @@ class Dubins(Vehicle):
             self, n_spl=2, degree=degree, shapes=shapes, options=options)
         self.vmax = bounds['vmax'] if 'vmax' in bounds else 0.5
         self.amax = bounds['amax'] if 'amax' in bounds else 1.
-        self.wmin = bounds['wmin'] if 'wmin' in bounds else -30.  # in deg/s
-        self.wmax = bounds['wmax'] if 'wmax' in bounds else 30.
+        self.wmin = bounds['wmin'] if 'wmin' in bounds else -np.pi/6. # in rad/s
+        self.wmax = bounds['wmax'] if 'wmax' in bounds else np.pi/6.
 
     def set_default_options(self):
         Vehicle.set_default_options(self)
@@ -71,8 +71,8 @@ class Dubins(Vehicle):
         dv_til, dtg_ha = v_til.derivative(), tg_ha.derivative()
         self.define_constraint(
             v_til*(1+tg_ha**2) - self.vmax, -inf, 0.)
-        # self.define_constraint(-v_til*(1+tg_ha**2) - self.vmax, -inf, 0)
-        # self.define_constraint(- self.vmax, -inf, 0) # only forward driving
+        # self.define_constraint(-v_til*(1+tg_ha**2) - self.vmax, -inf, 0)  # only forward driving
+
         # self.define_constraint(
         #     dv_til*(1+tg_ha**2) + 2*v_til*tg_ha*dtg_ha - self.T*self.amax, -inf, 0.)
 
@@ -100,10 +100,10 @@ class Dubins(Vehicle):
         #     (ddx**2+ddy**2) - (self.T**4)*self.amax**2, -inf, 0.)
 
         # add constraints on change in orientation
-        self.define_constraint(2*dtg_ha - (1+tg_ha**2)*self.T*np.radians(self.wmax), -inf, 0.)
-        self.define_constraint(-2*dtg_ha + (1+tg_ha**2)*self.T*np.radians(self.wmin), -inf, 0.)
+        self.define_constraint(2*dtg_ha - (1+tg_ha**2)*self.T*self.wmax, -inf, 0.)
+        self.define_constraint(-2*dtg_ha + (1+tg_ha**2)*self.T*self.wmin, -inf, 0.)
 
-        self.define_constraint(-v_til, -inf, 0)  # only forward driving, positive v_tilde
+        # self.define_constraint(-v_til, -inf, 0)  # only forward driving, positive v_tilde
 
 
     def get_fleet_center(self, splines, rel_pos, substitute=True):
@@ -161,17 +161,15 @@ class Dubins(Vehicle):
         term_con_der = [(v_til, 0.), (tg_ha.derivative(), 0.)]
         return [term_con, term_con_der]
 
-    def set_initial_conditions(self, pose, input=np.zeros(2)):
-        # comes from the user so theta is in deg
-        pose[2] = np.radians(pose[2])
-        self.prediction['state'] = pose  # x, y, theta[rad]
-        self.pose0 = pose # for use in first iteration of splines2signals()
-        self.prediction['input'] = input  # V, dtheta
+    def set_initial_conditions(self, state, input=None):
+        if input is None:
+            input = np.zeros(2)
+        self.prediction['state'] = state
+        self.prediction['input'] = input
+        self.pose0 = state
 
     def set_terminal_conditions(self, pose):
-        # comes from the user so theta is in deg
-        pose[2] = np.radians(pose[2])
-        self.poseT = pose  # x, y, theta[rad]
+        self.poseT = pose
 
     def get_init_spline_value(self):
         # generate initial guess for spline variables

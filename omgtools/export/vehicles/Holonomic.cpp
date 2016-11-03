@@ -43,13 +43,18 @@ void Holonomic::getInitSplineValue(vector<vector<double>>& init_value){
     int degree = getDegree();
     int len_basis = getLenBasis();
     getPrediction(state0, input0);
+    // for(int k=0; k<n_spl; k++){
+    //     for(int d=0; d<degree; d++){
+    //         init_value[k][d] = state0[k];
+    //         init_value[k][len_basis-degree+d] = this->positionT[k];
+    //     }
+    //     for (int j=0; j<len_basis-2*degree; j++){
+    //         init_value[k][degree+j] = state0[k]+j*(this->positionT[k]-state0[k])/(len_basis-2*degree-1);
+    //     }
+    // }
     for(int k=0; k<n_spl; k++){
-        for(int d=0; d<degree; d++){
-            init_value[k][d] = state0[k];
-            init_value[k][len_basis-degree+d] = this->positionT[k];
-        }
-        for (int j=0; j<len_basis-2*degree; j++){
-            init_value[k][degree+j] = state0[k]+j*(this->positionT[k]-state0[k])/(len_basis-2*degree-1);
+        for(int j=0; j<len_basis; j++){
+            init_value[k][j] = state0[k]+j*(this->positionT[k]-state0[k])/(len_basis-1);
         }
     }
 }

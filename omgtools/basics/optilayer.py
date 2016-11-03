@@ -22,10 +22,7 @@ try:
 except:
     from casadi import Importer
     Compiler = Importer
-
 from casadi import DM, MX, inf, Function, nlpsol, external
-
-
 from casadi import symvar, substitute
 from casadi.tools import struct, struct_MX, struct_symMX, entry
 from spline import BSpline
@@ -36,6 +33,7 @@ import copy
 import os
 import shutil
 import collections as col
+
 
 def evalf(fun, x):
     x = x if isinstance(x, list) else [x]
@@ -430,7 +428,7 @@ class OptiFather(object):
         _init_tf = {}
         for child in self.children.values():
             for name, spl in child._splines_prim.items():
-                if name in child._variables:
+                if name in child._variables or name in child._substitutes:
                     basis = spl['basis']
                     if basis not in _init_tf:
                         _init_tf[basis] = init_primal_transform(basis)

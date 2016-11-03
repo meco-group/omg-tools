@@ -55,7 +55,7 @@ problem.init()
 # create simulator
 simulator = Simulator(problem)
 problem.plot('scene')
-vehicle.plot('input', knots=True, labels=['v (m/s)', 'w (rad/s)'])
+vehicle.plot('input', knots=True,labels=['v (m/s)', 'w (rad/s)'])
 
 # run it!
 simulator.run()

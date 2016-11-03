@@ -28,12 +28,21 @@ using namespace casadi;
 
 namespace omg{
 
-Point2Point::Point2Point(Vehicle* vehicle, double update_time, double sample_time, double horizon_time, int trajectory_length):
-parameters(N_PAR), variables(N_VAR), lbg(LBG_DEF), ubg(UBG_DEF), time(trajectory_length+1),
-state_trajectory(trajectory_length+1, vector<double>(vehicle->getNState())),
-input_trajectory(trajectory_length+1, vector<double>(vehicle->getNInput())) {
+Point2Point::Point2Point(Vehicle* vehicle,
+    double update_time, double sample_time, double horizon_time, int trajectory_length, bool initialize):
+parameters(N_PAR), variables(N_VAR), lbg(LBG_DEF), ubg(UBG_DEF) {
     if (trajectory_length > int(horizon_time/sample_time)){
-        cerr << "trajectory_length too large!" << endl;
+        cerr << "trajectory_length > (horizon_time/sample_time)!" << endl;
+    }
+    if (trajectory_length > int(update_time/sample_time)){
+        time.resize(trajectory_length+1);
+        state_trajectory.resize(trajectory_length+1, vector<double>(vehicle->getNState()));
+        input_trajectory.resize(trajectory_length+1, vector<double>(vehicle->getNInput()));
+    }
+    else {
+        time.resize(int(update_time/sample_time)+1);
+        state_trajectory.resize(int(update_time/sample_time)+1, vector<double>(vehicle->getNState()));
+        input_trajectory.resize(int(update_time/sample_time)+1, vector<double>(vehicle->getNInput()));
     }
     this->vehicle = vehicle;
     this->update_time = update_time;
@@ -43,15 +52,29 @@ input_trajectory(trajectory_length+1, vector<double>(vehicle->getNInput())) {
     for (int k=0; k<time.size(); k++){
         time[k] = k*sample_time;
     }
+    if (initialize){
+        this->initialize();
+    }
+}
+
+Point2Point::Point2Point(Vehicle* vehicle,
+    double update_time, double sample_time, double horizon_time):
+Point2Point(vehicle, update_time, sample_time, horizon_time, int(update_time/sample_time), true){
+}
+
+Point2Point::Point2Point(Vehicle* vehicle,
+    double update_time, double sample_time, double horizon_time, int trajectory_length):
+Point2Point(vehicle, update_time, sample_time, horizon_time, trajectory_length, true){
+}
+
+void Point2Point::initialize(){
     generateProblem();
+    generateSubstituteFunctions();
     args["p"] = parameters;
     args["x0"] = variables;
     args["lbg"] = lbg;
     args["ubg"] = ubg;
     initSplines();
-}
-
-Point2Point::Point2Point(Vehicle* vehicle, double update_time, double sample_time, double horizon_time):Point2Point(vehicle, update_time, sample_time, horizon_time, int(update_time/sample_time)){
 }
 
 void Point2Point::generateProblem(){
@@ -67,6 +90,10 @@ void Point2Point::generateProblem(){
     this->problem = nlpsol("problem", "ipopt", obj_path+"/nlp.so", options);
 }
 
+void Point2Point::generateSubstituteFunctions(){
+@generateSubstituteFunctions@
+}
+
 void Point2Point::initSplines(){
 @initSplines@
 }
@@ -79,11 +106,18 @@ void Point2Point::reset(){
     }
 }
 
-bool Point2Point::update(vector<double>& condition0, vector<double>& conditionT, vector<vector<double>>& state_trajectory, vector<vector<double>>& input_trajectory, vector<obstacle_t>& obstacles){
+void Point2Point::resetTime(){
+    current_time = 0.0;
+}
+
+bool Point2Point::update(vector<double>& condition0, vector<double>& conditionT,
+    vector<vector<double>>& state_trajectory, vector<vector<double>>& input_trajectory, vector<obstacle_t>& obstacles){
     update(condition0, conditionT, state_trajectory, input_trajectory, obstacles, 0);
 }
 
-bool Point2Point::update(vector<double>& state0, vector<double>& conditionT, vector<vector<double>>& state_trajectory, vector<vector<double>>& input_trajectory, vector<obstacle_t>& obstacles, int predict_shift){
+bool Point2Point::update(vector<double>& condition0, vector<double>& conditionT,
+    vector<vector<double>>& state_trajectory, vector<vector<double>>& input_trajectory,
+    vector<obstacle_t>& obstacles, int predict_shift){
     #ifdef DEBUG
     double tmeas;
     clock_t begin;
@@ -114,9 +148,9 @@ bool Point2Point::update(vector<double>& state0, vector<double>& conditionT, vec
     begin = clock();
     #endif
     if (fabs(current_time)<=1.e-6){
-        vehicle->setInitialConditions(state0);
+        vehicle->setInitialConditions(condition0);
     } else{
-        vehicle->predict(state0, this->state_trajectory, this->input_trajectory, update_time, sample_time, predict_shift);
+        vehicle->predict(condition0, this->state_trajectory, this->input_trajectory, update_time, sample_time, predict_shift);
     }
     #ifdef DEBUG
     end = clock();
@@ -137,14 +171,14 @@ bool Point2Point::update(vector<double>& state0, vector<double>& conditionT, vec
     #ifdef DEBUG
     begin = clock();
     #endif
-    retrieveTrajectories();
+    extractData();
     #ifdef DEBUG
     end = clock();
     tmeas = double(end-begin)/CLOCKS_PER_SEC;
-    cout << "time in retrieveTrajectories: " << tmeas << "s" << endl;
+    cout << "time in extractData: " << tmeas << "s" << endl;
     #endif
-    // ref state and input for system are one sample shorter!!
-    for (int k=0; k<time.size()-1; k++){
+    // write output state and input trajectory
+    for (int k=0; k<trajectory_length; k++){
         for (int j=0; j<state_trajectory[0].size(); j++){
             state_trajectory[k][j] = this->state_trajectory[k][j];
         }
@@ -200,14 +234,19 @@ void Point2Point::initVariables(){
 
 void Point2Point::setParameters(vector<obstacle_t>& obstacles){
     map<string, map<string, vector<double>>> par_dict;
+    fillParameterDict(obstacles, par_dict);
+    getParameterVector(parameters, par_dict);
+}
+
+void Point2Point::fillParameterDict(vector<obstacle_t>& obstacles, map<string, map<string, vector<double>>>& par_dict){
     map<string, vector<double>> par_dict_veh;
     vehicle->setParameters(par_dict_veh);
     par_dict[VEHICLELBL] = par_dict_veh;
     if (!freeT){
-        par_dict[PROBLEMLBL]["t"] = {fmod(round(current_time*1000.)/1000., horizon_time/(vehicle->getKnotIntervals()))};
-        par_dict[PROBLEMLBL]["T"] = {horizon_time};
+        par_dict[P2PLBL]["t"] = {fmod(round(current_time*1000.)/1000., horizon_time/(vehicle->getKnotIntervals()))};
+        par_dict[P2PLBL]["T"] = {horizon_time};
     } else{
-        par_dict[PROBLEMLBL]["t"] = {0.0};
+        par_dict[P2PLBL]["t"] = {0.0};
     }
     for (int k=0; k<n_obs; k++){
         vector<double> x_obs(n_dim);
@@ -223,15 +262,15 @@ void Point2Point::setParameters(vector<obstacle_t>& obstacles){
         par_dict[obstacles[k]]["v"] = v_obs;
         par_dict[obstacles[k]]["a"] = a_obs;
     }
-    getParameterVector(parameters, par_dict);
 }
 
-void Point2Point::retrieveTrajectories(){
+void Point2Point::extractData(){
     map<string, map<string, vector<double>>> var_dict;
     getVariableDict(variables, var_dict);
     vector<double> spline_coeffs_vec(var_dict[VEHICLELBL]["splines0"]);
+    vehicle->setKnotHorizon(horizon_time);
     if (freeT){
-        horizon_time = var_dict[PROBLEMLBL]["T"][0];
+        horizon_time = var_dict[P2PLBL]["T"][0];
     }
     vehicle->setKnotHorizon(horizon_time);
     int n_spl = vehicle->getNSplines();
@@ -242,6 +281,10 @@ void Point2Point::retrieveTrajectories(){
             spline_coeffs[k][j] = spline_coeffs_vec[k*len_basis+j];
         }
     }
+    retrieveTrajectories(spline_coeffs);
+}
+
+void Point2Point::retrieveTrajectories(vector<vector<double>>& spline_coeffs){
     vector<double> time(this->time);
     if (!freeT){
         for (int k=0; k<time.size(); k++){
@@ -251,7 +294,6 @@ void Point2Point::retrieveTrajectories(){
     vehicle->splines2State(spline_coeffs, time, state_trajectory);
     vehicle->splines2Input(spline_coeffs, time, input_trajectory);
 }
-
 
 void Point2Point::getParameterVector(vector<double>& par_vect, map<string, map<string, vector<double>>>& par_dict){
 @getParameterVector@

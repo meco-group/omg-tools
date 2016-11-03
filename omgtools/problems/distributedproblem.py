@@ -63,29 +63,39 @@ class DistributedProblem(Problem):
                                         self.options)
             self.updaters.append(updater)
         self.interprete_constraints(self.updaters)
-        vehicle_types = self.fleet.sort_vehicles()
-
         buildtime = []
         if self.options['separate_build']:
             for updater in self.updaters:
                 _, bt = updater.init()
                 buildtime.append(bt)
         else:
-            for veh_type, vehicles in vehicle_types.items():
-                nghb_nr = col.OrderedDict()
-                for veh in vehicles:
-                    nr = len(self.fleet.get_neighbors(veh))
-                    if nr not in nghb_nr:
-                        nghb_nr[nr] = []
-                    nghb_nr[nr].append(veh)
-                for nr, vehicles in nghb_nr.items():
+            updaters = self.separate_per_build()
+            for veh_type, nghb_nr in updaters.items():
+                for nr, upd in nghb_nr.items():
                     if self.options['verbose'] >= 2:
                         print('*Construct problem for type %s with %d neighbor(s):' % (veh_type, nr))
-                    problems, bt = self.updaters[vehicles[0]._index].init()
+                    problems, bt = upd[0].init()
                     buildtime.append(bt)
-                    for veh in vehicles[1:]:
-                        self.updaters[veh._index].init(problems)
+                    for u in upd[1:]:
+                        u.init(problems)
         return np.mean(buildtime)
+
+    def separate_per_build(self):
+        vehicle_types = self.fleet.sort_vehicles()
+        updaters = {}
+        for veh_type, vehicles in vehicle_types.items():
+            nghb_nr = col.OrderedDict()
+            for veh in vehicles:
+                nr = len(self.fleet.get_neighbors(veh))
+                if nr not in nghb_nr:
+                    nghb_nr[nr] = []
+                nghb_nr[nr].append(veh)
+            updaters[veh_type] = {}
+            for nr, vehicles in nghb_nr.items():
+                updaters[veh_type][nr] = []
+                for vehicle in vehicles:
+                    updaters[veh_type][nr].append(self.updaters[vehicle._index])
+        return updaters
 
     def interprete_constraints(self, updaters):
         for upd in updaters:
@@ -147,6 +157,12 @@ class DistributedProblem(Problem):
             for upd2 in upd1.q_ij.keys():
                 upd2.q_ji[upd1] = upd1.q_ij[upd2]
 
+        # sort dics for logical order of neighbors
+        # (not necessary, but easier for debugging)
+        for upd in updaters:
+            upd.q_ij = self._sort_dict(upd._index, upd.q_ij)
+            upd.q_ji = self._sort_dict(upd._index, upd.q_ji)
+
     def _compose_dictionary(self):
         children = [veh for veh in self.vehicles]
         children.extend(self.problems)
@@ -157,22 +173,46 @@ class DistributedProblem(Problem):
             symbol_dict.update(child.symbol_dict)
         return symbol_dict
 
+    def _sort_dict(self, ref, dic):
+        return col.OrderedDict(sorted(dic.iteritems(), key=lambda x: x[0]._index if(x[0]._index > ref) else x[0]._index + self.fleet.N))
+
     # ========================================================================
-    # Methods required for simulation
+    # Deploying related functions
     # ========================================================================
 
     def initialize(self, current_time):
         for problem in self.problems:
             problem.initialize(current_time)
 
-    def update(self, current_time, update_time, sample_time):
+    def store(self, current_time, update_time, sample_time):
         for problem in self.problems:
-            problem.update(current_time, update_time, sample_time)
-        if self.problems[0].options['horizon_time'] < update_time:
-            update_time = self.problems[0].options['horizon_time']
-        self.environment.update(update_time, sample_time)
+            problem.store(current_time, update_time, sample_time)
+
+
+    def predict(self, current_time, predict_time, sample_time, states=None, delay=0):
+        if states is None:
+            states = [None for k in range(len(self.problems))]
+        for problem, state in zip(self.problems, states):
+            problem.predict(current_time, predict_time, sample_time, state, delay)
+
+    # ========================================================================
+    # Simulation related functions
+    # ========================================================================
+
+    def simulate(self, current_time, simulation_time, sample_time):
+        for problem in self.problems:
+            problem.simulate(current_time, simulation_time, sample_time)
+        horizon_time = self.problems[0].options['horizon_time']
+        if horizon_time < simulation_time:
+            simulation_time = horizon_time
+        self.environment.simulate(simulation_time, sample_time)
         self.fleet.update_plots()
         self.update_plots()
+
+    def sleep(self, current_time, sleep_time, sample_time):
+        for problem in self.problems:
+            problem.sleep(current_time, sleep_time, sample_time)
+        self.environment.simulate(sleep_time, sample_time)
 
     def stop_criterium(self, current_time, update_time):
         stop = True

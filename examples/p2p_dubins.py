@@ -20,10 +20,10 @@
 from omgtools import *
 
 # create vehicle
-vehicle = Dubins(bounds={'vmax': 0.7, 'wmax': 60., 'wmin': -60.})  # in deg
+vehicle = Dubins(bounds={'vmax': 0.7, 'wmax': np.pi/3., 'wmin': -np.pi/3.})  # in rad/s
 vehicle.define_knots(knot_intervals=5)  # choose lower amount of knot intervals
 
-vehicle.set_initial_conditions([0., 0., 0.])  # input orientation in deg
+vehicle.set_initial_conditions([0., 0., 0.])  # input orientation in rad
 vehicle.set_terminal_conditions([3., 3., 0.])
 
 # create environment
@@ -38,6 +38,7 @@ environment.add_obstacle(Obstacle({'position': [1., 1.]}, shape=Circle(0.5),
 problem = Point2point(vehicle, environment, freeT=False)
 # extra solver settings which may improve performance
 problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
+problem.set_options({'hard_term_con': True, 'horizon_time': 12})
 problem.init()
 
 # create simulator

@@ -66,8 +66,10 @@ def running_integral(spline):
     coeffs_int = [0.]
     for i in range(len(basis_int)-1):
         coeffs_int.append(coeffs_int[i]+(knots[degree+i+1]-knots[i])/float(degree_int)*coeffs[i])
-    if isinstance(coeffs,(MX, SX)):
+    if isinstance(coeffs, (MX, SX)):
         coeffs_int = vertcat(*coeffs_int)
+    else:
+        coeffs_int = np.array(coeffs_int)
     spline_int = BSpline(basis_int, coeffs_int)
     return spline_int
 
@@ -289,6 +291,16 @@ def get_interval_T(basis, min_value, max_value):
     jmin = np.searchsorted(knots2, min_value, side='left')
     jmax = np.searchsorted(knots2, max_value, side='right')
     return T[jmin:jmax-degree-1, :], knots2[jmin:jmax]
+
+
+def crop_spline(spline, min_value, max_value):
+    T, knots2 = get_interval_T(spline.basis, min_value, max_value)
+    if isinstance(spline.coeffs, (SX, MX)):
+        coeffs2 = mtimes(T, spline.coeffs)
+    else:
+        coeffs2 = T.dot(spline.coeffs)
+    basis2 = BSplineBasis(knots2, spline.basis.degree)
+    return BSpline(basis2, coeffs2)
 
 
 def concat_splines(segments, segment_times):
