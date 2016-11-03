@@ -49,6 +49,9 @@ class Vehicle(OptiChild, PlotLayer):
         self.prediction = {}
         self.init_spline_value = None
         self.degree = degree
+
+        self.to_simulate = True
+
         # set options
         self.set_default_options()
         self.set_options(options)
@@ -305,31 +308,32 @@ class Vehicle(OptiChild, PlotLayer):
             self.prediction['pose'] = self._state2pose(state[:, -1])
 
     def simulate(self, simulation_time, sample_time):
-        n_samp = int(simulation_time/sample_time)
-        if self.options['ideal_update']:
-            for key in self.trajectories:
-                self.signals[key] = np.c_[
-                    self.signals[key], self.trajectories[key][:, 1:n_samp+1]]
-        else:
-            for key in self.trajectories:
-                if key not in ['state', 'input', 'pose']:
+        if self.to_simulate:
+            n_samp = int(simulation_time/sample_time)
+            if self.options['ideal_update']:
+                for key in self.trajectories:
                     self.signals[key] = np.c_[
                         self.signals[key], self.trajectories[key][:, 1:n_samp+1]]
-            input = self.trajectories['input']
-            if self.options['input_disturbance']:
-                input = self.add_disturbance(input)
-            if self.options['1storder_delay']:
-                input0 = self.signals['input'][:, -1]
-                input = self.integrate_ode(
-                    input0, input, simulation_time, sample_time, self._ode_1storder)
-            state0 = self.signals['state'][:, -1]  # current state
-            state = self.integrate_ode(
-                state0, input, simulation_time, sample_time)
-            self.signals['input'] = np.c_[
-                self.signals['input'], input[:, 1:n_samp+1]]
-            self.signals['state'] = np.c_[
-                self.signals['state'], state[:, 1:n_samp+1]]
-            self.signals['pose'] = np.c_[self.signals['pose'], self._state2pose(state[:, 1:n_samp+1])]
+            else:
+                for key in self.trajectories:
+                    if key not in ['state', 'input', 'pose']:
+                        self.signals[key] = np.c_[
+                            self.signals[key], self.trajectories[key][:, 1:n_samp+1]]
+                input = self.trajectories['input']
+                if self.options['input_disturbance']:
+                    input = self.add_disturbance(input)
+                if self.options['1storder_delay']:
+                    input0 = self.signals['input'][:, -1]
+                    input = self.integrate_ode(
+                        input0, input, simulation_time, sample_time, self._ode_1storder)
+                state0 = self.signals['state'][:, -1]  # current state
+                state = self.integrate_ode(
+                    state0, input, simulation_time, sample_time)
+                self.signals['input'] = np.c_[
+                    self.signals['input'], input[:, 1:n_samp+1]]
+                self.signals['state'] = np.c_[
+                    self.signals['state'], state[:, 1:n_samp+1]]
+                self.signals['pose'] = np.c_[self.signals['pose'], self._state2pose(state[:, 1:n_samp+1])]
 
     def store(self, update_time, sample_time):
         if not hasattr(self, 'traj_storage'):
