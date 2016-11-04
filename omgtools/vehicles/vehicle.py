@@ -353,17 +353,17 @@ class Vehicle(OptiChild, PlotLayer):
                     self.signals['state'], state[:, 1:n_samp+1]]
                 self.signals['pose'] = np.c_[
                 self.signals['pose'], self._state2pose(state[:, 1:n_samp+1])]
-            # store trajectories
-            if not hasattr(self, 'traj_storage'):
-                self.traj_storage = {}
-                self.traj_storage_kn = {}
-                self.pred_storage = {}
-            repeat = int(simulation_time/sample_time)
-            self._add_to_memory(self.traj_storage, self.trajectories, repeat)
-            self._add_to_memory(self.traj_storage_kn, self.trajectories_kn, repeat)
-            self._add_to_memory(self.pred_storage, self.prediction, repeat)
-            # update plots
-            self.update_plots()
+        # store trajectories
+        if not hasattr(self, 'traj_storage'):
+            self.traj_storage = {}
+            self.traj_storage_kn = {}
+            self.pred_storage = {}
+        repeat = int(simulation_time/sample_time)
+        self._add_to_memory(self.traj_storage, self.trajectories, repeat)
+        self._add_to_memory(self.traj_storage_kn, self.trajectories_kn, repeat)
+        self._add_to_memory(self.pred_storage, self.prediction, repeat)
+        # update plots
+        self.update_plots()
 
     def _state2pose(self, state):
         if len(state.shape) <= 1:
