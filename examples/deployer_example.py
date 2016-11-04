@@ -60,6 +60,7 @@ state_traj = np.c_[current_state]
 input_traj = np.c_[[0.0, 0.0]]
 
 n_samp = int(np.round(update_time/sample_time, 6))
+t00 = time.time()
 
 t00 = time.time()
 
@@ -85,6 +86,8 @@ for via_point, obstacle_pos in zip(via_points, obstacle_positions):
             input_traj = np.c_[input_traj, trajectories['input'][:, 1:n_samp+1]]
             # check target
             if (np.linalg.norm(via_point-state_traj[:, -1]) < 1e-2 and np.linalg.norm(input_traj[:, -1]) < 1e-2):
+                target_reached = True
+            if (problem.iteration > 300):
                 target_reached = True
 
 # plot results
