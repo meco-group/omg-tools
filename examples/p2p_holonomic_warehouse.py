@@ -16,12 +16,14 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
-
+import sys, os
+sys.path.insert(0, os.getcwd()+'/..')
 from omgtools import *
 
 # create vehicle
 vehicle = Holonomic(options={'syslimit': 'norm_2'})
 
+vehicle.define_knots(knot_intervals = 10)
 vehicle.set_initial_conditions([0., 0.])
 vehicle.set_terminal_conditions([6., 3.5])
 
@@ -35,9 +37,9 @@ environment.add_obstacle(Obstacle({'position': [5., 1.]}, shape=rectangle))
 environment.add_obstacle(Obstacle({'position': [1., 2.5]}, shape=rectangle))
 environment.add_obstacle(Obstacle({'position': [3., 2.5]}, shape=rectangle))
 environment.add_obstacle(Obstacle({'position': [5., 2.5]}, shape=rectangle))
-trajectories1 = {'velocity': {'time': [1., 2.],
+trajectories1 = {'velocity': {'time': [0, 2],
                              'values': [[0., 0.0], [0., 0.15]]}}
-trajectories2 = {'velocity': {'time': [1., 2.],
+trajectories2 = {'velocity': {'time': [0, 2],
                              'values': [[0., 0.0], [0., -0.1]]}}
 environment.add_obstacle(Obstacle({'position': [4., 2.5]}, shape=Circle(0.5),
                                   simulation={'trajectories': trajectories2}))
@@ -47,7 +49,7 @@ environment.add_obstacle(Obstacle({'position': [2., 1.]}, shape=Circle(0.5),
 # create a point-to-point problem
 problem = Point2point(vehicle, environment, freeT=True)
 problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57',
-    'ipopt.hessian_approximation': 'limited-memory'}}})
+    'ipopt.hessian_approximation': 'exact'}}})
 problem.init()
 
 # create simulator
@@ -57,3 +59,5 @@ vehicle.plot('input', knots=True,labels=['v (m/s)', 'w (rad/s)'])
 
 # run it!
 simulator.run()
+
+# problem.save_movie('scene', number_of_frames=60, name='warehouse', axis=False)
