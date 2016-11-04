@@ -1,6 +1,6 @@
 env:
   global:
-    - CASADIVERSION=3.1.0-rc1
+    - CASADIVERSION=3.0.0
     - LD_LIBRARY_PATH=$HOME/libhsl
     - IPOPT_DEFAULT_LINEAR_SOLVER=ma57
 
