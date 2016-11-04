@@ -39,7 +39,7 @@ environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
 
 # create a point-to-point problem
 # select solver
-solver = 'knitro'
+solver = 'ipopt'
 if solver is 'ipopt':
     options = {'solver': solver}
     problem = Point2point(vehicle, environment, options, freeT=False)
