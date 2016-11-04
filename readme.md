@@ -1,4 +1,4 @@
-<img width=850 src="https://cdn.rawgit.com/meco-group/omg-tools/develop/doc/banner.svg" alt="oh my god!"/>
+<img width=850 src="https://cdn.rawgit.com/meco-group/omg-tools/master/doc/banner.svg" alt="oh my god!"/>
 
 [![Build Status](https://travis-ci.org/meco-group/omg-tools.svg?branch=master)](https://travis-ci.org/meco-group/omg-tools) [![Coverage Status](https://coveralls.io/repos/github/meco-group/omg-tools/badge.svg?branch=master)](https://coveralls.io/github/meco-group/omg-tools?branch=master)
 [![Codacy Badge](https://api.codacy.com/project/badge/grade/a44dd52c358e4cd09b12585915738627)](https://www.codacy.com/app/joris-gillis42/omg-tools)
@@ -14,48 +14,6 @@ If these methods help you with your research, please cite us!
 ## Examples
 ### Overview
 The animations below give an overview of typical problems that OMG-tools can handle.
-<!-- <table style="border: none; border-collapse: collapse;" border="0" cellspacing="0" cellpadding="0" width="100%" align="center">
-<tr>
-<td align="center" valign="center">
-<img src="./doc/gifs/bicycle.gif" alt="Point-to-point motion of bicycle model"/>
-</td>
-<td align="center" valign="center">
-<img src="./doc/gifs/warehouse.gif" alt="Holonomic vehicle finding its way in a warehouse"/>
-</td>
-</tr>
-<tr>
-<td align="center" valign="center">
-<img src="./doc/gifs/revolving_door.gif" alt="Holonomic vehicle passing through a revolving door"/>
-</td>
-<td align="center" valign="center">
-<img src="./doc/gifs/formation_quad_rotatingwall.gif" alt="Formation of quadrotor with rotating wall"/>
-</td>
-</tr>
-<tr>
-<td align="center" valign="center">
-<img src="./doc/gifs/formation_dubins.gif" alt="Dubins vehicles moving in relative formation"/>
-</td>
-<td align="center" valign="center">
-<img src="./doc/gifs/trailer.gif" alt="Dubins vehicle with trailer"/>
-</td>
-</tr>
-<tr>
-<td align="center" valign="center">
-<img src="./doc/gifs/platform_landing.gif" alt="Quadrotors landing on platform"/>
-</td>
-<td align="center" valign="center">
-<img src="./doc/gifs/formation_quad_ufo.gif" alt="Quadrotors avoiding a UFO"/>
-</td>
-</tr>
-<tr>
-<td align="center" valign="center">
-<img src="./doc/gifs/plate.gif" alt="Plate in and out of machine"/>
-</td>
-<td aliggn="center" valign="center">
-<img src="./doc/gifs/3dquadrotor.gif" alt="3D quadrotor in obstructed environment"/>
-</td>
-</tr>
-</table> -->
 
 <table style="border: none; border-collapse: collapse;" border="0" cellspacing="0" cellpadding="0" width="100%" align="center">
 <tr>
