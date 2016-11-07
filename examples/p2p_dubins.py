@@ -35,17 +35,37 @@ environment.add_obstacle(Obstacle({'position': [1., 1.]}, shape=Circle(0.5),
                                   simulation={'trajectories': trajectories}))
 
 # create a point-to-point problem
-problem = Point2point(vehicle, environment, freeT=False)
+# problem = Point2point(vehicle, environment, freeT=True)
 # extra solver settings which may improve performance
-problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
+# problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
+
+
+solver = 'ipopt'
+if solver is 'ipopt':
+    options = {'solver': solver}
+    problem = Point2point(vehicle, environment, options, freeT=True)
+    problem.set_options(
+        {'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57', 'ipopt.hessian_approximation': 'limited-memory'
+                                      }}}) #'ipopt.hessian_approximation': 'limited-memory'
+if solver is 'knitro':
+    options = {'solver': solver}
+    problem = Point2point(vehicle, environment, options, freeT=True)
+    problem.set_options(
+        {'solver_options': {'knitro': {'knitro.linsolver': 2, 'knitro.bar_murule':5, 'knitro.algorithm':1}}}) #'knitro.bar_initpt': 2, 'knitro.honorbnds': 0, 'knitro.scale': 1
+
 problem.set_options({'hard_term_con': True, 'horizon_time': 12})
+
 problem.init()
+
+vehicle.problem = problem  # to plot error 
 
 # create simulator
 simulator = Simulator(problem)
 problem.plot('scene')
 vehicle.plot('input', knots=True, labels=['v (m/s)', 'w (rad/s)'])
 vehicle.plot('state', knots=True, labels=['x (m)', 'y (m)', 'theta (rad)'])
+# vehicle.plot('err_pos', knots=True)
+# vehicle.plot('err_dpos', knots=True)
 
 # run it!
 simulator.run()

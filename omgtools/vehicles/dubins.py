@@ -20,9 +20,9 @@
 from vehicle import Vehicle
 from ..basics.shape import Square, Circle
 from ..basics.spline_extra import sample_splines
-from ..basics.spline_extra import evalspline, running_integral
+from ..basics.spline_extra import evalspline, running_integral, concat_splines
 from ..basics.spline import BSplineBasis
-from casadi import inf
+from casadi import inf, SX, MX
 import numpy as np
 
 # Elaboration of the vehicle model:
@@ -88,17 +88,18 @@ class Dubins(Vehicle):
                 self.dy = self.define_spline_variable('dy', 1, 1, basis=dy.basis)[0]
                 self.define_constraint(self.dx-dx, 0., 0.)
                 self.define_constraint(self.dy-dy, 0., 0.)
+                self.x = self.integrate_once(self.dx, self.pos0[0], self.t, self.T)
+                self.y = self.integrate_once(self.dy, self.pos0[1], self.t, self.T)
             else:
-                degree = 4
+                degree = 3
                 knots = np.r_[np.zeros(degree), np.linspace(0., 1., 10+1), np.ones(degree)]
                 basis = BSplineBasis(knots, degree)
                 self.dx = self.define_spline_variable('dx', 1, 1, basis=basis)[0]
                 self.dy = self.define_spline_variable('dy', 1, 1, basis=basis)[0]
-                self.x = self.T*running_integral(self.dx)
-                self.y = self.T*running_integral(self.dy)
-                x = self.T*running_integral(dx)
-                y = self.T*running_integral(dy)
-
+                self.x = self.integrate_once(self.dx, self.pos0[0], self.t, self.T)
+                self.y = self.integrate_once(self.dy, self.pos0[1], self.t, self.T)
+                x = self.integrate_once(dx, self.pos0[0], self.t, self.T)
+                y = self.integrate_once(dy, self.pos0[1], self.t, self.T)
                 eps = 1e-2
                 self.define_constraint(self.x-x, -eps, eps)
                 self.define_constraint(self.y-y, -eps, eps)
@@ -125,11 +126,13 @@ class Dubins(Vehicle):
         pos0 = self.define_parameter('pos0', 2)
         v_til, tg_ha = splines
         dv_til, dtg_ha = v_til.derivative(), tg_ha.derivative()
-        dx = v_til*(1-tg_ha**2)
-        dy = v_til*(2*tg_ha)
-        x_int, y_int = T*running_integral(dx), T*running_integral(dy)
-        x = x_int-evalspline(x_int, t/T) + pos0[0]
-        y = y_int-evalspline(y_int, t/T) + pos0[1]
+        if self.options['substitution']:
+            x, y = self.x, self.y
+        else:
+            dx = v_til*(1-tg_ha**2)
+            dy = v_til*(2*tg_ha)
+            x = self.integrate_once(dx, pos0[0], self.t, self.T)
+            y = self.integrate_once(dy, pos0[1], self.t, self.T)
         eps = 1.e-2
         center = self.define_spline_variable('formation_center', self.n_dim)
         self.define_constraint((x-center[0])*(1+tg_ha**2) + rel_pos[0]*2*tg_ha + rel_pos[1]*(1-tg_ha**2), -eps, eps)
@@ -167,13 +170,11 @@ class Dubins(Vehicle):
         v_til, tg_ha = splines
         if self.options['substitution']:
             x, y = self.x, self.y
-            dx, dy = self.dx, self.dy
         else:
             dx = v_til*(1-tg_ha**2)
             dy = v_til*(2*tg_ha)
-            x_int, y_int = self.T*running_integral(dx), self.T*running_integral(dy)
-            x = x_int-evalspline(x_int, self.t/self.T) + self.pos0[0]  # self.pos0 was already defined in init
-            y = y_int-evalspline(y_int, self.t/self.T) + self.pos0[1]
+            x = self.integrate_once(dx, self.pos0[0], self.t, self.T)
+            y = self.integrate_once(dy, self.pos0[1], self.t, self.T)
         term_con = [(x, posT[0]), (y, posT[1]), (tg_ha, tg_haT)]
         term_con_der = [(v_til, 0.), (tg_ha.derivative(), 0.)]
         return [term_con, term_con_der]
@@ -222,14 +223,20 @@ class Dubins(Vehicle):
         v_til, tg_ha = splines[0], splines[1]
         if self.options['substitution']:
             x, y = self.x, self.y
-            dx, dy = self.dx, self.dy
         else:
             dx = v_til*(1-tg_ha**2)
             dy = v_til*(2*tg_ha)
-            x_int, y_int = self.T*running_integral(dx), self.T*running_integral(dy)
-            x = x_int-evalspline(x_int, self.t/self.T) + self.pos0[0]
-            y = y_int-evalspline(y_int, self.t/self.T) + self.pos0[1]
+            x = self.integrate_once(dx, self.pos0[0], self.t, self.T)
+            y = self.integrate_once(dy, self.pos0[1], self.t, self.T)
         self.define_collision_constraints_2d(hyperplanes, environment, [x, y], tg_ha)
+
+    def integrate_once(self, dx, x0, t, T=1.):
+        dx_int = T*running_integral(dx)
+        if isinstance(t, (SX, MX)):
+            x = dx_int-evalspline(dx_int, t/T) + x0
+        else:
+            x = dx_int-dx_int(t/T) + x0
+        return x
 
     def splines2signals(self, splines, time):
         # for plotting and logging
@@ -240,13 +247,11 @@ class Dubins(Vehicle):
         dx = v_til*(1-tg_ha**2)
         dy = v_til*(2*tg_ha)
         if not hasattr(self, 'signals'):  # first iteration
-            dx_int, dy_int = running_integral(dx), running_integral(dy)
-            x = dx_int - dx_int(time[0]) + self.pose0[0]
-            y = dy_int - dy_int(time[0]) + self.pose0[1]
+            x = self.integrate_once(dx, self.pose0[0], time[0])
+            y = self.integrate_once(dy, self.pose0[1], time[0])
         else:
-            dx_int, dy_int = running_integral(dx), running_integral(dy)  # current state
-            x = dx_int - dx_int(time[0]) + self.signals['state'][0, -1]
-            y = dy_int - dy_int(time[0]) + self.signals['state'][1, -1]
+            x = self.integrate_once(dx, self.signals['state'][0, -1], time[0])
+            y = self.integrate_once(dy, self.signals['state'][1, -1], time[0])
         x_s, y_s, v_til_s, tg_ha_s, dtg_ha_s = sample_splines([x, y, v_til, tg_ha, dtg_ha], time)
         den = sample_splines([(1+tg_ha**2)], time)[0]
         theta = 2*np.arctan2(tg_ha_s,1)
@@ -259,24 +264,21 @@ class Dubins(Vehicle):
             y_c = y_s + sample_splines([self.rel_pos_c[1]*2*tg_ha - self.rel_pos_c[0]*(1-tg_ha**2)], time)[0]/den
             signals['fleet_center'] = np.c_[x_c, y_c].T
 
-        if self.options['substitution']:
-            dx2 = self.problem.father.get_variables(self, 'dx')
-            dy2 = self.problem.father.get_variables(self, 'dy')
-            dx2 = concat_splines([dx2], [self.problem.options['horizon_time']])[0]
-            dy2 = concat_splines([dy2], [self.problem.options['horizon_time']])[0]
-            if not hasattr(self, 'signals'): # first iteration
-                dx2_int, dy2_int = running_integral(dx2), running_integral(dy2)
-                x2 = dx2_int - dx2_int(time[0]) + self.pose0[0]
-                y2 = dy2_int - dy2_int(time[0]) + self.pose0[1]
-            else:
-                dx2_int, dy2_int = running_integral(dx2), running_integral(dy2)  # current state
-                x2 = dx2_int - dx2_int(time[0]) + self.signals['state'][0, -1]
-                y2 = dy2_int - dy2_int(time[0]) + self.signals['state'][1, -1]
-            dx_s, dy_s = sample_splines([dx, dy], time)
-            dx_s2, dy_s2 = sample_splines([dx2, dy2], time)
-            x_s2, y_s2, dx_s2, dy_s2 = sample_splines([x2, y2, dx2, dy2], time)
-            signals['err_dpos'] = np.c_[dx_s-dx_s2, dy_s-dy_s2].T
-            signals['err_pos'] = np.c_[x_s-x_s2, y_s-y_s2].T
+        # if (self.options['substitution'] and not self.options['exact_substitution']):  # don't plot error for exact_subs
+        #     dx2 = self.problem.father.get_variables(self, 'dx')
+        #     dy2 = self.problem.father.get_variables(self, 'dy')
+        #     dx2 = concat_splines([dx2], [self.problem.options['horizon_time']])[0]
+        #     dy2 = concat_splines([dy2], [self.problem.options['horizon_time']])[0]
+        #     if not hasattr(self, 'signals'): # first iteration
+        #         x2 = self.integrate_once(dx2, self.pose0[0], time[0])
+        #         y2 = self.integrate_once(dy2, self.pose0[1], time[0])
+        #     else:
+        #         x2 = self.integrate_once(dx2, self.signals['state'][0, -1], time[0])
+        #         y2 = self.integrate_once(dy2, self.signals['state'][1, -1], time[0])
+        #     dx_s, dy_s = sample_splines([dx, dy], time)
+        #     x_s2, y_s2, dx_s2, dy_s2 = sample_splines([x2, y2, dx2, dy2], time)
+        #     signals['err_dpos'] = np.c_[dx_s-dx_s2, dy_s-dy_s2].T
+        #     signals['err_pos'] = np.c_[x_s-x_s2, y_s-y_s2].T
         return signals
 
     def state2pose(self, state):
@@ -319,11 +321,13 @@ class Dubins(Vehicle):
         t = self.define_symbol('t')  # current time of first knot
         pos0 = self.define_parameter('pos0', 2)  # current position
         v_til, tg_ha = splines
-        dx = v_til*(1-tg_ha**2)
-        dy = v_til*(2*tg_ha)
-        x_int, y_int = T*running_integral(dx), T*running_integral(dy)
-        x = x_int-evalspline(x_int, t/T) + pos0[0]  # self.pos0 was already defined in init
-        y = y_int-evalspline(y_int, t/T) + pos0[1]
+        if self.options['substitution']:
+            x, y = self.x, self.y
+        else:
+            dx = v_til*(1-tg_ha**2)
+            dy = v_til*(2*tg_ha)
+            x = self.integrate_once(dx, pos0[0], self.t, self.T)
+            y = self.integrate_once(dy, pos0[1], self.t, self.T)
         return [x, y]
 
     # Next two functions are required if vehicle is not passed to problem, but is still used in the optimization
