@@ -67,27 +67,11 @@ elif solver is 'blocksqp':
     problem = Point2point(vehicle, environment, options, freeT=False)
     problem.set_options({'solver_options':
                          {'blocksqp': {'warmstart': True, 'hess_lim_mem': 0}}})
-if solver is 'knitro':
+elif solver is 'knitro':
     options = {'solver': solver}
     problem = Point2point(vehicle, environment, options, freeT=True)
-    problem.set_options(
-        {'solver_options': {'knitro': {'knitro.bar_initpt': 2, 'knitro.honorbnds': 0, 'knitro.scale': 1}}})
-                               
-
-# {'knitro.algorithm': 1, 'knitro.bar_murule': 5, 'knitro.linsolver': 4, 'knitro:bar_directinterval':0}
-
-#KNITRO automatically shifts the initial starting point in order to improve the performance of its algorithms.
-#To disable this you have to set several parameters:
-#bar_inipt=2
-#honorbnds=0
-#scale=0 (scale can change the expression of the objective function and so its value)
-
-# 'knitro.algorithm': 1 = IP, 2=IP conjugate gradient, 3 = AS, 4=SQP, 5=multiple in parallel
-# 'knitro.bar_murule': 5, 
-# 'knitro.linsolver': 5 #ma57
-# 'knitro.tuner': 1 # finds best combination
-# 'knitro.ms_enable': 1, #multistart with several initial guesses
-# 'knitro.ms_maxsolves': 5}}}) #max amount of initial guesses to use
+    problem.set_options({'solver_options':
+      {'knitro': {'knitro.bar_initpt': 2, 'knitro.honorbnds': 0, 'knitro.scale': 1}}})
 else:
     print('You selected solver: ' + solver +
           ' but this solver is not supported. ' +

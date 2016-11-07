@@ -21,7 +21,7 @@ sys.path.insert(0, os.getcwd()+'/..')
 from omgtools import *
 
 # create vehicle
-vehicle = Holonomic(options={'syslimit': 'norm_2'})
+vehicle = Holonomic(options={'syslimit': 'norm_2', 'safety_distance': 0.1})
 
 vehicle.define_knots(knot_intervals = 10)
 vehicle.set_initial_conditions([0., 0.])
@@ -49,7 +49,7 @@ environment.add_obstacle(Obstacle({'position': [2., 1.]}, shape=Circle(0.5),
 # create a point-to-point problem
 problem = Point2point(vehicle, environment, freeT=True)
 problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57',
-    'ipopt.hessian_approximation': 'exact'}}})
+    'ipopt.hessian_approximation': 'limited-memory'}}})
 problem.init()
 
 # create simulator
