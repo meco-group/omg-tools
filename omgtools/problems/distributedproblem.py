@@ -18,7 +18,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from problem import Problem
-from casadi import symvar, Function, sum1
+from casadi import symvar, Function
 import collections as col
 import numpy as np
 
@@ -29,7 +29,7 @@ def get_dependency(expression):
     dep = col.OrderedDict()
     for index, sym in enumerate(sym):
         J = f.sparsity_jac(index, 0)
-        dep[sym] = sorted(sum1(J).find())
+        dep[sym] = sorted(set(J.T.row()))
     return dep
 
 

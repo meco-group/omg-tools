@@ -49,5 +49,3 @@ vehicle.plot('state', knots=True, labels=[
 
 # run it!
 simulator.run()
-
-problem.save_plot('scene')
