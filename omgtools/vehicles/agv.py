@@ -65,7 +65,7 @@ class AGV(Vehicle):
 
     def set_default_options(self):
         Vehicle.set_default_options(self)
-        self.options.update({'plot_type': 'bicycle'})  # by default plot a bicycle
+        self.options.update({'plot_type': 'agv'})  # by default plot a bicycle-shape
 
     def init(self):
         self.T = self.define_symbol('T')  # motion time
