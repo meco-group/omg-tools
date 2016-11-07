@@ -30,7 +30,6 @@ def get_dependency(expression):
     for index, sym in enumerate(sym):
         J = f.sparsity_jac(index, 0)
         dep[sym] = sorted(set(J.T.row()))
-        # dep[sym] = sorted(sum1(J).find())
     return dep
 
 
