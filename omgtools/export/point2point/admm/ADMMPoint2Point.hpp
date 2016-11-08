@@ -64,6 +64,8 @@ class ADMMPoint2Point: public Point2Point{
         virtual void reset();
         virtual void resetTime();
         int getIteration();
+        double getCurrentTime();
+        void stepBack();
     };
 }
 

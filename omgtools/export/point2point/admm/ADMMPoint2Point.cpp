@@ -90,8 +90,18 @@ void ADMMPoint2Point::resetTime(){
     iteration = 0;
 }
 
+void ADMMPoint2Point::stepBack(){
+    iteration--;
+    current_time = current_time_prev;
+    current_time_prev = current_time;
+}
+
 int ADMMPoint2Point::getIteration(){
     return iteration;
+}
+
+double ADMMPoint2Point::getCurrentTime(){
+    return current_time;
 }
 
 bool ADMMPoint2Point::update1(vector<double>& condition0, vector<double>& conditionT,
