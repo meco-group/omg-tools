@@ -192,9 +192,6 @@ bool Point2Point::update(vector<double>& condition0, vector<double>& conditionT,
             input_trajectory[k][j] = this->input_trajectory[k][j];
         }
     }
-    #ifdef DEBUG
-    dumpData();
-    #endif
     // update current time
     current_time_prev = current_time;
     current_time += update_time;
