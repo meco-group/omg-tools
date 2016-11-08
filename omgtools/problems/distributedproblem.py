@@ -44,6 +44,11 @@ class DistributedProblem(Problem):
         Problem.set_default_options(self)
         self.options['separate_build'] = False
 
+    def set_options(self, options):
+        Problem.set_options(self, options)
+        for problem in self.problems:
+            problem.set_options(options)
+
     # ========================================================================
     # Create problem
     # ========================================================================
