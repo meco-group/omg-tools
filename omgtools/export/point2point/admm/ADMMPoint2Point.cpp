@@ -177,6 +177,7 @@ bool ADMMPoint2Point::update1(vector<double>& condition0, vector<double>& condit
     cout << "time in solveUpdx: " << tmeas << "s" << endl;
     #endif
     if (!check){
+        current_time_prev = current_time; // prevent to transform again after infeasible!
         return false; // user should retry
     }
     // extra data

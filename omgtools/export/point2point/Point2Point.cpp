@@ -171,6 +171,7 @@ bool Point2Point::update(vector<double>& condition0, vector<double>& conditionT,
     cout << "time in solve: " << tmeas << "s" << endl;
     #endif
     if (!check){
+        current_time_prev = current_time; // prevent to transform again after infeasible!
         return false; // user should retry
     }
     // retrieve splines
