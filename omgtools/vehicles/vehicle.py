@@ -322,7 +322,7 @@ class Vehicle(OptiChild, PlotLayer):
         self.prediction['input'] = input
 
     def simulate(self, simulation_time, sample_time):
-        if self.to_simulate:           
+        if self.to_simulate:
             if not hasattr(self, 'signals'):
                 self.signals = {}
                 for key in self.trajectories:
