@@ -47,6 +47,9 @@ vehicle.to_simulate = False
 problem.set_options({'solver_options': {'ipopt': {'ipopt.hessian_approximation': 'limited-memory'}}})
 problem.init()
 
+# problem.set_options({'hard_term_con': True, 'horizon_time': 12})
+# vehicle.problem = problem  # to plot error 
+
 # create simulator
 simulator = Simulator(problem)
 problem.plot('scene')

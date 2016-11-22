@@ -104,6 +104,9 @@ class Quadrotor3D(Vehicle):
                 self.ddx = self.define_spline_variable('ddx', 1, 1, basis=ddx.basis)[0]
                 self.ddy = self.define_spline_variable('ddy', 1, 1, basis=ddy.basis)[0]
                 self.ddz = self.define_spline_variable('ddz', 1, 1, basis=ddz.basis)[0]
+                self.x, self.dx = self.integrate_twice(self.ddx, self.dpos0[0], self.pos0[0], self.t, self.T)
+                self.y, self.dy = self.integrate_twice(self.ddy, self.dpos0[1], self.pos0[1], self.t, self.T)
+                self.z, self.dz = self.integrate_twice(self.ddz, self.dpos0[2], self.pos0[2], self.t, self.T)
                 self.define_constraint(self.ddx - ddx, 0, 0)
                 self.define_constraint(self.ddy - ddy, 0, 0)
                 self.define_constraint(self.ddz - ddz, 0, 0)
@@ -263,7 +266,7 @@ class Quadrotor3D(Vehicle):
         signals['state'] = np.c_[x_s, y_s, z_s, dx_s, dy_s, dz_s, phi, theta].T
         signals['input'] = np.c_[f_s, dphi.T, dtheta.T].T
 
-        if self.options['substitution']:
+        if (self.options['substitution'] and not self.options['exact_substitution']):  # don't plot error for exact_subs
             ddx2 = self.problem.father.get_variables(self, 'ddx')
             ddy2 = self.problem.father.get_variables(self, 'ddy')
             ddz2 = self.problem.father.get_variables(self, 'ddz')
