@@ -143,9 +143,11 @@ class FixedTPoint2point(Point2pointProblem):
 
     def define_terminal_constraints(self):
         objective = 0.
+        self.term_con_len = []
         for vehicle in self.vehicles:
             term_con, term_con_der = vehicle.get_terminal_constraints(
                 vehicle.splines[0])
+            self.term_con_len.append(len(term_con))
             for k, con in enumerate(term_con):
                 spline, condition = con[0], con[1]
                 g = self.define_spline_variable(
@@ -236,10 +238,8 @@ class FixedTPoint2point(Point2pointProblem):
         t0 = rel_current_time/horizon_time
         t1 = t0 + update_time/horizon_time
         part_objective = 0.
-        for vehicle in self.vehicles:
-            term_con, _ = vehicle.get_terminal_constraints(
-                vehicle.splines[0])
-            for k in range(len(term_con)):
+        for v, vehicle in enumerate(self.vehicles):
+            for k in range(self.term_con_len[v]):
                 g = self.father.get_variables(self, 'g'+str(k))[0]
                 part_objective += horizon_time*definite_integral(g, t0, t1)
         self.objective += part_objective
@@ -247,10 +247,8 @@ class FixedTPoint2point(Point2pointProblem):
     def compute_objective(self):
         if self.objective == 0:
             obj = 0.
-            for vehicle in self.vehicles:
-                term_con, _ = vehicle.get_terminal_constraints(
-                    vehicle.splines[0])
-                for k in range(len(term_con)):
+            for v, vehicle in enumerate(self.vehicles):
+                for k in range(self.term_con_len[v]):
                     g = self.father.get_variables(self, 'g'+str(k))[0]
                     obj += self.options['horizon_time']*g.integral()
             return obj
@@ -383,12 +381,14 @@ class FreeEndPoint2point(FixedTPoint2point):
 
     def define_terminal_constraints(self):
         objective = 0.
+        self.term_con_len = []
         for l, vehicle in enumerate(self.vehicles):
             term_con, term_con_der = vehicle.get_terminal_constraints(
                 vehicle.splines[0])
             conditions = self.define_variable(
                 'conT'+str(l), len(self.free_ind[vehicle]))
             cnt = 0
+            self.term_con_len.append(len(term_con))
             for k, con in enumerate(term_con):
                 if k in self.free_ind[vehicle]:
                     spline, condition = con[0], conditions[cnt]
