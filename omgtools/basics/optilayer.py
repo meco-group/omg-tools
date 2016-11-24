@@ -462,11 +462,14 @@ class OptiFather(object):
                 init = spl['init']
                 if init is not None:
                     init = spl['init']
-                    self._dual_var_result[label, name] = transform_fun(
-                        self._dual_var_result[label, name], basis, init)
+                    # self._dual_var_result[label, name] = transform_fun(
+                    #     self._dual_var_result[label, name], basis, init)
+                    self._dual_var_result[child._add_label(name)] = transform_fun(
+                        self._dual_var_result[child._add_label(name)], basis, init)
                 else:
-                    self._dual_var_result[label, name] = transform_fun(
-                        self._dual_var_result[label, name], basis)
+                    # self._dual_var_result[label, name] = transform_fun(
+                    #     self._dual_var_result[label, name], basis)
+                    self._dual_var_result[child._add_label(name)] = transform_fun(self._dual_var_result[child._add_label(name)], basis)
 
 
 class OptiChild(object):

@@ -36,8 +36,9 @@ class Simulator:
         self.deployer.set_problem(problem)
         self.problem = problem
 
-    def run(self):
-        self.deployer.reset()
+    def run(self, init_reset=True):
+        if init_reset:
+            self.deployer.reset()
         stop = False
         while not stop:
             stop = self.update()
@@ -77,12 +78,13 @@ class Simulator:
         self.time = np.r_[self.time, np.linspace(
             self.time[-1]+self.sample_time, self.time[-1]+n_samp*self.sample_time, n_samp)]
 
-    def run_once(self, simulate=True, **kwargs):
+    def run_once(self, simulate=True, init_reset=True, **kwargs):
         if 'hard_stop' in kwargs:
             hard_stop = kwargs['hard_stop']
         else:
             hard_stop = None
-        self.deployer.reset()
+        if init_reset:
+            self.deployer.reset()
         self.deployer.update(self.current_time, None, np.inf)
         if not simulate:
             return None

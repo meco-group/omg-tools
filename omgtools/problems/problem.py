@@ -105,16 +105,20 @@ class Problem(OptiChild, PlotLayer):
         # set initial guess, parameters, lb & ub
         var = self.father.get_variables()
         par = self.father.set_parameters(current_time)
+        dual_var = self.father._dual_var_result
         lb, ub = self.father.update_bounds(current_time)
         # solve!
         t0 = time.time()
-        result = self.problem(x0=var, p=par, lbg=lb, ubg=ub)
+        result = self.problem(x0=var, p=par, lam_g0=dual_var, lbg=lb, ubg=ub)
         t1 = time.time()
         t_upd = t1-t0
         self.father.set_variables(result['x'])
+
+        self.father._dual_var_result = self.father._con_struct(result['lam_g'])
+
         stats = self.problem.stats()
-        if stats['return_status'] != 'Solve_Succeeded':
-            print stats['return_status']
+        # if stats['return_status'] != 'Solve_Succeeded':
+        #     print stats['return_status']
         if self.options['verbose'] >= 2:
             self.iteration += 1
             if ((self.iteration-1) % 20 == 0):

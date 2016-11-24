@@ -182,18 +182,20 @@ class FixedTPoint2point(Point2pointProblem):
         if (interval_prev < interval_now): # passed a knot
             self.father.transform_primal_splines(lambda coeffs, basis, T:
                                                  T.dot(coeffs))
-            # self.father.transform_dual_splines(lambda coeffs, basis, T:
-            #                                    T.dot(coeffs))
+            print 'tf dual'
+            self.father.transform_dual_splines(lambda coeffs, basis, T:
+                                               T.dot(coeffs))
         self.current_time_prev = current_time
 
     def init_primal_transform(self, basis):
         return shiftoverknot_T(basis)
 
-    # def init_dual_transform(self, basis):
-    #     B = integral_sqbasis(basis)
-    #     Binv = np.linalg.solve(B, np.eye(len(basis)))
-    #     T = shiftoverknot_T(basis)
-    #     return B.dot(T).dot(Binv)
+    def init_dual_transform(self, basis):
+        # B = integral_sqbasis(basis)
+        # Binv = np.linalg.solve(B, np.eye(len(basis)))
+        # T = shiftoverknot_T(basis)
+        # return B.dot(T).dot(Binv)
+        return shiftoverknot_T(basis)
 
     def initialize(self, current_time):
         Point2pointProblem.initialize(self, current_time)
