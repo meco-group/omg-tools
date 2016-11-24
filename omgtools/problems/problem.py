@@ -115,7 +115,6 @@ class Problem(OptiChild, PlotLayer):
         stats = self.problem.stats()
         if stats['return_status'] != 'Solve_Succeeded':
             print stats['return_status']
-        # print
         if self.options['verbose'] >= 2:
             self.iteration += 1
             if ((self.iteration-1) % 20 == 0):
