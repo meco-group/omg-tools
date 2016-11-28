@@ -72,6 +72,7 @@ elif solver is 'knitro':
     problem = Point2point(vehicle, environment, options, freeT=True)
     problem.set_options({'solver_options':
       {'knitro': {'knitro.bar_initpt': 2, 'knitro.honorbnds': 0, 'knitro.scale': 1}}})
+      # other possible options: 'knitro.linsolver': 2, 'knitro.bar_murule':5, 'knitro.algorithm':1
 else:
     print('You selected solver: ' + solver +
           ' but this solver is not supported. ' +
