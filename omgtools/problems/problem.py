@@ -115,13 +115,13 @@ class Problem(OptiChild, PlotLayer):
         stats = self.problem.stats()
         if stats['return_status'] != 'Solve_Succeeded':
             if stats['return_status'] == 'Maximum_CpuTime_Exceeded':
-                if current_time != 0.0:  # first iteration can be slow, neglect then
+                if current_time != 0.0:  # first iteration can be slow, neglect time here
+                    print 'Maximum solving time exceeded, resetting initial guess'
                     self.reset_init_guess()
                     print stats['return_status']
             else:
-                # self.reset_init_guess()
+                # there was another problem
                 print stats['return_status']
-        # print
         if self.options['verbose'] >= 2:
             self.iteration += 1
             if ((self.iteration-1) % 20 == 0):

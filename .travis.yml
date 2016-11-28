@@ -36,7 +36,6 @@ script:
   - pushd export_r
   - make && pushd bin
   - ./RendezVous
-#  - valgrind ./Point2Point
   - popd
   - popd
 

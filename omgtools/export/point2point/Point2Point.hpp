@@ -32,22 +32,25 @@
 namespace omg{
 
 typedef struct obstacle {
-    double position[N_DIM];
-    double velocity[N_DIM];
-    double acceleration[N_DIM];
-} __attribute__((packed)) obstacle_t;
-
+    std::vector<double> position;
+    std::vector<double> velocity;
+    std::vector<double> acceleration;
+    std::vector<double> checkpoints;
+    std::vector<double> radii;
+    bool avoid;
+} obstacle_t;
 
 class Point2Point{
     private:
         casadi::Function problem;
-        bool solve(std::vector<obstacle_t>&);
+        bool solve(double, std::vector<obstacle_t>&);
         void generateSubstituteFunctions();
         void initSplines();
 
     protected:
         Vehicle* vehicle;
         double current_time=0.0;
+        double current_time_prev=0.0;
         double horizon_time;
         double update_time;
         double sample_time;
@@ -71,12 +74,12 @@ class Point2Point{
 
         void setParameters(std::vector<obstacle_t>&);
         void initVariables();
-        void updateBounds(double);
+        void updateBounds(double, std::vector<obstacle_t>&);
         void retrieveTrajectories(std::vector<std::vector<double>>&);
         void getParameterVector(std::vector<double>&, std::map<std::string, std::map<std::string, std::vector<double>>>&);
         void getVariableVector(std::vector<double>&, std::map<std::string, std::map<std::string, std::vector<double>>>&);
         void getVariableDict(std::vector<double>&, std::map<std::string, std::map<std::string, std::vector<double>>>&);
-        void transformSplines(double);
+        void transformSplines(double, double);
 
         virtual void generateProblem();
         virtual void fillParameterDict(std::vector<obstacle_t>&, std::map<std::string, std::map<std::string, std::vector<double>>>&);

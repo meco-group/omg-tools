@@ -53,19 +53,33 @@ int main()
 
     // obstacles
     vector<omg::obstacle_t> obstacles(p2p.n_obs);
+    double width = 3.0;
+    double height = 0.2;
+    double radius = 0.001;
+
+    for (int k=0; k<p2p.n_obs; k++){
+        obstacles[k].position.resize(2);
+        obstacles[k].velocity.resize(2);
+        obstacles[k].acceleration.resize(2);
+        obstacles[k].checkpoints.resize(2*4);
+        obstacles[k].radii.resize(4);
+        obstacles[k].checkpoints[0] = 0.5*width;
+        obstacles[k].checkpoints[1] = 0.5*height;
+        obstacles[k].checkpoints[2] = 0.5*width;
+        obstacles[k].checkpoints[3] = -0.5*height;
+        obstacles[k].checkpoints[4] = -0.5*width;
+        obstacles[k].checkpoints[5] = -0.5*height;
+        obstacles[k].checkpoints[6] = -0.5*width;
+        obstacles[k].checkpoints[7] = 0.5*height;
+        obstacles[k].avoid = true;
+        for (int i=0; i<4; i++){
+            obstacles[k].radii[i] = radius;
+        }
+    }
     obstacles[0].position[0] = -0.6;
     obstacles[0].position[1] = 1.0;
-    obstacles[0].velocity[0] = 0.0;
-    obstacles[0].velocity[1] = 0.0;
-    obstacles[0].acceleration[0] = 0.0;
-    obstacles[0].acceleration[1] = 0.0;
-
     obstacles[1].position[0] = 3.2;
     obstacles[1].position[1] = 1.0;
-    obstacles[1].velocity[0] = 0.0;
-    obstacles[1].velocity[1] = 0.0;
-    obstacles[1].acceleration[0] = 0.0;
-    obstacles[1].acceleration[1] = 0.0;
 
     // compare with solution from Python
     vector<vector<vector<double>>> data_state(n_iter, vector<vector<double>>(trajectory_length, vector<double>(2)));
