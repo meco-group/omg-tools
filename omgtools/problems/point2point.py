@@ -18,7 +18,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from problem import Problem
-from ..basics.spline_extra import definite_integral
+from ..basics.spline_extra import definite_integral, integral_sqbasis
 from ..basics.spline_extra import shiftoverknot_T, shift_spline, evalspline
 from ..export.export_p2p import ExportP2P
 from casadi import inf
@@ -193,7 +193,6 @@ class FixedTPoint2point(Point2pointProblem):
     def init_dual_transform(self, basis):
         # B = integral_sqbasis(basis)
         # Binv = np.linalg.solve(B, np.eye(len(basis)))
-        # T = shiftoverknot_T(basis)
         # return B.dot(T).dot(Binv)
         return shiftoverknot_T(basis)
 
