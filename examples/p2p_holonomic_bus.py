@@ -19,8 +19,7 @@
 
 # This example simulates a bus which can only drive in a straight line. It tries
 # to reach its goal position but the journey is not without obstacles.
-import os, sys
-sys.path.insert(0, os.getcwd()+'/..')
+
 from omgtools import *
 
 # create vehicle
