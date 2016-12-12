@@ -30,20 +30,26 @@ class Holonomic(Vehicle):
         bounds = bounds or {}
         Vehicle.__init__(
             self, n_spl=2, degree=3, shapes=shapes, options=options)
-        self.vmin = self.vxmin = self.vymin = bounds['vmin'] if 'vmin' in bounds else -0.5
-        self.vmax = self.vxmax = self.vymax = bounds['vmax'] if 'vmax' in bounds else 0.5
-        self.amin = self.axmin =  self.aymin = bounds['amin'] if 'amin' in bounds else -1.
-        self.amax = self.axmax = self.aymax = bounds['amax'] if 'amax' in bounds else 1.
-
-        self.vxmin = bounds['vxmin'] if 'vxmin' in bounds else -0.5
-        self.vymin = bounds['vymin'] if 'vymin' in bounds else -0.5
-        self.vxmax = bounds['vxmax'] if 'vxmax' in bounds else 0.5
-        self.vymax = bounds['vymax'] if 'vymax' in bounds else 0.5
-        self.axmin = bounds['axmin'] if 'axmin' in bounds else -1.
-        self.aymin = bounds['aymin'] if 'aymin' in bounds else -1.
-        self.axmax = bounds['axmax'] if 'axmax' in bounds else 1.
-        self.aymax = bounds['aymax'] if 'aymax' in bounds else 1.
-
+        
+        if ((not 'syslimit' in self.options) or  # default choose norm_inf 
+                (self.options['syslimit'] is 'norm_inf')):
+            # user specified a single velocity for x and y
+            self.vxmin = self.vymin = bounds['vmin'] if 'vmin' in bounds else None
+            self.vxmax = self.vymax = bounds['vmax'] if 'vmax' in bounds else None
+            self.axmin = self.aymin = bounds['amin'] if 'amin' in bounds else None
+            self.axmax = self.aymax = bounds['amax'] if 'amax' in bounds else None
+            # user specified separate velocities for x and y
+            self.vxmin = bounds['vxmin'] if 'vxmin' in bounds else -0.5
+            self.vymin = bounds['vymin'] if 'vymin' in bounds else -0.5
+            self.vxmax = bounds['vxmax'] if 'vxmax' in bounds else 0.5
+            self.vymax = bounds['vymax'] if 'vymax' in bounds else 0.5
+            self.axmin = bounds['axmin'] if 'axmin' in bounds else -1.
+            self.aymin = bounds['aymin'] if 'aymin' in bounds else -1.
+            self.axmax = bounds['axmax'] if 'axmax' in bounds else 1.
+            self.aymax = bounds['aymax'] if 'aymax' in bounds else 1.
+        elif self.options['syslimit'] is 'norm_2':
+            self.vmax = bounds['vmax'] if 'vmax' in bounds else 0.5
+            self.amax = bounds['vmin'] if 'amax' in bounds else 1.
 
     def set_default_options(self):
         Vehicle.set_default_options(self)
