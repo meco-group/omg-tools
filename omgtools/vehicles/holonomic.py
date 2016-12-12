@@ -30,10 +30,20 @@ class Holonomic(Vehicle):
         bounds = bounds or {}
         Vehicle.__init__(
             self, n_spl=2, degree=3, shapes=shapes, options=options)
-        self.vmin = bounds['vmin'] if 'vmin' in bounds else -0.5
-        self.vmax = bounds['vmax'] if 'vmax' in bounds else 0.5
-        self.amin = bounds['amin'] if 'amin' in bounds else -1.
-        self.amax = bounds['amax'] if 'amax' in bounds else 1.
+        self.vmin = self.vxmin = self.vymin = bounds['vmin'] if 'vmin' in bounds else -0.5
+        self.vmax = self.vxmax = self.vymax = bounds['vmax'] if 'vmax' in bounds else 0.5
+        self.amin = self.axmin =  self.aymin = bounds['amin'] if 'amin' in bounds else -1.
+        self.amax = self.axmax = self.aymax = bounds['amax'] if 'amax' in bounds else 1.
+
+        self.vxmin = bounds['vxmin'] if 'vxmin' in bounds else -0.5
+        self.vymin = bounds['vymin'] if 'vymin' in bounds else -0.5
+        self.vxmax = bounds['vxmax'] if 'vxmax' in bounds else 0.5
+        self.vymax = bounds['vymax'] if 'vymax' in bounds else 0.5
+        self.axmin = bounds['axmin'] if 'axmin' in bounds else -1.
+        self.aymin = bounds['aymin'] if 'aymin' in bounds else -1.
+        self.axmax = bounds['axmax'] if 'axmax' in bounds else 1.
+        self.aymax = bounds['aymax'] if 'aymax' in bounds else 1.
+
 
     def set_default_options(self):
         Vehicle.set_default_options(self)
@@ -47,21 +57,23 @@ class Holonomic(Vehicle):
         x, y = splines
         dx, dy = x.derivative(), y.derivative()
         ddx, ddy = x.derivative(2), y.derivative(2)
+        # constrain total velocity
         if self.options['syslimit'] is 'norm_2':
             self.define_constraint(
                 (dx**2+dy**2) - (self.T**2)*self.vmax**2, -inf, 0.)
             self.define_constraint(
                 (ddx**2+ddy**2) - (self.T**4)*self.amax**2, -inf, 0.)
+        # constrain local velocity
         elif self.options['syslimit'] is 'norm_inf':
-            self.define_constraint(-dx + self.T*self.vmin, -inf, 0.)
-            self.define_constraint(-dy + self.T*self.vmin, -inf, 0.)
-            self.define_constraint(dx - self.T*self.vmax, -inf, 0.)
-            self.define_constraint(dy - self.T*self.vmax, -inf, 0.)
+            self.define_constraint(-dx + self.T*self.vxmin, -inf, 0.)
+            self.define_constraint(-dy + self.T*self.vymin, -inf, 0.)
+            self.define_constraint(dx - self.T*self.vxmax, -inf, 0.)
+            self.define_constraint(dy - self.T*self.vymax, -inf, 0.)
 
-            self.define_constraint(-ddx + (self.T**2)*self.amin, -inf, 0.)
-            self.define_constraint(-ddy + (self.T**2)*self.amin, -inf, 0.)
-            self.define_constraint(ddx - (self.T**2)*self.amax, -inf, 0.)
-            self.define_constraint(ddy - (self.T**2)*self.amax, -inf, 0.)
+            self.define_constraint(-ddx + (self.T**2)*self.axmin, -inf, 0.)
+            self.define_constraint(-ddy + (self.T**2)*self.aymin, -inf, 0.)
+            self.define_constraint(ddx - (self.T**2)*self.axmax, -inf, 0.)
+            self.define_constraint(ddy - (self.T**2)*self.aymax, -inf, 0.)
         else:
             raise ValueError(
                 'Only norm_2 and norm_inf are defined as system limit.')
