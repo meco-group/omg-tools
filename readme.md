@@ -51,8 +51,18 @@ The animations below give an overview of typical problems that OMG-tools can han
 </table>
 
 ### Experimental validation
-OMG-tools coming to life...
+OMG-tools implemented in real life.
 
+<p align="center">
+<a href="https://www.youtube.com/watch?v=w7tfz2djHqU">
+<img src="https://img.youtube.com/vi/w7tfz2djHqU/0.jpg" alt="Online motion planning"/>
+</a>
+</p>
+<p align="center">
+<a href="https://www.youtube.com/watch?v=J_ShOP_VWTg">
+<img src="https://img.youtube.com/vi/J_ShOP_VWTg/0.jpg" alt="Online distributed motion planning"/>
+</a>
+</p>
 <p align="center">
 <a href="https://www.youtube.com/watch?v=8GDlWS1OOOM">
 <img src="https://img.youtube.com/vi/8GDlWS1OOOM/0.jpg" alt="Plate transportation"/>
