@@ -53,10 +53,10 @@ class Trailer(Vehicle):
         # relaxed this equality constraint with eps
         eps = 1e-3
         self.define_constraint(2*dtg_ha_tr*self.l_hitch -
-                               T*v_til_veh*(2*tg_ha_veh*(1-tg_ha_tr**2)-((1-tg_ha_veh**2)**4)*2*tg_ha_tr) - T*eps,
+                               T*v_til_veh*(2*tg_ha_veh*(1-tg_ha_tr**2)-(1-tg_ha_veh**2)*2*tg_ha_tr) - T*eps,
                                -inf, 0.)
         self.define_constraint(-2*dtg_ha_tr*self.l_hitch +
-                               T*v_til_veh*(2*tg_ha_veh*(1-tg_ha_tr**2)-((1-tg_ha_veh**2)**4)*2*tg_ha_tr) - T*eps,
+                               T*v_til_veh*(2*tg_ha_veh*(1-tg_ha_tr**2)-(1-tg_ha_veh**2)*2*tg_ha_tr) - T*eps,
                                -inf, 0.)
         # limit angle between vehicle and trailer
         self.define_constraint(tg_ha_veh - tg_ha_tr - np.tan(self.tmax/2.), -inf, 0.)

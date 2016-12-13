@@ -20,37 +20,28 @@
 from omgtools import *
 
 # create vehicle
-vehicle = Bicycle(length=0.4, options={'plot_type': 'car', 'substitution': False})
-vehicle.define_knots(knot_intervals=5)  # choose lower amount of knot intervals
+N = 2
+vehicles = [Holonomic() for k in range(N)]
 
-vehicle.set_initial_conditions([0., 0., 0., 0.])  # x, y, theta, delta
-vehicle.set_terminal_conditions([3., 3., 0.])  # x, y, theta
+for k, vehicle in enumerate(vehicles):
+    vehicle.set_initial_conditions([1.5*np.cos((k*2.*np.pi)/N), 1.5*np.sin((k*2.*np.pi)/N)])
+    vehicle.set_terminal_conditions([-1.5*np.cos((k*2.*np.pi)/N), -1.5*np.sin((k*2.*np.pi)/N)])
 
 # create environment
-environment = Environment(room={'shape': Square(5.), 'position': [1.5, 1.5]})
-trajectories = {'velocity': {'time': [0.5],
-                             'values': [[0.3, 0.0]]}}
-environment.add_obstacle(Obstacle({'position': [1., 1.]}, shape=Circle(0.5),
-                                  simulation={'trajectories': trajectories}))
+environment = Environment(room={'shape': Square(5.)})
+rectangle = Rectangle(width=3., height=0.2)
 
 # create a point-to-point problem
-problem = Point2point(vehicle, environment, freeT=True)
-# extra solver settings which may improve performance
+problem = Point2point(vehicles, environment, freeT=False)
 problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
+problem.set_options({'inter_vehicle_avoidance': True})
 problem.init()
-
-vehicle.problem = problem  # to plot error if using substitution 
 
 # create simulator
 simulator = Simulator(problem)
-
 problem.plot('scene')
-vehicle.plot('input', knots=True, labels=['v (m/s)', 'ddelta (rad/s)'])
-vehicle.plot('state', knots=True, labels=[
-             'x (m)', 'y (m)', 'theta (rad)', 'delta (rad)'])
-if vehicle.options['substitution']:
-	vehicle.plot('err_pos', knots=True)
-	vehicle.plot('err_dpos', knots=True)
+vehicles[0].plot('input', knots=True, prediction=True, labels=['v_x (m/s)', 'v_y (m/s)'])
+vehicles[1].plot('input', knots=True, prediction=True, labels=['v_x (m/s)', 'v_y (m/s)'])
 
 # run it!
 simulator.run()

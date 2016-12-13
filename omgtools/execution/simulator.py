@@ -103,7 +103,6 @@ class Simulator:
                 trajectories[str(vehicle)] = vehicle.trajectories
         return trajectories
 
-
     def hard_stop(self, current_time, stop_time, perturbation):
         self.problem.simulate(current_time, stop_time, self.sample_time)
         for k, vehicle in enumerate(self.problem.vehicles):

@@ -328,6 +328,10 @@ class PlotLayer(object):
                 'figurewidth'] if 'figurewidth' in kwargs else '8cm'
             figureheight = kwargs[
                 'figureheight'] if 'figureheight' in kwargs else None
+            # by default scale only axis is true, but you can disable it
+            # this option makes sure the plot has the provided width and height
+            scaleonlyaxis = kwargs[
+                'scaleonlyaxis'] if 'scaleonlyaxis' in kwargs else True
             cnt = 0
             proj_3d = False
             for k in range(0, len(t)-1, subsample):
@@ -347,9 +351,13 @@ class PlotLayer(object):
                 else:
                     path = directory+'/'+name+'_'+str(cnt)+'.tikz'
                     if figureheight is None:
-                        tikz_save(path, figurewidth=figurewidth)
+                        tikz_save(path, figurewidth=figurewidth,
+                                  extra={'scale only axis='+str(scaleonlyaxis).lower()})
+                        # tikz requires a lowercase true/false
                     else:
                         tikz_save(
-                            path, figurewidth=figurewidth, figureheight=figureheight)
+                            path, figurewidth=figurewidth, figureheight=figureheight,
+                            extra={['scale only axis='+str(scaleonlyaxis).lower()]})
+                        # tikz requires a lowercase true/false
                     _cleanup_rubbish(path, info, root)
                 cnt += 1

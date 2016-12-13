@@ -114,8 +114,14 @@ class Problem(OptiChild, PlotLayer):
         self.father.set_variables(result['x'])
         stats = self.problem.stats()
         if stats['return_status'] != 'Solve_Succeeded':
-            print stats['return_status']
-        # print
+            if stats['return_status'] == 'Maximum_CpuTime_Exceeded':
+                if current_time != 0.0:  # first iteration can be slow, neglect time here
+                    print 'Maximum solving time exceeded, resetting initial guess'
+                    self.reset_init_guess()
+                    print stats['return_status']
+            else:
+                # there was another problem
+                print stats['return_status']
         if self.options['verbose'] >= 2:
             self.iteration += 1
             if ((self.iteration-1) % 20 == 0):
@@ -128,11 +134,32 @@ class Problem(OptiChild, PlotLayer):
     def predict(self, current_time, predict_time, sample_time, states=None, delay=0):
         if states is None:
             states = [None for k in range(len(self.vehicles))]
-        if not isinstance(states, list):
-            states = [states]
+        if len(self.vehicles) == 1:
+            if not isinstance(states, list):
+                states = [states]
+            elif isinstance(states[0], float):
+                states = [states]
         enforce = True if (current_time == self.start_time) else False
         for k, vehicle in enumerate(self.vehicles):
             vehicle.predict(current_time, predict_time, sample_time, states[k], delay, enforce)
+
+    def reset_init_guess(self, init_guess=None):
+            if init_guess is None:  # no user provided initial guess
+                init_guess = []
+                for k, vehicle in enumerate(self.vehicles):  # build list
+                    init_guess.append(vehicle.get_init_spline_value())
+            elif not isinstance(init_guess, list):  # guesses must be in a list
+                init_guess = [init_guess]
+
+            for k, vehicle in enumerate(self.vehicles):
+                if len(init_guess) != vehicle.n_seg:
+                    raise ValueError('Each spline segment of the vehicle should receive an initial guess.')
+                else:
+                    for l in range(vehicle.n_seg):
+                        if init_guess[l].shape[1] != vehicle.n_spl:
+                            raise ValueError('Each vehicle spline should receive an initial guess.')
+                        else:
+                            self.father.set_variables(init_guess[l].tolist(),child=vehicle, name='splines'+str(l))
 
     # ========================================================================
     # Simulation related functions
@@ -142,6 +169,7 @@ class Problem(OptiChild, PlotLayer):
         for vehicle in self.vehicles:
             vehicle.simulate(simulation_time, sample_time)
         self.environment.simulate(simulation_time, sample_time)
+        self.fleet.update_plots()
         self.update_plots()
 
     def sleep(self, current_time, sleep_time, sample_time):

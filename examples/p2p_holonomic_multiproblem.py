@@ -60,6 +60,3 @@ simulator.sleep(2.)
 simulator.set_problem(problem2)
 vehicle.set_terminal_conditions([0.0, 1.0])
 simulator.run()
-
-# plot movie
-# problem2.plot_movie('scene', number_of_frames=100, repeat=False)

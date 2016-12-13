@@ -20,37 +20,38 @@
 from omgtools import *
 
 # create vehicle
-vehicle = Bicycle(length=0.4, options={'plot_type': 'car', 'substitution': False})
-vehicle.define_knots(knot_intervals=5)  # choose lower amount of knot intervals
+vehicle = Holonomic(shapes=Circle(0.2), options={'syslimit': 'norm_2'})
+vehicle.define_knots(knot_intervals=10)
 
-vehicle.set_initial_conditions([0., 0., 0., 0.])  # x, y, theta, delta
-vehicle.set_terminal_conditions([3., 3., 0.])  # x, y, theta
+vehicle.set_initial_conditions([-4., 0])
+vehicle.set_terminal_conditions([4., 0])
 
 # create environment
-environment = Environment(room={'shape': Square(5.), 'position': [1.5, 1.5]})
-trajectories = {'velocity': {'time': [0.5],
-                             'values': [[0.3, 0.0]]}}
-environment.add_obstacle(Obstacle({'position': [1., 1.]}, shape=Circle(0.5),
-                                  simulation={'trajectories': trajectories}))
+environment = Environment(room={'shape': Square(10.)})
+
+trajectories1 = {'velocity': {'time': [0, 4.5],
+                             'values': [[0., 0.0], [0., 0.35]]}}
+trajectories2 = {'velocity': {'time': [0, 5.],
+                             'values': [[0., 0.0], [0., 0.25]]}}
+
+environment.add_obstacle(Obstacle({'position': [0.,-0.5]}, shape=Circle(0.75),
+    simulation={'trajectories': trajectories1}))
+environment.add_obstacle(Obstacle({'position': [2.,0.5]}, shape=Circle(0.75)))
+environment.add_obstacle(Obstacle({'position': [-2.,0.5]}, shape=Circle(0.75)))
+
+environment.add_obstacle(Obstacle({'position': [0.,-2.25]}, shape=Circle(0.75),
+    simulation={'trajectories': trajectories2}))
 
 # create a point-to-point problem
 problem = Point2point(vehicle, environment, freeT=True)
-# extra solver settings which may improve performance
-problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
+problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57',
+    'ipopt.hessian_approximation': 'exact'}}})
 problem.init()
-
-vehicle.problem = problem  # to plot error if using substitution 
 
 # create simulator
 simulator = Simulator(problem)
-
 problem.plot('scene')
-vehicle.plot('input', knots=True, labels=['v (m/s)', 'ddelta (rad/s)'])
-vehicle.plot('state', knots=True, labels=[
-             'x (m)', 'y (m)', 'theta (rad)', 'delta (rad)'])
-if vehicle.options['substitution']:
-	vehicle.plot('err_pos', knots=True)
-	vehicle.plot('err_dpos', knots=True)
+vehicle.plot('input', knots=True, labels=['v_x (m/s)', 'v_y (m/s)'])
 
 # run it!
 simulator.run()
