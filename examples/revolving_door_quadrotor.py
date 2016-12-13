@@ -47,7 +47,7 @@ environment.add_obstacle(Obstacle({'position': [0., 0.], 'velocity': velocity,
 # create a point-to-point problem
 problem = Point2point(
     vehicle, environment, freeT=False, options={'horizon_time': horizon_time})
-problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57', 
+problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57',
 	    'ipopt.hessian_approximation': 'limited-memory'}}})
 	    # 'ipopt.tol': 1e-4,
 	    # 'ipopt.warm_start_init_point': 'no',
@@ -64,5 +64,3 @@ vehicle.plot('input', knots=True, labels=['v_x (m/s)', 'v_y (m/s)'])
 
 # run it!
 simulator.run()
-
-problem.save_plot('scene')
