@@ -52,8 +52,8 @@ vehicle.plot('input', knots=True, labels=['v (m/s)', 'w (rad/s)'])
 vehicle.plot('state', knots=True, labels=['x (m)', 'y (m)', 'theta (rad)'])
 
 if vehicle.options['substitution']:
-  vehicle.plot('err_pos', knots=True)
-  vehicle.plot('err_dpos', knots=True)
+    vehicle.plot('err_pos', knots=True)
+    vehicle.plot('err_dpos', knots=True)
 
 # run it!
 simulator.run()

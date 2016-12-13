@@ -20,7 +20,6 @@
 from omgtools import *
 
 # create vehicle
-## Holonomic
 vehicle = Holonomic(shapes=Circle(0.2), options={'syslimit': 'norm_2'})
 vehicle.define_knots(knot_intervals=10)
 
@@ -36,17 +35,17 @@ trajectories2 = {'velocity': {'time': [0, 5.],
                              'values': [[0., 0.0], [0., 0.25]]}}
 
 environment.add_obstacle(Obstacle({'position': [0.,-0.5]}, shape=Circle(0.75),
-	                                  simulation={'trajectories': trajectories1}))
+    simulation={'trajectories': trajectories1}))
 environment.add_obstacle(Obstacle({'position': [2.,0.5]}, shape=Circle(0.75)))
 environment.add_obstacle(Obstacle({'position': [-2.,0.5]}, shape=Circle(0.75)))
 
 environment.add_obstacle(Obstacle({'position': [0.,-2.25]}, shape=Circle(0.75),
-	                                  simulation={'trajectories': trajectories2}))
+    simulation={'trajectories': trajectories2}))
 
 # create a point-to-point problem
 problem = Point2point(vehicle, environment, freeT=True)
-problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57', 
-	    'ipopt.hessian_approximation': 'exact'}}})
+problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57',
+    'ipopt.hessian_approximation': 'exact'}}})
 problem.init()
 
 # create simulator
