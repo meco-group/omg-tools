@@ -42,6 +42,10 @@ class Point2pointProblem(Problem):
         self.init_time = None
         self.start_time = 0.
 
+    def set_default_options(self):
+        Problem.set_default_options(self)
+        self.options['inter_vehicle_avoidance'] = False
+
     # ========================================================================
     # Optimization modelling related functions
     # ========================================================================
@@ -54,6 +58,8 @@ class Point2pointProblem(Problem):
             splines = vehicle.define_splines(n_seg=1)[0]
             vehicle.define_trajectory_constraints(splines)
             self.environment.define_collision_constraints(vehicle, splines)
+        if len(self.vehicles) > 1 and self.options['inter_vehicle_avoidance']:
+            self.environment.define_intervehicle_collision_constraints(self.vehicles)
 
     def define_init_constraints(self):
         for vehicle in self.vehicles:
