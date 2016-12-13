@@ -166,6 +166,7 @@ class Problem(OptiChild, PlotLayer):
         for vehicle in self.vehicles:
             vehicle.simulate(simulation_time, sample_time)
         self.environment.simulate(simulation_time, sample_time)
+        self.fleet.update_plots()
         self.update_plots()
 
     def sleep(self, current_time, sleep_time, sample_time):
