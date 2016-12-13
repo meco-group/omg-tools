@@ -134,8 +134,11 @@ class Problem(OptiChild, PlotLayer):
     def predict(self, current_time, predict_time, sample_time, states=None, delay=0):
         if states is None:
             states = [None for k in range(len(self.vehicles))]
-        if not isinstance(states, list):
-            states = [states]
+        if len(self.vehicles) == 1:
+            if not isinstance(states, list):
+                states = [states]
+            elif isinstance(states[0], float):
+                states = [states]
         enforce = True if (current_time == self.start_time) else False
         for k, vehicle in enumerate(self.vehicles):
             vehicle.predict(current_time, predict_time, sample_time, states[k], delay, enforce)
