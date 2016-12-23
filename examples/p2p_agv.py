@@ -21,16 +21,17 @@ from omgtools import *
 
 # create vehicle
 vehicle = AGV(length=0.8, options={'plot_type': 'agv'})
+# vehicle.set_options({'safety_distance': 0.3})
 vehicle.define_knots(knot_intervals=5)  # choose lower amount of knot intervals
 
-vehicle.set_initial_conditions([0.8, -0.1, 0.], [0.])  # x, y, theta, delta
+vehicle.set_initial_conditions([0.8, -0.05, 0., 0.])  # x, y, theta, delta
 vehicle.set_terminal_conditions([2.45, -0.35, 0.])  # x, y, theta
 
 # create environment
-environment = Environment(room={'shape': Square(5.), 'position': [1.5, 1.5]})
+environment = Environment(room={'shape': Rectangle(width=4, height=1), 'position': [2, 0.]})
 rectangle = Rectangle(width=0.8, height=0.2)
 environment.add_obstacle(Obstacle({'position': [1., -0.35]}, shape=rectangle))
-environment.add_obstacle(Obstacle({'position': [3.6, -0.35]}, shape=rectangle))
+environment.add_obstacle(Obstacle({'position': [3.4, -0.35]}, shape=rectangle))
 
 # create a point-to-point problem
 problem = Point2point(vehicle, environment, freeT=True)

@@ -18,23 +18,26 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 import numpy as np
+from deployer import Deployer
 from plotlayer import PlotLayer
 
 
 class Simulator:
 
     def __init__(self, problem, sample_time=0.01, update_time=0.1):
-        self.set_problem(problem)
+        self.deployer = Deployer(problem, sample_time, update_time)
         self.update_time = update_time
         self.sample_time = sample_time
+        self.problem = problem
         PlotLayer.simulator = self
         self.reset_timing()
 
     def set_problem(self, problem):
+        self.deployer.set_problem(problem)
         self.problem = problem
 
     def run(self):
-        self.problem.initialize(self.current_time)
+        self.deployer.reset()
         stop = False
         while not stop:
             stop = self.update()
@@ -45,12 +48,23 @@ class Simulator:
                 self.update_timing()
         self.problem.final()
         # return trajectories and signals
-        trajectories = {}
-        signals = {}
-        for vehicle in self.problem.vehicles:
-            trajectories[str(vehicle)] = vehicle.traj_storage
-            signals[str(vehicle)] = vehicle.signals
+        trajectories, signals = {}, {}
+        if len(self.problem.vehicles) == 1:
+            return self.problem.vehicles[0].traj_storage, self.problem.vehicles[0].signals
+        else:
+            for vehicle in self.problem.vehicles:
+                trajectories[str(vehicle)] = vehicle.traj_storage
+                signals[str(vehicle)] = vehicle.signals
         return trajectories, signals
+
+    def update(self):
+        # update deployer
+        self.deployer.update(self.current_time)
+        # simulate problem
+        self.problem.simulate(self.current_time, self.update_time, self.sample_time)
+        # check stop condition
+        stop = self.problem.stop_criterium(self.current_time, self.update_time)
+        return stop
 
     def reset_timing(self):
         self.current_time = 0.
@@ -59,52 +73,38 @@ class Simulator:
     def update_timing(self, update_time=None):
         update_time = self.update_time if not update_time else update_time
         self.current_time += update_time
-        n_samp = int(update_time/self.sample_time)
+        n_samp = int(np.round(update_time/self.sample_time, 6))
         self.time = np.r_[self.time, np.linspace(
             self.time[-1]+self.sample_time, self.time[-1]+n_samp*self.sample_time, n_samp)]
 
-    def update(self):
-        # solve problem
-        self.problem.solve(self.current_time, self.update_time)
-        # update everything
-        self.problem.update(
-            self.current_time, self.update_time, self.sample_time)
-        # check termination criteria
-        stop = self.problem.stop_criterium(self.current_time, self.update_time)
-        return stop
-
-    def run_once(self, **kwargs):
-        if 'update' in kwargs and not kwargs['update']:
-            update = False
-        else:
-            update = True
+    def run_once(self, simulate=True, **kwargs):
         if 'hard_stop' in kwargs:
             hard_stop = kwargs['hard_stop']
         else:
             hard_stop = None
-        # initialize problem
-        self.problem.initialize(0.)
-        # solve problem
-        self.problem.solve(0., 0.)
-        if not update:
+        self.deployer.reset()
+        self.deployer.update(self.current_time, None, np.inf)
+        if not simulate:
             return None
-        # update everything
         if hard_stop:
-            self.hard_stop(hard_stop['time'], hard_stop['perturbation'])
+            self.hard_stop(self.current_time, hard_stop['time'], hard_stop['perturbation'])
         else:
-            self.problem.update(self.current_time, np.inf, self.sample_time)
+            self.problem.simulate(self.current_time, np.inf, self.sample_time)
         self.problem.final()
         # determine timing
         update_time = self.problem.vehicles[0].signals['time'][:, -1] - self.current_time
         self.update_timing(update_time)
         # return trajectories
         trajectories = {}
-        for vehicle in self.problem.vehicles:
-            trajectories[str(vehicle)] = vehicle.trajectories
+        if len(self.problem.vehicles) == 1:
+            return self.problem.vehicles[0].trajectories
+        else:
+            for vehicle in self.problem.vehicles:
+                trajectories[str(vehicle)] = vehicle.trajectories
         return trajectories
 
-    def hard_stop(self, stop_time, perturbation):
-        self.problem.update(self.current_time, stop_time, self.sample_time)
+    def hard_stop(self, current_time, stop_time, perturbation):
+        self.problem.simulate(current_time, stop_time, self.sample_time)
         for k, vehicle in enumerate(self.problem.vehicles):
             vehicle.overrule_state(vehicle.signals['state'][:, -1] + np.array(perturbation[k]))
             vehicle.overrule_input(np.zeros(len(vehicle.prediction['input'])))

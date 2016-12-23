@@ -30,7 +30,7 @@ vehicle.set_terminal_conditions([2., 2.])
 environment = Environment(room={'shape': Square(5.)})
 rectangle = Rectangle(width=3., height=0.2)
 
-environment.add_obstacle(Obstacle({'position': [-2.1, -0.5]}, shape=rectangle))
+# environment.add_obstacle(Obstacle({'position': [-2.1, -0.5]}, shape=rectangle))
 environment.add_obstacle(Obstacle({'position': [1.7, -0.5]}, shape=rectangle))
 trajectories = {'velocity': {'time': [3., 4.],
                              'values': [[-0.15, 0.0], [0., 0.15]]}}
@@ -44,8 +44,8 @@ if solver is 'ipopt':
     options = {'solver': solver}
     problem = Point2point(vehicle, environment, options, freeT=False)
     problem.set_options(
-        {'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57',
-                                      'ipopt.hessian_approximation': 'limited-memory'}}})
+        {'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'
+                                      }}}) #'ipopt.hessian_approximation': 'limited-memory'
 elif solver is 'worhp':
     options = {'solver': solver}
     worhp_options = {  # 'worhp.qp_ipLsMethod': 'MA57',  # todo: option not found?
@@ -62,10 +62,21 @@ elif solver is 'snopt':
     problem.set_options({'solver_options':
                          {'snopt': {'snopt.Hessian': 'limited memory',
                                     'start': 'warm'}}})
+elif solver is 'blocksqp':
+    options = {'solver': solver}
+    problem = Point2point(vehicle, environment, options, freeT=False)
+    problem.set_options({'solver_options':
+                         {'blocksqp': {'warmstart': True, 'hess_lim_mem': 0}}})
+elif solver is 'knitro':
+    options = {'solver': solver}
+    problem = Point2point(vehicle, environment, options, freeT=True)
+    problem.set_options({'solver_options':
+      {'knitro': {'knitro.bar_initpt': 2, 'knitro.honorbnds': 0, 'knitro.scale': 1}}})
+      # other possible options: 'knitro.linsolver': 2, 'knitro.bar_murule':5, 'knitro.algorithm':1
 else:
     print('You selected solver: ' + solver +
           ' but this solver is not supported. ' +
-          'Choose between ipopt, worhp or snopt.')
+          'Choose between ipopt, worhp, snopt or blocksqp.')
 problem.init()
 
 # create simulator

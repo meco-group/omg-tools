@@ -1,6 +1,6 @@
 env:
   global:
-    - CASADIVERSION=3.0.0
+    - CASADIVERSION=3.1.0-rc1
     - LD_LIBRARY_PATH=$HOME/libhsl
     - IPOPT_DEFAULT_LINEAR_SOLVER=ma57
 
@@ -36,7 +36,6 @@ script:
   - pushd export_r
   - make && pushd bin
   - ./RendezVous
-#  - valgrind ./Point2Point
   - popd
   - popd
 

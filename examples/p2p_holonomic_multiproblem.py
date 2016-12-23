@@ -35,7 +35,7 @@ obstacle2 = Obstacle({'position': [1.7, -0.5]}, shape=rectangle)
 trajectories = {'velocity': {'time': [3., 4.],
                              'values': [[-0.15, 0.0], [0., 0.15]]}}
 obstacle3 = Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
-                     simulation={'trajectories': trajectories})
+    simulation={'trajectories': trajectories})
 
 environment.add_obstacle([obstacle1, obstacle2, obstacle3])
 
@@ -48,20 +48,15 @@ problem2.init()
 
 # create simulator & plots
 simulator = Simulator(problem1)
-vehicle.plot('input', knots=True, labels=['v_x (m/s)', 'v_y (m/s)'])
-
+vehicle.plot('input', knots=True, prediction=True, labels=['v_x (m/s)', 'v_y (m/s)'])
+problem1.plot('scene')
 # 1st task
 simulator.run()
 # 2nd task
 vehicle.set_terminal_conditions([2., 0.0])
-problem1.reinitialize()
 simulator.run()
 # 3th task (we can neglect circular obstacle), but first sleep 2 seconds
 simulator.sleep(2.)
 simulator.set_problem(problem2)
 vehicle.set_terminal_conditions([0.0, 1.0])
-problem2.reinitialize()
 simulator.run()
-
-# plot movie
-problem2.plot_movie('scene', number_of_frames=100, repeat=False)

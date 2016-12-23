@@ -31,7 +31,7 @@ init_positions = [-4., -4.] + configuration
 terminal_positions = [4., 4.] + configuration
 
 fleet.set_configuration(configuration.tolist())
-fleet.set_initial_conditions(init_positions.tolist())
+fleet.set_initial_conditions([np.r_[pos, np.zeros(3)] for pos in init_positions.tolist()])
 fleet.set_terminal_conditions(terminal_positions.tolist())
 
 # create environment

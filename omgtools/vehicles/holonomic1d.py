@@ -61,8 +61,11 @@ class Holonomic1D(Vehicle):
             term_con_der.extend([(x.derivative(d), 0.)])
         return [term_con, term_con_der]
 
-    def set_initial_conditions(self, position, input=0.):
-        self.prediction['state'] = position
+    def set_initial_conditions(self, state, input=None):
+        if input is None:
+            input = 0.
+        # list all predictions that are used in set_parameters
+        self.prediction['state'] = state
         self.prediction['input'] = input
 
     def set_terminal_conditions(self, position):

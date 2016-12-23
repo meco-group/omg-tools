@@ -22,6 +22,7 @@ from omgtools import *
 # create vehicle
 vehicle = Holonomic()
 vehicle.set_options({'safety_distance': 0.1})
+vehicle.set_options({'ideal_prediction': False})
 
 vehicle.set_initial_conditions([-1.5, -1.5])
 vehicle.set_terminal_conditions([2., 2.])
@@ -45,7 +46,7 @@ problem.init()
 # create simulator
 simulator = Simulator(problem)
 problem.plot('scene')
-vehicle.plot('input', knots=True, labels=['v_x (m/s)', 'v_y (m/s)'])
+vehicle.plot('input', knots=True, prediction=True, labels=['v_x (m/s)', 'v_y (m/s)'])
 
 # run it!
 simulator.run()

@@ -19,7 +19,7 @@
 
 from ..basics.optilayer import OptiChild
 from ..basics.spline import BSplineBasis
-from ..simulation.plotlayer import PlotLayer
+from ..execution.plotlayer import PlotLayer
 from obstacle import Obstacle
 from casadi import inf
 import numpy as np
@@ -109,6 +109,33 @@ class Environment(OptiChild, PlotLayer):
         for spline in vehicle.splines:
             vehicle.define_collision_constraints(hyp_veh, self, spline)
 
+    def define_intervehicle_collision_constraints(self, vehicles):
+        hyp_veh = {veh: {sh: [] for sh in veh.shapes} for veh in vehicles}
+        for k in range(len(vehicles)):
+            for l in range(k+1, len(vehicles)):
+                veh1 = vehicles[k]
+                veh2 = vehicles[l]
+                if veh1 != veh2:
+                    if veh1.n_dim != veh2.n_dim:
+                        raise ValueError('Not possible to combine ' +
+                                         str(veh1.n_dim) + 'D and ' + str(veh2.n_dim) + 'D vehicle.')
+                    degree = 1
+                    knots = np.r_[np.zeros(degree), np.union1d(veh1.knots[veh1.degree:-veh1.degree], veh2.knots[veh2.degree:-veh2.degree]), np.ones(degree)]
+                    basis = BSplineBasis(knots, degree)
+                    for kk, shape1 in enumerate(veh1.shapes):
+                        for ll, shape2 in enumerate(veh2.shapes):
+                            a = self.define_spline_variable(
+                                'a'+'_'+veh1.label+'_'+str(kk)+'_'+veh2.label+'_'+str(ll), self.n_dim, basis=basis)
+                            b = self.define_spline_variable(
+                                'b'+'_'+veh1.label+'_'+str(kk)+'_'+veh2.label+'_'+str(ll), 1, basis=basis)[0]
+                            self.define_constraint(
+                                sum([a[p]*a[p] for p in range(self.n_dim)])-1, -inf, 0.)
+                            hyp_veh[veh1][shape1].append({'a': a, 'b': b})
+                            hyp_veh[veh2][shape2].append({'a': [-a_i for a_i in a], 'b': -b})
+        for vehicle in vehicles:
+            for spline in vehicle.splines:
+                vehicle.define_collision_constraints(hyp_veh[vehicle], self, spline)
+
     # ========================================================================
     # Optimization modelling related functions
     # ========================================================================
@@ -118,12 +145,12 @@ class Environment(OptiChild, PlotLayer):
             obstacle.init()
 
     # ========================================================================
-    # Update environment
+    # Simulate environment
     # ========================================================================
 
-    def update(self, update_time, sample_time):
+    def simulate(self, simulation_time, sample_time):
         for obstacle in self.obstacles:
-            obstacle.update(update_time, sample_time)
+            obstacle.simulate(simulation_time, sample_time)
         self.update_plots()
 
     def draw(self, t=-1):
@@ -131,7 +158,11 @@ class Environment(OptiChild, PlotLayer):
         for obstacle in self.obstacles:
             draw.extend(obstacle.draw(t))
         if self.room['draw']:
-            draw.extend(self.room['shape'].draw())
+            roomPoints = []
+            for point in self.room['shape'].draw():
+                roomPoints.append(np.array([point[0]+self.room['position'][0],
+                                            point[1]+self.room['position'][1]]))
+            draw.extend(roomPoints)
         return draw
 
     def get_canvas_limits(self):

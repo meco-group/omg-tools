@@ -18,10 +18,12 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from vehicle import Vehicle
+from ..problems.point2point import FreeTPoint2point, FixedTPoint2point
 from ..basics.shape import Rectangle, Circle
-from ..basics.spline_extra import sample_splines, evalspline
+from ..basics.spline_extra import sample_splines, evalspline, concat_splines
 from ..basics.spline_extra import running_integral
-from casadi import inf
+from ..basics.spline import BSplineBasis
+from casadi import inf, SX, MX
 import numpy as np
 
 # Elaboration of the vehicle model:
@@ -56,15 +58,17 @@ class Bicycle(Vehicle):
             self, n_spl=2, degree=2, shapes=Circle(length/2.), options=options)
         self.vmax = bounds['vmax'] if 'vmax' in bounds else 0.8
         self.amax = bounds['amax'] if 'amax' in bounds else 1.
-        self.dmin = bounds['dmin'] if 'dmin' in bounds else -30.  # steering angle [deg]
-        self.dmax = bounds['dmax'] if 'dmax' in bounds else 30.
-        self.ddmin = bounds['ddmin'] if 'ddmin' in bounds else -45.  # dsteering angle [deg/s]
-        self.ddmax = bounds['ddmax'] if 'ddmax' in bounds else 45.
+        self.dmin = bounds['dmin'] if 'dmin' in bounds else -np.pi/6.  # steering angle [rad]
+        self.dmax = bounds['dmax'] if 'dmax' in bounds else np.pi/6.
+        self.ddmin = bounds['ddmin'] if 'ddmin' in bounds else -np.pi/4.  # dsteering angle [rad/s]
+        self.ddmax = bounds['ddmax'] if 'ddmax' in bounds else np.pi/4.
         self.length = length
 
     def set_default_options(self):
         Vehicle.set_default_options(self)
         self.options.update({'plot_type': 'bicycle'})  # by default plot a bicycle
+        self.options.update({'substitution' : False})
+        self.options.update({'exact_substitution' : False})
 
     def init(self):
         self.T = self.define_symbol('T')  # motion time
@@ -88,22 +92,47 @@ class Bicycle(Vehicle):
         # self.define_constraint(
         #     (ddx**2+ddy**2) - (self.T**4)*self.amax**2, -inf, 0.)
 
+        if self.options['substitution']:
+            # substitute velocity and introduce equality constraints
+            dx = v_til*(1-tg_ha**2)
+            dy = v_til*(2*tg_ha)        
+            if self.options['exact_substitution']:
+                self.dx = self.define_spline_variable('dx', 1, 1, basis=dx.basis)[0]
+                self.dy = self.define_spline_variable('dy', 1, 1, basis=dy.basis)[0]
+                self.define_constraint(self.dx-dx, 0., 0.)
+                self.define_constraint(self.dy-dy, 0., 0.)
+                self.x = self.integrate_once(self.dx, self.pos0[0], self.t, self.T)
+                self.y = self.integrate_once(self.dy, self.pos0[1], self.t, self.T)
+            else:
+                degree = 2
+                knots = np.r_[np.zeros(degree), np.linspace(0., 1., 10+1), np.ones(degree)]
+                basis = BSplineBasis(knots, degree)
+                self.dx = self.define_spline_variable('dx', 1, 1, basis=basis)[0]
+                self.dy = self.define_spline_variable('dy', 1, 1, basis=basis)[0]
+                self.x = self.integrate_once(self.dx, self.pos0[0], self.t, self.T)
+                self.y = self.integrate_once(self.dy, self.pos0[1], self.t, self.T)
+                x = self.integrate_once(dx, self.pos0[0], self.t, self.T)
+                y = self.integrate_once(dy, self.pos0[1], self.t, self.T)
+                eps = 1e-2
+                self.define_constraint(self.x-x, -eps, eps)
+                self.define_constraint(self.y-y, -eps, eps)
+
         # limit steering angle
         self.define_constraint(
-             2*dtg_ha*self.length - v_til*(1+tg_ha**2)**2*np.tan(np.radians(self.dmax))*self.T, -inf, 0.)
+             2*dtg_ha*self.length - v_til*(1+tg_ha**2)**2*np.tan(self.dmax)*self.T, -inf, 0.)
         self.define_constraint(
-             -2*dtg_ha*self.length + v_til*(1+tg_ha**2)**2*np.tan(np.radians(self.dmin))*self.T, -inf, 0.)
-    # limit rate of change of steering angle
+             -2*dtg_ha*self.length + v_til*(1+tg_ha**2)**2*np.tan(self.dmin)*self.T, -inf, 0.)
+        # limit rate of change of steering angle
         self.define_constraint(
              2*self.length*ddtg_ha*(v_til*(1+tg_ha**2)**2)
              -2*self.length*dtg_ha*(dv_til*(1+tg_ha**2)**2
              +v_til*(4*tg_ha+4*tg_ha**3)*dtg_ha) - ((self.T**2)*v_til**2*(1+tg_ha**2)**4
-             +(2*self.length*dtg_ha)**2)*np.radians(self.ddmax), -inf, 0.)
+             +(2*self.length*dtg_ha)**2)*self.ddmax, -inf, 0.)
         self.define_constraint(
              -2*self.length*ddtg_ha*(v_til*(1+tg_ha**2)**2)
              +2*self.length*dtg_ha*(dv_til*(1+tg_ha**2)**2
              +v_til*(4*tg_ha+4*tg_ha**3)*dtg_ha) + ((self.T**2)*v_til**2*(1+tg_ha**2)**4
-             +(2*self.length*dtg_ha)**2)*np.radians(self.ddmin), -inf, 0.)
+             +(2*self.length*dtg_ha)**2)*self.ddmin, -inf, 0.)
         self.define_constraint(-v_til, -inf, 0)  # model requires positive V, so positive v_tilde
 
     def get_initial_constraints(self, splines):
@@ -151,30 +180,31 @@ class Bicycle(Vehicle):
         v_til, tg_ha = splines
         dv_til, dtg_ha = v_til.derivative(), tg_ha.derivative()
         ddtg_ha = tg_ha.derivative(2)
-        dx = v_til*(1-tg_ha**2)
-        dy = v_til*(2*tg_ha)
-        x_int, y_int = self.T*running_integral(dx), self.T*running_integral(dy)
-        x = x_int-evalspline(x_int, self.t/self.T) + self.pos0[0]  # self.pos0 was already defined in init
-        y = y_int-evalspline(y_int, self.t/self.T) + self.pos0[1]
+        if self.options['substitution']:
+            x, y = self.x, self.y
+        else:
+            dx = v_til*(1-tg_ha**2)
+            dy = v_til*(2*tg_ha)
+            x = self.integrate_once(dx, self.pos0[0], self.t, self.T)
+            y = self.integrate_once(dy, self.pos0[1], self.t, self.T)
+            # x_int, y_int = self.T*running_integral(dx), self.T*running_integral(dy)
+            # x = x_int-evalspline(x_int, self.t/self.T) + self.pos0[0]  # self.pos0 was already defined in init
+            # y = y_int-evalspline(y_int, self.t/self.T) + self.pos0[1]
         term_con = [(x, posT[0]), (y, posT[1]), (tg_ha, tg_haT)]
         term_con_der = [(v_til, v_tilT), (dtg_ha, self.T*dtg_haT),
                         (dv_til, dv_tilT), (ddtg_ha, self.T**2*ddtg_haT)]
         return [term_con, term_con_der]
 
-    def set_initial_conditions(self, pose, delta, input=np.zeros(2)):
-        # comes from the user so theta[deg]
-        pose[2] = np.radians(pose[2])  # theta
-        delta = np.radians(delta)  # delta
-        self.prediction['state'] = np.r_[pose, delta]  # x, y, theta[rad], delta[rad]
-        self.pose0 = pose # for use in first iteration of splines2signals()
-        self.delta0 = delta
-        self.prediction['input'] = input  # V, ddelta
+    def set_initial_conditions(self, state, input=None):
+        if input is None:
+            input = np.zeros(2)
+        self.prediction['state'] = state
+        self.prediction['input'] = input
+        self.pose0 = state[:3]
+        self.delta0 = state[3]
 
     def set_terminal_conditions(self, pose):
-        # comes from the user so theta[deg]
-        pose[2] = np.radians(pose[2])  # theta
-        # pose[3] = np.radians(pose[3])  # delta
-        self.poseT = pose  # x, y, theta[rad]
+        self.poseT = pose
 
     def get_init_spline_value(self):
         # generate initial guess for spline variables
@@ -222,12 +252,25 @@ class Bicycle(Vehicle):
 
     def define_collision_constraints(self, hyperplanes, environment, splines):
         v_til, tg_ha = splines[0], splines[1]
-        dx = v_til*(1-tg_ha**2)
-        dy = v_til*(2*tg_ha)
-        x_int, y_int = self.T*running_integral(dx), self.T*running_integral(dy)
-        x = x_int-evalspline(x_int, self.t/self.T) + self.pos0[0]
-        y = y_int-evalspline(y_int, self.t/self.T) + self.pos0[1]
+        if self.options['substitution']:
+            x, y = self.x, self.y
+        else:
+            dx = v_til*(1-tg_ha**2)
+            dy = v_til*(2*tg_ha)
+            x = self.integrate_once(dx, self.pos0[0], self.t, self.T)
+            y = self.integrate_once(dy, self.pos0[1], self.t, self.T)
+            # x_int, y_int = self.T*running_integral(dx), self.T*running_integral(dy)
+            # x = x_int-evalspline(x_int, self.t/self.T) + self.pos0[0]
+            # y = y_int-evalspline(y_int, self.t/self.T) + self.pos0[1]
         self.define_collision_constraints_2d(hyperplanes, environment, [x, y], tg_ha)
+
+    def integrate_once(self, dx, x0, t, T=1.):
+        dx_int = T*running_integral(dx)
+        if isinstance(t, (SX, MX)):
+            x = dx_int-evalspline(dx_int, t/T) + x0
+        else:
+            x = dx_int-dx_int(t/T) + x0
+        return x
 
     def splines2signals(self, splines, time):
         # for plotting and logging
@@ -239,13 +282,17 @@ class Bicycle(Vehicle):
         dx = v_til*(1-tg_ha**2)
         dy = v_til*(2*tg_ha)
         if not hasattr(self, 'signals'):  # first iteration
-            dx_int, dy_int = running_integral(dx), running_integral(dy)
-            x = dx_int - dx_int(time[0]) + self.pose0[0]
-            y = dy_int - dy_int(time[0]) + self.pose0[1]
+            x = self.integrate_once(dx, self.pose0[0], time[0])
+            y = self.integrate_once(dy, self.pose0[1], time[0])
+            # dx_int, dy_int = running_integral(dx), running_integral(dy)
+            # x = dx_int - dx_int(time[0]) + self.pose0[0]
+            # y = dy_int - dy_int(time[0]) + self.pose0[1]
         else:
-            dx_int, dy_int = running_integral(dx), running_integral(dy)  # current state
-            x = dx_int - dx_int(time[0]) + self.signals['state'][0, -1]
-            y = dy_int - dy_int(time[0]) + self.signals['state'][1, -1]
+            x = self.integrate_once(dx, self.signals['state'][0, -1], time[0])
+            y = self.integrate_once(dy, self.signals['state'][1, -1], time[0])
+            # dx_int, dy_int = running_integral(dx), running_integral(dy)  # current state
+            # x = dx_int - dx_int(time[0]) + self.signals['state'][0, -1]
+            # y = dy_int - dy_int(time[0]) + self.signals['state'][1, -1]
         # sample splines
         tg_ha = np.array(sample_splines([tg_ha], time))
         v_til = np.array(sample_splines([v_til], time))
@@ -274,10 +321,32 @@ class Bicycle(Vehicle):
             ddelta[0, -1] = ddelta[0, -2]
         input = np.c_[v_til*(1+tg_ha**2)]  # V
         input = np.r_[input, ddelta]
-        signals['state'] = np.c_[sample_splines([x, y], time)]
+        x_s, y_s = sample_splines([x, y], time)
+        signals['state'] = np.c_[x_s, y_s].T
         signals['state'] = np.r_[signals['state'], theta, delta]
         signals['input'] = input
         signals['delta'] = delta
+
+        if (self.options['substitution']):# and not self.options['exact_substitution']):  # don't plot error for exact_subs
+            dx2 = self.problem.father.get_variables(self, 'dx')
+            dy2 = self.problem.father.get_variables(self, 'dy')
+            # select horizon_time
+            if isinstance(self.problem, FreeTPoint2point):
+                horizon_time = self.problem.father.get_variables(self.problem, 'T')[0][0]
+            elif isinstance(self.problem, FixedTPoint2point):
+                horizon_time = self.problem.options['horizon_time']
+            dx2 = concat_splines([dx2], [horizon_time])[0]
+            dy2 = concat_splines([dy2], [horizon_time])[0]
+            if not hasattr(self, 'signals'): # first iteration
+                x2 = self.integrate_once(dx2, self.pose0[0], time[0])
+                y2 = self.integrate_once(dy2, self.pose0[1], time[0])
+            else:
+                x2 = self.integrate_once(dx2, self.signals['state'][0, -1], time[0])
+                y2 = self.integrate_once(dy2, self.signals['state'][1, -1], time[0])
+            dx_s, dy_s = sample_splines([dx, dy], time)
+            x_s2, y_s2, dx_s2, dy_s2 = sample_splines([x2, y2, dx2, dy2], time)
+            signals['err_dpos'] = np.c_[dx_s-dx_s2, dy_s-dy_s2].T
+            signals['err_pos'] = np.c_[x_s-x_s2, y_s-y_s2].T
         return signals
 
     def state2pose(self, state):
