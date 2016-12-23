@@ -48,6 +48,17 @@ The animations below give an overview of typical problems that OMG-tools can han
 <img width=100% src="./doc/gifs/3dquadrotor.gif" alt="3D quadrotor in obstructed environment"/>
 </td>
 </tr>
+<tr>
+<td align="center" valign="center" bgcolor="#FFFFFF">
+<img width=100% src="./doc/gifs/agv.gif" alt="Rear-wheel steered AGV parking"/>
+</td>
+<td align="center" valign="center" bgcolor="#FFFFFF">
+<img width=100% src="./doc/gifs/p2p_holonomic_blocking.gif" alt="Holonomic vehicle moving while suddenly blocked"/>
+</td>
+<td aliggn="center" valign="center" bgcolor="#FFFFFF">
+<img width=100% src="./doc/gifs/revolving_door_diffdrive.gif" alt="Differential drive moving through a revolving door"/>
+</td>
+</tr>
 </table>
 
 ### Experimental validation
