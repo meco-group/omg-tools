@@ -21,6 +21,8 @@
 from ..basics.optilayer import OptiChild
 from ..basics.spline_extra import get_interval_T
 from ..basics.spline import BSplineBasis, BSpline
+from ..basics.geometry import distance_between_points
+from ..basics.shape import Circle, Polyhedron, Rectangle
 from casadi import inf, vertcat, cos, sin
 from scipy.interpolate import interp1d
 from scipy.integrate import odeint
@@ -57,7 +59,7 @@ class ObstaclexD(OptiChild):
     # ========================================================================
 
     def set_default_options(self):
-        self.options = {'draw': True, 'avoid': True}
+        self.options = {'draw': True, 'avoid': True, 'bounce': False}
 
     def set_options(self, options):
         self.options.update(options)
@@ -325,6 +327,49 @@ class Obstacle2D(ObstaclexD):
                 self.signals['orientation'], theta]
             self.signals['angular_velocity'] = np.c_[
                 self.signals['angular_velocity'], omega]
+
+    def overlaps_with(self, obstacle):
+        if isinstance(self.shape, Circle):
+            if isinstance(obstacle.shape, Circle):
+                self_checkpoints = self.shape.get_checkpoints()
+                obs_checkpoints = obstacle.shape.get_checkpoints()
+
+                for self_chck, self_rad in zip(*self_checkpoints):
+                    self_chck = self_chck + self.signals['position'][:,-1]
+                    for obs_chck, obs_rad in zip(*obs_checkpoints):
+                        obs_chck = obs_chck + obstacle.signals['position'][:,-1]
+                        if (distance_between_points(self_chck, obs_chck) < (self_rad + obs_rad)):
+                            return True
+                # didn't find an overlap
+                return False
+            elif isinstance(obstacle.shape, Polyhedron):
+                obstacle.shape.get_sides(obstacle.shape.vertices)
+                print 'Circle - Polyhedron bouncing not yet implemented'
+                return False
+
+        elif isinstance(self.shape, Polyhedron):
+            if isinstance(obstacle.shape, Circle):
+                print 'Circle - Polyhedron bouncing not yet implemented'
+                return False
+            elif isinstance(obstacle.shape, Polyhedron):
+                if isinstance(obstacle.shape, Rectangle):
+                    if obstacle.shape.orientation == 0:
+                        self_checkpoints = self.shape.get_checkpoints()
+                        [[xmin,xmax],[ymin,ymax]] = obstacle.shape.get_canvas_limits()
+                        [posx,posy]= obstacle.signals['position'][:,-1]
+                        xmin += posx
+                        xmax += posx
+                        ymin += posy
+                        ymax += posy
+                        for self_chck, _ in zip(*self_checkpoints):
+                            self_chck += self.signals['position'][:,-1]
+                            if xmin <= self_chck[0] <= xmax and ymin <= self_chck[1] <= ymax:
+                                return True
+                    else: 
+                        print 'Rectangle bouncing with non-zero orientation not yet implemented'
+                else:
+                    print 'Circle - Non-rectangular shape boucing not yet implemented'
+                return False
 
     def draw(self, t=-1):
         if not self.options['draw']:
