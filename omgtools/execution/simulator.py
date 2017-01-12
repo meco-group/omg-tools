@@ -21,7 +21,6 @@ import numpy as np
 from deployer import Deployer
 from plotlayer import PlotLayer
 
-
 class Simulator:
 
     def __init__(self, problem, sample_time=0.01, update_time=0.1):
@@ -56,6 +55,34 @@ class Simulator:
                 trajectories[str(vehicle)] = vehicle.traj_storage
                 signals[str(vehicle)] = vehicle.signals
         return trajectories, signals
+
+    def step(self, update_time=0.1):
+        stop = self.update()
+        if stop:
+            update_time = float(self.problem.vehicles[0].signals['time'][:, -1] - self.current_time)
+            self.update_timing(update_time)
+            self.problem.final()
+        else:
+            self.update_timing(update_time)
+        # return trajectories and signals
+        trajectories, signals, curr_state = {}, {}, {}
+        # determine remaining motion time
+        # depends on problem type, for fixedT motion_time is always = horizon_time
+        # local import required to avoid circular dependency
+        from ..problems.point2point import FixedTPoint2point, FreeTPoint2point
+        if isinstance(self.problem, FixedTPoint2point):
+            motion_time = self.problem.options['horizon_time']
+        elif isinstance(self.problem, FreeTPoint2point):
+            motion_time = self.problem.father.get_variables(self.problem, 'T')[0][0]
+
+        if len(self.problem.vehicles) == 1:
+            return self.problem.vehicles[0].signals['state'][:,-1], self.current_time, motion_time, stop, self.problem.vehicles[0].traj_storage, self.problem.vehicles[0].signals
+        else:
+            for vehicle in self.problem.vehicles:
+                trajectories[str(vehicle)] = vehicle.traj_storage
+                signals[str(vehicle)] = vehicle.signals
+                curr_state[str(vehicle)] = vehicle.signals['state'][:,-1]
+        return curr_state, self.current_time, motion_time, stop, trajectories, signals
 
     def update(self):
         # update deployer
