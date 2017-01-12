@@ -1,6 +1,6 @@
 import Tkinter as tk
 from environment import Environment, Obstacle
-from basics import Rectangle, Circle
+from ..basics.shape import Rectangle, Circle
 
 class EnvironmentGUI(tk.Tk):
     # Graphical assistant to make an environment
