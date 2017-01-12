@@ -22,7 +22,7 @@ from ..basics.optilayer import OptiChild
 from ..basics.spline_extra import get_interval_T
 from ..basics.spline import BSplineBasis, BSpline
 from ..basics.geometry import distance_between_points
-from ..basics.shape import Circle, Polyhedron, Rectangle
+from ..basics.shape import Circle, Polyhedron, Rectangle, Square
 from casadi import inf, vertcat, cos, sin
 from scipy.interpolate import interp1d
 from scipy.integrate import odeint
@@ -329,6 +329,7 @@ class Obstacle2D(ObstaclexD):
                 self.signals['angular_velocity'], omega]
 
     def overlaps_with(self, obstacle):
+        # check if self overlaps with obstacle
         if isinstance(self.shape, Circle):
             if isinstance(obstacle.shape, Circle):
                 self_checkpoints = self.shape.get_checkpoints()
@@ -370,6 +371,40 @@ class Obstacle2D(ObstaclexD):
                 else:
                     print 'Circle - Non-rectangular shape boucing not yet implemented'
                 return False
+
+    def is_outside_of(self, room):
+        # check if self is outside or on the border of room
+        [[xmin,xmax],[ymin,ymax]] = room['shape'].get_canvas_limits()
+        [posx,posy]= room['position']
+        xmin += posx
+        xmax += posx
+        ymin += posy
+        ymax += posy
+        self_checkpoints = self.shape.get_checkpoints()
+        if isinstance(self.shape, Circle):
+            if isinstance(room['shape'], (Rectangle, Square)):
+                for self_chck, self_rad in zip(*self_checkpoints):
+                    self_chck = self_chck + self.signals['position'][:,-1]
+                    if (not (xmin<=self_chck[0]+self.shape.radius<=xmax) or not (ymin<=self_chck[1]+self.shape.radius<=ymax)
+                        or not (xmin<=self_chck[0]-self.shape.radius<=xmax) or not (ymin<=self_chck[1]-self.shape.radius<=ymax)):
+                        #self_chck not within borders
+                        return True
+                # didn't find an overlap
+                return False
+            else:
+                print 'Only rectangular borders can be checked for bouncing obstacles yet'
+        elif isinstance(self.shape, Polyhedron):
+            if isinstance(room['shape'], (Rectangle, Square)):
+                for self_chck, self_rad in zip(*self_checkpoints):
+                    self_chck = self_chck + self.signals['position'][:,-1]
+                    if (not (xmin<=self_chck[0]<=xmax) or not (ymin<=self_chck[1]<=ymax)
+                        or not (xmin<=self_chck[0]<=xmax) or not (ymin<=self_chck[1]<=ymax)):
+                        #self_chck not within borders
+                        return True
+                # didn't find an overlap
+                return False
+            else:
+                print 'Only rectangular borders can be checked for bouncing obstacles yet'
 
     def draw(self, t=-1):
         if not self.options['draw']:
