@@ -94,9 +94,14 @@ environment.add_obstacle(Obstacle({'position': [150, 210]}, shape=Rectangle(widt
 globalplanner = None
 
 # make coordinator
-options={'problem': {'freeT': True}, 'solver': {'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}}}
-coordinator=Coordinator(vehicle, environment, globalplanner, options)
-coordinator.init()
-coordinator.plot('scene')
+options={'freeT': True}
+multiproblem=Multiproblem(vehicle, environment, globalplanner, options=options)
+multiproblem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
+multiproblem.init()
 
-coordinator.run()
+simulator = Simulator(multiproblem)
+multiproblem.plot('scene')
+
+# run it!
+import pdb; pdb.set_trace()  # breakpoint 435cdc8c //
+simulator.run()

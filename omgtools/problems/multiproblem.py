@@ -20,7 +20,7 @@
 from problem import Problem
 from point2point import Point2point
 from ..basics.shape import Rectangle, Circle
-from ..basics.geometry import intersect_lines, intersect_line_segments
+from ..basics.geometry import distance_between_points, intersect_lines, intersect_line_segments
 from ..environment.environment import Environment
 # from ..vehicles.vehicle import Vehicle
 from globalplanner import GlobalPlanner
@@ -29,37 +29,44 @@ from ..execution.simulator import Simulator
 from scipy.interpolate import interp1d
 import numpy as np
 
-class Coordinator(Problem):
+class Multiproblem(Problem):
 
-    def __init__(self, fleet, environment, global_planner, options):
-        Problem.__init__(self, fleet, environment, options, label='coordinator')
+    def __init__(self, fleet, environment, global_planner, options=None):
+        Problem.__init__(self, fleet, environment, options, label='multiproblem')
         self.global_planner = global_planner
+        self.problem_options = options  # e.g. selection of problem type (freeT, fixedT)
         
         self.init_time = None
         self.start_time = 0.
         self.update_time = 0.1
         self.curr_time = self.start_time
-
         self.tol = 1e-2
-        self.problem_options = options  # options for solver, selection of problem type (freeT, fixedT)
+        self.update_times=[]
+
         self.arrived = False
 
         self.frame = None
-        # Todo: better get initial and goal position as input? To make it vehicle type independent
+        print 'Enlarging frame for known example'
+        self.frame_size = 150
+        self.cnt = 1  # frame counter
+        
+        # Todo: Only works for one vehile now
+        # Todo: positionT is for Holonomic, should this become poseT?
         self.curr_state = self.vehicles[0].prediction['state'] # initial vehicle position
         self.goal_state = self.vehicles[0].positionT # overall goal 
 
-        self.cnt = 1  # frame counter
-
-        print 'Enlarging frame for known example'
-        self.frame_size = 150
-
     def init(self):
-        self.total_problem = Point2point(self.vehicles[0], self.environment, freeT=self.problem_options['problem']['freeT'])
-        self.total_problem.init()
+        ###Create big problem###
+        Problem.init(self)
+        # = self.total_problem from before
+        # This should create a big problem, in the complete environment. Regardless of freeT or fixedT
+        
+        # if self.problem_options['freeT']:
+        #     FreeTPoint2point.init(self, fleet, environment, options)
+        # elif:
+        #     FixedTPoint2point.init(self, fleet, environment, options)
 
-    def run(self):
-
+        ###Create first frame###
         # get a global path
         # self.global_path = self.global_planner.get_path(self.environment, self.curr_state, self.goal_state)
         # for now fix global path to solve one case
@@ -82,7 +89,7 @@ class Coordinator(Problem):
         # append goal state to waypoints
         self.global_path.append(self.goal_state)
 
-        # get a frame
+        # get a frame, fills in self.frame
         self.create_frame(frame_size = self.frame_size)
 
         # get initial guess based on global path, get motion time
@@ -90,78 +97,125 @@ class Coordinator(Problem):
 
         # get moving obstacles inside frame for this time
         self.frame['moving_obstacles'] = self.get_moving_obstacles_in_frame()
-        # Todo: if there were moving obstacles get new init_guess?
-        # or actually this is the same as solving the problem once --> guess is useless
 
-        # transform frame into problem and simulate
+        # transform frame into problem
+        # Todo: or should self.frame immediately be a problem?
         problem = self.generate_problem()  # transform frame into point2point problem
         problem.reset_init_guess(self.init_guess)  # Todo: is this function doing what we want?
-        self.sim = Simulator(problem)  # make simulator with current problem
         problem.plot('scene')
-        
-        # Set up total problem 
-        # self.total_problem.plot('scene')
-        # self.total_frame_plot = self.total_problem.plot('scene')
-        # self.total_problem.update_plots(plots=[self.total_frame_plot])
 
-        # self.plot('scene')
+        # the big problem has a local problem at each moment
+        # problem representation of the frame
+        self.local_problem = problem
 
-        while not self.arrived:
-        # while np.linalg.norm(np.asarray(self.curr_state) - np.asarray(self.goal_state)) > self.tol:
-            import pdb; pdb.set_trace()  # breakpoint 0a3112da //
-            self.total_problem.simulate(self.curr_time, self.sim.update_time, self.sim.sample_time)
-            # self.total_problem.update_plots(plots=self.total_frame_plot)
+    def construct(self):
+        # This is not necessary since we are never going to solve the total_problem? 
+        # We only want to simulate it, with inputs of local_problem
 
-            # self.total_problem.plot('scene', figure=self.total_problem.plots[0]['figure'])
-            frame_valid = self.check_frame()
-            if not frame_valid:
-                # frame_valid = True  # reset
-                self.cnt += 1  # count frame
+        # Todo: this seems weird?
+        self.T, self.t = self.define_parameter('T'), self.define_parameter('t')
+        self.t0 = self.t/self.T
+        Problem.construct(self)
 
-                # frame was not valid anymore, update frame based on current position
-                self.update_frame()
+    def solve(self, current_time, update_time):
+        # solve local problem
+        self.local_problem.solve(self, current_time, update_time)
 
-                # transform frame into problem and simulate
+        self.update_times.append(self.local_problem.update_times[-1])
+
+        # Todo: how get current position in a clean way?
+        # self.curr_state = self.father.get_parameters()['vehicle0'][2:4]
+
+        frame_valid = self.check_frame()
+        if not frame_valid:
+            # frame_valid = True  # reset
+            self.cnt += 1  # count frame
+
+            # frame was not valid anymore, update frame based on current position
+            self.update_frame()
+
+            # transform frame into problem and simulate
+            problem = self.generate_problem()
+            problem.reset_init_guess(self.init_guess)
+            problem.init()  # Todo: before or after set_init_guess?
+            
+            self.local_frame = problem
+        else: 
+            moving_obstacles = self.get_moving_obstacles_in_frame()
+            # see if amount of moving obstacles changed, if so change = True and self.frame is updated
+            # if change = False, self.frame stays the same
+            # if the obstacles change their trajectory, the simulator takes this into account
+            # Todo: if obstacle is not relevant anymore, place it far away and set hyperplanes accordingly?
+            nobs_changed = self.update_moving_obstacles(moving_obstacles)
+            if nobs_changed:
+                # new or disappeared moving obstacle: number changed
                 problem = self.generate_problem()
-                problem.reset_init_guess(self.init_guess)
+                # Todo: make new problem or place dummy obstacles and overwrite their state? for now dummies have influence on solving time, so better don't use them?
+                problem.reset_init_guess(self.splines)  # Todo: use init_guess from previous problem = best we can do
                 problem.init()  # Todo: before or after set_init_guess?
-                self.sim.set_problem(problem)  # assign problem to simulator
-                problem.plot('scene')
+                
+                self.local_frame = problem
+            
+            # # One simulation step, update pos and remaining motion time.
+            # # For fixedT problem, motion time = horizon_time to make sure obstacles approaching goal position are taken into account
+            # self.curr_state, self.curr_time, self.motion_time, self.arrived, _, _ = self.sim.step(self.update_time)
 
-                # plot frame border
-                # from matplotlib import pyplot as plt                
-                # plt.figure(self.total_problem.plots[0]['figure'].number)
-                # chck = self.frame['border']['shape'].get_checkpoints()[0]
-                # vx = []
-                # vy = []
-                # for i in range(len(chck)):
-                #     vx.append(chck[i][0] + np.array(self.frame['border']['position'][0]))
-                #     vy.append(chck[i][1] + np.array(self.frame['border']['position'][1]))
-                # vx.append(vx[0])
-                # vy.append(vy[0])
-                # plt.plot(vx,vy)
+    def store(self, current_time, update_time, sample_time):
+        
+        # call store of local problem
+        self.local_problem.store(current_time, update_time, sample_time)
 
-            else: 
-                moving_obstacles = self.get_moving_obstacles_in_frame()
-                # see if amount of moving obstacles changed, if so change = True and self.frame is updated
-                # if change = False, self.frame stays the same
-                # if the obstacles change their trajectory, the simulator takes this into account
-                # Todo: if obstacle is not relevant anymore, place it far away and set hyperplanes accordingly?
-                nobs_changed = self.update_moving_obstacles(moving_obstacles)
-                if nobs_changed:
-                    # new or disappeared moving obstacle: number changed
-                    problem = self.generate_problem()
-                    # Todo: make new problem or place dummy obstacles and overwrite their state? for now dummies have influence on solving time, so better don't use them?
-                    problem.reset_init_guess(self.splines)  # Todo: use init_guess from previous problem = best we can do
-                    problem.init()  # Todo: before or after set_init_guess?
-                    self.sim.set_problem(problem)
-                    problem.plot('scene')
-                # One simulation step, update pos and remaining motion time.
-                # For fixedT problem, motion time = horizon_time to make sure obstacles approaching goal position are taken into account
-                self.curr_state, self.curr_time, self.motion_time, self.arrived, _, _ = self.sim.step(self.update_time)
+        # afterwards plot the total problem using the stored values of the local problem
+
+    def stop_criterium(self, current_time, update_time):
+
+        # check if the current frame is the last one
+        if self.local_frame['endpoint_frame'] == self.goal_state:
+            # if we now reach the goal, the vehicle has arrived
+            if self.local_frame.stop_criterium(current_time, update_time):
+                return True
+        else:
+            return False
+
+    def final(self):
+        self.reset_init_time()
         print 'The robot has reached its goal!'
         print 'The problem was divided over ', self.cnt,' frames'
+        if self.options['verbose'] >= 1:
+            print 'Motion time: ', self.curr_time
+            print '%-18s %6g ms' % ('Max update time:',
+                                    max(self.update_times)*1000.)
+            print '%-18s %6g ms' % ('Av update time:',
+                                    (sum(self.update_times)*1000. /
+                                     len(self.update_times)))
+    
+    def export(self, options=None):
+        # ignored this functionality for now
+        raise NotImplementedError('Please implement this method!')
 
+    def set_init_time(self, time):
+        self.init_time = time
+
+    def reset_init_time(self):
+        self.init_time = None
+
+    def init_plot(self, argument, **kwargs):
+        data = Problem.init_plot(self, argument)
+        if data is not None:
+            # Todo: plot border of local_frame
+            data.append(rechthoek_frame)
+
+    def update_plot(self, argument, t, **kwargs):
+        # update the big frame: moving obstacles
+        # but since the big frame also has the vehicles, we can get the trajectories from here?
+        data = Problem.update_plot(self, argument, t)
+        if data is not None:
+            # Todo: plot border of local_frame
+            data.append(rechthoek_frame)
+
+    # ========================================================================
+    # Multiproblem specific functions
+    # ========================================================================
 
     def create_frame(self, frame_size=1.5):
         # Makes a frame, using the environment, the current state and the global path (waypoints)
@@ -493,8 +547,8 @@ class Coordinator(Problem):
             # if final goal is not in the current frame, compare current distance
             # to the local goal with the initial distance
             if not self.point_in_frame(self.goal_state):
-                    init_dist = self.distance_between_points(self.frame['waypoints'][0], self.frame['endpoint_frame'])
-                    curr_dist = self.distance_between_points(self.curr_state[:2], self.frame['endpoint_frame'])
+                    init_dist = distance_between_points(self.frame['waypoints'][0], self.frame['endpoint_frame'])
+                    curr_dist = distance_between_points(self.curr_state[:2], self.frame['endpoint_frame'])
                     if curr_dist < init_dist*(1-(percentage/100.)):
                         # if already covered 'percentage' of the distance 
                         valid = False
@@ -511,10 +565,6 @@ class Coordinator(Problem):
             print 'check_frame for corridor not yet implemented'
                 #close enough/in next corridor?        
 
-    def distance_between_points(self, point1, point2):  
-        # calculate distance between two points
-        return np.sqrt((point2[0]-point1[0])**2+(point2[1]-point1[1])**2)
-
     def update_frame(self):
         
         # update global path from current position,
@@ -527,7 +577,7 @@ class Coordinator(Problem):
         dist = max(self.environment.room['shape'].width, self.environment.room['shape'].height)
         index = 0
         for idx, waypoint in enumerate(self.global_path):
-            curr_dist = self.distance_between_points(waypoint, self.curr_state)
+            curr_dist = distance_between_points(waypoint, self.curr_state)
             if curr_dist < dist:
                 dist = curr_dist
                 index = idx
@@ -601,7 +651,7 @@ class Coordinator(Problem):
         for obstacle in self.frame['stationary_obstacles']:
             environment.add_obstacle(obstacle)
 
-        problem = Point2point(self.vehicles[0], environment, freeT=self.problem_options['problem']['freeT'])
+        problem = Point2point(self.vehicles[0], environment, freeT=self.problem_options['freeT'])
         problem.init()
         if 'reset' in kwargs:
             if kwargs['reset']:
@@ -688,98 +738,7 @@ class Coordinator(Problem):
         for obstacle in self.frame['stationary_obstacles'] + self.frame['moving_obstacles']:
             environment.add_obstacle(obstacle)
         # create a point-to-point problem
-        problem = Point2point(self.vehicles, environment, freeT=self.problem_options['problem']['freeT'])
-        problem.set_options(self.problem_options['solver'])
+        problem = Point2point(self.vehicles, environment, freeT=self.problem_options['freeT'])
+        problem.set_options(self.options['solver_options'])
         problem.init() 
         return problem
-
-    def init_plot(self, argument, **kwargs):
-        import pdb; pdb.set_trace()  # breakpoint 458a20dd //
-        data = self.total_problem.init_plot(argument)
-        if data is not None:
-            data.append(rechthoek_frame)
-
-    def update_plot(self, argument, t, **kwargs):
-        import pdb; pdb.set_trace()  # breakpoint e47ec618 //
-        data = self.total_problem.update_plot(argument, t)
-        if data is not None:
-            data.append(rechthoek_frame)
-
-
-    # def set_default_options(self):
-    #     Problem.set_default_options(self)
-
-    # # ========================================================================
-    # # Optimization modelling related functions
-    # # ========================================================================
-
-    # def construct(self):
-    #     self.T, self.t = self.define_parameter('T'), self.define_parameter('t')
-    #     self.t0 = self.t/self.T
-    #     Problem.construct(self)
-    #     for vehicle in self.vehicles:
-    #         splines = vehicle.define_splines(n_seg=1)[0]
-    #         vehicle.define_trajectory_constraints(splines)
-    #         self.environment.define_collision_constraints(vehicle, splines)
-    #     if len(self.vehicles) > 1 and self.options['inter_vehicle_avoidance']:
-    #         self.environment.define_intervehicle_collision_constraints(self.vehicles)
-
-    # def define_init_constraints(self):
-    #     for vehicle in self.vehicles:
-    #         init_con = vehicle.get_initial_constraints(vehicle.splines[0])
-    #         for con in init_con:
-    #             spline, condition = con[0], con[1]
-    #             self.define_constraint(
-    #                 evalspline(spline, self.t0) - condition, 0., 0.)
-
-    # # ========================================================================
-    # # Deploying related functions
-    # # ========================================================================
-
-    # def initialize(self, current_time):
-    #     self.start_time = current_time
-
-    # def reinitialize(self, father=None):
-    #     if father is None:
-    #         father = self.father
-    #     Problem.reinitialize(self)
-    #     for vehicle in self.vehicles:
-    #         init = vehicle.get_init_spline_value()
-    #         father.set_variables(init, vehicle, 'splines0')
-
-    # def set_init_time(self, time):
-    #     self.init_time = time
-
-    # def reset_init_time(self):
-    #     self.init_time = None
-
-    # # ========================================================================
-    # # Simulation related functions
-    # # ========================================================================
-
-    # def stop_criterium(self, current_time, update_time):
-    #     stop = True
-    #     for vehicle in self.vehicles:
-    #         stop *= vehicle.check_terminal_conditions()
-    #     return stop
-
-    # def final(self):
-    #     self.reset_init_time()
-    #     obj = self.compute_objective()
-    #     if self.options['verbose'] >= 1:
-    #         print '\nWe reached our target!'
-    #         print '%-18s %6g' % ('Objective:', obj)
-    #         print '%-18s %6g ms' % ('Max update time:',
-    #                                 max(self.update_times)*1000.)
-    #         print '%-18s %6g ms' % ('Av update time:',
-    #                                 (sum(self.update_times)*1000. /
-    #                                  len(self.update_times)))
-
-    # def compute_objective(self):
-    #     raise NotImplementedError('Please implement this method!')
-
-    # def export(self, options=None):
-    #     options = options or {}
-    #     if not hasattr(self, 'father'):
-    #         self.init()
-    #     ExportP2P(self, options)
