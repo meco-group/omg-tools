@@ -183,6 +183,8 @@ class FixedTPoint2point(Point2pointProblem):
 
     def init_step(self, current_time, update_time):
         # transform spline variables
+        if not hasattr(self, 'current_time_prev'):
+            self.current_time_prev = 0
         interval_prev = int(np.round(self.current_time_prev/self.knot_time, 6))
         interval_now = int(np.round(current_time/self.knot_time, 6))
         if (interval_prev < interval_now): # passed a knot

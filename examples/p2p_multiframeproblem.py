@@ -95,7 +95,7 @@ environment.add_obstacle(Obstacle({'position': [150, 210]}, shape=Rectangle(widt
 globalplanner = None
 
 # make coordinator
-options={'freeT': True}
+options={'freeT': True, 'horizon_time': 10}
 multiproblem=MultiFrameProblem(vehicle, environment, globalplanner, options=options)
 multiproblem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 multiproblem.init()

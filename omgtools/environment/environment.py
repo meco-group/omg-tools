@@ -222,7 +222,6 @@ class Environment(OptiChild, PlotLayer):
                         
                                 # reset position
                                 obstacle.signals['position'][:,-1] = old_pos
-                            print 'setting new velocity'
                             obstacle.signals['velocity'][:,-1] = vel_new
                 # check if the obstacle doesn't hit the borders
                 if obstacle.is_outside_of(self.room):
