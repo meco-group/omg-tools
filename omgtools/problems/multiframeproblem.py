@@ -47,7 +47,7 @@ class MultiFrameProblem(Problem):
 
         self.frame = {}
         self.frame['type'] = 'frame_shift'
-        self.frame_size = 2.5
+        self.frame_size = 2.5 #150 #2.5
         self.cnt = 1  # frame counter        
 
     def init(self):
@@ -126,7 +126,6 @@ class MultiFrameProblem(Problem):
         frame_valid = self.check_frame()
         if not frame_valid:
             self.cnt += 1  # count frame
-            import pdb; pdb.set_trace()  # breakpoint fc46cc8f //
 
             # frame was not valid anymore, update frame based on current position
             self.update_frame()
@@ -181,6 +180,24 @@ class MultiFrameProblem(Problem):
                                     (sum(self.update_times)*1000. /
                                      len(self.update_times)))
     
+    def simulate(self, current_time, simulation_time, sample_time):
+        # save global path and frame border
+        # store trajectories
+        if not hasattr(self, 'frame_storage'):
+            self.frame_storage = []
+            self.global_path_storage = []
+        repeat = int(simulation_time/sample_time)
+        self._add_to_memory(self.frame_storage, self.frame, repeat)
+        self._add_to_memory(self.global_path_storage, self.global_path, repeat)
+        
+        #this is gonna call self.update_plots, so don't do it here
+        Problem.simulate(self, current_time, simulation_time, sample_time)
+
+    def _add_to_memory(self, memory, data_to_add, repeat=1):
+            # if not isinstance(data_to_add, list):
+            #     data_to_add = [data_to_add]
+            memory.extend([data_to_add for k in range(repeat)])
+
     def export(self, options=None):
         # ignored this functionality for now
         raise NotImplementedError('Please implement this method!')
@@ -199,16 +216,17 @@ class MultiFrameProblem(Problem):
     def update_plot(self, argument, t, **kwargs):
         # plot environment
         data = Problem.update_plot(self, argument, t)
+
         if data is not None:
             # plot frame border
-            for l in self.frame['border']['shape'].draw(self.frame['border']['position']):
-                data[0][0].append([l[k, :] for k in range(self.frame['border']['shape'].n_dim)])
+            for l in self.frame_storage[t]['border']['shape'].draw(self.frame_storage[t]['border']['position']):
+                data[0][0].append([l[k, :] for k in range(self.frame_storage[t]['border']['shape'].n_dim)])
             # plot global path
             # remove last waypoint, since this is the goal position,
             # which was manually added and is not necessarily a grid point
-            length = np.shape(self.global_path[:-1])[0]
+            length = np.shape(self.global_path_storage[t][:-1])[0]
             waypoints = np.array(np.zeros((2,length)))
-            for idx, waypoint in enumerate(self.global_path[:-1]):
+            for idx, waypoint in enumerate(self.global_path_storage[t][:-1]):
                 waypoints[0,idx] = waypoint[0]
                 waypoints[1,idx] = waypoint[1]
             data[0][0].append([waypoints[k, :] for k in range(2)])
@@ -228,6 +246,9 @@ class MultiFrameProblem(Problem):
         # of obstacles inside a frame
         # corridor: a frame consists solely of a corridor, without any static obstacles
         if self.frame['type'] == 'frame_shift':
+            # make new dictionary, to avoid that self.frame keeps the same reference
+            self.frame = {}
+            self.frame['type'] = 'frame_shift'
             # frame with current position as center
             xmin = self.curr_state[0] - frame_size*0.5
             ymin = self.curr_state[1] - frame_size*0.5
@@ -653,7 +674,11 @@ class MultiFrameProblem(Problem):
         self.vehicles[0].set_init_spline_value(init_guess)
 
         # Set start and goal
-        self.vehicles[0].set_initial_conditions(waypoints[0])
+        if hasattr (self.vehicles[0], 'signals'):
+            # use current vehicle velocity as starting velocity for next frame
+            self.vehicles[0].set_initial_conditions(waypoints[0], input=self.vehicles[0].signals['input'][:,-1])
+        else: 
+            self.vehicles[0].set_initial_conditions(waypoints[0])
         self.vehicles[0].set_terminal_conditions(waypoints[-1])
 
         # Solve one time

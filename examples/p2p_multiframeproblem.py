@@ -24,7 +24,7 @@ fixed_example = False
 
 # create vehicle
 if fixed_example:
-    vehicle = Holonomic(shapes = Circle(radius=0.1), options={'syslimit': 'norm_2'}, bounds={'vmax': 10, 'vmin':-10, 'amax':100, 'amin':-100})
+    vehicle = Holonomic(shapes = Circle(radius=2), options={'syslimit': 'norm_2'}, bounds={'vmax': 10, 'vmin':-10, 'amax':100, 'amin':-100})
 else:
     vehicle = Holonomic(shapes = Circle(radius=0.1), options={'syslimit': 'norm_2'}, bounds={'vmax': 1, 'vmin':-1, 'amax':10, 'amin':-10})
 
@@ -91,6 +91,7 @@ else:
 # globalplanner = QuadmapPlanner(environment)
 if fixed_example:
 	globalplanner = None
+    # globalplanner = AStarPlanner(environment, 10, start, goal)
 else: 
 	globalplanner = AStarPlanner(environment, options['cell_size'], start, goal)
 
