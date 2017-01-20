@@ -22,6 +22,7 @@ from point2point import Point2point
 from ..basics.shape import Rectangle, Circle
 from ..basics.geometry import distance_between_points, intersect_lines, intersect_line_segments
 from ..environment.environment import Environment
+from globalplanner import AStarPlanner
 
 from scipy.interpolate import interp1d
 import numpy as np
@@ -30,7 +31,15 @@ class MultiFrameProblem(Problem):
 
     def __init__(self, fleet, environment, global_planner=None, options=None):
         Problem.__init__(self, fleet, environment, options, label='multiproblem')
-        self.global_planner = global_planner
+        # Todo: positionT is for Holonomic, should this become poseT?
+        self.curr_state = self.vehicles[0].prediction['state'] # initial vehicle position
+        self.goal_state = self.vehicles[0].positionT # overall goal 
+
+        if global_planner is not None:
+            self.global_planner = global_planner
+        else: 
+            self.global_planner = AStarPlanner(environment, 10, self.curr_state, self.goal_state)
+
         self.problem_options = options  # e.g. selection of problem type (freeT, fixedT)
         
         self.start_time = 0.
@@ -38,12 +47,8 @@ class MultiFrameProblem(Problem):
 
         self.frame = {}
         self.frame['type'] = 'frame_shift'
-        self.frame_size = 150
-        self.cnt = 1  # frame counter
-        
-        # Todo: positionT is for Holonomic, should this become poseT?
-        self.curr_state = self.vehicles[0].prediction['state'] # initial vehicle position
-        self.goal_state = self.vehicles[0].positionT # overall goal 
+        self.frame_size = 2.5
+        self.cnt = 1  # frame counter        
 
     def init(self):
         # otherwise the init of Problem is called, which is not desirable
@@ -58,26 +63,33 @@ class MultiFrameProblem(Problem):
         # Create first frame:
 
         # get a global path
-        # self.global_path = self.global_planner.get_path(self.environment, self.curr_state, self.goal_state)
-        # for now fix global path to solve one case
-        print 'Using global_path for known example'
-        self.global_path = [[192.546875,   32.171875], [178.53125 ,   38.40625 ], 
-                            [178.53125,   63.34375], [178.53125,   88.28125],
-                            [164.515625,  106.984375], [164.515625,  119.453125],
-                            [159.84375 ,  138.15625 ],[141.15625,  163.09375],
-                            [136.484375,  181.796875], [136.484375,  194.265625],
-                            [122.46875 ,  212.96875 ], [122.46875,  237.90625],
-                            [110.7890625,  247.2578125],[106.1171875,  247.2578125],
-                            [101.4453125,  247.2578125],[ 96.7734375,  247.2578125],
-                            [ 92.1015625,  247.2578125],[ 87.4296875,  247.2578125],
-                            [ 82.7578125,  247.2578125],[ 78.0859375,  247.2578125],
-                            [ 73.4140625,  247.2578125],[ 68.7421875,  247.2578125],
-                            [ 64.0703125,  247.2578125],[ 59.3984375,  247.2578125],
-                            [ 47.71875  ,  262.84375  ],[ 29.03125,  287.78125],
-                            [ 29.03125,  312.71875],[ 29.03125,  337.65625],
-                            [ 29.03125,  362.59375]]
+        if self.problem_options['fixed_example']:
+            # # for now fix global path to solve one case
+            print 'Using global_path for known example'
+            self.global_path = [[192.546875,   32.171875], [178.53125 ,   38.40625 ], 
+                                [178.53125,   63.34375], [178.53125,   88.28125],
+                                [164.515625,  106.984375], [164.515625,  119.453125],
+                                [159.84375 ,  138.15625 ],[141.15625,  163.09375],
+                                [136.484375,  181.796875], [136.484375,  194.265625],
+                                [122.46875 ,  212.96875 ], [122.46875,  237.90625],
+                                [110.7890625,  247.2578125],[106.1171875,  247.2578125],
+                                [101.4453125,  247.2578125],[ 96.7734375,  247.2578125],
+                                [ 92.1015625,  247.2578125],[ 87.4296875,  247.2578125],
+                                [ 82.7578125,  247.2578125],[ 78.0859375,  247.2578125],
+                                [ 73.4140625,  247.2578125],[ 68.7421875,  247.2578125],
+                                [ 64.0703125,  247.2578125],[ 59.3984375,  247.2578125],
+                                [ 47.71875  ,  262.84375  ],[ 29.03125,  287.78125],
+                                [ 29.03125,  312.71875],[ 29.03125,  337.65625],
+                                [ 29.03125,  362.59375]]
+        else:
+            self.global_path = self.global_planner.get_path()
         # append goal state to waypoints, since desired goal is not necessarily a waypoint
         self.global_path.append(self.goal_state)
+
+        # plot global path
+        self.global_planner.grid.draw()
+        # don't include last waypoint, since it is the manually added goal_state
+        self.global_planner.plot_path(self.global_path[:-1])
 
         # get a frame, fills in self.frame
         self.create_frame(frame_size=self.frame_size)
@@ -114,6 +126,7 @@ class MultiFrameProblem(Problem):
         frame_valid = self.check_frame()
         if not frame_valid:
             self.cnt += 1  # count frame
+            import pdb; pdb.set_trace()  # breakpoint fc46cc8f //
 
             # frame was not valid anymore, update frame based on current position
             self.update_frame()
@@ -121,9 +134,10 @@ class MultiFrameProblem(Problem):
             # transform frame into problem and simulate
             problem = self.generate_problem()
             # Todo: is this a new guess?
-            init_guess, _, _ = self.get_init_guess()
-            problem.init()
-            problem.reset_init_guess(init_guess)
+            # init_guess, _, _ = self.get_init_guess()
+            # problem.init()
+            # self.init_guess comes from update_frame
+            problem.reset_init_guess(self.init_guess)
             self.local_problem = problem        
         else: 
             moving_obstacles = self.get_moving_obstacles_in_frame()
@@ -139,7 +153,7 @@ class MultiFrameProblem(Problem):
                     if obs1==obs2 and obs1.options['avoid'] != obs2.options['avoid']:
                         # new moving obstacle in frame or obstacle disappeared from frame
                         problem = self.generate_problem()
-                        problem.init()
+                        # problem.init()
                         init_guess = self.local_problem.father.get_variables()[self.vehicles[0].label, 'splines0']
                         problem.reset_init_guess(init_guess)  # use init_guess from previous problem = best we can do
                         self.local_problem = problem
@@ -264,7 +278,6 @@ class MultiFrameProblem(Problem):
                 # find intersection point between line and frame
                 intersection_point = self.find_intersection_line_frame(waypoint_line)
                 # shift endpoint away from border
-                percentage = 10
                 shape = self.vehicles[0].shapes[0]
                 if isinstance(shape, Circle):
                     veh_size = shape.radius
@@ -279,34 +292,32 @@ class MultiFrameProblem(Problem):
             else:
                 # all waypoints are within frame, even without shifting, so don't shift the frame
                 endpoint = self.global_path[-1]
-                # Check if last waypoint is too close to the frame border, move the frame extra in that direction
-                # Only needs to be checked in the else, since in other cases the frame was already shifted
-                dist_to_border = self.distance_to_border(endpoint)
-                shape = self.vehicles[0].shapes[0]
-                if isinstance(shape, Circle):
-                    veh_size = shape.radius
-                elif isinstance(shape, Rectangle):
-                    veh_size = max(shape.width, shape.height)
-                if abs(dist_to_border[0]) <= veh_size:
-                    print 'Last waypoint too close in x-direction, moving frame'
-                    # move in x-direction
-                    move_distance = (veh_size - abs(dist_to_border[0]))*1.1
-                    if dist_to_border[0]<0: 
-                        move_distance = -move_distance
-                    xmin = xmin + move_distance
-                    xmax = xmax + move_distance
-                    self.frame['border']['limits'][0] = xmin
-                    self.frame['border']['limits'][2] = xmax
-                if abs(dist_to_border[1]) <= veh_size:
-                    print 'Last waypoint too close in y-direction, moving frame'
-                    # move in y-direction
-                    move_distance = (veh_size - abs(dist_to_border[1]))*1.1
-                    if dist_to_border[1]<0: 
-                        move_distance = -move_distance
-                    ymin = ymin + move_distance
-                    ymax = ymax + move_distance
-                    self.frame['border']['limits'][1] = ymin
-                    self.frame['border']['limits'][3] = ymax
+            # Check if last waypoint is too close to the frame border, move the frame extra in that direction
+            # Only needs to be checked in the else, since in other cases the frame was already shifted
+            dist_to_border = self.distance_to_border(endpoint)
+            shape = self.vehicles[0].shapes[0]
+            if isinstance(shape, Circle):
+                veh_size = shape.radius
+            elif isinstance(shape, Rectangle):
+                veh_size = max(shape.width, shape.height)
+            if abs(dist_to_border[0]) <= veh_size:
+                print 'Last waypoint too close in x-direction, moving frame'
+                # move in x-direction
+                move_distance = (veh_size - abs(dist_to_border[0]))*1.1
+                if dist_to_border[0]<0: 
+                    move_distance = -move_distance
+                xmin = xmin + move_distance
+                xmax = xmax + move_distance
+                self.frame['border'] = self.make_border(xmin, ymin, xmax, ymax)
+            if abs(dist_to_border[1]) <= veh_size:
+                print 'Last waypoint too close in y-direction, moving frame'
+                # move in y-direction
+                move_distance = (veh_size - abs(dist_to_border[1]))*1.1
+                if dist_to_border[1]<0: 
+                    move_distance = -move_distance
+                ymin = ymin + move_distance
+                ymax = ymax + move_distance
+                self.frame['border'] = self.make_border(xmin, ymin, xmax, ymax)                
 
         # Finish frame description
         # frame['border'] is already determined
@@ -463,7 +474,11 @@ class MultiFrameProblem(Problem):
                 move_back = max(abs(distance/np.cos(angle)), abs(distance/np.sin(angle)))
             new_length = length - move_back
             if new_length < 0:
-                raise ValueError('In shift_point_back, trying to shift too far')
+                new_length = 0
+                print 'Distance between last waypoint inside frame and', \
+                      'intersection point with border is too small to shift',\
+                      '(i.e. smaller than desired shift distance), selecting last waypoint inside frame'
+                # raise ValueError('In shift_point_back, trying to shift too far')
 
         end_shifted = [0.,0.]
         end_shifted[0] = start[0] + new_length*np.cos(angle)
@@ -476,9 +491,9 @@ class MultiFrameProblem(Problem):
         # Based on: https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line
         x2, y2, x3, y3 = self.frame['border']['limits']
         # number vertices of border
-        # v1--v2
+        # v2--v3
         # |   |
-        # v4--v3
+        # v1--v4
         v1 = [x2,y2]
         v2 = [x2,y3]
         v3 = [x3,y3]
@@ -496,8 +511,8 @@ class MultiFrameProblem(Problem):
         dist41 = -abs((v1[1]-v4[1])*point[0] - (v1[0]-v4[0])*point[1] + v1[0]*v4[1] - v1[1]*v4[0])/(np.sqrt((v1[1]-v4[1])**2+(v1[0]-v4[0])**2))
    
         distance = [0.,0.]
-        distance[0] = min(abs(dist12), abs(dist41))  # x-direction
-        distance[1] = min(abs(dist23), abs(dist34))  # y-direction
+        distance[0] = min(abs(dist12), abs(dist34))  # x-direction: from point to side12 or side34
+        distance[1] = min(abs(dist23), abs(dist41))  # y-direction
 
         return distance
 
@@ -557,22 +572,26 @@ class MultiFrameProblem(Problem):
         # Update global path from current position,
         # since there may be a deviation from original global path
         # and since you moved over the path so a part needs to be removed.
-        #================================================================
-        print 'For now global path is not yet updated, just shrinked'
-        # for now remove a part from the path, keeping the same waypoints
-        # find waypoint closest to current position, remove the rest
+        
+        if self.problem_options['fixed_example']:
+            #================================================================
+            print 'For now global path is not yet updated, just shrinked'
+            # for now remove a part from the path, keeping the same waypoints
+            # find waypoint closest to current position, remove the rest
 
-        # initialize distance to the maximum possible value
-        dist = max(self.environment.room['shape'].width, self.environment.room['shape'].height)
-        index = 0
-        for idx, waypoint in enumerate(self.global_path):
-            curr_dist = distance_between_points(waypoint, self.curr_state)
-            if curr_dist < dist:
-                dist = curr_dist
-                index = idx
-        self.global_path = self.global_path[index:]
-        #================================================================
-        # self.global_path = self.global_planner.get_path(self.environment, self.curr_state, self.goal_state)
+            # initialize distance to the maximum possible value
+            dist = max(self.environment.room['shape'].width, self.environment.room['shape'].height)
+            index = 0
+            for idx, waypoint in enumerate(self.global_path):
+                curr_dist = distance_between_points(waypoint, self.curr_state)
+                if curr_dist < dist:
+                    dist = curr_dist
+                    index = idx
+            self.global_path = self.global_path[index:]
+            #================================================================
+        else:
+            self.global_path = self.global_planner.get_path(start=self.curr_state, goal=self.goal_state)
+            self.global_path.append(self.goal_state)
         # make new frame
         self.create_frame(frame_size = self.frame_size)
 

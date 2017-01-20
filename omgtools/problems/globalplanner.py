@@ -18,6 +18,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from ..basics.shape import Rectangle, Square, Circle
+import time
 
 from matplotlib import pyplot as plt
 import numpy as np
@@ -160,7 +161,19 @@ class AStarPlanner(GlobalPlanner):
         # creates a node on the location of point
         return Node(point, parent)
 
-    def get_path(self):
+    def get_path(self, start=None, goal=None):
+        t1 = time.time()
+        if start is not None:
+            # only grid points are reachable
+            self.start = self.grid.move_to_gridpoint(start)
+        if goal is not None:
+            self.goal = self.grid.move_to_gridpoint(goal)
+
+        # initialize A*-algorithm
+        self.current_node = self.create_node(self.start)
+        self.open_list = []
+        self.closed_list = [self.current_node]
+
         while not self.current_node.pos == self.goal:
             # get positions of current node neighbours
             neighbors = self.grid.get_neighbors(self.current_node.pos)
@@ -202,15 +215,14 @@ class AStarPlanner(GlobalPlanner):
                 # open list was empty, meaning that no path could be found
                 raise RuntimeError('There is no path from the desired start to the desired end node!')
 
+        t2 = time.time()
+        print 'Elapsed time to find a global path: ', t2-t1
+
         path = self.closed_list_to_path()
         waypoints = []
         for node in path:
             waypoints.append(node.pos)
         waypoints.reverse()
-        # temporary plotting
-        self.grid.draw()
-        self.plot_path(path)
-        import pdb; pdb.set_trace()  # breakpoint b6d486eb //
         return waypoints
 
     def closed_list_to_path(self):
@@ -225,10 +237,9 @@ class AStarPlanner(GlobalPlanner):
     def plot_path(self, path):
         posx = []
         posy = []
-        for node in path:
-            posx.append(node.pos[0])
-            posy.append(node.pos[1])
-        plt.figure(1)
+        for waypoint in path:
+            posx.append(waypoint[0])
+            posy.append(waypoint[1])
         plt.plot(posx,posy)
         plt.show()
 
@@ -421,10 +432,11 @@ class Grid:
         x_top = self.position[0] + 0.5*self.width
         y_bottom = self.position[1] - 0.5*self.height
         y_top = self.position[1] + 0.5*self.height
-        for k in range(self.width/self.cell_width+1):
+        # make int because number of lines can only be an integer
+        for k in range(int(self.width/self.cell_width)+1):
             x_point = x_bottom + k*self.cell_width
             plt.plot([x_point,x_point], [y_bottom,y_top], 'r-')
-        for k in range(self.height/self.cell_height+1):
+        for k in range(int(self.height/self.cell_height)+1):
             y_point = y_bottom + k*self.cell_height
             plt.plot([x_bottom,x_top], [y_point,y_point], 'r-')
         plt.draw()

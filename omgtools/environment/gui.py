@@ -2,20 +2,20 @@ import Tkinter as tk
 from environment import Environment, Obstacle
 from ..basics.shape import Rectangle, Circle
 
-class EnvironmentGUI(tk.Tk):
+class EnvironmentGUI(tk.Toplevel):
     # Graphical assistant to make an environment
     # width = environment border width
     # height = environment border height
     # position = top left corner point of environment
     def __init__(self, width=8,height=8, position=[0,0], options=None, *args, **kwargs):
-        tk.Tk.__init__(self, *args, **kwargs)
+        tk.Toplevel.__init__(self, *args, **kwargs)
 
         self.title("Environment")
         self.resizable(0,0)
 
-        self.meter2pixel = 100  # conversion of meter to pixels
+        self.meter2pixel = 50  # conversion of meter to pixels
 
-        grid_size = options['grid_size'] if 'grid_size' in options else 0.5
+        cell_size = options['cell_size'] if 'cell_size' in options else 0.5
 
         # make environment frame and size it
         self.frameWidth = width*self.meter2pixel
@@ -23,10 +23,9 @@ class EnvironmentGUI(tk.Tk):
         self.position = [pos * self.meter2pixel for pos in position]  # top left corner point of the frame
         self.canvas = tk.Canvas(self, width=self.frameWidth, height=self.frameHeight, borderwidth=0, highlightthickness=0)
         self.canvas.configure(cursor="tcross")
-        # self.canvas.pack(side="top", fill="both", expand="true")
         self.canvas.grid(row=0,columnspan=3)
-        self.cellWidth = int(grid_size*self.meter2pixel)
-        self.cellHeight = int(grid_size*self.meter2pixel)
+        self.cellWidth = int(cell_size*self.meter2pixel)  # in pixels, so int is required
+        self.cellHeight = int(cell_size*self.meter2pixel)
         self.rows = self.frameWidth/self.cellWidth
         self.columns = self.frameHeight/self.cellHeight
 
@@ -69,9 +68,9 @@ class EnvironmentGUI(tk.Tk):
 
         # Add rectangle or circle
         self.shape = tk.StringVar()
-        self.circleButton = tk.Radiobutton(self, text="Circle", variable=self.shape, value='circle')#.pack(anchor=tk.W)
+        self.circleButton = tk.Radiobutton(self, text="Circle", variable=self.shape, value='circle')
         self.circleButton.grid(row=2, column=2)
-        self.rectangleButton = tk.Radiobutton(self, text="Rectangle", variable=self.shape, value='rectangle')#.pack(anchor=tk.W)
+        self.rectangleButton = tk.Radiobutton(self, text="Rectangle", variable=self.shape, value='rectangle')
         self.rectangleButton.grid(row=3,column=2)
 
         # Add text
@@ -97,7 +96,7 @@ class EnvironmentGUI(tk.Tk):
     def makeObstacle(self, event):
 
         obstacle = {}
-        event = self.snap2Grid(event)
+        event = self.snap_to_grid(event)
         clickedPixel = [click+pos for click,pos in zip([event.x,event.y],self.position)]  # shift click with position of frame
         pos = self.pixel2World(clickedPixel)
         obstacle['pos'] = pos
@@ -133,11 +132,11 @@ class EnvironmentGUI(tk.Tk):
                 print 'Created obstacle: ', obstacle
         # return self.obstacles
 
-    def snap2Grid(self, event):
+    def snap_to_grid(self, event):
         # Snap the user clicked point to a grid point, since obstacles can only
         # be placed on grid points
         event.x = int(self.cellWidth * round(float(event.x)/self.cellWidth))
-        event.y = int(self.cellWidth * round(float(event.y)/self.cellWidth))
+        event.y = int(self.cellHeight * round(float(event.y)/self.cellHeight))
         return event
 
     def getPosition(self, event):
@@ -152,25 +151,29 @@ class EnvironmentGUI(tk.Tk):
             print 'You clicked more than two times, the last click replaced the previous one'
 
     def buildEnvironment(self):
-        # make border
-        self.environment = Environment(room={'shape': Rectangle(width = self.frameWidth/self.meter2pixel,
-                                                                height = self.frameHeight/self.meter2pixel),
-                                             'position':[(self.position[0]+self.frameWidth/2.)/self.meter2pixel,
-                                                         (self.position[1]+self.frameHeight/2.)/self.meter2pixel]})
-        for obstacle in self.obstacles:
-            print obstacle
-            if obstacle['shape'] == 'rectangle':
-                rectangle = Rectangle(width=obstacle['width'],height=obstacle['height'])
-                pos = obstacle['pos']
-                self.environment.add_obstacle(Obstacle({'position': pos}, shape=rectangle))
-            elif obstacle['shape'] == 'circle':
-                circle = Circle(radius=obstacle['radius'])
-                pos = obstacle['pos']
-                self.environment.add_obstacle(Obstacle({'position': pos}, shape=circle))
-            else:
-                raise ValueError('For now only rectangles and circles are supported, you selected a ' + obstacle['shape'])
-        # close window
-        self.destroy()
+        # only build environment and shut down GUI if start and goal positions are clicked
+        if len(self.clickedPositions) == 2:
+            # make border
+            self.environment = Environment(room={'shape': Rectangle(width = self.frameWidth/self.meter2pixel,
+                                                                    height = self.frameHeight/self.meter2pixel),
+                                                 'position':[(self.position[0]+self.frameWidth/2.)/self.meter2pixel,
+                                                             (self.position[1]+self.frameHeight/2.)/self.meter2pixel]})
+            for obstacle in self.obstacles:
+                print obstacle
+                if obstacle['shape'] == 'rectangle':
+                    rectangle = Rectangle(width=obstacle['width'],height=obstacle['height'])
+                    pos = obstacle['pos']
+                    self.environment.add_obstacle(Obstacle({'position': pos}, shape=rectangle))
+                elif obstacle['shape'] == 'circle':
+                    circle = Circle(radius=obstacle['radius'])
+                    pos = obstacle['pos']
+                    self.environment.add_obstacle(Obstacle({'position': pos}, shape=circle))
+                else:
+                    raise ValueError('For now only rectangles and circles are supported, you selected a ' + obstacle['shape'])
+            # close window
+            self.destroy()
+        else:
+            print 'Please right-click on the start and goal position first'
 
     def getEnvironment(self):
         return self.environment
