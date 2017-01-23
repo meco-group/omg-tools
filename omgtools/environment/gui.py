@@ -94,6 +94,24 @@ class EnvironmentGUI(tk.Frame):
         labelRadius.grid(row=6,column=1)
         labelRadiusEntry.grid(row=7,column=1)
 
+        self.vel_x = tk.DoubleVar(value=0.0)
+        self.vel_y = tk.DoubleVar(value=0.0)
+
+        labelVelx = tk.Label(self.root, text="x-velocity [m/s]")
+        labelVelxEntry = tk.Entry(self.root, bd =0, textvariable=self.vel_x)
+        labelVelx.grid(row=4,column=2)
+        labelVelxEntry.grid(row=5,column=2)
+
+        labelVely = tk.Label(self.root, text="y-velocity [m/s]")
+        labelVelyEntry = tk.Entry(self.root, bd =0, textvariable=self.vel_y)
+        labelVely.grid(row=6,column=2)
+        labelVelyEntry.grid(row=7,column=2)
+
+        self.bounce = tk.BooleanVar(value=False)
+
+        labelBounce = tk.Checkbutton(self.root, text="Bounce [yes/no]", variable=self.bounce)
+        labelBounce.grid(row=8,column=2)
+
     def makeObstacle(self, event):
 
         obstacle = {}
@@ -118,6 +136,8 @@ class EnvironmentGUI(tk.Frame):
                 obstacle['shape'] = 'rectangle'
                 obstacle['width'] = self.width.get()
                 obstacle['height'] = self.height.get()
+                obstacle['velocity'] = [self.vel_x.get(), self.vel_y.get()]
+                obstacle['bounce'] = self.bounce.get()
                 self.obstacles.append(obstacle)
                 print 'Created obstacle: ', obstacle
         elif self.shape.get() == 'circle':
@@ -129,6 +149,8 @@ class EnvironmentGUI(tk.Frame):
                 self.canvas.create_circle(event.x, event.y, self.radius.get()*self.meter2pixel, fill="black")
                 obstacle['shape'] = 'circle'
                 obstacle['radius'] = self.radius.get()
+                obstacle['velocity'] = [self.vel_x.get(), self.vel_y.get()]
+                obstacle['bounce'] = self.bounce.get()
                 self.obstacles.append(obstacle)
                 print 'Created obstacle: ', obstacle
         # return self.obstacles
@@ -164,11 +186,15 @@ class EnvironmentGUI(tk.Frame):
                 if obstacle['shape'] == 'rectangle':
                     rectangle = Rectangle(width=obstacle['width'],height=obstacle['height'])
                     pos = obstacle['pos']
-                    self.environment.add_obstacle(Obstacle({'position': pos}, shape=rectangle))
+                    trajectory = {'velocity': {'time': [0.], 'values': [obstacle['velocity']]}}
+                    simulation = {'trajectories': trajectory}
+                    self.environment.add_obstacle(Obstacle({'position': pos}, shape=rectangle, simulation=simulation, options={'bounce': obstacle['bounce']}))
                 elif obstacle['shape'] == 'circle':
                     circle = Circle(radius=obstacle['radius'])
                     pos = obstacle['pos']
-                    self.environment.add_obstacle(Obstacle({'position': pos}, shape=circle))
+                    trajectory = {'velocity': {'time': [0.], 'values': [obstacle['velocity']]}}
+                    simulation = {'trajectories': trajectory}
+                    self.environment.add_obstacle(Obstacle({'position': pos}, shape=circle, simulation=simulation, options={'bounce': obstacle['bounce']}))
                 else:
                     raise ValueError('For now only rectangles and circles are supported, you selected a ' + obstacle['shape'])
             # close window
