@@ -74,9 +74,11 @@ if fixed_example:
 
 else:
 	# stationary obstacles via GUI
+    import Tkinter as tk
+    root = tk.Tk()
     options={'cell_size': 0.25}
-    gui = EnvironmentGUI(width=10, height=10, position=[0,0], options=options)
-    gui.mainloop()
+    gui = EnvironmentGUI(parent=root, width=10, height=10, position=[0,0], options=options)
+    root.mainloop()
     environment = gui.getEnvironment()
 
     # manually add moving obstacles to environment

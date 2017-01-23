@@ -2,16 +2,17 @@ import Tkinter as tk
 from environment import Environment, Obstacle
 from ..basics.shape import Rectangle, Circle
 
-class EnvironmentGUI(tk.Toplevel):
+class EnvironmentGUI(tk.Frame):
     # Graphical assistant to make an environment
     # width = environment border width
     # height = environment border height
     # position = top left corner point of environment
-    def __init__(self, width=8,height=8, position=[0,0], options=None, *args, **kwargs):
-        tk.Toplevel.__init__(self, *args, **kwargs)
+    def __init__(self, parent, width=8,height=8, position=[0,0], options=None, *args, **kwargs):
+        tk.Frame.__init__(self, parent, *args, **kwargs)
 
-        self.title("Environment")
-        self.resizable(0,0)
+        self.root = parent
+        self.root.title("Environment")
+        self.root.resizable(0,0)
 
         self.meter2pixel = 50  # conversion of meter to pixels
 
@@ -21,7 +22,7 @@ class EnvironmentGUI(tk.Toplevel):
         self.frameWidth = width*self.meter2pixel
         self.frameHeight = height*self.meter2pixel
         self.position = [pos * self.meter2pixel for pos in position]  # top left corner point of the frame
-        self.canvas = tk.Canvas(self, width=self.frameWidth, height=self.frameHeight, borderwidth=0, highlightthickness=0)
+        self.canvas = tk.Canvas(self.root, width=self.frameWidth, height=self.frameHeight, borderwidth=0, highlightthickness=0)
         self.canvas.configure(cursor="tcross")
         self.canvas.grid(row=0,columnspan=3)
         self.cellWidth = int(cell_size*self.meter2pixel)  # in pixels, so int is required
@@ -46,16 +47,16 @@ class EnvironmentGUI(tk.Toplevel):
         self.canvas.bind("<Button-3>", self.getPosition)  # right mouse button gives a position
 
         # Add buttons
-        self.readyButton = tk.Button(self, text="Ready", fg="green", command=self.buildEnvironment)
+        self.readyButton = tk.Button(self.root, text="Ready", fg="green", command=self.buildEnvironment)
         self.readyButton.grid(row=2, column=0)
         # self.readyButton.pack(side=tk.RIGHT)
 
-        self.quitButton = tk.Button(self, text="Quit", fg="red", command=self.canvas.quit)
+        self.quitButton = tk.Button(self.root, text="Quit", fg="red", command=self.canvas.quit)
         self.quitButton.grid(row=3, column=0)
         # self.button.pack(side=tk.RIGHT)
 
         # add cellSize button
-        self.cellSize = tk.Label(self, text='Cell size: ' + str(float(self.cellWidth)/self.meter2pixel) + 'x' + str(float(self.cellHeight)/self.meter2pixel) + ' [m]')
+        self.cellSize = tk.Label(self.root, text='Cell size: ' + str(float(self.cellWidth)/self.meter2pixel) + 'x' + str(float(self.cellHeight)/self.meter2pixel) + ' [m]')
         self.cellSize.grid(row=1, column=1)
         # self.cellSize.pack(expand=0)
 
@@ -68,9 +69,9 @@ class EnvironmentGUI(tk.Toplevel):
 
         # Add rectangle or circle
         self.shape = tk.StringVar()
-        self.circleButton = tk.Radiobutton(self, text="Circle", variable=self.shape, value='circle')
+        self.circleButton = tk.Radiobutton(self.root, text="Circle", variable=self.shape, value='circle')
         self.circleButton.grid(row=2, column=2)
-        self.rectangleButton = tk.Radiobutton(self, text="Rectangle", variable=self.shape, value='rectangle')
+        self.rectangleButton = tk.Radiobutton(self.root, text="Rectangle", variable=self.shape, value='rectangle')
         self.rectangleButton.grid(row=3,column=2)
 
         # Add text
@@ -78,18 +79,18 @@ class EnvironmentGUI(tk.Toplevel):
         self.height = tk.DoubleVar()
         self.radius = tk.DoubleVar()
 
-        labelWidth = tk.Label(self, text="Width [m]")
-        labelWidthEntry = tk.Entry(self, bd =0, textvariable=self.width)
+        labelWidth = tk.Label(self.root, text="Width [m]")
+        labelWidthEntry = tk.Entry(self.root, bd =0, textvariable=self.width)
         labelWidth.grid(row=2,column=1)
         labelWidthEntry.grid(row=3,column=1)
 
-        labelHeight = tk.Label(self, text="Height [m]")
-        labelHeightEntry = tk.Entry(self, bd =0, textvariable=self.height)
+        labelHeight = tk.Label(self.root, text="Height [m]")
+        labelHeightEntry = tk.Entry(self.root, bd =0, textvariable=self.height)
         labelHeight.grid(row=4,column=1)
         labelHeightEntry.grid(row=5,column=1)
 
-        labelRadius = tk.Label(self, text="Radius [m]")
-        labelRadiusEntry = tk.Entry(self, bd =0, textvariable=self.radius)
+        labelRadius = tk.Label(self.root, text="Radius [m]")
+        labelRadiusEntry = tk.Entry(self.root, bd =0, textvariable=self.radius)
         labelRadius.grid(row=6,column=1)
         labelRadiusEntry.grid(row=7,column=1)
 
@@ -172,6 +173,7 @@ class EnvironmentGUI(tk.Toplevel):
                     raise ValueError('For now only rectangles and circles are supported, you selected a ' + obstacle['shape'])
             # close window
             self.destroy()
+            self.root.destroy()
         else:
             print 'Please right-click on the start and goal position first'
 
