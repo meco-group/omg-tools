@@ -108,21 +108,6 @@ class MultiFrameProblem(Problem):
         self.local_problem = problem
 
     def solve(self, current_time, update_time):
-        # solve local problem
-        self.local_problem.solve(current_time, update_time)
-
-        # save solving time
-        self.update_times.append(self.local_problem.update_times[-1])
-
-        # Todo: how get current position in a clean way?
-        # np.array converts CasADi DM to numbers
-        if not hasattr(self.vehicles[0], 'signals'):
-            # first iteration
-            self.curr_state = self.vehicles[0].prediction['state']
-        else:
-            # all other iterations
-            self.curr_state = self.vehicles[0].signals['pose'][:,-1]
-
         frame_valid = self.check_frame()
         if not frame_valid:
             self.cnt += 1  # count frame
@@ -156,6 +141,21 @@ class MultiFrameProblem(Problem):
                         init_guess = self.local_problem.father.get_variables()[self.vehicles[0].label, 'splines0']
                         problem.reset_init_guess(init_guess)  # use init_guess from previous problem = best we can do
                         self.local_problem = problem
+        
+        # solve local problem
+        self.local_problem.solve(current_time, update_time)
+
+        # save solving time
+        self.update_times.append(self.local_problem.update_times[-1])
+
+        # Todo: how get current position in a clean way?
+        # np.array converts CasADi DM to numbers
+        if not hasattr(self.vehicles[0], 'signals'):
+            # first iteration
+            self.curr_state = self.vehicles[0].prediction['state']
+        else:
+            # all other iterations
+            self.curr_state = self.vehicles[0].signals['pose'][:,-1]
             
     def store(self, current_time, update_time, sample_time):        
         # call store of local problem
@@ -763,4 +763,6 @@ class MultiFrameProblem(Problem):
         if 'horizon_time' in self.problem_options:
             problem.set_options({'horizon_time' : self.problem_options['horizon_time']})
         problem.init() 
+        problem.initialize(current_time=0.)  # reset the current_time, to ensure that predict uses the provided
+                                             # last input of previous problem and vehicle velocity is kept from one frame to another
         return problem
