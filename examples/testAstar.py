@@ -16,5 +16,5 @@ planner = AStarPlanner(environment, cell_size=square_size, start=start, goal=goa
 waypoints = planner.get_path()
 planner.grid.draw()
 planner.plot_path(waypoints)
-import pdb; pdb.set_trace()  # breakpoint 55ce3d5d //
+# put breakpoint here to see the plot
 print waypoints
