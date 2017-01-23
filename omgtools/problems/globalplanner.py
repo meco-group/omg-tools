@@ -18,6 +18,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from ..basics.shape import Rectangle, Square, Circle
+from ..basics.geometry import distance_between_points
 import time
 
 from matplotlib import pyplot as plt
@@ -43,25 +44,7 @@ class QuadmapPlanner(GlobalPlanner):
         GlobalPlanner.__init__(self, environment)
         self.environment = environment
     
-        # # initialization of the quad map
-        # bb = qmap.Bbox((width, height))
-        # self.quad = qmap.Quad(bb, depth=2)
-        # self.quad.insert(bb, 0)
-        # self.insertFactoryWalls()
-
-        # # initialization of the viewer
-        # self.v = viewer.Viewer(self.quad, 1000, 1000, self.quad.G)
-        # self.v.update()
-        # self.path = {}  # contain all current paths
-        # self.pathLineStrings = {}  # contain all paths converted to lineString
-        # self.dist = {}  # current travel distance of paths
-        # self.obstacles = {}  # random obstacles traveling in the virtual world
-        # self.robotgoals = {}  # endpoints of the robots
-        # self.robotstates = {}  # current position of the robots (x,y,th,vx,vy,w) 
-        # self.splineplannerdict = {}  # spline planners for the robots
-
     def get_path(self, environment, curr_state, goal_state):
-        print 'bla'
         return []
 
 class AStarPlanner(GlobalPlanner):
@@ -87,6 +70,10 @@ class AStarPlanner(GlobalPlanner):
         else:
             raise ValueError('Invalid grid_size entered, use maximum two numbers (width and height)')
 
+        # occupy grid cells based on environment
+        blocked = self.grid.get_occupied_cells(environment, cell_size)
+        self.grid.block(blocked)
+
         # only grid points are reachable
         self.start = self.grid.move_to_gridpoint(start)
         self.goal = self.grid.move_to_gridpoint(goal)
@@ -99,10 +86,6 @@ class AStarPlanner(GlobalPlanner):
         # diagonal moving cost for grid
         theta = np.arctan(self.grid.cell_height/self.grid.cell_width)
         self.diag_cost = self.grid.cell_width / np.cos(theta)
-
-        # occupy grid cells based on environment
-        blocked = self.grid.get_occupied_cells(environment, cell_size)
-        self.grid.block(blocked)
 
     def set_start(self, start):
         self.start = start
@@ -209,7 +192,6 @@ class AStarPlanner(GlobalPlanner):
             self.current_node = self.get_lowest_f_cost_node()
             self.remove_from_open_list(self.current_node)
             self.closed_list.append(self.current_node)
-            print self.current_node.pos
 
             if not self.open_list:
                 # open list was empty, meaning that no path could be found
@@ -338,11 +320,43 @@ class Grid:
         return accessible
     
     def move_to_gridpoint(self, point):
-        # start on first grid point and add the amount of cell widths/heights
-        # which fits in the point, do this -1 because you start on the first grid point
+
+        # determine distance of point to all surrounding grid points
+
+        # find the amount of cell widths/heights which fits in the point
+        # this is the closest gridpoint
         moved_point = [0, 0]
-        moved_point[0] = self.position[0] - 0.5*self.width + 0.5*self.cell_width +  self.cell_width * (round(float(point[0])/self.cell_width)-1)
-        moved_point[1] = self.position[1] - 0.5*self.height + 0.5*self.cell_height +  self.cell_height * (round(float(point[1])/self.cell_height)-1)
+        # remove offset, i.e. substract the bottom left gridpoint
+        point[0] = point[0] - (self.position[0] - 0.5*self.width + 0.5*self.cell_width)
+        point[1] = point[1] - (self.position[1] - 0.5*self.height + 0.5*self.cell_height)
+        # determine how many times point fits in cell dimensions
+        moved_point[0] = self.cell_width * (round(float(point[0])/self.cell_width))
+        moved_point[1] = self.cell_height * (round(float(point[1])/self.cell_height))
+        # add offset, i.e. add bottom left gridpoint
+        moved_point[0] = moved_point[0] + (self.position[0] - 0.5*self.width + 0.5*self.cell_width)
+        moved_point[1] = moved_point[1] + (self.position[1] - 0.5*self.height + 0.5*self.cell_height)
+
+        if moved_point in self.occupied:
+            # closest grid point is occupied, check all neighbours of this point
+            points_to_check = [[moved_point[0]+self.cell_width, moved_point[1]],
+                               [moved_point[0]-self.cell_width, moved_point[1]],
+                               [moved_point[0], moved_point[1]+self.cell_height],
+                               [moved_point[0], moved_point[1]-self.cell_height],
+                               [moved_point[0]+self.cell_width, moved_point[1]+self.cell_height],
+                               [moved_point[0]+self.cell_width, moved_point[1]-self.cell_height],
+                               [moved_point[0]-self.cell_width, moved_point[1]+self.cell_height],
+                               [moved_point[0]-self.cell_width, moved_point[1]-self.cell_height]]
+            # remove inaccessible points from points_to_check
+            points_to_check = filter(self.in_bounds, points_to_check)
+            points_to_check = filter(self.free, points_to_check)
+            # select closest point which is not occupied
+            if points_to_check is not None:
+                d_min = max(self.cell_height, self.cell_width)
+                for p in points_to_check:
+                    distance = distance_between_points(p, point)
+                    if distance < d_min:
+                        d_min = distance
+                        moved_point = p
         return moved_point
 
     def get_neighbors(self, point):
