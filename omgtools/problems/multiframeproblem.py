@@ -29,7 +29,7 @@ import numpy as np
 
 class MultiFrameProblem(Problem):
 
-    def __init__(self, fleet, environment, global_planner=None, options=None):
+    def __init__(self, fleet, environment, global_planner=None, options=None, **kwargs):
         Problem.__init__(self, fleet, environment, options, label='multiproblem')
         # Todo: positionT is for Holonomic, should this become poseT?
         self.curr_state = self.vehicles[0].prediction['state'] # initial vehicle position
@@ -46,8 +46,8 @@ class MultiFrameProblem(Problem):
         self.update_times=[]
 
         self.frame = {}
-        self.frame['type'] = 'frame_shift'
-        self.frame_size = 2.5 #150 #2.5
+        self.frame['type'] = kwargs['frame_type'] if 'frame_type' in kwargs else 'frame_shift'
+        self.frame_size = kwargs['frame_size'] if 'frame_size' in kwargs else 2.5
         self.cnt = 1  # frame counter        
 
     def init(self):
@@ -58,31 +58,9 @@ class MultiFrameProblem(Problem):
         self.local_problem.initialize(current_time)
 
     def reinitialize(self,):
-        # this function is called at the start
+        # this function is called at the start and creates the first frame
 
-        # Create first frame:
-
-        # get a global path
-        if self.problem_options['fixed_example']:
-            # # for now fix global path to solve one case
-            print 'Using global_path for known example'
-            self.global_path = [[192.546875,   32.171875], [178.53125 ,   38.40625 ], 
-                                [178.53125,   63.34375], [178.53125,   88.28125],
-                                [164.515625,  106.984375], [164.515625,  119.453125],
-                                [159.84375 ,  138.15625 ],[141.15625,  163.09375],
-                                [136.484375,  181.796875], [136.484375,  194.265625],
-                                [122.46875 ,  212.96875 ], [122.46875,  237.90625],
-                                [110.7890625,  247.2578125],[106.1171875,  247.2578125],
-                                [101.4453125,  247.2578125],[ 96.7734375,  247.2578125],
-                                [ 92.1015625,  247.2578125],[ 87.4296875,  247.2578125],
-                                [ 82.7578125,  247.2578125],[ 78.0859375,  247.2578125],
-                                [ 73.4140625,  247.2578125],[ 68.7421875,  247.2578125],
-                                [ 64.0703125,  247.2578125],[ 59.3984375,  247.2578125],
-                                [ 47.71875  ,  262.84375  ],[ 29.03125,  287.78125],
-                                [ 29.03125,  312.71875],[ 29.03125,  337.65625],
-                                [ 29.03125,  362.59375]]
-        else:
-            self.global_path = self.global_planner.get_path()
+        self.global_path = self.global_planner.get_path()
         # append goal state to waypoints, since desired goal is not necessarily a waypoint
         self.global_path.append(self.goal_state)
 
@@ -594,25 +572,25 @@ class MultiFrameProblem(Problem):
         # since there may be a deviation from original global path
         # and since you moved over the path so a part needs to be removed.
         
-        if self.problem_options['fixed_example']:
-            #================================================================
-            print 'For now global path is not yet updated, just shrinked'
-            # for now remove a part from the path, keeping the same waypoints
-            # find waypoint closest to current position, remove the rest
+        # if self.problem_options['fixed_example']:
+        #     #================================================================
+        #     print 'For now global path is not yet updated, just shrinked'
+        #     # for now remove a part from the path, keeping the same waypoints
+        #     # find waypoint closest to current position, remove the rest
 
-            # initialize distance to the maximum possible value
-            dist = max(self.environment.room['shape'].width, self.environment.room['shape'].height)
-            index = 0
-            for idx, waypoint in enumerate(self.global_path):
-                curr_dist = distance_between_points(waypoint, self.curr_state)
-                if curr_dist < dist:
-                    dist = curr_dist
-                    index = idx
-            self.global_path = self.global_path[index:]
-            #================================================================
-        else:
-            self.global_path = self.global_planner.get_path(start=self.curr_state, goal=self.goal_state)
-            self.global_path.append(self.goal_state)
+        #     # initialize distance to the maximum possible value
+        #     dist = max(self.environment.room['shape'].width, self.environment.room['shape'].height)
+        #     index = 0
+        #     for idx, waypoint in enumerate(self.global_path):
+        #         curr_dist = distance_between_points(waypoint, self.curr_state)
+        #         if curr_dist < dist:
+        #             dist = curr_dist
+        #             index = idx
+        #     self.global_path = self.global_path[index:]
+        #     #================================================================
+        # else:
+        self.global_path = self.global_planner.get_path(start=self.curr_state, goal=self.goal_state)
+        self.global_path.append(self.goal_state)
         # make new frame
         self.create_frame(frame_size = self.frame_size)
 
