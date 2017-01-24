@@ -345,12 +345,12 @@ class Obstacle2D(ObstaclexD):
                 return False
             elif isinstance(obstacle.shape, Polyhedron):
                 obstacle.shape.get_sides(obstacle.shape.vertices)
-                print 'Circle - Polyhedron bouncing not yet implemented'
+                # print 'Circle - Polyhedron bouncing not yet implemented'
                 return False
 
         elif isinstance(self.shape, Polyhedron):
             if isinstance(obstacle.shape, Circle):
-                print 'Circle - Polyhedron bouncing not yet implemented'
+                # print 'Circle - Polyhedron bouncing not yet implemented'
                 return False
             elif isinstance(obstacle.shape, Polyhedron):
                 if isinstance(obstacle.shape, Rectangle):
