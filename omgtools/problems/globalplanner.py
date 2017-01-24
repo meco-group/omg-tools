@@ -327,11 +327,11 @@ class Grid:
         # this is the closest gridpoint
         moved_point = [0, 0]
         # remove offset, i.e. substract the bottom left gridpoint
-        point[0] = point[0] - (self.position[0] - 0.5*self.width + 0.5*self.cell_width)
-        point[1] = point[1] - (self.position[1] - 0.5*self.height + 0.5*self.cell_height)
+        moved_point[0] = point[0] - (self.position[0] - 0.5*self.width + 0.5*self.cell_width)
+        moved_point[1] = point[1] - (self.position[1] - 0.5*self.height + 0.5*self.cell_height)
         # determine how many times point fits in cell dimensions
-        moved_point[0] = self.cell_width * (round(float(point[0])/self.cell_width))
-        moved_point[1] = self.cell_height * (round(float(point[1])/self.cell_height))
+        moved_point[0] = self.cell_width * (round(float(moved_point[0])/self.cell_width))
+        moved_point[1] = self.cell_height * (round(float(moved_point[1])/self.cell_height))
         # add offset, i.e. add bottom left gridpoint
         moved_point[0] = moved_point[0] + (self.position[0] - 0.5*self.width + 0.5*self.cell_width)
         moved_point[1] = moved_point[1] + (self.position[1] - 0.5*self.height + 0.5*self.cell_height)
@@ -395,12 +395,12 @@ class Grid:
                         v_y = vertex_y[k] + pos[1]
                         vertices.append([v_x, v_y])
                 if isinstance(obstacle.shape, Circle):
-                    r = obstacle.radius
+                    r = obstacle.shape.radius
                     # approximate circle by a square and add these vertices
-                    vertices = [[pos[0]+radius, pos[1]+radius],
-                                [pos[0]+radius, pos[1]-radius],
-                                [pos[0]-radius, pos[1]+radius],
-                                [pos[0]-radius, pos[1]-radius]]
+                    vertices = [[pos[0]+r, pos[1]+r],
+                                [pos[0]+r, pos[1]-r],
+                                [pos[0]-r, pos[1]+r],
+                                [pos[0]-r, pos[1]-r]]
                 vertices = np.array(vertices)
 
                 occ_cells = []
