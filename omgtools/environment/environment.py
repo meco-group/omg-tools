@@ -171,7 +171,7 @@ class Environment(OptiChild, PlotLayer):
                                     # direction = up_right
                                     # new direction may be down_right or up_left
                                     # test new direction down_right by shifting obstacle
-                                    obstacle.signals['position'][:,-1] += [0.05,-0.05]
+                                    obstacle.signals['position'][:,-1] += [0.15,-0.15]
                                     if not obstacle.overlaps_with(obs):
                                         # no overlap so move down_right
                                         # new_direction = down_right
@@ -184,7 +184,7 @@ class Environment(OptiChild, PlotLayer):
                                     # direction = up_left
                                     # new direction may be down_left or up_right
                                     # test new direction down_left by shifting obstacle
-                                    obstacle.signals['position'][:,-1] += [-0.05,-0.05]
+                                    obstacle.signals['position'][:,-1] += [-0.15,-0.15]
                                     if not obstacle.overlaps_with(obs):
                                         # no overlap so move down_left
                                         # new_direction = down_left
@@ -197,7 +197,7 @@ class Environment(OptiChild, PlotLayer):
                                     # direction = down_right
                                     # new direction may be down_left or up_right
                                     # test new direction down_left by shifting obstacle
-                                    obstacle.signals['position'][:,-1] += [-0.05,-0.05]
+                                    obstacle.signals['position'][:,-1] += [-0.15,-0.15]
                                     if not obstacle.overlaps_with(obs):
                                         # no overlap so move down_left
                                         # new_direction = down_left
@@ -210,7 +210,7 @@ class Environment(OptiChild, PlotLayer):
                                     # direction = down_left
                                     # new direction may be down_right or up_left
                                     # test new direction down_right by shifting obstacle
-                                    obstacle.signals['position'][:,-1] += [0.05,-0.05]
+                                    obstacle.signals['position'][:,-1] += [0.15,-0.15]
                                     if not obstacle.overlaps_with(obs):
                                         # no overlap so move down_right
                                         # new_direction = down_right
@@ -225,17 +225,17 @@ class Environment(OptiChild, PlotLayer):
                             obstacle.signals['velocity'][:,-1] = vel_new
                 # check if the obstacle doesn't hit the borders
                 if obstacle.is_outside_of(self.room):
-                    # bounce straight off other obstacle
+                    # bounce straight off border
                     if any(v == 0 for v in vel):
                         vel_new = -vel
-                    # bounce diagonally off other obstacle
+                    # bounce diagonally off border
                     else:
                         old_pos = np.copy(obstacle.signals['position'][:,-1])
                         if (vel[0] > 0 and vel[1] > 0):
                             # direction = up_right
                             # new direction may be down_right or up_left
                             # test new direction down_right by shifting obstacle
-                            obstacle.signals['position'][:,-1] += [0.05,-0.05]
+                            obstacle.signals['position'][:,-1] += [0.15,-0.15]
                             if not obstacle.is_outside_of(self.room):
                                 # no overlap so move down_right
                                 # new_direction = down_right
@@ -248,7 +248,7 @@ class Environment(OptiChild, PlotLayer):
                             # direction = up_left
                             # new direction may be down_left or up_right
                             # test new direction down_left by shifting obstacle
-                            obstacle.signals['position'][:,-1] += [-0.05,-0.05]
+                            obstacle.signals['position'][:,-1] += [-0.15,-0.15]
                             if not obstacle.is_outside_of(self.room):
                                 # no overlap so move down_left
                                 # new_direction = down_left
@@ -261,7 +261,7 @@ class Environment(OptiChild, PlotLayer):
                             # direction = down_right
                             # new direction may be down_left or up_right
                             # test new direction down_left by shifting obstacle
-                            obstacle.signals['position'][:,-1] += [-0.05,-0.05]
+                            obstacle.signals['position'][:,-1] += [-0.15,-0.15]
                             if not obstacle.is_outside_of(self.room):
                                 # no overlap so move down_left
                                 # new_direction = down_left
@@ -274,15 +274,15 @@ class Environment(OptiChild, PlotLayer):
                             # direction = down_left
                             # new direction may be down_right or up_left
                             # test new direction down_right by shifting obstacle
-                            obstacle.signals['position'][:,-1] += [0.05,-0.05]
+                            obstacle.signals['position'][:,-1] += [0.15,-0.15]
                             if not obstacle.is_outside_of(self.room):
                                 # no overlap so move down_right
                                 # new_direction = down_right
-                                vel_new = [vel[0], -vel[1]]
+                                vel_new = [-vel[0], vel[1]]
                             else:
                                 # there was overlap so move up_left
                                 # new_direction = up_left
-                                vel_new = [-vel[0],vel[1]]
+                                vel_new = [vel[0],-vel[1]]
                         # reset position
                         obstacle.signals['position'][:,-1] = old_pos
                     print 'setting new velocity'
