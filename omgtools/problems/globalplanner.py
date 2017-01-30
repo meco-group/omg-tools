@@ -19,6 +19,7 @@
 
 from ..basics.shape import Rectangle, Square, Circle
 from ..basics.geometry import distance_between_points
+
 import time
 
 from matplotlib import pyplot as plt
@@ -255,9 +256,10 @@ class Grid:
         self.width = width
         self.height = height
         self.position = position
-        if width % cell_width != 0:
+        # todo: dirty trick to avoid float division, alternative?
+        if (width*1e5) % (cell_width*1e5) != 0:
             raise ValueError('Selected width must be a multiple of square size')
-        elif height % cell_height != 0:
+        elif (height*1e5) % (cell_height*1e5) != 0:
             raise ValueError('Selected height must be a multiple of square size')
         else:
             self.cell_width = cell_width  # width of a cell
