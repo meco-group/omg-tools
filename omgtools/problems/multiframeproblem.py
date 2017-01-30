@@ -329,18 +329,18 @@ class MultiFrameProblem(Problem):
             self.frame['waypoints'] = points_in_frame
             # Todo: added endpoint to waypoints, okay?
 
-        # min_nobs: start with a certain frame size, shift frame and adapt size to get a minimum amount
-        # of obstacles inside a frame
+        # min_nobs: enlarge frame as long as there are no obstacles inside it
         elif self.frame['type'] == 'min_nobs':
-            # make new dictionary, to avoid that self.frame keeps the same reference
+            import time
+            start = time.time()
             self.frame = self.get_min_nobs_frame(self.curr_state)
 
-            # try to scale up frame
+            # try to scale up frame in all directions until it hits the borders or an obstacle
             self.frame['border'] = self.scale_up_frame(self.frame)
 
             # Check if last waypoint is too close to the frame border, move the frame extra in that direction
-            # This is possible if point was inside frame without shifting frame, but is too close to border
-            # update limits of frame
+            # This is possible if point was inside frame but is too close to border.
+            # Update limits of frame
             xmin,ymin,xmax,ymax = self.frame['border']['limits']
             dist_to_border = self.distance_to_border(self.frame['waypoints'][-1])
             if abs(dist_to_border[0]) <= self.veh_size:
@@ -362,7 +362,6 @@ class MultiFrameProblem(Problem):
                 ymax = ymax + move_distance
                 self.frame['border'] = self.make_border(xmin, ymin, xmax, ymax)
 
-
             # Finish frame description
             # frame['border'] is already determined
             stationary_obstacles = self.get_stationary_obstacles_in_frame()
@@ -375,15 +374,300 @@ class MultiFrameProblem(Problem):
             # and not necessarily in the goal position (which can lie between grid points, anywhere on the map)
             self.frame['endpoint_frame'] = self.frame['waypoints'][-1]
 
+            # compute the next frame, such that you can check when the vehicle
+            # enters this next frame and make this frame the new current frame
             self.next_frame = self.create_next_frame(self.frame)
 
+            end = time.time()
+            print 'Elapsed time while creating frame: ', end-start
 
         # corridor: a frame consists solely of a corridor, without any static obstacles
         elif self.frame['type'] == 'corridor':
             raise NotImplementedError('Frame type corridor is not implemented yet')
 
+    def check_frame(self):
+        if self.frame['type'] == 'frame_shift':
+            percentage = 80  # if travelled over x% then get new frame
+
+            # if final goal is not in the current frame, compare current distance
+            # to the local goal with the initial distance
+            if not self.point_in_frame(self.goal_state):
+                    init_dist = distance_between_points(self.frame['waypoints'][0], self.frame['endpoint_frame'])
+                    curr_dist = distance_between_points(self.curr_state[:2], self.frame['endpoint_frame'])
+                    if curr_dist < init_dist*(1-(percentage/100.)):
+                        # if already covered 'percentage' of the distance 
+                        valid = False
+                        return valid
+                    else:
+                        valid = True
+                        return valid
+            else:  # keep frame, until 'percentage' of the distance covered or arrived at last frame
+                valid = True
+                return valid
+        elif self.frame['type'] == 'min_nobs':
+            percentage = 99  # if travelled over x% then get new frame
+
+            # if final goal is not in the current frame, compare current distance
+            # to the local goal with the initial distance
+            if not self.point_in_frame(self.goal_state):
+                    init_dist = distance_between_points(self.frame['waypoints'][0], self.frame['endpoint_frame'])
+                    curr_dist = distance_between_points(self.curr_state[:2], self.frame['endpoint_frame'])
+                    if curr_dist < init_dist*(1-(percentage/100.)):
+                        # if already covered 'percentage' of the distance 
+                        valid = False
+                        return valid
+                    elif self.point_in_frame(self.curr_state[:2], frame=self.next_frame, distance=self.veh_size):
+                        valid = False
+                        return valid
+                    else:
+                        valid = True
+                        return valid
+            else:  # keep frame, until 'percentage' of the distance covered or arrived at last frame
+                valid = True
+                return valid
+        elif self.frame['type'] == 'corridor':
+            raise RuntimeError('check_frame for corridor not yet implemented')
+
+    def update_frame(self, next_frame=None):
+        
+        # Update global path from current position,
+        # since there may be a deviation from original global path
+        # and since you moved over the path so a part needs to be removed.
+        
+        import time
+        start = time.time()
+
+        self.global_path = self.global_planner.get_path(start=self.curr_state, goal=self.goal_state)
+        self.global_path.append(self.goal_state)
+        
+        # make new frame
+        if next_frame is not None:
+            # we already have the next frame, so we first compute the frame
+            # after the next one
+            new_frame = self.create_next_frame(next_frame)
+            # the next frame becomes the current frame
+            self.frame = self.next_frame.copy()
+            # the new frame becomes the next frame
+            # note: if the current frame is the last one, new_frame will be None
+            if new_frame is not None:
+                self.next_frame = new_frame.copy()
+            else:
+                self.next_frame = None
+        else:
+            self.create_frame(frame_size = self.frame_size)
+
+        # get initial guess based on global path, get motion time
+        self.init_guess, self.motion_time = self.get_init_guess()
+
+        # get moving obstacles inside frame for this time
+        self.frame['moving_obstacles'] = self.get_moving_obstacles_in_frame()
+
+        end = time.time()
+        print 'Elapsed time while updating frame: ', end-start
+
+    def get_stationary_obstacles_in_frame(self, frame=None):
+        obstacles_in_frame = []
+        for obstacle in self.environment.obstacles:
+            # check if obstacle is stationary, this is when:
+            # there is no entry trajectories or there are trajectories but no velocity or 
+            # all velocities are 0.
+            if ((not 'trajectories' in obstacle.simulation) or (not 'velocity' in obstacle.simulation['trajectories'])
+               or (all(vel == [0.]*obstacle.n_dim for vel in obstacle.simulation['trajectories']['velocity']['values']))):
+                # get obstacle checkpoints
+                if not isinstance(obstacle.shape, Circle):
+                    obs_chck = obstacle.shape.get_checkpoints()[0]  # element [0] gives vertices, not the corresponding radii
+                # for a circle only the center is returned as a checkpoint
+                # make a square representation of it and use those checkpoints
+                # Todo: circle is approximated as a square,
+                # so may be added to frame while not necessary
+                # Improvement: check if distance to frame < radius, by using extra
+                # input to point_in_frame(distance=radius)
+                else:
+                    [[xmin, xmax],[ymin, ymax]] = obstacle.shape.get_canvas_limits()
+                    obs_chck = [[xmin, ymin], [xmin, ymax], [xmax, ymax], [xmax, ymin]]                        
+                obs_pos = obstacle.signals['position'][:,-1]
+                for chck in obs_chck:
+                    # if it is not a circle, rotate the vertices
+                    if hasattr(obstacle.shape, 'orientation'):
+                        vertex = obstacle.shape.rotate(obstacle.shape.orientation, chck)
+                    else:
+                        vertex = chck
+                    # move to correct position
+                    vertex += obs_pos
+                    # check if vertex is in frame
+                    if self.point_in_frame(vertex, frame=frame):
+                        # add corresponding obstacle
+                        obstacles_in_frame.append(obstacle)
+                        # break from for chck in obs_chck, move on to next obstacle,
+                        # since if one vertex of obstacle is in frame then the whole
+                        # obstacle is added
+                        break
+        return obstacles_in_frame
+
+    def get_moving_obstacles_in_frame(self):
+        # determine which moving obstacles are in self.frame for self.motion_time
+        moving_obstacles = []
+        for obstacle in self.environment.obstacles:
+            # check if obstacle is moving, this is when:
+            # there is an entry trajectories, and there is a velocity,
+            # and not all velocities are 0.
+            if (('trajectories' in obstacle.simulation) and ('velocity' in obstacle.simulation['trajectories'])
+               and not (all(vel == [0.]*obstacle.n_dim for vel in obstacle.simulation['trajectories']['velocity']['values']))):
+                # get obstacle checkpoints
+                if not isinstance(obstacle.shape, Circle):
+                    obs_chck = obstacle.shape.get_checkpoints()[0]  # element [0] gives vertices, not the corresponding radii
+                # for a circle only the center is returned as a checkpoint
+                # make a square representation of it and use those checkpoints
+                # Todo: circle is approximated as a square,
+                # so may be added to frame while not necessary
+                # Improvement: check if distance to frame < radius, by using extra
+                # input to point_in_frame(distance=radius)
+                else:
+                    [[xmin, xmax],[ymin, ymax]] = obstacle.shape.get_canvas_limits()
+                    obs_chck = [[xmin, ymin], [xmin, ymax], [xmax, ymax], [xmax, ymin]] 
+                obs_pos = obstacle.signals['position'][:,-1]
+                obs_vel = obstacle.signals['velocity'][:,-1]
+                # add all moving obstacles, but only avoid those that matter
+                moving_obstacles.append(obstacle)
+                # by default don't avoid the obstacle, only if it is inside the frame
+                obstacle.set_options({'avoid': False})
+                # only check points for which the obstacle velocity is not all zero
+                if any(obs_vel != np.zeros(obstacle.n_dim)):
+                    for chck in obs_chck:
+                        # if it is not a circle, rotate the vertices
+                        if hasattr(obstacle.shape, 'orientation'):
+                            vertex = obstacle.shape.rotate(obstacle.shape.orientation, chck)
+                        else:
+                            vertex = chck
+                        # move to correct position
+                        vertex += obs_pos
+                        # check if vertex is in frame during movement
+                        if self.point_in_frame(vertex, time=self.motion_time, velocity=obs_vel):
+                            # avoid corresponding obstacle                            
+                            obstacle.set_options({'avoid': True})
+                            # break from for chck in obs_chck, move on to next obstacle, since
+                            # obstacle is added to the frame if any of its vertices is in the frame
+                            break
+        return moving_obstacles
+
+    def get_init_guess(self, **kwargs):
+
+        waypoints = self.frame['waypoints']
+        # change first waypoint to current state, the startpoint of the init guess
+        waypoints[0] = [self.curr_state[0], self.curr_state[1]]
+        # use waypoints for prediction
+        x, y = [], []
+        for waypoint in waypoints:
+            x.append(waypoint[0])
+            y.append(waypoint[1])
+        # Calculate total length in x- and y-direction
+        l_x, l_y = 0., 0.
+        for i in range(len(waypoints)-1):
+            l_x += waypoints[i+1][0] - waypoints[i][0]
+            l_y += waypoints[i+1][1] - waypoints[i][1]
+        # Calculate distance in x and y between each 2 waypoints
+        # and use it as a relative measure to build time vector
+        time_x = [0.]
+        time_y = [0.]
+
+        for i in range(len(waypoints)-1):
+            if (l_x == 0. and l_y !=0.):
+                time_x.append(0.)
+                time_y.append(time_y[-1] + float(waypoints[i+1][1] - waypoints[i][1])/l_y)
+            elif (l_x != 0. and l_y == 0.):
+                time_x.append(time_x[-1] + float(waypoints[i+1][0] - waypoints[i][0])/l_x)
+                time_y.append(0.)
+            elif (l_x == 0. and l_y == 0.):
+                time_x.append(0.)
+                time_y.append(0.)
+            else:
+                time_x.append(time_x[-1] + float(waypoints[i+1][0] - waypoints[i][0])/l_x)
+                time_y.append(time_y[-1] + float(waypoints[i+1][1] - waypoints[i][1])/l_y)  # gives time 0...1
+
+        # make approximate one an exact one
+        # otherwise fx(1) = 1
+        for idx, t in enumerate(time_x):
+            if (1 - t < 1e-5):
+                time_x[idx] = 1
+        for idx, t in enumerate(time_y):
+            if (1 - t < 1e-5):
+                time_y[idx] = 1
+
+        # Make interpolation functions
+        fx = interp1d(time_x, x, kind='linear', bounds_error=False, fill_value=1.)  # kind='cubic' requires a minimum of 4 waypoints
+        fy = interp1d(time_y, y, kind='linear', bounds_error=False, fill_value=1.)
+
+        # Evaluate resulting splines to get evaluations at knots = coeffs-guess
+        # Todo: this doesn't take into account the conservatism: spline value is taken instead of the knots
+        #       what is the effect of this?
+        coeffs_x = fx(self.vehicles[0].knots[self.vehicles[0].degree-1:-(self.vehicles[0].degree-1)])
+        coeffs_y = fy(self.vehicles[0].knots[self.vehicles[0].degree-1:-(self.vehicles[0].degree-1)])
+        init_guess = np.c_[coeffs_x, coeffs_y]
+
+        # Suppose vehicle is moving at half of vmax, don't build and solve problem
+        length_to_travel = np.sqrt((l_x**2+l_y**2))
+        max_vel = self.vehicles[0].vmax if hasattr(self.vehicles[0], 'vmax') else (self.vehicles[0].vxmax+self.vehicles[0].vymax)*0.5
+        motion_time = length_to_travel/(max_vel*0.5)
+        init_guess[-3] = init_guess[-1]  # final acceleration is also 0 normally
+        init_guess[-4] = init_guess[-1]  # final acceleration is also 0 normally
+        splines = init_guess
+
+        # Pass on initial guess
+        self.vehicles[0].set_init_spline_value(init_guess)
+
+        # Set start and goal
+        if hasattr (self.vehicles[0], 'signals'):
+            # use current vehicle velocity as starting velocity for next frame
+            self.vehicles[0].set_initial_conditions(waypoints[0], input=self.vehicles[0].signals['input'][:,-1])
+        else: 
+            self.vehicles[0].set_initial_conditions(waypoints[0])
+        self.vehicles[0].set_terminal_conditions(waypoints[-1])
+
+        # # Solve one time
+        # environment = Environment(room={'shape': self.frame['border']['shape'],
+        #                                 'position': self.frame['border']['position'],
+        #                                 'orientation': self.frame['border']['orientation']})
+        # for obstacle in self.frame['stationary_obstacles']:
+        #     environment.add_obstacle(obstacle)
+
+        # problem_options = {}
+        # for key, value in self.problem_options.items():
+        #     problem_options[key] = value
+        # problem = Point2point(self.vehicles[0], environment, freeT=self.problem_options['freeT'], options=problem_options)
+        # problem.init()
+        # problem.solve(current_time=0, update_time=0.1)
+
+        # if problem.problem.stats()['return_status'] != 'Solve_Succeeded':
+        #     feasible = False
+        #     print 'Problem was infeasible, did not find an initial guess'
+        # else:
+        #     feasible = True
+
+        # # Retreive motion time
+        # if self.options['freeT']:
+        #     # freeT: there is a time variable
+        #     motion_time = problem.father.get_variables(problem, 'T',)[0][0]
+        # else:
+        #     # fixedT: the remaining motion time is always the horizon time
+        #     motion_time = problem.options['horizon_time']
+        # # Save trajectories for all frames, as initial guesses
+        # splines = problem.father.get_variables()[self.vehicles[0].label, 'splines0']
+        # splines = np.array(splines)  # convert DM to array
+        return splines, motion_time
+
+    def make_border(self, xmin, ymin, xmax, ymax):
+        width = xmax - xmin
+        height = ymax - ymin
+        angle = 0.
+        # add angle to position
+        position = [(xmax - xmin)*0.5+xmin,(ymax-ymin)*0.5+ymin, angle]
+        limits = [xmin, ymin, xmax, ymax]
+        return {'shape': Rectangle(width=width, height=height),
+         'position': position, 'orientation': angle, 'limits': limits}
+
     def create_next_frame(self, frame):
         if not frame['endpoint_frame'] == self.goal_state:
+            # only search the next frame if the current frame doesn't contain the goal state
             next_frame = self.get_min_nobs_frame(start=frame['endpoint_frame'])
 
             # try to scale up frame
@@ -417,26 +701,33 @@ class MultiFrameProblem(Problem):
             # frame['border'] is already determined
             stationary_obstacles = self.get_stationary_obstacles_in_frame(frame=next_frame)
             next_frame['stationary_obstacles'] = stationary_obstacles
-            # If generated frame contains goal position, endpoint will be = goal position, since the goal position
-            # was added to the global path. This was necessary because otherwise you will end up on a grid point
-            # and not necessarily in the goal position (which can lie between grid points, anywhere on the map)
+            # Last waypoint of frame is a point of global_path or the goal_state which was added to self.global_path.
+            # This was necessary because otherwise you will end up on a grid point and not necessarily in the goal
+            # position (which can lie between grid points, anywhere on the map)
             next_frame['endpoint_frame'] = next_frame['waypoints'][-1]
             return next_frame
         else:
+            # tried to create the next frame, while the goal position is already inside the current frame
             return None
 
     def get_min_nobs_frame(self, start):
+        # generates a frame by subsequently including more waypoints, until an obstacle
+        # is found inside the frame
+
+        # make new dictionary, to avoid that self.frame keeps the same reference
         frame = {}
         frame['type'] = 'min_nobs'
 
-        # frame with current vehicle position as center
+        # frame with current vehicle position as center, 
+        # width and height are determined by the vehicle size
         xmin = start[0] - self.veh_size*self.scale_factor
         ymin = start[1] - self.veh_size*self.scale_factor
         xmax = start[0] + self.veh_size*self.scale_factor
         ymax = start[1] + self.veh_size*self.scale_factor
         frame['border'] = self.make_border(xmin,ymin,xmax,ymax)
 
-        # only consider the waypoints past 'start'
+        # only consider the waypoints past 'start' = the current vehicle position or a certain waypoint
+        # so find the waypoint which is closest to start
         dist = max(self.environment.room['shape'].width, self.environment.room['shape'].height)
         closest_waypoint = self.global_path[0]
         index = 0
@@ -448,10 +739,10 @@ class MultiFrameProblem(Problem):
                 index = idx
 
         points_in_frame = []  # holds all waypoints in the frame
+        # run over all waypoints, starting from the waypoint closest to start
         for idx, point in enumerate(self.global_path[index:]):
             # update limits of frame
             xmin,ymin,xmax,ymax = frame['border']['limits']
-            # add first waypoint
             if not self.point_in_frame(point, frame=frame):
                 # next waypoint is not inside frame,
                 # enlarge frame such that it is in there
@@ -477,6 +768,7 @@ class MultiFrameProblem(Problem):
                 # else: ymin and ymax are kept
 
                 frame['border'] = self.make_border(xmin_new,ymin_new,xmax_new,ymax_new)
+                # check if there are any obstacles inside this new frame
                 stationary_obstacles = self.get_stationary_obstacles_in_frame(frame=frame)
                 if stationary_obstacles:
                     # there is an obstacle inside the frame after enlarging
@@ -498,51 +790,60 @@ class MultiFrameProblem(Problem):
         return frame
 
     def scale_up_frame(self, frame):
+        # scale up the current frame in all directions, until it hits the borders
+        # or it contains an obstacle
         scaled_frame = frame.copy()
         xmin,ymin,xmax,ymax = scaled_frame['border']['limits']            
         while True:
+            # enlarge in positive x-direction
             xmax_new = xmax + self.veh_size*self.scale_factor
             scaled_frame['border'] = self.make_border(xmin,ymin,xmax_new,ymax)
-            if not self.get_stationary_obstacles_in_frame(frame=scaled_frame):
-                xmax = xmax_new
-            else:
-                scaled_frame['border'] = self.make_border(xmin,ymin,xmax,ymax)
-                break
-            if xmax > self.environment.room['shape'].get_canvas_limits()[0][1] + self.environment.room['position'][0]:
+            if xmax_new > self.environment.room['shape'].get_canvas_limits()[0][1] + self.environment.room['position'][0]:
+                # the frame hit the borders, this is the maximum size in this direction
                 xmax = self.environment.room['shape'].get_canvas_limits()[0][1] + self.environment.room['position'][0]
                 break
+            if not self.get_stationary_obstacles_in_frame(frame=scaled_frame):
+                # there is no obstacle in the enlarged frame, so enlarge it
+                xmax = xmax_new
+            else:
+                # there is an obstacle in the enlarged frame, don't enlarge it
+                scaled_frame['border'] = self.make_border(xmin,ymin,xmax,ymax)
+                break
         while True:
+            # enlarge in negative x-direction
             xmin_new = xmin - self.veh_size*self.scale_factor
             scaled_frame['border'] = self.make_border(xmin_new,ymin,xmax,ymax)
+            if xmin_new < self.environment.room['shape'].get_canvas_limits()[0][0] + self.environment.room['position'][0]:
+                xmin = self.environment.room['shape'].get_canvas_limits()[0][0] + self.environment.room['position'][0]
+                break
             if not self.get_stationary_obstacles_in_frame(frame=scaled_frame):
                 xmin = xmin_new
             else:
                 scaled_frame['border'] = self.make_border(xmin,ymin,xmax,ymax)
                 break
-            if xmin < self.environment.room['shape'].get_canvas_limits()[0][0] + self.environment.room['position'][0]:
-                xmin = self.environment.room['shape'].get_canvas_limits()[0][0] + self.environment.room['position'][0]
-                break
         while True:
+            # enlarge in positive y-direction
             ymax_new = ymax + self.veh_size*self.scale_factor
             scaled_frame['border'] = self.make_border(xmin,ymin,xmax,ymax_new)
+            if ymax_new > self.environment.room['shape'].get_canvas_limits()[1][1] + self.environment.room['position'][1]:
+                ymax = self.environment.room['shape'].get_canvas_limits()[1][1] + self.environment.room['position'][1]
+                break
             if not self.get_stationary_obstacles_in_frame(frame=scaled_frame):
                 ymax = ymax_new
             else:
                 scaled_frame['border'] = self.make_border(xmin,ymin,xmax,ymax)
                 break
-            if ymax > self.environment.room['shape'].get_canvas_limits()[1][1] + self.environment.room['position'][1]:
-                ymax = self.environment.room['shape'].get_canvas_limits()[1][1] + self.environment.room['position'][1]
-                break
         while True:
+            # enlarge in negative y-direction
             ymin_new = ymin - self.veh_size*self.scale_factor
             scaled_frame['border'] = self.make_border(xmin,ymin_new,xmax,ymax)
+            if ymin_new < self.environment.room['shape'].get_canvas_limits()[1][0] + self.environment.room['position'][1]:
+                ymin = self.environment.room['shape'].get_canvas_limits()[1][0] + self.environment.room['position'][1]
+                break
             if not self.get_stationary_obstacles_in_frame(frame=scaled_frame):
                 ymin = ymin_new
             else:
                 scaled_frame['border'] = self.make_border(xmin,ymin,xmax,ymax)
-                break
-            if ymin < self.environment.room['shape'].get_canvas_limits()[1][0] + self.environment.room['position'][1]:
-                ymin = self.environment.room['shape'].get_canvas_limits()[1][0] + self.environment.room['position'][1]
                 break
         return scaled_frame['border']
 
@@ -728,280 +1029,6 @@ class MultiFrameProblem(Problem):
         distance[1] = dist23 if abs(dist23) < abs(dist41) else dist41  # y-direction: from point to side23 or side41
 
         return distance
-
-    def get_stationary_obstacles_in_frame(self, frame=None):
-        obstacles_in_frame = []
-        for obstacle in self.environment.obstacles:
-            # check if obstacle is stationary, this is when:
-            # there is no entry trajectories or there are trajectories but no velocity or 
-            # all velocities are 0.
-            if ((not 'trajectories' in obstacle.simulation) or (not 'velocity' in obstacle.simulation['trajectories'])
-               or (all(vel == [0.]*obstacle.n_dim for vel in obstacle.simulation['trajectories']['velocity']['values']))):
-                # get obstacle checkpoints
-                if not isinstance(obstacle.shape, Circle):
-                    obs_chck = obstacle.shape.get_checkpoints()[0]  # element [0] gives vertices, not the corresponding radii
-                # for a circle only the center is returned as a checkpoint
-                # make a square representation of it and use those checkpoints
-                # Todo: circle is approximated as a square,
-                # so may be added to frame while not necessary
-                # Improvement: check if distance to frame < radius, by using extra
-                # input to point_in_frame(distance=radius)
-                else:
-                    [[xmin, xmax],[ymin, ymax]] = obstacle.shape.get_canvas_limits()
-                    obs_chck = [[xmin, ymin], [xmin, ymax], [xmax, ymax], [xmax, ymin]]                        
-                obs_pos = obstacle.signals['position'][:,-1]
-                for chck in obs_chck:
-                    # if it is not a circle, rotate the vertices
-                    if hasattr(obstacle.shape, 'orientation'):
-                        vertex = obstacle.shape.rotate(obstacle.shape.orientation, chck)
-                    else:
-                        vertex = chck
-                    # move to correct position
-                    vertex += obs_pos
-                    # check if vertex is in frame
-                    if self.point_in_frame(vertex, frame=frame):
-                        # add corresponding obstacle
-                        obstacles_in_frame.append(obstacle)
-                        # break from for chck in obs_chck, move on to next obstacle,
-                        # since if one vertex of obstacle is in frame then the whole
-                        # obstacle is added
-                        break
-        return obstacles_in_frame
-
-    def check_frame(self):
-        if self.frame['type'] == 'frame_shift':
-            percentage = 80  # if travelled over x% then get new frame
-
-            # if final goal is not in the current frame, compare current distance
-            # to the local goal with the initial distance
-            if not self.point_in_frame(self.goal_state):
-                    init_dist = distance_between_points(self.frame['waypoints'][0], self.frame['endpoint_frame'])
-                    curr_dist = distance_between_points(self.curr_state[:2], self.frame['endpoint_frame'])
-                    if curr_dist < init_dist*(1-(percentage/100.)):
-                        # if already covered 'percentage' of the distance 
-                        valid = False
-                        return valid
-                    else:
-                        valid = True
-                        return valid
-            else:  # keep frame, until 'percentage' of the distance covered or arrived at last frame
-                valid = True
-                return valid
-        elif self.frame['type'] == 'min_nobs':
-            percentage = 99  # if travelled over x% then get new frame
-
-            # if final goal is not in the current frame, compare current distance
-            # to the local goal with the initial distance
-            if not self.point_in_frame(self.goal_state):
-                    init_dist = distance_between_points(self.frame['waypoints'][0], self.frame['endpoint_frame'])
-                    curr_dist = distance_between_points(self.curr_state[:2], self.frame['endpoint_frame'])
-                    if curr_dist < init_dist*(1-(percentage/100.)):
-                        # if already covered 'percentage' of the distance 
-                        valid = False
-                        return valid
-                    elif self.point_in_frame(self.curr_state[:2], frame=self.next_frame, distance=self.veh_size):
-                        valid = False
-                        return valid
-                    else:
-                        valid = True
-                        return valid
-            else:  # keep frame, until 'percentage' of the distance covered or arrived at last frame
-                valid = True
-                return valid
-        elif self.frame['type'] == 'corridor':
-            raise RuntimeError('check_frame for corridor not yet implemented')
-
-    def update_frame(self, next_frame=None):
-        
-        # Update global path from current position,
-        # since there may be a deviation from original global path
-        # and since you moved over the path so a part needs to be removed.
-        
-        self.global_path = self.global_planner.get_path(start=self.curr_state, goal=self.goal_state)
-        self.global_path.append(self.goal_state)
-        
-        # make new frame
-        if next_frame is not None:
-            # we already have the next frame, so we first compute the frame
-            # after the next one
-            new_frame = self.create_next_frame(next_frame)
-            # the next frame becomes the current frame
-            self.frame = self.next_frame.copy()
-            # the new frame becomes the next frame
-            # note: if the current frame is the last one, new_frame will be None
-            if new_frame is not None:
-                self.next_frame = new_frame.copy()
-            else:
-                self.next_frame = None
-        else:
-            self.create_frame(frame_size = self.frame_size)
-
-        # get initial guess based on global path, get motion time
-        self.init_guess, self.motion_time = self.get_init_guess()
-
-        # get moving obstacles inside frame for this time
-        self.frame['moving_obstacles'] = self.get_moving_obstacles_in_frame()
-
-    def get_init_guess(self, **kwargs):
-
-        waypoints = self.frame['waypoints']
-        # change first waypoint to current state, the startpoint of the init guess
-        waypoints[0] = [self.curr_state[0], self.curr_state[1]]
-        # use waypoints for prediction
-        x, y = [], []
-        for waypoint in waypoints:
-            x.append(waypoint[0])
-            y.append(waypoint[1])
-        # Calculate total length in x- and y-direction
-        l_x, l_y = 0., 0.
-        for i in range(len(waypoints)-1):
-            l_x += waypoints[i+1][0] - waypoints[i][0]
-            l_y += waypoints[i+1][1] - waypoints[i][1]
-        # Calculate distance in x and y between each 2 waypoints
-        # and use it as a relative measure to build time vector
-        time_x = [0.]
-        time_y = [0.]
-
-        for i in range(len(waypoints)-1):
-            if (l_x == 0. and l_y !=0.):
-                time_x.append(0.)
-                time_y.append(time_y[-1] + float(waypoints[i+1][1] - waypoints[i][1])/l_y)
-            elif (l_x != 0. and l_y == 0.):
-                time_x.append(time_x[-1] + float(waypoints[i+1][0] - waypoints[i][0])/l_x)
-                time_y.append(0.)
-            elif (l_x == 0. and l_y == 0.):
-                time_x.append(0.)
-                time_y.append(0.)
-            else:
-                time_x.append(time_x[-1] + float(waypoints[i+1][0] - waypoints[i][0])/l_x)
-                time_y.append(time_y[-1] + float(waypoints[i+1][1] - waypoints[i][1])/l_y)  # gives time 0...1
-
-        # make approximate one an exact one
-        # otherwise fx(1) = 1
-        for idx, t in enumerate(time_x):
-            if (1 - t < 1e-5):
-                time_x[idx] = 1
-        for idx, t in enumerate(time_y):
-            if (1 - t < 1e-5):
-                time_y[idx] = 1
-
-        # Make interpolation functions
-        fx = interp1d(time_x, x, kind='linear', bounds_error=False, fill_value=1.)  # kind='cubic' requires a minimum of 4 waypoints
-        fy = interp1d(time_y, y, kind='linear', bounds_error=False, fill_value=1.)
-
-        # Evaluate resulting splines to get evaluations at knots = coeffs-guess
-        # Todo: this doesn't take into account the conservatism: spline value is taken instead of the knots
-        #       what is the effect of this?
-        coeffs_x = fx(self.vehicles[0].knots[self.vehicles[0].degree-1:-(self.vehicles[0].degree-1)])
-        coeffs_y = fy(self.vehicles[0].knots[self.vehicles[0].degree-1:-(self.vehicles[0].degree-1)])
-        init_guess = np.c_[coeffs_x, coeffs_y]
-
-        # Suppose vehicle is moving at half of vmax, don't build and solve problem
-        length_to_travel = np.sqrt((l_x**2+l_y**2))
-        max_vel = self.vehicles[0].vmax if hasattr(self.vehicles[0], 'vmax') else (self.vehicles[0].vxmax+self.vehicles[0].vymax)*0.5
-        motion_time = length_to_travel/(max_vel*0.5)
-        init_guess[-3] = init_guess[-1]  # final acceleration is also 0 normally
-        init_guess[-4] = init_guess[-1]  # final acceleration is also 0 normally
-        splines = init_guess
-
-        # Pass on initial guess
-        self.vehicles[0].set_init_spline_value(init_guess)
-
-        # Set start and goal
-        if hasattr (self.vehicles[0], 'signals'):
-            # use current vehicle velocity as starting velocity for next frame
-            self.vehicles[0].set_initial_conditions(waypoints[0], input=self.vehicles[0].signals['input'][:,-1])
-        else: 
-            self.vehicles[0].set_initial_conditions(waypoints[0])
-        self.vehicles[0].set_terminal_conditions(waypoints[-1])
-
-        # # Solve one time
-        # environment = Environment(room={'shape': self.frame['border']['shape'],
-        #                                 'position': self.frame['border']['position'],
-        #                                 'orientation': self.frame['border']['orientation']})
-        # for obstacle in self.frame['stationary_obstacles']:
-        #     environment.add_obstacle(obstacle)
-
-        # problem_options = {}
-        # for key, value in self.problem_options.items():
-        #     problem_options[key] = value
-        # problem = Point2point(self.vehicles[0], environment, freeT=self.problem_options['freeT'], options=problem_options)
-        # problem.init()
-        # problem.solve(current_time=0, update_time=0.1)
-
-        # if problem.problem.stats()['return_status'] != 'Solve_Succeeded':
-        #     feasible = False
-        #     print 'Problem was infeasible, did not find an initial guess'
-        # else:
-        #     feasible = True
-
-        # # Retreive motion time
-        # if self.options['freeT']:
-        #     # freeT: there is a time variable
-        #     motion_time = problem.father.get_variables(problem, 'T',)[0][0]
-        # else:
-        #     # fixedT: the remaining motion time is always the horizon time
-        #     motion_time = problem.options['horizon_time']
-        # # Save trajectories for all frames, as initial guesses
-        # splines = problem.father.get_variables()[self.vehicles[0].label, 'splines0']
-        # splines = np.array(splines)  # convert DM to array
-        return splines, motion_time
-
-    def make_border(self, xmin, ymin, xmax, ymax):
-        width = xmax - xmin
-        height = ymax - ymin
-        angle = 0.
-        # add angle to position
-        position = [(xmax - xmin)*0.5+xmin,(ymax-ymin)*0.5+ymin, angle]
-        limits = [xmin, ymin, xmax, ymax]
-        return {'shape': Rectangle(width=width, height=height),
-         'position': position, 'orientation': angle, 'limits': limits}
-
-    def get_moving_obstacles_in_frame(self):
-        # determine which moving obstacles are in self.frame for self.motion_time
-        moving_obstacles = []
-        for obstacle in self.environment.obstacles:
-            # check if obstacle is moving, this is when:
-            # there is an entry trajectories, and there is a velocity,
-            # and not all velocities are 0.
-            if (('trajectories' in obstacle.simulation) and ('velocity' in obstacle.simulation['trajectories'])
-               and not (all(vel == [0.]*obstacle.n_dim for vel in obstacle.simulation['trajectories']['velocity']['values']))):
-                # get obstacle checkpoints
-                if not isinstance(obstacle.shape, Circle):
-                    obs_chck = obstacle.shape.get_checkpoints()[0]  # element [0] gives vertices, not the corresponding radii
-                # for a circle only the center is returned as a checkpoint
-                # make a square representation of it and use those checkpoints
-                # Todo: circle is approximated as a square,
-                # so may be added to frame while not necessary
-                # Improvement: check if distance to frame < radius, by using extra
-                # input to point_in_frame(distance=radius)
-                else:
-                    [[xmin, xmax],[ymin, ymax]] = obstacle.shape.get_canvas_limits()
-                    obs_chck = [[xmin, ymin], [xmin, ymax], [xmax, ymax], [xmax, ymin]] 
-                obs_pos = obstacle.signals['position'][:,-1]
-                obs_vel = obstacle.signals['velocity'][:,-1]
-                # add all moving obstacles, but only avoid those that matter
-                moving_obstacles.append(obstacle)
-                # by default don't avoid the obstacle, only if it is inside the frame
-                obstacle.set_options({'avoid': False})
-                # only check points for which the obstacle velocity is not all zero
-                if any(obs_vel != np.zeros(obstacle.n_dim)):
-                    for chck in obs_chck:
-                        # if it is not a circle, rotate the vertices
-                        if hasattr(obstacle.shape, 'orientation'):
-                            vertex = obstacle.shape.rotate(obstacle.shape.orientation, chck)
-                        else:
-                            vertex = chck
-                        # move to correct position
-                        vertex += obs_pos
-                        # check if vertex is in frame during movement
-                        if self.point_in_frame(vertex, time=self.motion_time, velocity=obs_vel):
-                            # avoid corresponding obstacle                            
-                            obstacle.set_options({'avoid': True})
-                            # break from for chck in obs_chck, move on to next obstacle, since
-                            # obstacle is added to the frame if any of its vertices is in the frame
-                            break
-        return moving_obstacles
 
     def generate_problem(self):
         environment = Environment(room={'shape': self.frame['border']['shape'],
