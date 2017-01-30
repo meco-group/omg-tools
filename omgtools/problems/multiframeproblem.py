@@ -896,14 +896,13 @@ class MultiFrameProblem(Problem):
         coeffs_y = fy(self.vehicles[0].knots[self.vehicles[0].degree-1:-(self.vehicles[0].degree-1)])
         init_guess = np.c_[coeffs_x, coeffs_y]
 
-        # Todo: suppose moving at half of vmax, then you don't need to build and solve problem
-        # length_to_travel = np.sqrt((l_x**2+l_y**2))
-        # max_vel = self.vehicles[0].vmax if hasattr(self.vehicles[0], 'vmax') else (self.vehicles[0].vxmax+self.vehicles[0].vymax)*0.5
-        # motion_time = length_to_travel/(max_vel*0.5)
-        # feasible = True
-        # init_guess[-4] = init_guess[-1]
-        # init_guess[-3] = init_guess[-1]
-        # splines = init_guess
+        # Suppose vehicle is moving at half of vmax, don't build and solve problem
+        length_to_travel = np.sqrt((l_x**2+l_y**2))
+        max_vel = self.vehicles[0].vmax if hasattr(self.vehicles[0], 'vmax') else (self.vehicles[0].vxmax+self.vehicles[0].vymax)*0.5
+        motion_time = length_to_travel/(max_vel*0.5)
+        init_guess[-3] = init_guess[-1]  # final acceleration is also 0 normally
+        init_guess[-4] = init_guess[-1]  # final acceleration is also 0 normally
+        splines = init_guess
 
         # Pass on initial guess
         self.vehicles[0].set_init_spline_value(init_guess)
@@ -916,36 +915,36 @@ class MultiFrameProblem(Problem):
             self.vehicles[0].set_initial_conditions(waypoints[0])
         self.vehicles[0].set_terminal_conditions(waypoints[-1])
 
-        # Solve one time
-        environment = Environment(room={'shape': self.frame['border']['shape'],
-                                        'position': self.frame['border']['position'],
-                                        'orientation': self.frame['border']['orientation']})
-        for obstacle in self.frame['stationary_obstacles']:
-            environment.add_obstacle(obstacle)
+        # # Solve one time
+        # environment = Environment(room={'shape': self.frame['border']['shape'],
+        #                                 'position': self.frame['border']['position'],
+        #                                 'orientation': self.frame['border']['orientation']})
+        # for obstacle in self.frame['stationary_obstacles']:
+        #     environment.add_obstacle(obstacle)
 
-        problem_options = {}
-        for key, value in self.problem_options.items():
-            problem_options[key] = value
-        problem = Point2point(self.vehicles[0], environment, freeT=self.problem_options['freeT'], options=problem_options)
-        problem.init()
-        problem.solve(current_time=0, update_time=0.1)
+        # problem_options = {}
+        # for key, value in self.problem_options.items():
+        #     problem_options[key] = value
+        # problem = Point2point(self.vehicles[0], environment, freeT=self.problem_options['freeT'], options=problem_options)
+        # problem.init()
+        # problem.solve(current_time=0, update_time=0.1)
 
-        if problem.problem.stats()['return_status'] != 'Solve_Succeeded':
-            feasible = False
-            print 'Problem was infeasible, did not find an initial guess'
-        else:
-            feasible = True
+        # if problem.problem.stats()['return_status'] != 'Solve_Succeeded':
+        #     feasible = False
+        #     print 'Problem was infeasible, did not find an initial guess'
+        # else:
+        #     feasible = True
 
-        # Retreive motion time
-        if self.options['freeT']:
-            # freeT: there is a time variable
-            motion_time = problem.father.get_variables(problem, 'T',)[0][0]
-        else:
-            # fixedT: the remaining motion time is always the horizon time
-            motion_time = problem.options['horizon_time']
-        # Save trajectories for all frames, as initial guesses
-        splines = problem.father.get_variables()[self.vehicles[0].label, 'splines0']
-        splines = np.array(splines)  # convert DM to array
+        # # Retreive motion time
+        # if self.options['freeT']:
+        #     # freeT: there is a time variable
+        #     motion_time = problem.father.get_variables(problem, 'T',)[0][0]
+        # else:
+        #     # fixedT: the remaining motion time is always the horizon time
+        #     motion_time = problem.options['horizon_time']
+        # # Save trajectories for all frames, as initial guesses
+        # splines = problem.father.get_variables()[self.vehicles[0].label, 'splines0']
+        # splines = np.array(splines)  # convert DM to array
         return splines, motion_time
 
     def make_border(self, xmin, ymin, xmax, ymax):
