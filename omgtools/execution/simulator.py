@@ -40,7 +40,8 @@ class Simulator:
         stop = False
         while not stop:
             stop = self.update()
-            if stop:
+            ### adapted ###
+            if (stop or self.update_time - float(self.problem.vehicles[0].signals['time'][:, -1] - self.current_time)) > self.sample_time:
                 update_time = float(self.problem.vehicles[0].signals['time'][:, -1] - self.current_time)
                 self.update_timing(update_time)
             else:

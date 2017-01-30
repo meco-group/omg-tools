@@ -41,6 +41,10 @@ class Deployer:
         current_time = float(current_time)
         if not update_time:
             update_time = self.update_time
+        ### adapted ###
+        if hasattr(self.problem.vehicles[0], 'signals'):
+            if update_time - float(self.problem.vehicles[0].signals['time'][:, -1] - self.current_time) > self.sample_time:
+                update_time = float(self.problem.vehicles[0].signals['time'][:, -1] - self.current_time)
         if (self.iteration0):
             self.iteration0 = False
             self.problem.initialize(current_time)
