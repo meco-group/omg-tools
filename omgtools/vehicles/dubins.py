@@ -20,9 +20,7 @@
 from vehicle import Vehicle
 from ..problems.point2point import FreeTPoint2point, FixedTPoint2point
 from ..basics.shape import Square, Circle
-from ..basics.spline_extra import sample_splines
-from ..basics.spline_extra import evalspline, running_integral, concat_splines
-from ..basics.spline import BSplineBasis
+from ..basics.dummy_layer import *
 from casadi import inf, SX, MX
 import numpy as np
 
@@ -87,7 +85,7 @@ class Dubins(Vehicle):
         if self.options['substitution']:
             # substitute velocity and introduce equality constraints
             dx = v_til*(1-tg_ha**2)
-            dy = v_til*(2*tg_ha)        
+            dy = v_til*(2*tg_ha)
             if self.options['exact_substitution']:
                 self.dx = self.define_spline_variable('dx', 1, 1, basis=dx.basis)[0]
                 self.dy = self.define_spline_variable('dy', 1, 1, basis=dy.basis)[0]
@@ -98,7 +96,7 @@ class Dubins(Vehicle):
             else:
                 degree = 3
                 knots = np.r_[np.zeros(degree), np.linspace(0., 1., 10+1), np.ones(degree)]
-                basis = BSplineBasis(knots, degree)
+                basis = spl.BSplineBasis(knots, degree)
                 self.dx = self.define_spline_variable('dx', 1, 1, basis=basis)[0]
                 self.dy = self.define_spline_variable('dy', 1, 1, basis=basis)[0]
                 self.x = self.integrate_once(self.dx, self.pos0[0], self.t, self.T)
@@ -193,13 +191,14 @@ class Dubins(Vehicle):
         self.poseT = pose
 
     def get_init_spline_value(self):
+        len_basis = self.basis.getLength()
         # generate initial guess for spline variables
-        init_value = np.zeros((len(self.basis), 2))
-        v_til0 = np.zeros(len(self.basis))
+        init_value = np.zeros((len_basis, 2))
+        v_til0 = np.zeros(len_basis)
         tg_ha0 = np.tan(self.prediction['state'][2]/2.)
         tg_haT = np.tan(self.poseT[2]/2.)
         init_value[:, 0] = v_til0
-        init_value[:, 1] = np.linspace(tg_ha0, tg_haT, len(self.basis))
+        init_value[:, 1] = np.linspace(tg_ha0, tg_haT, len_basis)
         return init_value
 
     def check_terminal_conditions(self):
@@ -234,11 +233,8 @@ class Dubins(Vehicle):
         self.define_collision_constraints_2d(hyperplanes, environment, [x, y], tg_ha)
 
     def integrate_once(self, dx, x0, t, T=1.):
-        dx_int = T*running_integral(dx)
-        if isinstance(t, (SX, MX)):
-            x = dx_int-evalspline(dx_int, t/T) + x0
-        else:
-            x = dx_int-dx_int(t/T) + x0
+        dx_int = T*dx.integrate()
+        x = dx_int - dx_int(t/T) + x0
         return x
 
     def splines2signals(self, splines, time):

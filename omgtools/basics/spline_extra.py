@@ -96,26 +96,36 @@ def shift_spline(coeffs, t_shift, basis):
     T_tf = basis2.transform(basis)
     return T_tf.dot(coeffs)
 
+def extrapolate(spline, t_extra, m=None):
+    T, knots = extrapolate_T(spline.basis, t_extra, m)
+    if isinstance(spline.coeffs, (SX, MX)):
+        coeffs2 = mtimes(T, spline.coeffs)
+    else:
+        coeffs2 = T.dot(spline.coeffs)
+    basis2 = BSplineBasis(knots, spline.basis.degree)
+    return BSpline(basis2, coeffs2)
 
-def extrapolate(coeffs, t_extra, basis):
-    T = extrapolate_T(basis, t_extra)
-    return T.dot(coeffs)
 
-
-def extrapolate_T(basis, t_extra):
+def extrapolate_T(basis, t_extra, m=None):
     # Create transformation matrix that extrapolates the spline over an extra
     # knot interval of t_extra long.
     knots = basis.knots
     deg = basis.degree
     N = len(basis)
-    m = 1  # number of repeating internal knots
-    while knots[-deg-2-m] >= knots[-deg-2]:
-        m += 1
+    if m is None:
+        # m is number of desired knots at interpolation border
+        # default value is # knots at second last knot place of original spline
+        m = 1
+        while knots[-deg-2-m] >= knots[-deg-2]:
+            m += 1
     knots2 = np.r_[knots[:-deg-1], knots[-deg-1]*np.ones(m),
                    (knots[-1]+t_extra)*np.ones(deg+1)]
     basis2 = BSplineBasis(knots2, deg)
     A = np.zeros((deg+1, deg+1))
     B = np.zeros((deg+1, deg+1))
+    # only (deg+1) last coefficients change: we need (deg+1) equations, giving
+    # a relation between (deg+1) last coefficients before and after extrapolation
+
     # (deg+1-m) relations based on evaluation of basis functions on (deg+1-m)
     # last greville points
     if m < deg+1:
@@ -152,41 +162,36 @@ def extrapolate_T(basis, t_extra):
     T = np.zeros((N+m, N))
     T[:N, :N] = np.eye(N)
     T[-(deg+1):, -(deg+1):] = _T
-    return T
+    return T, knots2
 
 
-def shift_over_knot(coeffs, basis):
-    T = shiftoverknot_T(basis)
-    return T.dot(coeffs)
+def shiftoverknot(spline):
+    T, knots = shiftoverknot_T(spline.basis)
+    if isinstance(spline.coeffs, (SX, MX)):
+        coeffs2 = mtimes(T, spline.coeffs)
+    else:
+        coeffs2 = T.dot(spline.coeffs)
+    basis2 = BSplineBasis(knots, spline.basis.degree)
+    return BSpline(basis2, coeffs2)
 
 
 def shiftoverknot_T(basis):
-    # Create transformation matrix that moves the horizon to
-    # [knot[degree+1], T+knots[-1]-knots[-deg-2]]. The spline is extrapolated
-    # over the last knot interval.
     knots = basis.knots
     deg = basis.degree
-    m = 1  # number of repeating internal knots
+    N = len(basis)
+    # number of basis fun discarted by cropping
+    n = len(np.where(knots == knots[deg+1])[0])
+    # number of basis fun added by extrapolating
+    m = 1
     while knots[-deg-2-m] >= knots[-deg-2]:
         m += 1
-    t_shift = knots[deg+1] - knots[0]
-    T = np.diag(np.ones(len(basis)-m), m)
-    _T = np.eye(deg+1)
-    for k in range(deg):
-        _t = np.zeros((deg+1+k+1, deg+1+k))
-        for j in range(deg+1+k+1):
-            if j >= deg+1:
-                _t[j, j-1] = 1.
-            elif j <= k:
-                _t[j, j] = 1.
-            else:
-                _t[j, j-1] = (knots[j+deg-k]-t_shift)/(knots[j+deg-k]-knots[j])
-                _t[j, j] = (t_shift-knots[j])/(knots[j+deg-k]-knots[j])
-        _T = _t.dot(_T)
-    T[:deg, :deg+1] = _T[deg+1:, :]
-    T_extr = extrapolate_T(basis, knots[-1] - knots[-deg-2])
+    T_crp, _ = crop_T(basis, knots[deg+1], knots[-1])
+    T_extr, _ = extrapolate_T(basis, knots[-1] - knots[-deg-2])
+    T = np.zeros((N + m - n, N))
+    T[:N-n, :] = T_crp
     T[-(deg+1):, -(deg+1):] = T_extr[-(deg+1):, -(deg+1):]
-    return T
+    knots2 = np.r_[knots[deg+n]*np.ones(deg+1), knots[deg+n+1:-deg-1], knots[-deg-1]*np.ones(m), (knots[-1]+(knots[-1] - knots[-deg-2]))*np.ones(deg+1)]
+    return T, knots2
 
 
 def shift_knot1_fwd(cfs, basis, t_shift):
@@ -255,6 +260,8 @@ def shiftfirstknot_T(basis, t_shift, inverse=False):
 
 def knot_insertion_T(basis, knots_to_insert):
     # Create transformation matrix that transforms spline after inserting knots
+    if not isinstance(knots_to_insert, list):
+        knots_to_insert = [knots_to_insert]
     N = len(basis)
     knots = basis.knots.tolist()
     degree = basis.degree
@@ -278,7 +285,7 @@ def knot_insertion_T(basis, knots_to_insert):
     return T, knots
 
 
-def get_interval_T(basis, min_value, max_value):
+def crop_T(basis, min_value, max_value):
     # Create transformation matrix that extract piece of spline from min_value
     # to max_value
     knots = basis.knots
@@ -293,13 +300,13 @@ def get_interval_T(basis, min_value, max_value):
     return T[jmin:jmax-degree-1, :], knots2[jmin:jmax]
 
 
-def crop_spline(spline, min_value, max_value):
-    T, knots2 = get_interval_T(spline.basis, min_value, max_value)
+def crop(spline, min_value, max_value):
+    T, knots = crop_T(spline.basis, min_value, max_value)
     if isinstance(spline.coeffs, (SX, MX)):
         coeffs2 = mtimes(T, spline.coeffs)
     else:
         coeffs2 = T.dot(spline.coeffs)
-    basis2 = BSplineBasis(knots2, spline.basis.degree)
+    basis2 = BSplineBasis(knots, spline.basis.degree)
     return BSpline(basis2, coeffs2)
 
 
@@ -326,7 +333,6 @@ def sample_splines(spline, time):
         return [splev(time, (s.basis.knots, s.coeffs, s.basis.degree)) for s in spline]
     else:
         return splev(time, (spline.basis.knots, spline.coeffs, spline.basis.degree))
-
 
 # def integral_sqbasis(basis):
 #     # Compute integral of squared bases.

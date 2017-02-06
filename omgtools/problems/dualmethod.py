@@ -162,9 +162,10 @@ class DualUpdater(Problem):
                 for name, ind in q_i.items():
                     if name in child._splines_prim:
                         basis = child._splines_prim[name]['basis']
-                        for l in range(len(basis)):
-                            sl_min = l*len(basis)
-                            sl_max = (l+1)*len(basis)
+                        len_basis = basis.getLength()
+                        for l in range(len_basis):
+                            sl_min = l*len_basis
+                            sl_max = (l+1)*len_basis
                             if set(range(sl_min, sl_max)) <= set(ind):
                                 sl = slice(sl_min-ind[0], sl_max-ind[0])
                                 v = var[child.label][name][sl]

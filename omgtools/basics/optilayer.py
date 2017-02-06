@@ -17,6 +17,8 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
+from dummy_layer import *
+
 try:
     from casadi import Compiler
 except:
@@ -25,7 +27,7 @@ except:
 from casadi import DM, MX, inf, Function, nlpsol, external
 from casadi import symvar, substitute
 from casadi.tools import struct, struct_MX, struct_symMX, entry
-from spline import BSpline
+# from spline import BSpline
 from itertools import groupby
 import time
 import numpy as np
@@ -352,7 +354,7 @@ class OptiFather(object):
                     else:
                         fun = self.substitutes[child][name]
                         coeffs = np.array(fun(self._var_result, self._par_result))
-                    return [BSpline(basis, coeffs[:, k]) for k in range(coeffs.shape[1])]
+                    return [spl.Function(basis, coeffs[:, k]) for k in range(coeffs.shape[1])]
                 else:
                     if 'symbolic' in kwargs and kwargs['symbolic']:
                         if 'substitute' in kwargs and not kwargs['substitute']:
@@ -368,7 +370,7 @@ class OptiFather(object):
                     coeffs = child._variables[name]
                 else:
                     coeffs = np.array(self._var_result[child.label, name])
-                return [BSpline(basis, coeffs[:, k]) for k in range(coeffs.shape[1])]
+                return [spl.Function(basis, coeffs[:, k]) for k in range(coeffs.shape[1])]
             else:
                 if 'symbolic' in kwargs and kwargs['symbolic']:
                     return child._variables[name]
@@ -387,7 +389,7 @@ class OptiFather(object):
                     coeffs = child._parameters[name]
                 else:
                     coeffs = np.array(self._par_result[child.label, name])
-                return [BSpline(basis, coeffs[:, k]) for k in range(coeffs.shape[1])]
+                return [spl.Function(basis, coeffs[:, k]) for k in range(coeffs.shape[1])]
             else:
                 if 'symbolic' in kwargs and kwargs['symbolic']:
                     return child._parameters[name]
@@ -427,27 +429,27 @@ class OptiFather(object):
         # primal
         _init_tf = {}
         for child in self.children.values():
-            for name, spl in child._splines_prim.items():
+            for name, spline in child._splines_prim.items():
                 if name in child._variables or name in child._substitutes:
-                    basis = spl['basis']
+                    basis = spline['basis']
                     if basis not in _init_tf:
                         _init_tf[basis] = init_primal_transform(basis)
                     child._splines_prim[name]['init'] = _init_tf[basis]
         # dual
         _init_tf = {}
         for child in self.children.values():
-            for name, spl in child._splines_dual.items():
-                basis = spl['basis']
+            for name, spline in child._splines_dual.items():
+                basis = spline['basis']
                 if basis not in _init_tf:
                     _init_tf[basis] = init_dual_transform(basis)
                 child._splines_dual[name]['init'] = _init_tf[basis]
 
     def transform_primal_splines(self, transform_fun):
         for label, child in self.children.items():
-            for name, spl in child._splines_prim.items():
+            for name, spline in child._splines_prim.items():
                 if name in child._variables:
-                    basis = spl['basis']
-                    init = spl['init']
+                    basis = spline['basis']
+                    init = spline['init']
                     if init is not None:
                         self._var_result[label, name] = transform_fun(
                             self._var_result[label, name], basis, init)
@@ -457,11 +459,11 @@ class OptiFather(object):
 
     def transform_dual_splines(self, transform_fun):
         for label, child in self.children.items():
-            for name, spl in child._splines_dual.items():
-                basis = spl['basis']
-                init = spl['init']
+            for name, spline in child._splines_dual.items():
+                basis = spline['basis']
+                init = spline['init']
                 if init is not None:
-                    init = spl['init']
+                    init = spline['init']
                     self._dual_var_result[label, name] = transform_fun(
                         self._dual_var_result[label, name], basis, init)
                 else:
@@ -554,18 +556,20 @@ class OptiChild(object):
             if name in self._substitutes:
                 raise ValueError('Name %s already used for substitutes!' % (name))
             symbol_name = self._add_label(name)
-            if isinstance(expr, BSpline):
-                self._splines_prim[name] = {'basis': expr.basis}
-                coeffs = MX.sym(symbol_name, expr.coeffs.shape[0], 1)
-                subst = BSpline(expr.basis, coeffs)
-                self._substitutes[name] = [expr.coeffs, subst.coeffs]
+            if isinstance(expr, spl.Function):
+                basis = expr.getBasis()
+                coeffs1 = expr.getCoefficient().getData()
+                self._splines_prim[name] = {'basis': basis}
+                coeffs2 = MX.sym(symbol_name, coeffs1.shape[0], 1)
+                subst = spl.Function(basis, coeffs2)
+                self._substitutes[name] = [coeffs1, coeffs2]
                 inp_sym, inp_num = [], []
-                for sym in symvar(expr.coeffs):
+                for sym in symvar(coeffs1):
                     inp_sym.append(sym)
                     inp_num.append(DM(self._values[self.symbol_dict[sym.name()][1]]))
-                fun = Function('eval', inp_sym, [expr.coeffs])
+                fun = Function('eval', inp_sym, [coeffs1])
                 self._values[name] = fun(*inp_num)
-                self.add_to_dict(coeffs, name)
+                self.add_to_dict(coeffs2, name)
             else:
                 subst = MX.sym(symbol_name, expr.shape[0], expr.shape[1])
                 self._substitutes[name] = [expr, subst]
@@ -587,11 +591,11 @@ class OptiChild(object):
                                            1, dictionary, basis, value)
                     for l in range(size1)]
         else:
-
+            len_basis = basis.getLength()
             coeffs = self._define_mx(
-                name, len(basis), size0, dictionary, value)
+                name, len_basis, size0, dictionary, value)
             self._splines_prim[name] = {'basis': basis}
-            return [BSpline(basis, coeffs[:, k]) for k in range(size0)]
+            return [spl.Function(basis, coeffs[:, k]) for k in range(size0)]
 
     def set_value(self, name, value):
         self._values[name] = value
@@ -604,11 +608,13 @@ class OptiChild(object):
         else:
             name = name + '_' + str(self._constraint_cnt)
         self._constraint_cnt += 1
-        if isinstance(expr, BSpline):
+        if isinstance(expr, spl.Function):
+            coeffs = expr.getCoefficient().getData()
+            basis = expr.getBasis()
             self._constraints[name] = (
-                expr.coeffs, lb*np.ones(expr.coeffs.shape[0]),
-                ub*np.ones(expr.coeffs.shape[0]), shutdown)
-            self._splines_dual[name] = {'basis': expr.basis}
+                coeffs, lb*np.ones(coeffs.shape[0]),
+                ub*np.ones(coeffs.shape[0]), shutdown)
+            self._splines_dual[name] = {'basis': basis}
         else:
             self._constraints[name] = (expr, lb, ub, shutdown)
 

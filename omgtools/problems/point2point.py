@@ -18,8 +18,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from problem import Problem
-from ..basics.spline_extra import definite_integral
-from ..basics.spline_extra import shiftoverknot_T, shift_spline, evalspline
+from ..basics.dummy_layer import *
 from ..export.export_p2p import ExportP2P
 from casadi import inf
 import numpy as np
@@ -66,8 +65,7 @@ class Point2pointProblem(Problem):
             init_con = vehicle.get_initial_constraints(vehicle.splines[0])
             for con in init_con:
                 spline, condition = con[0], con[1]
-                self.define_constraint(
-                    evalspline(spline, self.t0) - condition, 0., 0.)
+                self.define_constraint(spline(self.t0) - condition, 0., 0.)
 
     # ========================================================================
     # Deploying related functions
@@ -157,8 +155,8 @@ class FixedTPoint2point(Point2pointProblem):
             for k, con in enumerate(term_con):
                 spline, condition = con[0], con[1]
                 g = self.define_spline_variable(
-                    'g'+str(k), 1, basis=spline.basis)[0]
-                objective += definite_integral(g, self.t0, 1.)
+                    'g'+str(k), 1, basis=spline.getBasis())[0]
+                objective += g.integral(self.t0, 1.)
                 self.define_constraint(spline - condition - g, -inf, 0.)
                 self.define_constraint(-spline + condition - g, -inf, 0.)
                 if self.options['hard_term_con']:
@@ -193,7 +191,8 @@ class FixedTPoint2point(Point2pointProblem):
         self.current_time_prev = current_time
 
     def init_primal_transform(self, basis):
-        return shiftoverknot_T(basis)
+        T, _ = shiftoverknot_T(basis)
+        return T
 
     # def init_dual_transform(self, basis):
     #     B = integral_sqbasis(basis)
@@ -247,7 +246,7 @@ class FixedTPoint2point(Point2pointProblem):
         for v, vehicle in enumerate(self.vehicles):
             for k in range(self.term_con_len[v]):
                 g = self.father.get_variables(self, 'g'+str(k))[0]
-                part_objective += horizon_time*definite_integral(g, t0, t1)
+                part_objective += horizon_time*g.integral(t0, t1)
         self.objective += part_objective
 
     def compute_objective(self):

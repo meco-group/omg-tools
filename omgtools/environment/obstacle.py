@@ -19,7 +19,6 @@
 
 
 from ..basics.optilayer import OptiChild
-from ..basics.spline_extra import get_interval_T
 from ..basics.spline import BSplineBasis, BSpline
 from casadi import inf, vertcat, cos, sin
 from scipy.interpolate import interp1d

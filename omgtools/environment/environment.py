@@ -18,7 +18,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from ..basics.optilayer import OptiChild
-from ..basics.spline import BSplineBasis
+from ..basics.dummy_layer import *
 from ..execution.plotlayer import PlotLayer
 from obstacle import Obstacle
 from casadi import inf
@@ -87,7 +87,7 @@ class Environment(OptiChild, PlotLayer):
                       vehicle.knots[
                           vehicle.degree:-vehicle.degree],
                       np.ones(degree)]
-        basis = BSplineBasis(knots, degree)
+        basis = spl.BSplineBasis(knots, degree)
         hyp_veh, hyp_obs = {}, {}
         for k, shape in enumerate(vehicle.shapes):
             hyp_veh[shape] = []
@@ -121,7 +121,7 @@ class Environment(OptiChild, PlotLayer):
                                          str(veh1.n_dim) + 'D and ' + str(veh2.n_dim) + 'D vehicle.')
                     degree = 1
                     knots = np.r_[np.zeros(degree), np.union1d(veh1.knots[veh1.degree:-veh1.degree], veh2.knots[veh2.degree:-veh2.degree]), np.ones(degree)]
-                    basis = BSplineBasis(knots, degree)
+                    basis = spl.BSplineBasis(knots, degree)
                     for kk, shape1 in enumerate(veh1.shapes):
                         for ll, shape2 in enumerate(veh2.shapes):
                             a = self.define_spline_variable(

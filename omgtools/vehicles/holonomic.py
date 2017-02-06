@@ -19,7 +19,8 @@
 
 from vehicle import Vehicle
 from ..basics.shape import Circle
-from ..basics.spline_extra import sample_splines
+# from ..basics.spline_extra import sample_splines
+from ..basics.dummy_layer import *
 from casadi import inf
 import numpy as np
 
@@ -30,8 +31,8 @@ class Holonomic(Vehicle):
         bounds = bounds or {}
         Vehicle.__init__(
             self, n_spl=2, degree=3, shapes=shapes, options=options)
-        
-        if ((not 'syslimit' in self.options) or  # default choose norm_inf 
+
+        if ((not 'syslimit' in self.options) or  # default choose norm_inf
                 (self.options['syslimit'] is 'norm_inf')):
             # user specified a single velocity for x and y
             self.vxmin = self.vymin = bounds['vmin'] if 'vmin' in bounds else None
@@ -112,13 +113,14 @@ class Holonomic(Vehicle):
         self.positionT = position
 
     def get_init_spline_value(self):
-        init_value = np.zeros((len(self.basis), 2))
+        len_basis = self.basis.getLength()
+        init_value = np.zeros((len_basis, 2))
         pos0 = self.prediction['state']
         posT = self.positionT
         for k in range(2):
             # init_value[:, k] = np.r_[pos0[k]*np.ones(self.degree), np.linspace(
             #     pos0[k], posT[k], len(self.basis) - 2*self.degree), posT[k]*np.ones(self.degree)]
-            init_value[:, k] = np.linspace(pos0[k], posT[k], len(self.basis))
+            init_value[:, k] = np.linspace(pos0[k], posT[k], len_basis)
         return init_value
 
     def check_terminal_conditions(self):

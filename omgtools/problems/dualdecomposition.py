@@ -18,7 +18,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from ..basics.optilayer import OptiFather, create_function
-from ..basics.spline_extra import shift_knot1_fwd, shift_over_knot
+from ..basics.spline_extra import shift_knot1_fwd, shiftoverknot
 from problem import Problem
 from dualmethod import DualUpdater, DualProblem
 from casadi import symvar, mtimes, MX, reshape, substitute
@@ -232,7 +232,7 @@ class DDUpdater(DualUpdater):
         # transform spline variables
         if ((current_time > 0. and
              np.round(current_time, 6) % self.problem.knot_time == 0)):
-            tf = shift_over_knot
+            tf = shiftoverknot
             for key in ['x_i']:
                 self.var_dd[key] = self._transform_spline(
                     self.var_dd[key], tf, self.q_i)

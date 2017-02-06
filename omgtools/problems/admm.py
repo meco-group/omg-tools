@@ -18,7 +18,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from ..basics.optilayer import OptiFather, create_function
-from ..basics.spline_extra import shift_knot1_fwd, shift_knot1_bwd, shift_over_knot
+from ..basics.dummy_layer import *
 from problem import Problem
 from dualmethod import DualUpdater, DualProblem
 from casadi import symvar, mtimes, MX, Function
@@ -477,7 +477,8 @@ class ADMM(DualUpdater):
         # transform spline variables
         if ((current_time > 0. and
              np.round(current_time, 6) % self.problem.knot_time == 0)):
-            tf = shift_over_knot
+            # tf = shiftoverknot
+            tf = lambda cfs, basis: shiftoverknot_T(basis)[0].dot(cfs)
             for key in ['x_i', 'z_i', 'z_i_p', 'l_i', 'l_i_p']:
                 self.var_admm[key] = self._transform_spline(
                     self.var_admm[key], tf, self.q_i)
