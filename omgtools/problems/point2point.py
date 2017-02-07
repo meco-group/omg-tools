@@ -18,7 +18,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from problem import Problem
-from ..basics.dummy_layer import *
+from ..basics.splines import *
 from ..export.export_p2p import ExportP2P
 from casadi import inf
 import numpy as np
@@ -191,7 +191,7 @@ class FixedTPoint2point(Point2pointProblem):
         self.current_time_prev = current_time
 
     def init_primal_transform(self, basis):
-        T, _ = shiftoverknot_T(basis)
+        T, _ = get_shiftoverknot_tf(basis)
         return T
 
     # def init_dual_transform(self, basis):
@@ -355,8 +355,9 @@ class FreeTPoint2point(Point2pointProblem):
             # create spline which starts from the position at update_time and goes
             # to goal position at target_time. Approximate/Represent this spline in
             # a new basis with new equidistant knots.
-            self.father.transform_primal_splines(
-                lambda coeffs, basis: shift_spline(coeffs, update_time/target_time, basis))
+            self.father.transform_primal_splines(lambda coeffs, basis: basis.get_crop_inexact_tf(update_time/target_time, 1)[0].dot(coeffs))
+            # self.father.transform_primal_splines(
+            #     lambda coeffs, basis: spl.Function(basis, coeffs).crop_inexact(update_time/target_time, 1).getCoefficient().getData())
             self.father.set_variables(target_time, self, 'T')
 
     def compute_partial_objective(self, current_time):
@@ -401,8 +402,8 @@ class FreeEndPoint2point(FixedTPoint2point):
                 else:
                     spline, condition = con[0], con[1]
                 g = self.define_spline_variable(
-                    'g'+str(k), 1, basis=spline.basis)[0]
-                objective += definite_integral(g, self.t0, 1.)
+                    'g'+str(k), 1, basis=spline.getBasis())[0]
+                objective += g.integral(self.t0, 1.)
                 self.define_constraint(spline - condition - g, -inf, 0.)
                 self.define_constraint(-spline + condition - g, -inf, 0.)
             for con in term_con_der:

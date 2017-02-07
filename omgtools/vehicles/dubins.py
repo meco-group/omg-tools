@@ -20,7 +20,7 @@
 from vehicle import Vehicle
 from ..problems.point2point import FreeTPoint2point, FixedTPoint2point
 from ..basics.shape import Square, Circle
-from ..basics.dummy_layer import *
+from ..basics.splines import *
 from casadi import inf, SX, MX
 import numpy as np
 
@@ -233,7 +233,7 @@ class Dubins(Vehicle):
         self.define_collision_constraints_2d(hyperplanes, environment, [x, y], tg_ha)
 
     def integrate_once(self, dx, x0, t, T=1.):
-        dx_int = T*dx.integrate()
+        dx_int = T*dx.antiderivative()
         x = dx_int - dx_int(t/T) + x0
         return x
 

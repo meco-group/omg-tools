@@ -18,8 +18,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from ..basics.optilayer import OptiChild
-
-from ..basics.dummy_layer import *
+from ..basics.splines import *
 
 # from ..basics.spline import BSplineBasis
 # from ..basics.spline_extra import concat_splines, definite_integral, sample_splines
@@ -206,7 +205,7 @@ class Vehicle(OptiChild, PlotLayer):
                         T = self.define_symbol('T')
                         eps = self.define_spline_variable(
                             'eps_'+str(s)+str(k))[0]
-                        obj = safety_weight*definite_integral(eps, t/T, 1.)
+                        obj = safety_weight*eps.integral(t/T, 1.)
                         self.define_objective(obj)
                         self.define_constraint(eps - safety_distance, -inf, 0.)
                         self.define_constraint(-eps, -inf, 0.)

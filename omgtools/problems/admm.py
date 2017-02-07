@@ -18,7 +18,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from ..basics.optilayer import OptiFather, create_function
-from ..basics.dummy_layer import *
+from ..basics.splines import *
 from problem import Problem
 from dualmethod import DualUpdater, DualProblem
 from casadi import symvar, mtimes, MX, Function
@@ -83,7 +83,8 @@ class ADMM(DualUpdater):
             # get (part of) variables
             x_i = self._get_x_variables(symbolic=True)
             # transform spline variables: only consider future piece of spline
-            tf = lambda cfs, basis: shift_knot1_fwd(cfs, basis, t0)
+
+            tf = lambda cfs, basis: shiftfirstknot_fwd(cfs, basis, t0)
             self._transform_spline([x_i, z_i, l_i], tf, self.q_i)
             self._transform_spline([z_ji, l_ji], tf, self.q_ji)
             # construct objective
@@ -140,7 +141,7 @@ class ADMM(DualUpdater):
         l_i = self.q_i_struct(l_i)
         l_ij = self.q_ij_struct(l_ij)
         # transform spline variables: only consider future piece of spline
-        tf = lambda cfs, basis: shift_knot1_fwd(cfs, basis, t0)
+        tf = lambda cfs, basis: shiftfirstknot_fwd(cfs, basis, t0)
         self._transform_spline([x_i, l_i], tf, self.q_i)
         self._transform_spline([x_j, l_ij], tf, self.q_ij)
         # fill in parameters
@@ -158,7 +159,7 @@ class ADMM(DualUpdater):
         z_i_new = self.q_i_struct(z[:l_qi])
         z_ij_new = self.q_ij_struct(z[l_qi:l_qi+l_qij])
         # transform back
-        tf = lambda cfs, basis: shift_knot1_bwd(cfs, basis, t0)
+        tf = lambda cfs, basis: shiftfirstknot_bwd(cfs, basis, t0)
         self._transform_spline(z_i_new, tf, self.q_i)
         self._transform_spline(z_ij_new, tf, self.q_ij)
         out = [z_i_new.cat, z_ij_new.cat]
@@ -291,7 +292,7 @@ class ADMM(DualUpdater):
         z_ij_p = self.q_ij_struct(z_ij_p)
         x_j = self.q_ij_struct(x_j)
         # transform spline variables: only consider future piece of spline
-        tf = lambda cfs, basis: shift_knot1_fwd(cfs, basis, t0)
+        tf = lambda cfs, basis: shiftfirstknot_fwd(cfs, basis, t0)
         self._transform_spline([x_i, z_i, z_i_p], tf, self.q_i)
         self._transform_spline([x_j, z_ij, z_ij_p], tf, self.q_ij)
         # compute residuals
@@ -477,8 +478,7 @@ class ADMM(DualUpdater):
         # transform spline variables
         if ((current_time > 0. and
              np.round(current_time, 6) % self.problem.knot_time == 0)):
-            # tf = shiftoverknot
-            tf = lambda cfs, basis: shiftoverknot_T(basis)[0].dot(cfs)
+            tf = lambda cfs, basis: basis.get_shiftoverknot_tf()[0].dot(cfs)
             for key in ['x_i', 'z_i', 'z_i_p', 'l_i', 'l_i_p']:
                 self.var_admm[key] = self._transform_spline(
                     self.var_admm[key], tf, self.q_i)

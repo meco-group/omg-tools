@@ -19,9 +19,7 @@
 
 from vehicle import Vehicle
 from ..basics.shape import Sphere
-from ..basics.spline import BSplineBasis
-from ..basics.spline_extra import sample_splines
-from ..basics.spline_extra import evalspline, running_integral, concat_splines, definite_integral
+from ..basics.splines import *
 from casadi import inf, SX, MX
 import numpy as np
 import time
@@ -101,9 +99,9 @@ class Quadrotor3D(Vehicle):
             ddy = -f_til*(1+q_theta**2)*(2*q_phi)
             ddz = f_til*(1-q_phi**2)*(1-q_theta**2) - self.g
             if self.options['exact_substitution']:
-                self.ddx = self.define_spline_variable('ddx', 1, 1, basis=ddx.basis)[0]
-                self.ddy = self.define_spline_variable('ddy', 1, 1, basis=ddy.basis)[0]
-                self.ddz = self.define_spline_variable('ddz', 1, 1, basis=ddz.basis)[0]
+                self.ddx = self.define_spline_variable('ddx', 1, 1, basis=ddx.getBasis())[0]
+                self.ddy = self.define_spline_variable('ddy', 1, 1, basis=ddy.getBasis())[0]
+                self.ddz = self.define_spline_variable('ddz', 1, 1, basis=ddz.getBasis())[0]
                 self.x, self.dx = self.integrate_twice(self.ddx, self.dpos0[0], self.pos0[0], self.t, self.T)
                 self.y, self.dy = self.integrate_twice(self.ddy, self.dpos0[1], self.pos0[1], self.t, self.T)
                 self.z, self.dz = self.integrate_twice(self.ddz, self.dpos0[2], self.pos0[2], self.t, self.T)
@@ -113,7 +111,7 @@ class Quadrotor3D(Vehicle):
             else:
                 degree = 4
                 knots = np.r_[np.zeros(degree), np.linspace(0., 1., 10+1), np.ones(degree)]
-                basis = BSplineBasis(knots, degree)
+                basis = spl.BSplineBasis(knots, degree)
                 self.ddx = self.define_spline_variable('ddx', 1, 1, basis=basis)[0]
                 self.ddy = self.define_spline_variable('ddy', 1, 1, basis=basis)[0]
                 self.ddz = self.define_spline_variable('ddz', 1, 1, basis=basis)[0]
@@ -178,15 +176,16 @@ class Quadrotor3D(Vehicle):
         self.poseT = np.r_[position, roll, pitch, 0.].T
 
     def get_init_spline_value(self):
-        init_value = np.zeros((len(self.basis), 3))
-        f_til0 = np.zeros(len(self.basis))
+        len_basis = self.basis.getLength()
+        init_value = np.zeros((len_basis, 3))
+        f_til0 = np.zeros(len_basis)
         q_phi0 = np.tan(self.prediction['state'][6]/2.)
         q_theta0 = np.tan(self.prediction['state'][7]/2.)
         q_phiT = np.tan(self.poseT[3]/2.)
         q_thetaT = np.tan(self.poseT[4]/2.)
         init_value[:, 0] = f_til0
-        init_value[:, 1] = np.linspace(q_phi0, q_phiT, len(self.basis))
-        init_value[:, 2] = np.linspace(q_theta0, q_thetaT, len(self.basis))
+        init_value[:, 1] = np.linspace(q_phi0, q_phiT, len_basis)
+        init_value[:, 2] = np.linspace(q_theta0, q_thetaT, len_basis)
         return init_value
 
     def check_terminal_conditions(self):
@@ -227,17 +226,11 @@ class Quadrotor3D(Vehicle):
 
     def integrate_twice(self, ddx, dx0, x0, t, T=1.):
         # first integration
-        ddx_int = T*running_integral(ddx)
-        if isinstance(t, (SX, MX)):
-            dx = ddx_int-evalspline(ddx_int, t/T) + dx0
-        else:
-            dx = ddx_int-ddx_int(t/T) + dx0
+        ddx_int = T*ddx.antiderivative()
+        dx = ddx_int - ddx_int(t/T) + dx0
         # second integration
-        dx_int = T*running_integral(dx)
-        if isinstance(t, (SX, MX)):
-            x = dx_int-evalspline(dx_int, t/T) + x0
-        else:
-            x = dx_int-dx_int(t/T) + x0
+        dx_int = T*dx.antiderivative()
+        x = dx_int-dx_int(t/T) + x0
         return x, dx
 
     def splines2signals(self, splines, time):

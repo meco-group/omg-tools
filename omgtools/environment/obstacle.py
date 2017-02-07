@@ -19,7 +19,7 @@
 
 
 from ..basics.optilayer import OptiChild
-from ..basics.spline import BSplineBasis, BSpline
+from ..basics.splines import *
 from casadi import inf, vertcat, cos, sin
 from scipy.interpolate import interp1d
 from scipy.integrate import odeint
@@ -46,7 +46,7 @@ class ObstaclexD(OptiChild):
         self.set_options(options)
         self.shape = shape
         self.n_dim = shape.n_dim
-        self.basis = BSplineBasis([0, 0, 0, 1, 1, 1], 2)
+        self.basis = spl.BSplineBasis([0, 0, 0, 1, 1, 1], 2)
         self.initial = initial
         self.prepare_simulation(initial, simulation)
         self.A = np.array([[0., 1., 0.], [0., 0., 1.], [0., 0., 0.]])
@@ -77,7 +77,7 @@ class ObstaclexD(OptiChild):
         x0 = x - self.t*v0 - 0.5*(self.t**2)*a
         a0 = a
         # pos spline over time horizon
-        self.pos_spline = [BSpline(self.basis, vertcat(x0[k], 0.5*v0[k]*self.T + x0[k], x0[k] + v0[k]*self.T + 0.5*a0[k]*(self.T**2)))
+        self.pos_spline = [spl.Function(self.basis, vertcat(x0[k], 0.5*v0[k]*self.T + x0[k], x0[k] + v0[k]*self.T + 0.5*a0[k]*(self.T**2)))
                            for k in range(self.n_dim)]
         # checkpoints + radii
         checkpoints, _ = self.shape.get_checkpoints()
@@ -251,8 +251,8 @@ class Obstacle2D(ObstaclexD):
         n_quarters = int(np.ceil(4*T/Ts))
         knots_theta = np.r_[np.zeros(3), np.hstack(
             [0.25*k*np.ones(2) for k in range(1, n_quarters+1)]), 0.25*n_quarters]*(Ts/T)
-        Tf, knots = get_interval_T(BSplineBasis(knots_theta, 2), 0, 1.)
-        basis = BSplineBasis(knots, 2)
+        Tf, knots = spl.BSplineBasis(knots_theta, 2).get_crop_tf(0., 1.)
+        basis = spl.BSplineBasis(knots, 2)
         # coefficients based on nurbs representation of circle
         cos_cfs = np.r_[1., np.sqrt(
             2.)/2., 0., -np.sqrt(2.)/2., -1., -np.sqrt(2.)/2.,  0.,  np.sqrt(2.)/2., 1.]
@@ -260,16 +260,16 @@ class Obstacle2D(ObstaclexD):
             2.)/2., 1.,  np.sqrt(2.)/2.,  0., -np.sqrt(2.)/2., -1., -np.sqrt(2.)/2., 0.]
         weight_cfs = np.r_[1., np.sqrt(
             2.)/2., 1.,  np.sqrt(2.)/2.,  1.,  np.sqrt(2.)/2.,  1.,  np.sqrt(2.)/2., 1.]
-        cos_cfs = Tf.dot(np.array([cos_cfs[k % 8] for k in range(len(basis))]))
-        sin_cfs = Tf.dot(np.array([sin_cfs[k % 8] for k in range(len(basis))]))
+        len_basis = basis.getLength()
+        cos_cfs = Tf.dot(np.array([cos_cfs[k % 8] for k in range(len_basis)]))
+        sin_cfs = Tf.dot(np.array([sin_cfs[k % 8] for k in range(len_basis)]))
         weight_cfs = Tf.dot(
-            np.array([weight_cfs[k % 8] for k in range(len(basis))]))
-
-        cos_wt = BSpline(basis, cos_cfs)
-        sin_wt = BSpline(basis, sin_cfs)*np.sign(omega)
+            np.array([weight_cfs[k % 8] for k in range(len_basis)]))
+        cos_wt = spl.Function(basis, cos_cfs)
+        sin_wt = spl.Function(basis, sin_cfs)*np.sign(omega)
         self.cos = cos_wt*cos(theta0) - sin_wt*sin(theta0)
         self.sin = cos_wt*sin(theta0) + sin_wt*cos(theta0)
-        self.gon_weight = BSpline(basis, weight_cfs)
+        self.gon_weight = spl.Function(basis, weight_cfs)
 
     def define_collision_constraints(self, hyperplanes):
         for hyperplane in hyperplanes:

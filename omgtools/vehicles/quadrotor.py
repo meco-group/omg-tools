@@ -19,7 +19,7 @@
 
 from vehicle import Vehicle
 from ..basics.shape import Circle
-from ..basics.spline_extra import sample_splines
+from ..basics.splines import *
 from casadi import inf
 import numpy as np
 
@@ -89,12 +89,13 @@ class Quadrotor(Vehicle):
         self.positionT = position
 
     def get_init_spline_value(self):
-        init_value = np.zeros((len(self.basis), 2))
+        len_basis = self.basis.getLength()
+        init_value = np.zeros((len_basis, 2))
         pos0 = self.prediction['state'][:2]
         posT = self.positionT
         for k in range(2):
             init_value[:, k] = np.r_[pos0[k]*np.ones(self.degree), np.linspace(
-                pos0[k], posT[k], len(self.basis) - 2*self.degree), posT[k]*np.ones(self.degree)]
+                pos0[k], posT[k], len_basis - 2*self.degree), posT[k]*np.ones(self.degree)]
         return init_value
 
     def check_terminal_conditions(self):

@@ -20,9 +20,7 @@
 from vehicle import Vehicle
 from ..problems.point2point import FreeTPoint2point, FixedTPoint2point
 from ..basics.shape import Rectangle, Circle
-from ..basics.spline_extra import sample_splines, evalspline, concat_splines
-from ..basics.spline_extra import running_integral
-from ..basics.spline import BSplineBasis
+from ..basics.splines import *
 from casadi import inf, SX, MX
 import numpy as np
 
@@ -95,7 +93,7 @@ class Bicycle(Vehicle):
         if self.options['substitution']:
             # substitute velocity and introduce equality constraints
             dx = v_til*(1-tg_ha**2)
-            dy = v_til*(2*tg_ha)        
+            dy = v_til*(2*tg_ha)
             if self.options['exact_substitution']:
                 self.dx = self.define_spline_variable('dx', 1, 1, basis=dx.basis)[0]
                 self.dy = self.define_spline_variable('dy', 1, 1, basis=dy.basis)[0]
@@ -147,8 +145,8 @@ class Bicycle(Vehicle):
 
         hop0 = self.define_parameter('hop0', 1)
         tdelta0 = self.define_parameter('tdelta0', 1)  # tan(delta)
-        self.define_constraint(hop0*(2.*evalspline(ddtg_ha, self.t/self.T)*self.length
-                               -tdelta0*(evalspline(dv_til, self.t/self.T)*(1.+tg_ha0**2)**2)*self.T), 0., 0.)
+        self.define_constraint(hop0*(2.*ddtg_ha(self.t/self.T)*self.length
+                               -tdelta0*(dv_til(self.t/self.T)*(1.+tg_ha0**2)**2)*self.T), 0., 0.)
         # This constraint is obtained by using l'Hopital's rule on the expression of
         # tan(delta) = 2*dtg_ha*self.length / (v_til*(1+tg_ha**2)**2)
         # this constraint is used to impose a specific steering angle when v_til = 0, e.g. when
@@ -208,12 +206,13 @@ class Bicycle(Vehicle):
 
     def get_init_spline_value(self):
         # generate initial guess for spline variables
-        init_value = np.zeros((len(self.basis), 2))
-        v_til0 = np.zeros(len(self.basis))
+        len_basis = self.basis.getLength()
+        init_value = np.zeros((len_basis, 2))
+        v_til0 = np.zeros(len_basis)
         tg_ha0 = np.tan(self.prediction['state'][2]/2)
         tg_haT = np.tan(self.poseT[2]/2)
         init_value[:, 0] = v_til0
-        init_value[:, 1] = np.linspace(tg_ha0, tg_haT, len(self.basis))
+        init_value[:, 1] = np.linspace(tg_ha0, tg_haT, len_basis)
         return init_value
 
     def check_terminal_conditions(self):
@@ -265,11 +264,8 @@ class Bicycle(Vehicle):
         self.define_collision_constraints_2d(hyperplanes, environment, [x, y], tg_ha)
 
     def integrate_once(self, dx, x0, t, T=1.):
-        dx_int = T*running_integral(dx)
-        if isinstance(t, (SX, MX)):
-            x = dx_int-evalspline(dx_int, t/T) + x0
-        else:
-            x = dx_int-dx_int(t/T) + x0
+        dx_int = T*dx.antiderivative()
+        x = dx_int-dx_int(t/T) + x0
         return x
 
     def splines2signals(self, splines, time):

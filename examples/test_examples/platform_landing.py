@@ -16,40 +16,38 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
-
+import sys, os
+sys.path.insert(0, os.getcwd()+'/..')
 from omgtools import *
-import numpy as np
 
-# create vehicle
-vehicle = Quadrotor3D(0.5)
+# create fleet
+N_quad = 2
+quadrotors = [Quadrotor(0.2) for l in range(N_quad)]
+fleet = Fleet(quadrotors + [Holonomic1D()])
 
-vehicle.set_initial_conditions([-3, -2, -0.5, 0, 0, 0, 0, 0])
-vehicle.set_terminal_conditions([3, 2, 0.5])
+configuration = [[0.25], [-0.25], [0.0]]
+init_positions = [[1.5, 3.], [-2., 2.], [1.]]
+terminal_positions = [[0., 0.1], [0., 0.1], [0.]]
 
-vehicle.set_options({'safety_distance': 0.1, 'safety_weight': 10})
+fleet.set_configuration(configuration)
+fleet.set_initial_conditions(init_positions)
+fleet.set_terminal_conditions(terminal_positions)
 
 # create environment
-environment = Environment(room={'shape': Cuboid(8, 6, 8)})
+environment = Environment(room={'shape': Square(5.), 'position': [0., 2.]})
+environment.add_obstacle(Obstacle({'position': [1., 1.5]},
+                                  shape=Rectangle(width=1, height=0.2)))
 
-trajectory = {'velocity': {'time': [1.5], 'values': [[0, 0, -0.6]]}}
-obst1 = Obstacle({'position': [-2, 0, -2]}, shape=Plate(Rectangle(5., 8.), 0.1,
-                 orientation=[0., np.pi/2, 0.]), options={'draw': True})
-obst2 = Obstacle({'position': [2, 0, 3.5]}, shape=Plate(Rectangle(5., 8.), 0.1,
-                 orientation=[0., np.pi/2, 0.]),
-                 simulation={'trajectories': trajectory}, options={'draw': True})
-
-environment.add_obstacle([obst1, obst2])
-
-# create a point-to-point problem
-problem = Point2point(vehicle, environment, freeT=False, options={'horizon_time': 5.})
+# create a formation point-to-point problem
+options = {'horizon_time': 5., 'codegen': {'jit': False}, 'rho': 3.}
+problem = RendezVous(fleet, environment, options=options)
 problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem.init()
 
-vehicle.problem = problem
 # create simulator
-simulator = Simulator(problem, sample_time=0.01, update_time=0.4)
-vehicle.plot('input', knots=True)
-problem.plot('scene', view=[20, -80])
+simulator = Simulator(problem)
+problem.plot('scene')
+fleet.plot('input', knots=True)
 
 # run it!
 simulator.run()

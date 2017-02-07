@@ -18,7 +18,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from ..basics.optilayer import OptiChild
-from ..basics.dummy_layer import *
+from ..basics.splines import *
 from ..execution.plotlayer import PlotLayer
 from obstacle import Obstacle
 from casadi import inf

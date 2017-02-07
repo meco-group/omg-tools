@@ -17,7 +17,7 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-from spline import BSpline, BSplineBasis
+from spline_old import BSpline, BSplineBasis
 from casadi import SX, MX, mtimes, Function, vertcat
 from scipy.interpolate import splev
 import numpy as np
@@ -95,6 +95,7 @@ def shift_spline(coeffs, t_shift, basis):
     basis2 = BSplineBasis(knots2, degree)
     T_tf = basis2.transform(basis)
     return T_tf.dot(coeffs)
+
 
 def extrapolate(spline, t_extra, m=None):
     T, knots = extrapolate_T(spline.basis, t_extra, m)
@@ -258,7 +259,7 @@ def shiftfirstknot_T(basis, t_shift, inverse=False):
         return T
 
 
-def knot_insertion_T(basis, knots_to_insert):
+def insert_knots_T(basis, knots_to_insert):
     # Create transformation matrix that transforms spline after inserting knots
     if not isinstance(knots_to_insert, list):
         knots_to_insert = [knots_to_insert]
@@ -285,6 +286,16 @@ def knot_insertion_T(basis, knots_to_insert):
     return T, knots
 
 
+def insert_knots(spline, knots_to_insert):
+    T, knots = insert_knots_T(spline.basis, knots_to_insert)
+    if isinstance(spline.coeffs, (SX, MX)):
+        coeffs2 = mtimes(T, spline.coeffs)
+    else:
+        coeffs2 = T.dot(spline.coeffs)
+    basis2 = BSplineBasis(knots, spline.basis.degree)
+    return BSpline(basis2, coeffs2)
+
+
 def crop_T(basis, min_value, max_value):
     # Create transformation matrix that extract piece of spline from min_value
     # to max_value
@@ -294,7 +305,7 @@ def crop_T(basis, min_value, max_value):
     n_max = len(np.where(knots == max_value)[0])
     min_knots = [min_value]*(degree + 1 - n_min)
     max_knots = [max_value]*(degree + 1 - n_max)
-    T, knots2 = knot_insertion_T(basis, min_knots+max_knots)
+    T, knots2 = insert_knots_T(basis, min_knots+max_knots)
     jmin = np.searchsorted(knots2, min_value, side='left')
     jmax = np.searchsorted(knots2, max_value, side='right')
     return T[jmin:jmax-degree-1, :], knots2[jmin:jmax]
