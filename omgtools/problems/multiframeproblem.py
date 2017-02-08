@@ -53,7 +53,7 @@ class MultiFrameProblem(Problem):
         self.update_times=[]
 
         self.frame = {}
-        self.frame['type'] = kwargs['frame_type'] if 'frame_type' in kwargs else 'frame_shift'
+        self.frame['type'] = kwargs['frame_type'] if 'frame_type' in kwargs else 'shift'
         self.frame_size = kwargs['frame_size'] if 'frame_size' in kwargs else 2.5
         self.cnt = 1  # frame counter        
 
@@ -83,7 +83,7 @@ class MultiFrameProblem(Problem):
         init_guess, self.motion_time = self.get_init_guess()
 
         # get moving obstacles inside frame for this motion time
-        self.frame['moving_obstacles'] = self.get_moving_obstacles_in_frame()
+        self.frame['moving_obstacles'], _ = self.get_moving_obstacles_in_frame()
 
         # get a problem representation of the frame
         problem = self.generate_problem()  # transform frame into point2point problem
@@ -106,10 +106,18 @@ class MultiFrameProblem(Problem):
             # transform frame into problem and simulate
             problem = self.generate_problem()
             # self.init_guess is filled in by update_frame()
+            # this also updates self.motion_time
             problem.reset_init_guess(self.init_guess)
             self.local_problem = problem        
         else: 
-            moving_obstacles = self.get_moving_obstacles_in_frame()
+            # update remaining motion time
+            if self.problem_options['freeT']:
+                # freeT: there is a time variable
+                self.motion_time = self.local_problem.father.get_variables(self.local_problem, 'T',)[0][0]
+            else:
+                # fixedT: the remaining motion time is always the horizon time
+                self.motion_time = self.local_problem.options['horizon_time']
+
             # Check if amount of moving obstacles changed
             # If the obstacles just change their trajectory, the simulator takes this into account            
             # If moving_obstacles is different from the existing moving_obstacles (new obstacle,
@@ -118,14 +126,14 @@ class MultiFrameProblem(Problem):
             # Todo: if obstacle is not relevant anymore, place it far away and set hyperplanes accordingly?
             # Todo: make new problem or place dummy obstacles and overwrite their state?
             #       for now dummies have influence on solving time...
-            for obs1 in moving_obstacles:
-                for obs2 in self.frame['moving_obstacles']:
-                    if obs1==obs2 and obs1.options['avoid'] != obs2.options['avoid']:
-                        # new moving obstacle in frame or obstacle disappeared from frame
-                        problem = self.generate_problem()
-                        init_guess = self.local_problem.father.get_variables()[self.vehicles[0].label, 'splines0']
-                        problem.reset_init_guess(init_guess)  # use init_guess from previous problem = best we can do
-                        self.local_problem = problem
+
+            self.frame['moving_obstacles'], obs_change = self.get_moving_obstacles_in_frame()
+            if obs_change:
+                # new moving obstacle in frame or obstacle disappeared from frame
+                problem = self.generate_problem()
+                init_guess = np.array(self.local_problem.father.get_variables()[self.vehicles[0].label, 'splines0'])  # np.array converts DM to array
+                problem.reset_init_guess(init_guess)  # use init_guess from previous problem = best we can do
+                self.local_problem = problem
         
         # solve local problem
         self.local_problem.solve(current_time, update_time)
@@ -233,13 +241,16 @@ class MultiFrameProblem(Problem):
     def create_frame(self, frame_size=1.5):
         # Makes a frame, based on the environment, the current state and the global path (waypoints)
 
-        # There are different options: frame_shift, min_nobs, corridor
-        # frame_shift: keep frame_size fixed, shift frame in the direction of the movement
+        # There are different options: shift, min_nobs, corridor
+        # shift: keep frame_size fixed, shift frame in the direction of the movement
         # over a maximum distance of move_limit
-        if self.frame['type'] == 'frame_shift':
+        if self.frame['type'] == 'shift':
+            import time
+            start_time = time.time()
+
             # make new dictionary, to avoid that self.frame keeps the same reference
             self.frame = {}
-            self.frame['type'] = 'frame_shift'
+            self.frame['type'] = 'shift'
             # frame with current vehicle position as center
             xmin = self.curr_state[0] - frame_size*0.5
             ymin = self.curr_state[1] - frame_size*0.5
@@ -329,10 +340,13 @@ class MultiFrameProblem(Problem):
             self.frame['waypoints'] = points_in_frame
             # Todo: added endpoint to waypoints, okay?
 
+            end_time = time.time()
+            print 'elapsed time in create SitCon frame: ', end_time-start_time
+
         # min_nobs: enlarge frame as long as there are no obstacles inside it
         elif self.frame['type'] == 'min_nobs':
             import time
-            start = time.time()
+            start_time = time.time()
             self.frame = self.get_min_nobs_frame(self.curr_state)
 
             # try to scale up frame in all directions until it hits the borders or an obstacle
@@ -378,15 +392,15 @@ class MultiFrameProblem(Problem):
             # enters this next frame and make this frame the new current frame
             self.next_frame = self.create_next_frame(self.frame)
 
-            end = time.time()
-            print 'Elapsed time while creating frame: ', end-start
+            end_time = time.time()
+            print 'Elapsed time while creating frame: ', end_time-start_time
 
         # corridor: a frame consists solely of a corridor, without any static obstacles
         elif self.frame['type'] == 'corridor':
             raise NotImplementedError('Frame type corridor is not implemented yet')
 
     def check_frame(self):
-        if self.frame['type'] == 'frame_shift':
+        if self.frame['type'] == 'shift':
             percentage = 80  # if travelled over x% then get new frame
 
             # if final goal is not in the current frame, compare current distance
@@ -435,7 +449,7 @@ class MultiFrameProblem(Problem):
         # and since you moved over the path so a part needs to be removed.
         
         import time
-        start = time.time()
+        start_time = time.time()
 
         self.global_path = self.global_planner.get_path(start=self.curr_state, goal=self.goal_state)
         self.global_path.append(self.goal_state)
@@ -460,10 +474,10 @@ class MultiFrameProblem(Problem):
         self.init_guess, self.motion_time = self.get_init_guess()
 
         # get moving obstacles inside frame for this time
-        self.frame['moving_obstacles'] = self.get_moving_obstacles_in_frame()
+        self.frame['moving_obstacles'], _ = self.get_moving_obstacles_in_frame()
 
-        end = time.time()
-        print 'Elapsed time while updating frame: ', end-start
+        end_time = time.time()
+        print 'Elapsed time while updating frame: ', end_time-start_time
 
     def get_stationary_obstacles_in_frame(self, frame=None):
         obstacles_in_frame = []
@@ -506,13 +520,21 @@ class MultiFrameProblem(Problem):
 
     def get_moving_obstacles_in_frame(self):
         # determine which moving obstacles are in self.frame for self.motion_time
+        
+        import time
+        start_time = time.time()
+
         moving_obstacles = []
+        obs_change = False
         for obstacle in self.environment.obstacles:
             # check if obstacle is moving, this is when:
             # there is an entry trajectories, and there is a velocity,
             # and not all velocities are 0.
-            if (('trajectories' in obstacle.simulation) and ('velocity' in obstacle.simulation['trajectories'])
-               and not (all(vel == [0.]*obstacle.n_dim for vel in obstacle.simulation['trajectories']['velocity']['values']))):
+
+            # if (('trajectories' in obstacle.simulation) and ('velocity' in obstacle.simulation['trajectories'])
+            #    and not (all(vel == [0.]*obstacle.n_dim for vel in obstacle.simulation['trajectories']['velocity']['values']))):
+            # no, this is a more accurate check, since it uses the last velocity value
+            if not all(obstacle.signals['velocity'][:,-1] == [0.]*obstacle.n_dim):
                 # get obstacle checkpoints
                 if not isinstance(obstacle.shape, Circle):
                     obs_chck = obstacle.shape.get_checkpoints()[0]  # element [0] gives vertices, not the corresponding radii
@@ -524,33 +546,52 @@ class MultiFrameProblem(Problem):
                 # input to point_in_frame(distance=radius)
                 else:
                     [[xmin, xmax],[ymin, ymax]] = obstacle.shape.get_canvas_limits()
-                    obs_chck = [[xmin, ymin], [xmin, ymax], [xmax, ymax], [xmax, ymin]] 
+                    obs_chck = [[xmin, ymin], [xmin, ymax], [xmax, ymax], [xmax, ymin]]
+                    # also check center, because vertices of square approximation may be outside
+                    # of the frame, while the center is in the frame
+                    obs_chck.insert(0, [0,0]) 
                 obs_pos = obstacle.signals['position'][:,-1]
                 obs_vel = obstacle.signals['velocity'][:,-1]
                 # add all moving obstacles, but only avoid those that matter
                 moving_obstacles.append(obstacle)
-                # by default don't avoid the obstacle, only if it is inside the frame
-                obstacle.set_options({'avoid': False})
-                # only check points for which the obstacle velocity is not all zero
-                if any(obs_vel != np.zeros(obstacle.n_dim)):
-                    for chck in obs_chck:
-                        # if it is not a circle, rotate the vertices
-                        if hasattr(obstacle.shape, 'orientation'):
-                            vertex = obstacle.shape.rotate(obstacle.shape.orientation, chck)
-                        else:
-                            vertex = chck
-                        # move to correct position
-                        vertex += obs_pos
-                        # check if vertex is in frame during movement
-                        if self.point_in_frame(vertex, time=self.motion_time, velocity=obs_vel):
-                            # avoid corresponding obstacle                            
-                            obstacle.set_options({'avoid': True})
-                            # break from for chck in obs_chck, move on to next obstacle, since
-                            # obstacle is added to the frame if any of its vertices is in the frame
-                            break
-        return moving_obstacles
+                
+                # REMOVE: already checked this above
+                # # only check points for which the obstacle velocity is not all zero
+                # if any(obs_vel != np.zeros(obstacle.n_dim)):
+                
+                for chck in obs_chck:
+                    # if it is not a circle, rotate the vertices
+                    if hasattr(obstacle.shape, 'orientation'):
+                        vertex = obstacle.shape.rotate(obstacle.shape.orientation, chck)
+                    else:
+                        vertex = chck
+                    # move to correct position
+                    vertex += obs_pos
+                    # check if vertex is in frame during movement
+                    if self.point_in_frame(vertex, time=self.motion_time, velocity=obs_vel):
+                        if obstacle.options['avoid'] is not True:
+                            # obstacle was not avoided in previous frame, but it should be now
+                            obs_change = True                            
+                        # avoid corresponding obstacle
+                        obstacle.set_options({'avoid': True})
+                        # break from for chck in obs_chck, move on to next obstacle, since
+                        # obstacle is added to the frame if any of its vertices is in the frame
+                        break
+                    if obstacle.options['avoid'] is not False:
+                        # obstacle was avoided in previous frame, but not necessary now
+                        obs_change = True
+                        # obstacle was not in the frame, so don't avoid
+                        obstacle.set_options({'avoid': False})
+
+        end_time = time.time()
+        print 'elapsed time in get_moving_obstacles_in_frame', end_time-start_time
+
+        return moving_obstacles, obs_change
 
     def get_init_guess(self, **kwargs):
+
+        import time
+        start_time = time.time()
 
         waypoints = self.frame['waypoints']
         # change first waypoint to current state, the startpoint of the init guess
@@ -653,6 +694,10 @@ class MultiFrameProblem(Problem):
         # # Save trajectories for all frames, as initial guesses
         # splines = problem.father.get_variables()[self.vehicles[0].label, 'splines0']
         # splines = np.array(splines)  # convert DM to array
+        
+        end_time = time.time()
+        print 'elapsed time in get_init_guess ', end_time - start_time
+
         return splines, motion_time
 
     def make_border(self, xmin, ymin, xmax, ymax):
@@ -666,6 +711,10 @@ class MultiFrameProblem(Problem):
          'position': position, 'orientation': angle, 'limits': limits}
 
     def create_next_frame(self, frame):
+        
+        import time
+        start = time.time()
+
         if not frame['endpoint_frame'] == self.goal_state:
             # only search the next frame if the current frame doesn't contain the goal state
             next_frame = self.get_min_nobs_frame(start=frame['endpoint_frame'])
@@ -705,6 +754,10 @@ class MultiFrameProblem(Problem):
             # This was necessary because otherwise you will end up on a grid point and not necessarily in the goal
             # position (which can lie between grid points, anywhere on the map)
             next_frame['endpoint_frame'] = next_frame['waypoints'][-1]
+            
+            end = time.time()
+            print 'time spend in create_next_frame, ', end-start
+
             return next_frame
         else:
             # tried to create the next frame, while the goal position is already inside the current frame
@@ -713,6 +766,9 @@ class MultiFrameProblem(Problem):
     def get_min_nobs_frame(self, start):
         # generates a frame by subsequently including more waypoints, until an obstacle
         # is found inside the frame
+
+        import time
+        start_time = time.time()
 
         # make new dictionary, to avoid that self.frame keeps the same reference
         frame = {}
@@ -787,64 +843,107 @@ class MultiFrameProblem(Problem):
             raise RuntimeError('No waypoint was found inside min_nobs frame, something wrong with frame')
         else:
             frame['waypoints'] = points_in_frame
+        
+        end_time = time.time()
+        print 'time in min_nobs_frame', end_time-start_time
+
         return frame
 
     def scale_up_frame(self, frame):
         # scale up the current frame in all directions, until it hits the borders
         # or it contains an obstacle
+        
+        import time
+        start_time = time.time()
+
         scaled_frame = frame.copy()
         xmin,ymin,xmax,ymax = scaled_frame['border']['limits']            
         while True:
             # enlarge in positive x-direction
-            xmax_new = xmax + self.veh_size*self.scale_factor
+
+            # first try to put xmax = frame border
+            xmax_new = self.environment.room['shape'].get_canvas_limits()[0][1] + self.environment.room['position'][0]
             scaled_frame['border'] = self.make_border(xmin,ymin,xmax_new,ymax)
-            if xmax_new > self.environment.room['shape'].get_canvas_limits()[0][1] + self.environment.room['position'][0]:
-                # the frame hit the borders, this is the maximum size in this direction
-                xmax = self.environment.room['shape'].get_canvas_limits()[0][1] + self.environment.room['position'][0]
-                break
             if not self.get_stationary_obstacles_in_frame(frame=scaled_frame):
-                # there is no obstacle in the enlarged frame, so enlarge it
-                xmax = xmax_new
-            else:
-                # there is an obstacle in the enlarged frame, don't enlarge it
-                scaled_frame['border'] = self.make_border(xmin,ymin,xmax,ymax)
+                xmax = xmax_new  # assign new xmax
                 break
+            else: 
+                xmax_new = xmax + self.veh_size*self.scale_factor
+                scaled_frame['border'] = self.make_border(xmin,ymin,xmax_new,ymax)
+                if xmax_new > self.environment.room['shape'].get_canvas_limits()[0][1] + self.environment.room['position'][0]:
+                    # the frame hit the borders, this is the maximum size in this direction
+                    xmax = self.environment.room['shape'].get_canvas_limits()[0][1] + self.environment.room['position'][0]
+                    break
+                if not self.get_stationary_obstacles_in_frame(frame=scaled_frame):
+                    # there is no obstacle in the enlarged frame, so enlarge it
+                    xmax = xmax_new
+                else:
+                    # there is an obstacle in the enlarged frame, don't enlarge it
+                    scaled_frame['border'] = self.make_border(xmin,ymin,xmax,ymax)
+                    break
         while True:
             # enlarge in negative x-direction
-            xmin_new = xmin - self.veh_size*self.scale_factor
+
+            # first try to put xmin = frame border
+            xmin_new = self.environment.room['shape'].get_canvas_limits()[0][0] + self.environment.room['position'][0]
             scaled_frame['border'] = self.make_border(xmin_new,ymin,xmax,ymax)
-            if xmin_new < self.environment.room['shape'].get_canvas_limits()[0][0] + self.environment.room['position'][0]:
-                xmin = self.environment.room['shape'].get_canvas_limits()[0][0] + self.environment.room['position'][0]
-                break
             if not self.get_stationary_obstacles_in_frame(frame=scaled_frame):
-                xmin = xmin_new
-            else:
-                scaled_frame['border'] = self.make_border(xmin,ymin,xmax,ymax)
+                xmin = xmin_new  # assign new xmin
                 break
+            else:
+                xmin_new = xmin - self.veh_size*self.scale_factor
+                scaled_frame['border'] = self.make_border(xmin_new,ymin,xmax,ymax)
+                if xmin_new < self.environment.room['shape'].get_canvas_limits()[0][0] + self.environment.room['position'][0]:
+                    xmin = self.environment.room['shape'].get_canvas_limits()[0][0] + self.environment.room['position'][0]
+                    break
+                if not self.get_stationary_obstacles_in_frame(frame=scaled_frame):
+                    xmin = xmin_new
+                else:
+                    scaled_frame['border'] = self.make_border(xmin,ymin,xmax,ymax)
+                    break
         while True:
             # enlarge in positive y-direction
-            ymax_new = ymax + self.veh_size*self.scale_factor
+
+            # first try to put ymax = frame border
+            ymax_new = self.environment.room['shape'].get_canvas_limits()[1][1] + self.environment.room['position'][1]
             scaled_frame['border'] = self.make_border(xmin,ymin,xmax,ymax_new)
-            if ymax_new > self.environment.room['shape'].get_canvas_limits()[1][1] + self.environment.room['position'][1]:
-                ymax = self.environment.room['shape'].get_canvas_limits()[1][1] + self.environment.room['position'][1]
-                break
             if not self.get_stationary_obstacles_in_frame(frame=scaled_frame):
-                ymax = ymax_new
-            else:
-                scaled_frame['border'] = self.make_border(xmin,ymin,xmax,ymax)
+                ymax = ymax_new  # assign new ymax
                 break
+            else:
+                ymax_new = ymax + self.veh_size*self.scale_factor
+                scaled_frame['border'] = self.make_border(xmin,ymin,xmax,ymax_new)
+                if ymax_new > self.environment.room['shape'].get_canvas_limits()[1][1] + self.environment.room['position'][1]:
+                    ymax = self.environment.room['shape'].get_canvas_limits()[1][1] + self.environment.room['position'][1]
+                    break
+                if not self.get_stationary_obstacles_in_frame(frame=scaled_frame):
+                    ymax = ymax_new
+                else:
+                    scaled_frame['border'] = self.make_border(xmin,ymin,xmax,ymax)
+                    break
         while True:
             # enlarge in negative y-direction
-            ymin_new = ymin - self.veh_size*self.scale_factor
+
+            # first try to put ymin = frame border
+            ymin_new = self.environment.room['shape'].get_canvas_limits()[1][0] + self.environment.room['position'][1]
             scaled_frame['border'] = self.make_border(xmin,ymin_new,xmax,ymax)
-            if ymin_new < self.environment.room['shape'].get_canvas_limits()[1][0] + self.environment.room['position'][1]:
-                ymin = self.environment.room['shape'].get_canvas_limits()[1][0] + self.environment.room['position'][1]
-                break
             if not self.get_stationary_obstacles_in_frame(frame=scaled_frame):
-                ymin = ymin_new
-            else:
-                scaled_frame['border'] = self.make_border(xmin,ymin,xmax,ymax)
+                ymin = ymin_new  # assign new ymin
                 break
+            else:
+                ymin_new = ymin - self.veh_size*self.scale_factor
+                scaled_frame['border'] = self.make_border(xmin,ymin_new,xmax,ymax)
+                if ymin_new < self.environment.room['shape'].get_canvas_limits()[1][0] + self.environment.room['position'][1]:
+                    ymin = self.environment.room['shape'].get_canvas_limits()[1][0] + self.environment.room['position'][1]
+                    break
+                if not self.get_stationary_obstacles_in_frame(frame=scaled_frame):
+                    ymin = ymin_new
+                else:
+                    scaled_frame['border'] = self.make_border(xmin,ymin,xmax,ymax)
+                    break
+
+        end_time = time.time()
+        print 'time in scale_up_frame', end_time-start_time
         return scaled_frame['border']
 
     def move_frame(self, delta_x, delta_y, frame_size, move_limit):
@@ -913,7 +1012,7 @@ class MultiFrameProblem(Problem):
             # amount of times to check
             N = int(round(self.motion_time/time_interval)+1)
             # sample time of check
-            Ts = self.motion_time/N
+            Ts = float(self.motion_time)/N
             x, y = point
             vx, vy = velocity
             for l in range(N+1):
@@ -1040,7 +1139,7 @@ class MultiFrameProblem(Problem):
         problem_options = {}
         for key, value in self.problem_options.items():
             problem_options[key] = value
-        if self.next_frame is None:  # no next frame, so current frame is last one
+        if self.frame['endpoint_frame'] == self.goal_state:  # current frame is the last one
             problem_options['no_term_con_der'] = False  # include final velocity = 0 constraint
         problem = Point2point(self.vehicles, environment, freeT=self.problem_options['freeT'], options=problem_options)
         problem.set_options({'solver_options': self.options['solver_options']})
