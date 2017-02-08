@@ -168,11 +168,15 @@ class EnvironmentGUI(tk.Frame):
 
     def remove_last_obstacle(self):
         # when clicking the remove button, this removes
-        # the obstacle which was just added
+        # the obstacle which was created the last
         # erase from gui
-        self.canvas.delete(self.obstacles[-1]['variable'])
-        # remove from list
-        del self.obstacles[-1]
+        if self.obstacles:
+            # get all ids of obstacles drawn on canvas
+            ids = self.canvas.find_all()
+            # delete the last id, corresponding to the last obstacle
+            self.canvas.delete(ids[-1])
+            # remove obstacle from list
+            del self.obstacles[-1]
 
     def snap_to_grid(self, point):
         # Snap the user clicked point to a grid point, since obstacles can only
