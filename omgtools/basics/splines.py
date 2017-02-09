@@ -1,4 +1,7 @@
-import meco_binaries; meco_binaries(cpp_splines='master')
+try:
+    import meco_binaries; meco_binaries(cpp_splines='master')
+except ImportError:
+    print "meco_binaries not found."
 import Basis as spl
 import spline_old as spl_old
 import spline_extra as spl_ex
