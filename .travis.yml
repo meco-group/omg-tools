@@ -31,6 +31,7 @@ before_script:
       token = $MECO_DROPBOX_TOKEN
   - rclone sync --include meco_binaries.* dropbox:meco_binaries_debian meco_binaries
   - rclone sync dropbox:meco_binaries_debian/python27/cpp_splines/master meco_binaries/python27/cpp_splines/master
+  - rclone sync dropbox:meco_binaries_debianr meco_binaries
   - export PYTHONPATH=$PYTHONPATH:$HOME/meco_binaries
 
 script:
