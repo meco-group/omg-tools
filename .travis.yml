@@ -30,7 +30,6 @@ before_script:
       app_key =
       app_secret =
       token = $MECO_DROPBOX_TOKEN
-    EOF
   - rclone sync --include meco_binaries.* dropbox:meco_binaries_debian meco_binaries
   - rclone sync --include meco_binaries.* dropbox:meco_binaries_debian/python27/cpp_splines/develop meco_binaries/python27/cpp_splines/develop
 
