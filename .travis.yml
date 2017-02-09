@@ -18,20 +18,6 @@ before_script:
   - git clone https://github.com/meco-group/bob.git
   - pushd bob && source setup.sh && popd
   - bob_get libhsl.tar.gz && mkdir $HOME/libhsl && tar -xf libhsl.tar.gz -C $HOME/libhsl
-  
-  # setup rclone
-  - wget http://downloads.rclone.org/rclone-current-linux-amd64.zip
-  - unzip rclone-current-linux-amd64.zip
-  - pushd rclone-*-linux-amd64 && sudo cp rclone /usr/sbin/ && sudo chown root:root /usr/sbin/rclone && sudo chmod 755 /usr/sbin/rclone && popd
-  - |
-    cat <<EOF > ~/.rclone.conf
-    [dropbox]
-      type = dropbox
-      app_key =
-      app_secret =
-      token = $MECO_DROPBOX_TOKEN
-  - rclone sync --include meco_binaries.* dropbox:meco_binaries_debian meco_binaries
-  - rclone sync dropbox:meco_binaries_debian/python27/cpp_splines/develop meco_binaries/python27/cpp_splines/develop
 
 script:
   - cd examples
