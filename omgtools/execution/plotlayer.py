@@ -20,7 +20,7 @@
 import os
 import shutil
 import matplotlib
-matplotlib.use('Agg')
+matplotlib.use('Cairo')
 print matplotlib.__version__
 print matplotlib.__version__
 print matplotlib.__version__
