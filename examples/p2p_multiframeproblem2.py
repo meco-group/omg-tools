@@ -23,14 +23,14 @@ sys.path.insert(0,os.getcwd()+'/..')
 from omgtools import *
 
 # create vehicle
-vehicle = Holonomic(shapes = Circle(radius=0.1), options={'syslimit': 'norm_2'}, bounds={'vmax': 1, 'vmin':-1, 'amax':10, 'amin':-10})
+vehicle = Holonomic(shapes = Circle(radius=0.1), options={'syslimit': 'norm_inf'}, bounds={'vmax': 0.8, 'vmin':-1, 'amax':10, 'amin':-10})
 
 # create environment
 # stationary obstacles via GUI
 import Tkinter as tk
 root = tk.Tk()
 options={'cell_size': 0.25}
-gui = EnvironmentGUI(parent=root, width=10, height=10, position=[0,0], options=options)
+gui = EnvironmentGUI(parent=root, width=16, height=16, position=[0,0], options=options)
 root.mainloop()
 environment = gui.get_environment()
 
@@ -46,7 +46,7 @@ start, goal = clicked[0], clicked[1]
 globalplanner = AStarPlanner(environment, options['cell_size'], start, goal)
 
 # make coordinator
-options={'freeT': True, 'horizon_time': 10, 'no_term_con_der': False}
+options={'freeT': False, 'horizon_time': 10, 'no_term_con_der': False}
 multiproblem=MultiFrameProblem(vehicle, environment, globalplanner, options=options, frame_type='min_nobs')
 multiproblem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 multiproblem.init()
