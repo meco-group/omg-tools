@@ -21,7 +21,7 @@
 from ..basics.optilayer import OptiChild
 from ..basics.spline_extra import get_interval_T
 from ..basics.spline import BSplineBasis, BSpline
-from ..basics.geometry import distance_between_points
+from ..basics.geometry import distance_between_points, point_in_polyhedron, circle_polyhedron_intersection
 from ..basics.shape import Circle, Polyhedron, Rectangle, Square
 from casadi import inf, vertcat, cos, sin
 from scipy.interpolate import interp1d
@@ -330,6 +330,8 @@ class Obstacle2D(ObstaclexD):
 
     def overlaps_with(self, obstacle):
         # check if self overlaps with obstacle
+        # Circle - Polyhedron is based on: 
+        # http://stackoverflow.com/questions/401847/circle-rectangle-collision-detection-intersection
         if isinstance(self.shape, Circle):
             if isinstance(obstacle.shape, Circle):
                 self_checkpoints = self.shape.get_checkpoints()
@@ -344,13 +346,19 @@ class Obstacle2D(ObstaclexD):
                 # didn't find an overlap
                 return False
             elif isinstance(obstacle.shape, Polyhedron):
-                obstacle.shape.get_sides(obstacle.shape.vertices)
-                # print 'Circle - Polyhedron bouncing not yet implemented'
-                return False
+                if (point_in_polyhedron(self.signals['position'][:,-1], obstacle) or
+                   circle_polyhedron_intersection(self, obstacle)):
+                    return True
+                else:
+                    return False
 
         elif isinstance(self.shape, Polyhedron):
             if isinstance(obstacle.shape, Circle):
-                # print 'Circle - Polyhedron bouncing not yet implemented'
+                if (point_in_polyhedron(obstacle.signals['position'][:,-1], self) or
+                   circle_polyhedron_intersection(obstacle, self)):
+                    return True
+                else:
+                    return False
                 return False
             elif isinstance(obstacle.shape, Polyhedron):
                 if isinstance(obstacle.shape, Rectangle):
@@ -369,7 +377,7 @@ class Obstacle2D(ObstaclexD):
                     else: 
                         print 'Rectangle bouncing with non-zero orientation not yet implemented'
                 else:
-                    print 'Circle - Non-rectangular shape boucing not yet implemented'
+                    print 'Polyhedron - Polyhedron boucing not yet implemented'
                 return False
 
     def is_outside_of(self, room):
