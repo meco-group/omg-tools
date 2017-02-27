@@ -22,6 +22,7 @@ from ..basics.splines import *
 from ..export.export_p2p import ExportP2P
 from casadi import inf
 import numpy as np
+import time
 
 
 class Point2point(object):
@@ -315,8 +316,13 @@ class FreeTPoint2point(Point2pointProblem):
             n_samp = int(
                 round((horizon_time-rel_current_time)/sample_time, 6)) + 1
             time_axis = np.linspace(rel_current_time, rel_current_time + (n_samp-1)*sample_time, n_samp)
+            t0 = time.time()
             spline_segments = [self.father.get_variables(vehicle, 'splines'+str(k)) for k in range(vehicle.n_seg)]
+            t1 = time.time()
             vehicle.store(current_time, sample_time, spline_segments, horizon_time, time_axis)
+            t2 = time.time()
+            print 't1-t0: ' + str(t1-t0)
+            print 't2-t1: ' + str(t2-t1)
 
     # ========================================================================
     # Simulation related functions
