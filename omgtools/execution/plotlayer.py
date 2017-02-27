@@ -21,6 +21,10 @@ import os
 import shutil
 import matplotlib
 matplotlib.use('Agg')
+print matplotlib.__version__
+print matplotlib.__version__
+print matplotlib.__version__
+print matplotlib.__version__
 import matplotlib.pyplot as plt
 from matplotlib import animation
 from mpl_toolkits.mplot3d import Axes3D, proj3d
