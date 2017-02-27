@@ -5,7 +5,7 @@ env:
     - IPOPT_DEFAULT_LINEAR_SOLVER=ma57
 
 # works from matplotlib 1.5 onwards
-    - MPLBACKEND=Cairo # Matplotlib backend; must be headless to run on travis
+    - MPLBACKEND=TKAgg # Matplotlib backend; must be headless to run on travis
 
 
 sudo: required
@@ -51,7 +51,7 @@ before_install:
   - tar -zxf casadi-py27-np1.9.1-v$CASADIVERSION.tar.gz -C $HOME/casadi-py27-np1.9.1-v$CASADIVERSION
   - sudo apt-get install -y python-numpy python-scipy python-matplotlib python-pip
   - mkdir -p $HOME/.matplotlib/
-  - "echo 'backend : Cairo' > $HOME/.matplotlib/matplotlibrc"
+  - "echo 'backend : TKAgg' > $HOME/.matplotlib/matplotlibrc"
   - sudo pip install matplotlib2tikz
   - export PYTHONPATH=$PYTHONPATH:$HOME/casadi-py27-np1.9.1-v$CASADIVERSION
   - sudo pip install nosexcover coveralls
