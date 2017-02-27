@@ -316,17 +316,22 @@ class Quadrotor3D(Vehicle):
         points = np.vstack((plt_xy, np.zeros(len(plt_xy)), plt_z))
         points = rot.dot(points) + np.c_[self.signals['pose'][:3, t]]
         n_points = points.shape[1]
-        lines = [np.c_[points[:, l], points[:, l+1]] for l in range(n_points-1)]
+        lines = [points]
+
+        # lines = [np.c_[points[:, l], points[:, l+1]] for l in range(n_points-1)]
 
         points = np.vstack((np.zeros(len(plt_xy)), plt_xy, plt_z))
         points = rot.dot(points) + np.c_[self.signals['pose'][:3, t]]
         n_points = points.shape[1]
-        lines += [np.c_[points[:, l], points[:, l+1]] for l in range(n_points-1)]
+        lines += [points]
+        # lines += [np.c_[points[:, l], points[:, l+1]] for l in range(n_points-1)]
 
         # rotors
         circle_h = np.vstack((rw*np.cos(s*2*np.pi), rw*np.sin(s*2*np.pi), np.zeros(len(s)), ))
         for i, j in zip([r-rw, 0, -r+rw, 0], [0, r-rw, 0, -r+rw]):
             points = rot.dot(circle_h + np.vstack((i, j, h))) + np.c_[self.signals['pose'][:3, t]]
-            n_points = points.shape[1]
-            lines += [np.c_[points[:, l], points[:, l+1]] for l in range(n_points-1)]
-        return lines
+            lines += [points]
+            # n_points = points.shape[1]
+            # lines += [np.c_[points[:, l], points[:, l+1]] for l in range(n_points-1)]
+
+        return [], lines

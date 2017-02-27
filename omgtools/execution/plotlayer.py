@@ -26,6 +26,14 @@ from mpl_toolkits.mplot3d import Axes3D, proj3d
 import numpy as np
 import warnings
 matplotlib.use('TKAgg')
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection, Line3DCollection
+
+MAYAVI_FOUND = True
+try:
+    from mayavi import mlab
+    from tvtk.api import tvtk
+except ImportError:
+    MAYAVI_FOUND = False
 
 # def orthogonal_proj(zfront, zback):
 #     a = (zfront+zback)/(zfront-zback)
@@ -69,8 +77,63 @@ def _init_axis_3d(axis, info, view=None):
     if view is not None:
         elevation, azimuth = view
         axis.view_init(elev=elevation, azim=azimuth)
+    for surf in info['surfaces']:
+        col = Poly3DCollection([], **surf)
+        axis.add_collection3d(col)
     for line in info['lines']:
-        axis.plot([], [], [], **line)
+        col = Line3DCollection([], **line)
+        axis.add_collection3d(col)
+
+    # surf = dict(zip(info['surfaces'][0],zip(*[d.values() for d in info['surfaces']])))
+    # col = Poly3DCollection([], **surf)
+    # axis.add_collection3d(col)
+    # lines = dict(zip(info['lines'][0],zip(*[d.values() for d in info['lines']])))
+    # col = Line3DCollection([], **lines)
+    # axis.add_collection3d(col)
+
+
+def _init_axis_3d_mayavi(axis, info, view=None):
+    # label setting
+    # limit setting
+    # view
+    axis['surfaces'], axis['lines'] = [], []
+    for surf in info['surfaces']:
+        mesh = tvtk.PolyData(points=np.zeros((0,3)), polys=[])
+        mlab.pipeline.surface(mesh, color=(1, 0, 0))
+        axis['surfaces'].append(mesh)
+    for line in info['lines']:
+        line = mlab.plot3d(np.zeros(1), np.zeros(1), np.zeros(1), color=(1,0,0))
+        axis['lines'].append(line)
+
+
+def get_mayavi_poly(data):
+    points, polys = [], []
+    cnt = 0
+    for surf in data:
+        s_i = []
+        for p in surf.T.tolist():
+            if p not in points:
+                points.append(p)
+                s_i.append(cnt)
+                cnt += 1
+            else:
+                s_i.append(points.index(p))
+        polys.append(s_i)
+    return points, polys
+
+
+def _update_axis_3d_mayavi(axis, info, data):
+    for p, dat in enumerate(data['surfaces']):
+        if len(dat) > 0:
+            points, polys = get_mayavi_poly(dat)
+            axis['surfaces'][p].set(points=points, polys=polys)
+    for p, dat in enumerate(data['lines']):
+        if len(dat) > 0:
+            try:
+                axis['lines'][p].set(x=dat[0, :], y=dat[1, :], z=dat[2, :])
+            except Exception as exc:
+                import pdb; pdb.set_trace()  # breakpoint c3b801b5x //
+    # aspect equal
 
 
 def _update_axis_2d(axis, info, data):
@@ -83,9 +146,20 @@ def _update_axis_2d(axis, info, data):
 
 
 def _update_axis_3d(axis, info, data):
-    for p, dat in enumerate(data):
-        axis.lines[p].set_data(dat[0].ravel(), dat[1].ravel())
-        axis.lines[p].set_3d_properties(dat[2].ravel())
+    for p, dat in enumerate(data['surfaces']):
+        axis.collections[p].set_verts([d.T.tolist() for d in dat])
+    ns = len(data['surfaces'])
+    for p, dat in enumerate(data['lines']):
+        axis.collections[p+ns].set_segments([d.T.tolist() for d in dat])
+
+    # s_data, l_data = [], []
+    # for p, dat in enumerate(data['surfaces']):
+    #     s_data += [d.T.tolist() for d in dat]
+    # for p, dat in enumerate(data['lines']):
+    #     l_data += [d.T.tolist() for d in dat]
+    # axis.collections[0].set_verts(s_data)
+    # axis.collections[1].set_segments(l_data)
+
     axis.relim()
     scalex = ('xlim' not in info or info['xlim'] is None)
     scaley = ('ylim' not in info or info['ylim'] is None)
@@ -174,7 +248,8 @@ class PlotLayer(object):
     # ========================================================================
 
     def plot(self, argument=None, **kwargs):
-        plot = {'argument': argument, 'kwargs': kwargs, 'figure': plt.figure()}
+        plot = {'argument': argument, 'kwargs': kwargs}
+        # plot = {'argument': argument, 'kwargs': kwargs, 'figure': plt.figure()}
         self.plots.append(plot)
         if 'time' in kwargs:
             index = self.__class__.simulator.time2index(kwargs['time'])
@@ -193,22 +268,39 @@ class PlotLayer(object):
         if info is None:
             return
         ax_r, ax_c = len(info), len(info[0])
-        figure = plot['figure']
-        for k in range(ax_r):
-            for l in range(ax_c):
-                if 'projection' in info[k][l] and info[k][l]['projection'] == '3d':
-                    axis = figure.add_subplot(
-                        ax_r, ax_c, k*ax_c+l+1, projection='3d')
-                    if 'view' in kwargs:
-                        view = kwargs['view']
+        if 'view' in kwargs:
+            view = kwargs['view']
+        else:
+            view = None
+        if 'mayavi' in kwargs and kwargs['mayavi']:
+            if not MAYAVI_FOUND:
+                raise ValueError('Mayavi not found')
+            if ax_r != 1 or ax_c != 1:
+                raise ValueError('Use of mayavi not possible within subplots')
+            if 'projection' not in info[0][0] or info[0][0]['projection'] != '3d':
+                raise ValueError('Use of mayavi only for 3d')
+            mlab.figure(bgcolor=(1, 1, 1))
+            axis = {}
+            _init_axis_3d_mayavi(axis, info[0][0], view)
+            plot['figure'] = axis
+        else:
+            figure = plt.figure()
+            plot['figure'] = figure
+            for k in range(ax_r):
+                for l in range(ax_c):
+                    if 'projection' in info[k][l] and info[k][l]['projection'] == '3d':
+                        if MAYAVI_FOUND:
+                            mlab.figure(bgcolor=(1,1,1))
+                            _init_axis_3d_mayavi({}, info[k][l], view)
+                        else:
+                            axis = figure.add_subplot(
+                                ax_r, ax_c, k*ax_c+l+1, projection='3d')
+                            _init_axis_3d(axis, info[k][l], view)
                     else:
-                        view = None
-                    _init_axis_3d(axis, info[k][l], view)
-                else:
-                    axis = figure.add_subplot(ax_r, ax_c, k*ax_c+l+1)
-                    _init_axis_2d(axis, info[k][l])
-                if 'aspect_equal' in info[k][l] and info[k][l]['aspect_equal']:
-                    axis.set_aspect('equal')
+                        axis = figure.add_subplot(ax_r, ax_c, k*ax_c+l+1)
+                        _init_axis_2d(axis, info[k][l])
+                    if 'aspect_equal' in info[k][l] and info[k][l]['aspect_equal']:
+                        axis.set_aspect('equal')
         plot.update({'info': info})
 
     # ========================================================================
@@ -229,17 +321,20 @@ class PlotLayer(object):
         if data is None:
             return
         fig, info = plot['figure'], plot['info']
-        ax_r, ax_c = len(data), len(data[0])
-        for k in range(ax_r):
-            for l in range(ax_c):
-                axis = fig.axes[k*ax_c+l]
-                if 'projection' in info[k][l] and info[k][l]['projection'] == '3d':
-                    _update_axis_3d(axis, info[k][l], data[k][l])
-                else:
-                    _update_axis_2d(axis, info[k][l], data[k][l])
-        if 'axis' in kwargs and not kwargs['axis']:
-            plt.axis('off')
-        fig.canvas.draw()
+        if 'mayavi' in kwargs and kwargs['mayavi']:
+            _update_axis_3d_mayavi(fig, info[0][0], data[0][0])
+        else:
+            ax_r, ax_c = len(data), len(data[0])
+            for k in range(ax_r):
+                for l in range(ax_c):
+                    axis = fig.axes[k*ax_c+l]
+                    if 'projection' in info[k][l] and info[k][l]['projection'] == '3d':
+                        _update_axis_3d(axis, info[k][l], data[k][l])
+                    else:
+                        _update_axis_2d(axis, info[k][l], data[k][l])
+            if 'axis' in kwargs and not kwargs['axis']:
+                plt.axis('off')
+            fig.canvas.draw()
 
     # ========================================================================
     # Post processing operations

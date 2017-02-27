@@ -154,16 +154,18 @@ class Environment(OptiChild, PlotLayer):
         self.update_plots()
 
     def draw(self, t=-1):
-        draw = []
+        surfaces, lines = [], []
         for obstacle in self.obstacles:
-            draw.extend(obstacle.draw(t))
-        if self.room['draw']:
-            roomPoints = []
-            for point in self.room['shape'].draw():
-                roomPoints.append(np.array([point[0]+self.room['position'][0],
-                                            point[1]+self.room['position'][1]]))
-            draw.extend(roomPoints)
-        return draw
+            s, l = obstacle.draw(t)
+            surfaces.append(s)
+            lines.append(l)
+        # if self.room['draw']:
+        #     roomPoints = []
+        #     for point in self.room['shape'].draw():
+        #         roomPoints.append(np.array([point[0]+self.room['position'][0],
+        #                                     point[1]+self.room['position'][1]]))
+        #     draw.extend(roomPoints)
+        return surfaces, lines
 
     def get_canvas_limits(self):
         limits = self.room['shape'].get_canvas_limits()
@@ -174,22 +176,27 @@ class Environment(OptiChild, PlotLayer):
     # ========================================================================
 
     def init_plot(self, argument, **kwargs):
-        lines = [{'color': 'black', 'linewidth': 1.2} for _ in self.draw()]
+        s, l = self.draw()
+        surfaces = [{'facecolor': 'gray', 'edgecolor': 'black', 'linewidth': 1.2} for _ in s]
+        lines = [{'color': 'black', 'linewidth': 1.2} for _ in l]
+        # lines = [{'color': 'black', 'linewidth': 1.2} for _ in self.draw()]
         if 'limits' in kwargs:
             limits = kwargs['limits']
         else:
             limits = self.get_canvas_limits()
         labels = ['' for k in range(self.n_dim)]
         if self.n_dim == 2:
-            return [[{'labels': labels, 'lines': lines, 'aspect_equal': True,
+            return [[{'labels': labels,'surfaces': surfaces, 'lines': lines, 'aspect_equal': True,
                       'xlim': limits[0], 'ylim': limits[1]}]]
         else:
-            return [[{'labels': labels, 'lines': lines, 'aspect_equal': True,
+            return [[{'labels': labels, 'surfaces': surfaces, 'lines': lines, 'aspect_equal': True,
                       'xlim': limits[0], 'ylim': limits[1], 'zlim': limits[2],
                       'projection': '3d'}]]
 
     def update_plot(self, argument, t, **kwargs):
-        lines = []
-        for l in self.draw(t):
-            lines.append([l[k, :] for k in range(self.n_dim)])
-        return [[lines]]
+        surfaces, lines = self.draw(t)
+        # lines = []
+        # for l in self.draw(t):
+        #     lines.append(l)
+            # lines.append([l[k, :] for k in range(self.n_dim)])
+        return [[{'surfaces': surfaces, 'lines': lines}]]
