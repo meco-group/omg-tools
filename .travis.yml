@@ -51,7 +51,7 @@ before_install:
   - tar -zxf casadi-py27-np1.9.1-v$CASADIVERSION.tar.gz -C $HOME/casadi-py27-np1.9.1-v$CASADIVERSION
   - sudo apt-get install -y python-numpy python-scipy python-matplotlib python-pip
   - mkdir -p $HOME/.matplotlib/
-  - "echo 'backend : Agg' > $HOME/.matplotlib/matplotlibrc"
+  - "echo 'backend : Cairo' > $HOME/.matplotlib/matplotlibrc"
   - sudo pip install matplotlib2tikz
   - export PYTHONPATH=$PYTHONPATH:$HOME/casadi-py27-np1.9.1-v$CASADIVERSION
   - sudo pip install nosexcover coveralls
