@@ -5,7 +5,7 @@ env:
     - IPOPT_DEFAULT_LINEAR_SOLVER=ma57
 
 # works from matplotlib 1.5 onwards
-    - MPLBACKEND=Agg # Matplotlib backend; must be headless to run on travis
+    - MPLBACKEND=Cairo # Matplotlib backend; must be headless to run on travis
 
 
 sudo: required
