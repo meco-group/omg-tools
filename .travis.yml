@@ -52,7 +52,7 @@ before_install:
   - wget http://sourceforge.net/projects/casadi/files/CasADi/$CASADIVERSION/linux/casadi-py27-np1.9.1-v$CASADIVERSION.tar.gz/download -O casadi-py27-np1.9.1-v$CASADIVERSION.tar.gz
   - mkdir $HOME/casadi-py27-np1.9.1-v$CASADIVERSION
   - tar -zxf casadi-py27-np1.9.1-v$CASADIVERSION.tar.gz -C $HOME/casadi-py27-np1.9.1-v$CASADIVERSION
-  - sudo apt-get install -qq --force-yes mesa-utils libgl1-mesa-swx11 libgl1-mesa-swx11-dev xvfb
+  - sudo apt-get install -qq --force-yes xvfb
   - sudo apt-get install -y python-numpy python-scipy python-matplotlib python-pip
   - mkdir -p $HOME/.matplotlib/
   #- "echo 'backend : Cairo' > $HOME/.matplotlib/matplotlibrc"
