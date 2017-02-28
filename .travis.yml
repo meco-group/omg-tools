@@ -5,12 +5,8 @@ env:
     - IPOPT_DEFAULT_LINEAR_SOLVER=ma57
 
 # works from matplotlib 1.5 onwards
- #   - MPLBACKEND=Cairo # Matplotlib backend; must be headless to run on travis
-addons:
-  apt:
-    packages:
-      - xvfb
-
+ #   - MPLBACKEND=Agg # Matplotlib backend; must be headless to run on travis
+ 
 sudo: required
 dist: trusty
 language: generic
@@ -21,10 +17,7 @@ before_script:
   - git clone https://github.com/meco-group/bob.git
   - pushd bob && source setup.sh && popd
   - bob_get libhsl.tar.gz && mkdir $HOME/libhsl && tar -xf libhsl.tar.gz -C $HOME/libhsl
-  #- "export DISPLAY=:99.0"
-  #- "sh -e /etc/init.d/xvfb start"
-  #- sleep 3 # give xvfb some time to start
-
+  
 script:
   - cd examples
   - chmod 644 *.py # nose doesnt match executable files
@@ -57,10 +50,9 @@ before_install:
   - wget http://sourceforge.net/projects/casadi/files/CasADi/$CASADIVERSION/linux/casadi-py27-np1.9.1-v$CASADIVERSION.tar.gz/download -O casadi-py27-np1.9.1-v$CASADIVERSION.tar.gz
   - mkdir $HOME/casadi-py27-np1.9.1-v$CASADIVERSION
   - tar -zxf casadi-py27-np1.9.1-v$CASADIVERSION.tar.gz -C $HOME/casadi-py27-np1.9.1-v$CASADIVERSION
-  - sudo apt-get install -qq --force-yes xvfb
-  - sudo apt-get install -y python-numpy python-scipy python-matplotlib python-pip
+  - sudo apt-get install -y python-numpy python-scipy python-matplotlib python-pip xvfb
   - mkdir -p $HOME/.matplotlib/
-  #- "echo 'backend : Cairo' > $HOME/.matplotlib/matplotlibrc"
+  #- "echo 'backend : Agg' > $HOME/.matplotlib/matplotlibrc"
   - sudo pip install matplotlib2tikz
   - export PYTHONPATH=$PYTHONPATH:$HOME/casadi-py27-np1.9.1-v$CASADIVERSION
   - sudo pip install nosexcover coveralls
