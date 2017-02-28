@@ -20,6 +20,10 @@
 import os
 import shutil
 import matplotlib
+print matplotlib.__version__
+print matplotlib.__version__
+print matplotlib.__version__
+print matplotlib.__version__
 matplotlib.use('TKAgg')
 import matplotlib.pyplot as plt
 from matplotlib import animation
