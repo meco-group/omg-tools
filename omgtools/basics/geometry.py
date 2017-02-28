@@ -117,37 +117,38 @@ def point_in_polyhedron(point, polyhedron):
 
 def circle_polyhedron_intersection(circle, polyhedron):
     
-    # And intersectCircle() is easy to implement too:
-    # one way would be to check if the foot of the perpendicular from P to the line
-    # is close enough and between the endpoints, and check the endpoints otherwise.
+    # Does one of the sides of the polyhedron have a point inside the circle?
+    # Compute perpendicular from the circle center to the polyhedron side
+    # Check if the intersection between the normal and the side is inside the circle
 
+    # get polyhedron vertices
     vertices = polyhedron.shape.vertices.copy()
+    # duplicate first vertex and place at the end, 
+    # to check all sides
+    vertices = np.c_[vertices, vertices[:,0]]
+    # add current position to vertices
     vertices[0] +=  polyhedron.signals['position'][:,-1][0]
     vertices[1] +=  polyhedron.signals['position'][:,-1][1]
 
-    for i in range(len(vertices)):
-        # check if any vertex is inside the circle
-        dist = distance_between_points(circle.signals['position'][:,-1], [vertices[0][i], vertices[1][i]])
-        if dist <= circle.shape.radius:
-            return True
     center = circle.signals['position'][:,-1]
+    for i in range(len(vertices)):
+        # first quickly check if any vertex is inside the circle
+        dist = distance_between_points(center, [vertices[0][i], vertices[1][i]])
+        if dist <= circle.shape.radius:
+            # one of the vertices is inside the circle
+            return True
     for i in range(len(vertices[0])-1):
-        # compute perpendicular of circle center to line and its intersection point with the line
+        # compute perpendicular of circle center to line and its intersection point (x4,y4) with the line
+        # based on: http://stackoverflow.com/questions/1811549/perpendicular-on-a-line-from-a-given-point
         x1, y1, x2, y2 = vertices[0][i], vertices[1][i], vertices[0][i+1], vertices[1][i+1]
         k = ((y2-y1) * (center[0]-x1) - (x2-x1) * (center[1]-y1)) / ((y2-y1)**2 + (x2-x1)**2)
         x4 = center[0] - k * (y2-y1)
         y4 = center[1] + k * (x2-x1)
 
         # see if intersection point is within the two end points of line
+        # and check distance between intersection point and circle center
         line1 = [[x1,y1],[x2,y2]]  # side of polyhedron
-        line2 = [center.tolist(), [x4,y4]]  # normal from circle to side of polyhedron
-        if intersect_line_segments(line1, line2):  # normal and side must intersect
-            intersection_point = intersect_lines(line1, line2)  # 
-            if ((x1<=intersection_point[0]<=x2 and y1<=intersection_point[1]<=y2) and
-                (distance_to_line(intersection_point, line1) <= circle.shape.radius)):
-                # intersection point is between the endpoints of the line and closer to
-                #  line than the circle radius
-                return True
-        else: 
-            raise RuntimeError('The computed normal does not intersect with the corresponding side, something is wrong')
+        if (((x1<=x4<=x2 and y1<=y4<=y2) or (x1>=x4>=x2 and y1>=y4>=y2)) and
+           (distance_between_points(center, [x4,y4]) <= circle.shape.radius)):
+            return True
     return False
