@@ -18,6 +18,9 @@ before_script:
   - git clone https://github.com/meco-group/bob.git
   - pushd bob && source setup.sh && popd
   - bob_get libhsl.tar.gz && mkdir $HOME/libhsl && tar -xf libhsl.tar.gz -C $HOME/libhsl
+  - "export DISPLAY=:99.0"
+  - "sh -e /etc/init.d/xvfb start"
+  - sleep 3 # give xvfb some time to start
 
 script:
   - cd examples
