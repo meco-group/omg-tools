@@ -12,6 +12,11 @@ sudo: required
 dist: trusty
 language: generic
 
+addons:
+  apt:
+    packages:
+      - xvfb
+
 before_script:
   - set -e
   - set -o pipefail  # otherwise, piping with grep discards exit statuses
