@@ -16,7 +16,8 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
-
+import sys, os
+sys.path.insert(0, os.getcwd()+'/../..')
 from omgtools import *
 
 # create vehicle
@@ -39,7 +40,7 @@ problem = Point2point(vehicle, environment, freeT=True)
 problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem.init()
 
-vehicle.problem = problem  # to plot error if using substitution 
+vehicle.problem = problem  # to plot error if using substitution
 
 # create simulator
 simulator = Simulator(problem)

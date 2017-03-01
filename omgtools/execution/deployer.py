@@ -19,6 +19,7 @@
 
 import numpy as np
 from plotlayer import PlotLayer
+import time
 
 
 class Deployer:
@@ -47,9 +48,16 @@ class Deployer:
             delay = 0
         else:
             delay = int((current_time - self.current_time - update_time)/self.sample_time)
+        t0 = time.time()
         self.problem.predict(current_time, update_time, self.sample_time, states, delay)
+        t1 = time.time()
         self.problem.solve(current_time, update_time)
+        t2 = time.time()
         self.problem.store(current_time, update_time, self.sample_time)
+        t3 = time.time()
+        print 'pre-process: ' + str(t1-t0) + ' s'
+        print 'solving: ' + str(t2-t1) + ' s'
+        print 'post-process: ' + str(t3-t2) + ' s'
         self.current_time = current_time
         # return trajectories
         trajectories = {}

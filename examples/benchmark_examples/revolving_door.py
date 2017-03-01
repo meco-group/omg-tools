@@ -16,43 +16,44 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
-
+import sys, os
+sys.path.insert(0, os.getcwd()+'/../..')
 from omgtools import *
+import numpy as np
 
-# create fleet
-N = 4
-vehicles = [Holonomic() for l in range(N)]
-
-fleet = Fleet(vehicles)
-configuration = RegularPolyhedron(0.2, N, np.pi/4.).vertices.T
-init_positions = [-1.5, -1.5] + configuration
-terminal_positions = [2., 2.] + configuration
-
-fleet.set_configuration(configuration.tolist())
-fleet.set_initial_conditions(init_positions.tolist())
-fleet.set_terminal_conditions(terminal_positions.tolist())
+# create vehicle
+vehicle = Holonomic()
+vehicle.set_initial_conditions([0., -2.0])
+vehicle.set_terminal_conditions([0., 2.0])
 
 # create environment
 environment = Environment(room={'shape': Square(5.)})
-rectangle = Rectangle(width=3., height=0.2)
-environment.add_obstacle(Obstacle({'position': [-2.1, -0.5]}, shape=rectangle))
-environment.add_obstacle(Obstacle({'position': [1.7, -0.5]}, shape=rectangle))
-trajectories = {'velocity': {'time': [3., 4.],
-                             'values': [[-0.15, 0.0], [0., 0.15]]}}
-environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
-                                  simulation={'trajectories': trajectories}))
+beam1 = Beam(width=2.2, height=0.2)
+environment.add_obstacle(Obstacle({'position': [-2., 0.]}, shape=beam1))
+environment.add_obstacle(Obstacle({'position': [2., 0.]}, shape=beam1))
 
-# create a formation point-to-point problem
-options = {'rho': 1., 'horizon_time': 10}
-problem = FormationPoint2point(fleet, environment, options=options)
+beam2 = Beam(width=1.4, height=0.2)
+horizon_time = 10.
+omega = 1.5*(2*np.pi/horizon_time)
+velocity = [0., 0.]
+# velocity = [0., -0.2] # crazy revolving door
+environment.add_obstacle(Obstacle({'position': [0., 0.], 'velocity': velocity,
+    'angular_velocity': omega}, shape=beam2, simulation={},
+    options={'horizon_time': horizon_time}))
+environment.add_obstacle(Obstacle({'position': [0., 0.], 'velocity': velocity,
+    'orientation': 0.5*np.pi, 'angular_velocity': omega},
+    shape=beam2, simulation={}, options={'horizon_time': horizon_time}))
+
+# create a point-to-point problem
+problem = Point2point(
+    vehicle, environment, freeT=False, options={'horizon_time': horizon_time})
 problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem.init()
 
 # create simulator
 simulator = Simulator(problem)
-fleet.plot('input', knots=True, predict=True, labels=['v_x (m/s)', 'v_y (m/s)'])
 problem.plot('scene')
-problem.plot('residuals')
+vehicle.plot('input', knots=True, labels=['v_x (m/s)', 'v_y (m/s)'])
 
 # run it!
 simulator.run()
