@@ -20,7 +20,7 @@
 from vehicle import Vehicle
 from ..problems.point2point import FreeTPoint2point, FixedTPoint2point
 from ..basics.shape import Square, Circle
-from ..basics.splines import *
+from ..basics.spline import *
 from casadi import inf, SX, MX
 import numpy as np
 
@@ -191,7 +191,7 @@ class Dubins(Vehicle):
         self.poseT = pose
 
     def get_init_spline_value(self):
-        len_basis = self.basis.getLength()
+        len_basis = self.basis.dimension()
         # generate initial guess for spline variables
         init_value = np.zeros((len_basis, 2))
         v_til0 = np.zeros(len_basis)

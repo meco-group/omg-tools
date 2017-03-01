@@ -19,10 +19,10 @@
 
 from vehicle import Vehicle
 from ..basics.shape import Sphere
-from ..basics.splines import *
+from ..basics.spline import *
 from casadi import inf, SX, MX
 import numpy as np
-import time
+import time as tt
 
 # Vehicle model:
 # ddx = (F/m)*cos(phi)*sin(theta)
@@ -176,7 +176,7 @@ class Quadrotor3D(Vehicle):
         self.poseT = np.r_[position, roll, pitch, 0.].T
 
     def get_init_spline_value(self):
-        len_basis = self.basis.getLength()
+        len_basis = self.basis.dimension()
         init_value = np.zeros((len_basis, 3))
         f_til0 = np.zeros(len_basis)
         q_phi0 = np.tan(self.prediction['state'][6]/2.)
@@ -240,6 +240,7 @@ class Quadrotor3D(Vehicle):
         ddx = f_til*(1-q_phi**2)*(2*q_theta)
         ddy = -f_til*(1+q_theta**2)*(2*q_phi)
         ddz = f_til*(1-q_phi**2)*(1-q_theta**2) - self.g
+        t0 = tt.time()
         if not hasattr(self, 'signals'): # first iteration
             x, dx = self.integrate_twice(ddx, 0., self.pose0[0], time[0])
             y, dy = self.integrate_twice(ddy, 0., self.pose0[1], time[0])
@@ -248,6 +249,8 @@ class Quadrotor3D(Vehicle):
             x, dx = self.integrate_twice(ddx, self.signals['state'][3, -1], self.signals['state'][0, -1], time[0])
             y, dy = self.integrate_twice(ddy, self.signals['state'][4, -1], self.signals['state'][1, -1], time[0])
             z, dz = self.integrate_twice(ddz, self.signals['state'][5, -1], self.signals['state'][2, -1], time[0])
+        t1 = tt.time()
+        print 'integration: ' + str(t1-t0)
         x_s, y_s, z_s, dx_s, dy_s, dz_s = sample_splines([x, y, z, dx, dy, dz], time)
         f_til_s, q_phi_s, q_theta_s, dq_phi_s, dq_theta_s = sample_splines([f_til, q_phi, q_theta, dq_phi, dq_theta], time)
         den = sample_splines([(1+q_phi**2)*(1+q_theta**2)], time)[0]

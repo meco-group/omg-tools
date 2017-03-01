@@ -20,7 +20,7 @@
 from admm import ADMMProblem
 from point2point import Point2point
 from ..export.export_formation import ExportFormation
-from ..basics.splines import *
+from ..basics.spline import *
 import numpy as np
 
 
@@ -59,7 +59,7 @@ class FormationPoint2point(ADMMProblem):
         # terminal constraints (stability issue)
         for veh in self.vehicles:
             for spline in centra[veh]:
-                for d in range(1, spline.getBasis().getDegree()+1):
+                for d in range(1, spline.basis().degree()+1):
                     # constraints imposed on distributedproblem instance will be
                     # invoked on the z-variables (because it is interpreted as
                     # 'interconnection constraint')

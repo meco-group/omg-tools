@@ -19,7 +19,7 @@
 
 from vehicle import Vehicle
 from ..basics.shape import Circle
-from ..basics.splines import *
+from ..basics.spline import *
 from casadi import inf
 import numpy as np
 
@@ -112,7 +112,7 @@ class Holonomic(Vehicle):
         self.positionT = position
 
     def get_init_spline_value(self):
-        len_basis = self.basis.getLength()
+        len_basis = self.basis.dimension()
         init_value = np.zeros((len_basis, 2))
         pos0 = self.prediction['state']
         posT = self.positionT

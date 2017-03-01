@@ -20,7 +20,7 @@
 from vehicle import Vehicle
 from ..problems.point2point import FreeTPoint2point, FixedTPoint2point
 from ..basics.shape import Rectangle, Circle
-from ..basics.splines import *
+from ..basics.spline import *
 from casadi import inf, SX, MX
 import numpy as np
 
@@ -206,7 +206,7 @@ class Bicycle(Vehicle):
 
     def get_init_spline_value(self):
         # generate initial guess for spline variables
-        len_basis = self.basis.getLength()
+        len_basis = self.basis.dimension()
         init_value = np.zeros((len_basis, 2))
         v_til0 = np.zeros(len_basis)
         tg_ha0 = np.tan(self.prediction['state'][2]/2)

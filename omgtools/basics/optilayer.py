@@ -17,7 +17,7 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-from splines import *
+from spline import *
 
 try:
     from casadi import Compiler
@@ -27,7 +27,6 @@ except:
 from casadi import DM, MX, inf, Function, nlpsol, external
 from casadi import symvar, substitute
 from casadi.tools import struct, struct_MX, struct_symMX, entry
-# from spline import BSpline
 from itertools import groupby
 import time
 import numpy as np
@@ -56,7 +55,7 @@ def create_nlp(var, par, obj, con, options, name=''):
     opt = {}
     for key, value in slv_opt.items():
         opt[key] = value
-    opt.update({'expand': True})
+    # opt.update({'expand': True})
     solver = nlpsol('solver', options['solver'], nlp, opt)
     name = 'nlp' if name == '' else 'nlp_' + name
     if codegen['build'] == 'jit':
@@ -109,7 +108,8 @@ def create_function(name, inp, out, options):
     if options['verbose'] >= 1:
         print 'Building function %s ... ' % name,
     t0 = time.time()
-    fun = Function(name, inp, out).expand()
+    # fun = Function(name, inp, out).expand()
+    fun = Function(name, inp, out)
     if codegen['build'] == 'jit':
         if options['verbose'] >= 1:
             print('[jit compilation with flags %s]' % (codegen['flags'])),
@@ -557,8 +557,8 @@ class OptiChild(object):
                 raise ValueError('Name %s already used for substitutes!' % (name))
             symbol_name = self._add_label(name)
             if isinstance(expr, spl.Function):
-                basis = expr.getBasis()
-                coeffs1 = expr.getCoefficient().getData()
+                basis = expr.basis()
+                coeffs1 = expr.data()
                 self._splines_prim[name] = {'basis': basis}
                 coeffs2 = MX.sym(symbol_name, coeffs1.shape[0], 1)
                 subst = spl.Function(basis, coeffs2)
@@ -591,7 +591,7 @@ class OptiChild(object):
                                            1, dictionary, basis, value)
                     for l in range(size1)]
         else:
-            len_basis = basis.getLength()
+            len_basis = basis.dimension()
             coeffs = self._define_mx(
                 name, len_basis, size0, dictionary, value)
             self._splines_prim[name] = {'basis': basis}
@@ -609,8 +609,8 @@ class OptiChild(object):
             name = name + '_' + str(self._constraint_cnt)
         self._constraint_cnt += 1
         if isinstance(expr, spl.Function):
-            coeffs = expr.getCoefficient().getData()
-            basis = expr.getBasis()
+            coeffs = expr.data()
+            basis = expr.basis()
             self._constraints[name] = (
                 coeffs, lb*np.ones(coeffs.shape[0]),
                 ub*np.ones(coeffs.shape[0]), shutdown)

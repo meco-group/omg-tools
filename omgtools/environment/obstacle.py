@@ -19,7 +19,7 @@
 
 
 from ..basics.optilayer import OptiChild
-from ..basics.splines import *
+from ..basics.spline import *
 from casadi import inf, vertcat, cos, sin
 from scipy.interpolate import interp1d
 from scipy.integrate import odeint
@@ -251,8 +251,7 @@ class Obstacle2D(ObstaclexD):
         n_quarters = int(np.ceil(4*T/Ts))
         knots_theta = np.r_[np.zeros(3), np.hstack(
             [0.25*k*np.ones(2) for k in range(1, n_quarters+1)]), 0.25*n_quarters]*(Ts/T)
-        Tf, knots = spl.BSplineBasis(knots_theta, 2).get_crop_tf(0., 1.)
-        basis = spl.BSplineBasis(knots, 2)
+        basis, Tf = spl.BSplineBasis(knots_theta, 2).crop(0., 1.)
         # coefficients based on nurbs representation of circle
         cos_cfs = np.r_[1., np.sqrt(
             2.)/2., 0., -np.sqrt(2.)/2., -1., -np.sqrt(2.)/2.,  0.,  np.sqrt(2.)/2., 1.]
@@ -260,7 +259,7 @@ class Obstacle2D(ObstaclexD):
             2.)/2., 1.,  np.sqrt(2.)/2.,  0., -np.sqrt(2.)/2., -1., -np.sqrt(2.)/2., 0.]
         weight_cfs = np.r_[1., np.sqrt(
             2.)/2., 1.,  np.sqrt(2.)/2.,  1.,  np.sqrt(2.)/2.,  1.,  np.sqrt(2.)/2., 1.]
-        len_basis = basis.getLength()
+        len_basis = basis.dimension()
         cos_cfs = Tf.dot(np.array([cos_cfs[k % 8] for k in range(len_basis)]))
         sin_cfs = Tf.dot(np.array([sin_cfs[k % 8] for k in range(len_basis)]))
         weight_cfs = Tf.dot(

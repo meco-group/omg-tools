@@ -18,10 +18,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from ..basics.optilayer import OptiChild
-from ..basics.splines import *
-
-# from ..basics.spline import BSplineBasis
-# from ..basics.spline_extra import concat_splines, definite_integral, sample_splines
+from ..basics.spline import *
 from ..basics.shape import Rectangle, Square, Circle
 from ..execution.plotlayer import PlotLayer
 from casadi import inf
@@ -86,7 +83,7 @@ class Vehicle(OptiChild, PlotLayer):
         self.basis = spl.BSplineBasis(self.knots, self.degree)
 
     def set_init_spline_value(self, value):
-        len_basis =  self.basis.getLength()
+        len_basis =  self.basis.dimension()
         if value.shape == (len_basis, self.n_spl):
             self.init_spline_value = value
         else:
@@ -133,7 +130,7 @@ class Vehicle(OptiChild, PlotLayer):
                     if safety_distance > 0.:
                         eps = self.define_spline_variable(
                             'eps_'+str(s)+str(k))[0]
-                        obj = safety_weight*eps.integral(t/T, 1.)
+                        obj = safety_weight*eps.integral([t/T, 1.])
                         self.define_objective(obj)
                         self.define_constraint(eps - safety_distance, -inf, 0.)
                         self.define_constraint(-eps, -inf, 0.)
@@ -205,7 +202,7 @@ class Vehicle(OptiChild, PlotLayer):
                         T = self.define_symbol('T')
                         eps = self.define_spline_variable(
                             'eps_'+str(s)+str(k))[0]
-                        obj = safety_weight*eps.integral(t/T, 1.)
+                        obj = safety_weight*eps.integral([t/T, 1.])
                         self.define_objective(obj)
                         self.define_constraint(eps - safety_distance, -inf, 0.)
                         self.define_constraint(-eps, -inf, 0.)
@@ -261,7 +258,7 @@ class Vehicle(OptiChild, PlotLayer):
         if hasattr(self, 'rel_pos_c') and ('fleet_center' not in self.trajectories):
             self.trajectories['fleet_center'] = np.c_[sample_splines(
                 [s+rp for s, rp in zip(splines, self.rel_pos_c)], time_axis)]
-        knots = splines[0].getBasis().getKnots()
+        knots = splines[0].basis().knots()
         time_axis_kn = np.r_[knots[self.degree] + time_axis[0], [k for k in knots[
         self.degree+1:-self.degree] if k > (knots[self.degree]+time_axis[0])]]
         self.trajectories_kn = self.splines2signals(splines, time_axis_kn)

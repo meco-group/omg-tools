@@ -162,7 +162,7 @@ class DualUpdater(Problem):
                 for name, ind in q_i.items():
                     if name in child._splines_prim:
                         basis = child._splines_prim[name]['basis']
-                        len_basis = basis.getLength()
+                        len_basis = basis.dimension()
                         for l in range(len_basis):
                             sl_min = l*len_basis
                             sl_max = (l+1)*len_basis

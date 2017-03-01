@@ -3,80 +3,79 @@ try:
 except ImportError:
     print "meco_binaries not found."
 import splines as spl
-import spline_old as spl_old
+# import spline_old as spl_old
 # import spline_extra as spl_ex
 import numpy as np
 from scipy.interpolate import splev
 from casadi import SX, MX, DM, Function
-import time
 
 
 """ helper functions -> should vanish """
 """ ================================= """
 
 
-def old2new(spline_old):
-    basis = spl.BSplineBasis(spline_old.basis.knots, spline_old.basis.degree)
-    coeffs = spline_old.coeffs
-    return spl.Function(basis, coeffs)
+# def old2new(spline_old):
+#     basis = spl.BSplineBasis(spline_old.basis.knots, spline_old.basis.degree)
+#     coeffs = spline_old.coeffs
+#     return spl.Function(basis, coeffs)
 
 
-def new2old(spline_new):
-    basis = spl_old.BSplineBasis(spline_new.basis().knots(), spline_new.basis().degree())
-    coeffs = spline_new.data()
-    return spl_old.BSpline(basis, coeffs)
+# def new2old(spline_new):
+#     basis = spl_old.BSplineBasis(spline_new.basis().knots(), spline_new.basis().degree())
+#     coeffs = spline_new.data()
+#     return spl_old.BSpline(basis, coeffs)
 
 
-def new2oldbasis(basis_new):
-    return spl_old.BSplineBasis(basis_new.knots(), basis_new.degree())
+# def new2oldbasis(basis_new):
+#     return spl_old.BSplineBasis(basis_new.knots(), basis_new.degree())
 
 
 """ methods desired to implement in spline toolbox -> should vanish """
 """ =============================================================== """
 
 
-def __add__(self, other):
-    if isinstance(other, self.__class__):
-        return old2new(new2old(self).__add__(new2old(other)))
-    else:
-        return old2new(new2old(self).__add__(other))
+# def __add__(self, other):
+#     if isinstance(other, self.__class__):
+#         return old2new(new2old(self).__add__(new2old(other)))
+#     else:
+#         return old2new(new2old(self).__add__(other))
 
 
-def __neg__(self):
-    return old2new(new2old(self).__neg__())
+# def __neg__(self):
+#     return old2new(new2old(self).__neg__())
 
 
-def __sub__(self, other):
-    return self + (-other)
+# def __sub__(self, other):
+#     return self + (-other)
 
 
-def __rsub__(self, other):
-    return other + (-self)
+# def __rsub__(self, other):
+#     return other + (-self)
 
 
-def __mul__(self, other):
-    if isinstance(other, self.__class__):
-        return old2new(new2old(self).__mul__(new2old(other)))
-    else:
-        return old2new(new2old(self).__mul__(other))
+# def __mul__(self, other):
+#     if isinstance(other, self.__class__):
+#         return old2new(new2old(self).__mul__(new2old(other)))
+#     else:
+#         return old2new(new2old(self).__mul__(other))
 
 
-def __rmul__(self, other):
-    return self.__mul__(other)
+# def __rmul__(self, other):
+#     return self.__mul__(other)
 
 
-def __pow__(self, power):
-    return old2new(new2old(self).__pow__(power))
+# def __pow__(self, power):
+#     return old2new(new2old(self).__pow__(power))
 
 
-spl.Function.__add__ = __add__
-spl.Function.__radd__ = __add__
-spl.Function.__neg__ = __neg__
-spl.Function.__sub__ = __sub__
-spl.Function.__rsub__ = __rsub__
-spl.Function.__mul__ = __mul__
-spl.Function.__rmul__ = __rmul__
-spl.Function.__pow__ = __pow__
+# spl.Function.__add__ = __add__
+# spl.Function.__radd__ = __add__
+# spl.Function.__neg__ = __neg__
+# spl.Function.__sub__ = __sub__
+# spl.Function.__rsub__ = __rsub__
+# spl.Function.__mul__ = __mul__
+# spl.Function.__rmul__ = __rmul__
+# spl.Function.__pow__ = __pow__
 
 """ extra BSplineBasis functions """
 """ ============================ """
@@ -95,6 +94,12 @@ def crop_basis(basis, lb, ub):
     jmax = np.searchsorted(knots2, ub, side='right')
     return spl.BSplineBasis(knots2[jmin:jmax], degree), T[jmin:jmax-degree-1, :]
 
+def extrapolate_basis2(basis, t_extra, m=None):
+    knots = basis.knots()
+    deg = basis.degree()
+    b2, Tex = basis.kick_bounds(knots[0], knots[-1]+t_extra)
+    b3, Tin = b2.insert_knots([knots[-1]]*m)
+    return b3, Tin.dot(Tex)
 
 def extrapolate_basis(basis, t_extra, m=None):
     # Create transformation matrix that extrapolates the spline over an extra
@@ -267,10 +272,6 @@ def crop_inexact(self, lb, ub):
     basis2 = spl.BSplineBasis(knots2, degree)
     ret = self.project_to(basis2)
     return ret
-
-    # b2, T = self.basis().crop_inexact(lb, ub)
-    # coeff2 = self.coeff().transform(T)
-    # return spl.Function(b2, coeff2)
 
 spl.Function.crop = crop
 spl.Function.extrapolate = extrapolate
