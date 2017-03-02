@@ -85,6 +85,11 @@ OMG-tools implemented in real life.
 </a>
 </p>
 <p align="center">
+<a href="https://www.youtube.com/watch?v=4JaY0_k24WM">
+<img src="https://img.youtube.com/vi/4JaY0_k24WM/0.jpg" alt="Spline-based motion planning"/>
+</a>
+</p>
+<p align="center">
 <a href="https://www.youtube.com/watch?v=8GDlWS1OOOM">
 <img src="https://img.youtube.com/vi/8GDlWS1OOOM/0.jpg" alt="Plate transportation"/>
 </a>
