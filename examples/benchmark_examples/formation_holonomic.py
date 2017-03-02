@@ -49,11 +49,11 @@ problem = FormationPoint2point(fleet, environment, options=options)
 problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem.init()
 
-# # create simulator
-# simulator = Simulator(problem)
-# fleet.plot('input', knots=True, predict=True, labels=['v_x (m/s)', 'v_y (m/s)'])
-# problem.plot('scene')
-# problem.plot('residuals')
+# create simulator
+simulator = Simulator(problem)
+fleet.plot('input', knots=True, predict=True, labels=['v_x (m/s)', 'v_y (m/s)'])
+problem.plot('scene')
+problem.plot('residuals')
 
-# # run it!
-# simulator.run()
+# run it!
+simulator.run()

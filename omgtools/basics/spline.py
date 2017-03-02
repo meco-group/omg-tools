@@ -97,7 +97,7 @@ def crop_basis(basis, lb, ub):
 def extrapolate_basis2(basis, t_extra, m=None):
     knots = basis.knots()
     deg = basis.degree()
-    b2, Tex = basis.kick_bounds(knots[0], knots[-1]+t_extra)
+    b2, Tex = basis.kick_boundary(knots[0], knots[-1]+t_extra)
     b3, Tin = b2.insert_knots([knots[-1]]*m)
     return b3, Tin.dot(Tex)
 
@@ -180,8 +180,16 @@ def shiftoverknot_basis(basis):
 
 
 def shiftfirstknot_basis(basis, t_shift):
-    return basis.crop(t_shift, basis.knots()[-1])
+    degree = basis.degree()
+    knots_ins = [t_shift]*(degree+1)
+    b2, T = basis.insert_knots(knots_ins)
+    knots2 = b2.knots()
+    return spl.BSplineBasis(knots2[degree+1:], degree), T[degree+1:, :]
 
+# def shiftfirstknot_basis(basis, t_shift):
+#     knots = basis.knots()
+#     b2, T =  basis.kick_boundary([t_shift, knots[-1]])
+#     return b2, T
 
 def crop_inexact_basis(basis, lb, ub):
     degree = basis.degree()
@@ -204,19 +212,19 @@ spl.Basis.crop_inexact = crop_inexact_basis
 def crop(self, lb, ub):
     b2, T = self.basis().crop(lb, ub)
     coeff2 = self.coeff().transform(T)
-    return spl.BSplineBasis(b2, coeff2)
+    return spl.Function(b2, coeff2)
 
 
 def extrapolate(self, t_extra, m=None):
     b2, T = self.basis().extrapolate(t_extra, m)
     coeff2 = self.coeff().transform(T)
-    return spl.BSplineBasis(b2, coeff2)
+    return spl.Function(b2, coeff2)
 
 
 def shiftoverknot(self):
     b2, T = self.basis().shiftoverknot()
     coeff2 = self.coeff().transform(T)
-    return spl.BSplineBasis(b2, coeff2)
+    return spl.Function(b2, coeff2)
 
 
 def shiftfirstknot_fwd(self, t_shift):
@@ -231,7 +239,7 @@ def shiftfirstknot_fwd(self, t_shift):
         coeffs2 = fun(coeffs, t_shift)
     else:
         coeffs2 = self.coeff().transform(T)
-    return spl.BSplineBasis(b2, coeffs2)
+    return spl.Function(b2, coeffs2)
 
 
 def shiftfirstknot_bwd(self, t_shift):
@@ -253,14 +261,14 @@ def shiftfirstknot_bwd(self, t_shift):
     else:
         b2, T = self.basis().shiftfirstknot(t_shift)
         # T is upper triangular: easy inverse
-        Tinv = DM.eye(self.basis().dimension())
+        Tinv = MX.eye(self.basis().dimension())
         for i in range(deg, -1, -1):
             Tinv[i, i] = 1./T[i, i]
             for j in range(deg, i, -1):
                 Tinv[i, j] = (-1./T[i, i])*sum([T[i, k]*Tinv[k, j]
                                                 for k in range(i+1, deg+2)])
         coeffs2 = self.coeff().transform(Tinv)
-    return spl.BSplineBasis(b2, coeffs2)
+    return spl.Function(b2, coeffs2)
 
 
 def crop_inexact(self, lb, ub):

@@ -84,6 +84,8 @@ class ADMM(DualUpdater):
             x_i = self._get_x_variables(symbolic=True)
             # transform spline variables: only consider future piece of spline
             tf = lambda cfs, basis: spl.Function(basis, cfs).shiftfirstknot_fwd(t0).data()
+            # tf = lambda cfs, basis: mtimes(basis.shiftfirstknot(t0)[1], cfs)
+            self._transform_spline([x_i], tf, self.q_i)
             self._transform_spline([x_i, z_i, l_i], tf, self.q_i)
             self._transform_spline([z_ji, l_ji], tf, self.q_ji)
             # construct objective
@@ -291,7 +293,7 @@ class ADMM(DualUpdater):
         z_ij_p = self.q_ij_struct(z_ij_p)
         x_j = self.q_ij_struct(x_j)
         # transform spline variables: only consider future piece of spline
-        tf = lambda cfs, basis: spl.Function(cfs, basis).shiftfirstknot_fwd(t0).data()
+        tf = lambda cfs, basis: spl.Function(basis, cfs).shiftfirstknot_fwd(t0).data()
         self._transform_spline([x_i, z_i, z_i_p], tf, self.q_i)
         self._transform_spline([x_j, z_ij, z_ij_p], tf, self.q_ij)
         # compute residuals
@@ -477,7 +479,7 @@ class ADMM(DualUpdater):
         # transform spline variables
         if ((current_time > 0. and
              np.round(current_time, 6) % self.problem.knot_time == 0)):
-            tf = lambda cfs, basis: basis.get_shiftoverknot_tf()[0].dot(cfs)
+            tf = lambda cfs, basis: basis.shiftoverknot()[1].dot(cfs)
             for key in ['x_i', 'z_i', 'z_i_p', 'l_i', 'l_i_p']:
                 self.var_admm[key] = self._transform_spline(
                     self.var_admm[key], tf, self.q_i)
