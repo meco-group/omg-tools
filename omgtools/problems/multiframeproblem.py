@@ -26,6 +26,7 @@ from globalplanner import AStarPlanner
 
 from scipy.interpolate import interp1d
 import numpy as np
+import time
 
 class MultiFrameProblem(Problem):
 
@@ -245,7 +246,6 @@ class MultiFrameProblem(Problem):
         # shift: keep frame_size fixed, shift frame in the direction of the movement
         # over a maximum distance of move_limit
         if self.frame['type'] == 'shift':
-            import time
             start_time = time.time()
 
             # make new dictionary, to avoid that self.frame keeps the same reference
@@ -294,7 +294,7 @@ class MultiFrameProblem(Problem):
                 # find intersection point between line and frame
                 intersection_point = self.find_intersection_line_frame(waypoint_line)
                 # shift endpoint away from border
-                endpoint = self.shift_point_back(points_in_frame[-1], intersection_point, distance=self.veh_size*1.1)
+                endpoint = self.shift_point_back(points_in_frame[-1], intersection_point, distance=self.veh_size*self.scale_factor)
             elif endpoint is not None:
                 # vehicle goal is inside frame after shifting
                 # shift frame over calculated distance
@@ -309,20 +309,20 @@ class MultiFrameProblem(Problem):
             if abs(dist_to_border[0]) <= self.veh_size:
                 print 'Last waypoint too close in x-direction, moving frame'
                 # move in x-direction
-                move_distance = (self.veh_size - abs(dist_to_border[0]))*1.1
-                if dist_to_border[0]<0: 
-                    move_distance = -move_distance
-                xmin = xmin + move_distance
-                xmax = xmax + move_distance
+                move_distance = (self.veh_size - abs(dist_to_border[0]))*self.scale_factor
+                if dist_to_border[0]<=0: 
+                    xmin = xmin - move_distance
+                else:                     
+                    xmax = xmax + move_distance
                 self.frame['border'] = self.make_border(xmin, ymin, xmax, ymax)
             if abs(dist_to_border[1]) <= self.veh_size:
                 print 'Last waypoint too close in y-direction, moving frame'
                 # move in y-direction
-                move_distance = (self.veh_size - abs(dist_to_border[1]))*1.1
-                if dist_to_border[1]<0: 
-                    move_distance = -move_distance
-                ymin = ymin + move_distance
-                ymax = ymax + move_distance
+                move_distance = (self.veh_size - abs(dist_to_border[1]))*self.scale_factor
+                if dist_to_border[1]<=0: 
+                    ymin = ymin - move_distance
+                else:                     
+                    ymax = ymax + move_distance
                 self.frame['border'] = self.make_border(xmin, ymin, xmax, ymax)                
 
             # Finish frame description
@@ -345,7 +345,6 @@ class MultiFrameProblem(Problem):
 
         # min_nobs: enlarge frame as long as there are no obstacles inside it
         elif self.frame['type'] == 'min_nobs':
-            import time
             start_time = time.time()
             self.frame = self.get_min_nobs_frame(self.curr_state)
 
@@ -361,19 +360,19 @@ class MultiFrameProblem(Problem):
                 print 'Last waypoint too close in x-direction, moving frame'
                 # move in x-direction
                 move_distance = (self.veh_size - abs(dist_to_border[0]))*self.scale_factor
-                if dist_to_border[0]<0: 
-                    move_distance = -move_distance
-                xmin = xmin + move_distance
-                xmax = xmax + move_distance
+                if dist_to_border[0]<=0: 
+                    xmin = xmin - move_distance
+                else:                     
+                    xmax = xmax + move_distance
                 self.frame['border'] = self.make_border(xmin, ymin, xmax, ymax)
             if abs(dist_to_border[1]) <= self.veh_size:
                 print 'Last waypoint too close in y-direction, moving frame'
                 # move in y-direction
                 move_distance = (self.veh_size - abs(dist_to_border[1]))*self.scale_factor
-                if dist_to_border[1]<0: 
-                    move_distance = -move_distance
-                ymin = ymin + move_distance
-                ymax = ymax + move_distance
+                if dist_to_border[1]<=0: 
+                    ymin = ymin - move_distance
+                else:                     
+                    ymax = ymax + move_distance
                 self.frame['border'] = self.make_border(xmin, ymin, xmax, ymax)
 
             # Finish frame description
@@ -448,7 +447,6 @@ class MultiFrameProblem(Problem):
         # since there may be a deviation from original global path
         # and since you moved over the path so a part needs to be removed.
         
-        import time
         start_time = time.time()
 
         self.global_path = self.global_planner.get_path(start=self.curr_state, goal=self.goal_state)
@@ -521,7 +519,6 @@ class MultiFrameProblem(Problem):
     def get_moving_obstacles_in_frame(self):
         # determine which moving obstacles are in self.frame for self.motion_time
         
-        import time
         start_time = time.time()
 
         moving_obstacles = []
@@ -590,7 +587,6 @@ class MultiFrameProblem(Problem):
 
     def get_init_guess(self, **kwargs):
 
-        import time
         start_time = time.time()
 
         waypoints = self.frame['waypoints']
@@ -712,7 +708,6 @@ class MultiFrameProblem(Problem):
 
     def create_next_frame(self, frame):
         
-        import time
         start = time.time()
 
         if not frame['endpoint_frame'] == self.goal_state:
@@ -731,19 +726,19 @@ class MultiFrameProblem(Problem):
                 print 'Last waypoint too close in x-direction, moving frame'
                 # move in x-direction
                 move_distance = (self.veh_size - abs(dist_to_border[0]))*self.scale_factor
-                if dist_to_border[0]<0: 
-                    move_distance = -move_distance
-                xmin = xmin + move_distance
-                xmax = xmax + move_distance
+                if dist_to_border[0]<=0: 
+                    xmin = xmin - move_distance
+                else:                     
+                    xmax = xmax + move_distance
                 next_frame['border'] = self.make_border(xmin, ymin, xmax, ymax)
             if abs(dist_to_border[1]) <= self.veh_size:
                 print 'Last waypoint too close in y-direction, moving frame'
                 # move in y-direction
                 move_distance = (self.veh_size - abs(dist_to_border[1]))*self.scale_factor
-                if dist_to_border[1]<0: 
-                    move_distance = -move_distance
-                ymin = ymin + move_distance
-                ymax = ymax + move_distance
+                if dist_to_border[1]<=0: 
+                    ymin = ymin - move_distance
+                else:
+                    ymax = ymax + move_distance
                 next_frame['border'] = self.make_border(xmin, ymin, xmax, ymax)
 
             # Finish frame description
@@ -767,7 +762,6 @@ class MultiFrameProblem(Problem):
         # generates a frame by subsequently including more waypoints, until an obstacle
         # is found inside the frame
 
-        import time
         start_time = time.time()
 
         # make new dictionary, to avoid that self.frame keeps the same reference
@@ -853,7 +847,6 @@ class MultiFrameProblem(Problem):
         # scale up the current frame in all directions, until it hits the borders
         # or it contains an obstacle
         
-        import time
         start_time = time.time()
 
         scaled_frame = frame.copy()
@@ -955,7 +948,7 @@ class MultiFrameProblem(Problem):
         # waypoint is outside frame in x-direction, shift in the waypoint direction
         if abs(delta_x) > frame_size*0.5:
             # move frame in x-direction, over a max of move_limit
-            move = min(move_limit, abs(delta_x)-frame_size*0.5 + self.veh_size*1.1)
+            move = min(move_limit, abs(delta_x)-frame_size*0.5 + self.veh_size*self.scale_factor)
             if delta_x > 0:
                 newx_lower = frame_size*0.5 - move
                 newx_upper = frame_size*0.5 + move
@@ -966,7 +959,7 @@ class MultiFrameProblem(Problem):
         # waypoint is outside frame in y-direction, shift in the waypoint direction
         if abs(delta_y) > frame_size*0.5:
             # move frame in y-direction, over a max of move_limit
-            move = min(move_limit, abs(delta_y)-frame_size*0.5 + self.veh_size*1.1)
+            move = min(move_limit, abs(delta_y)-frame_size*0.5 + self.veh_size*self.scale_factor)
             if delta_y > 0:
                 newy_lower = frame_size*0.5 - move
                 newy_upper = frame_size*0.5 + move
