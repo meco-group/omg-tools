@@ -69,7 +69,7 @@ globalplanner = AStarPlanner(environment, 10, start, goal)
 
 # make coordinator
 options={'freeT': True, 'horizon_time': 10}
-multiproblem=MultiFrameProblem(vehicle, environment, globalplanner, options=options, frame_size=150)
+multiproblem=MultiFrameProblem(vehicle, environment, globalplanner, options=options, frame_size=150, frame_type='min_nobs')
 multiproblem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 multiproblem.init()
 
@@ -79,5 +79,5 @@ vehicle.plot('input', knots=True, prediction=True, labels=['v_x (m/s)', 'v_y (m/
 
 # run it!
 simulator.run()
-# multiproblem.save_movie('scene', format='gif', name='multiproblemgif', number_of_frames=100, movie_time=5, axis=False)
+# multiproblem.save_movie('scene', format='gif', name='multiproblem', number_of_frames=100, movie_time=5, axis=False)
 # multiproblem.save_movie('scene', format='tikz', name='multiproblemtikz', number_of_frames=100, movie_time=5, axis=False)
