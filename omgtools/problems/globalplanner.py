@@ -158,7 +158,7 @@ class AStarPlanner(GlobalPlanner):
         self.open_list = []
         self.closed_list = [self.current_node]
 
-        while not self.current_node.pos == self.goal:
+        while not self.is_close(self.current_node.pos, self.goal):
             # get positions of current node neighbours
             neighbors = self.grid.get_neighbors(self.current_node.pos)
             for point in neighbors:
@@ -225,6 +225,13 @@ class AStarPlanner(GlobalPlanner):
             posy.append(waypoint[1])
         plt.plot(posx,posy)
         plt.show()
+
+    def is_close(self, list1, list2, rel_tol=1e-06, abs_tol=0.0):
+        # for floating point comparison
+        result = 1
+        for i in range(len(list1)):
+            result *= abs(list1[i]-list2[i]) <= max(rel_tol * max(abs(list1[i]), abs(list2[i])), abs_tol)
+        return result
 
 class Node:
     def __init__(self, position, parent=None):
