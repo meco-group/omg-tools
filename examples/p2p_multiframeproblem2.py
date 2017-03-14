@@ -46,7 +46,7 @@ start, goal = clicked[0], clicked[1]
 globalplanner = AStarPlanner(environment, options['cell_size'], start, goal)
 
 # make coordinator
-options={'freeT': False, 'horizon_time': 10, 'no_term_con_der': False}
+options={'freeT': True, 'horizon_time': 10, 'no_term_con_der': False}
 multiproblem=MultiFrameProblem(vehicle, environment, globalplanner, options=options, frame_type='min_nobs')
 multiproblem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 multiproblem.init()
