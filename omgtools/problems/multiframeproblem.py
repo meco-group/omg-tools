@@ -65,7 +65,7 @@ class MultiFrameProblem(Problem):
     def initialize(self, current_time):
         self.local_problem.initialize(current_time)
 
-    def reinitialize(self,):
+    def reinitialize(self):
         # this function is called at the start and creates the first frame
 
         self.global_path = self.global_planner.get_path()
@@ -78,6 +78,7 @@ class MultiFrameProblem(Problem):
         self.global_planner.plot_path(self.global_path[:-1])
 
         # get a frame, this function fills in self.frame
+        import pdb; pdb.set_trace()  # breakpoint debdde20 //
         self.create_frame(frame_size=self.frame_size)
 
         # get initial guess (based on global path), get motion time
@@ -479,6 +480,11 @@ class MultiFrameProblem(Problem):
 
     def get_stationary_obstacles_in_frame(self, frame=None):
         obstacles_in_frame = []
+        if frame is not None:
+            f_xmin, f_ymin, f_xmax, f_ymax= frame['border']['limits']
+        else:
+            f_xmin, f_ymin, f_xmax, f_ymax= self.frame['border']['limits']    
+        frame_chck = [[f_xmin, f_ymin],[f_xmin, f_ymax],[f_xmax, f_ymax],[f_xmax, f_ymin]] 
         for obstacle in self.environment.obstacles:
             # check if obstacle is stationary, this is when:
             # there is no entry trajectories or there are trajectories but no velocity or 
@@ -514,6 +520,17 @@ class MultiFrameProblem(Problem):
                         # since if one vertex of obstacle is in frame then the whole
                         # obstacle is added
                         break
+                # check if any of the frame vertices is inside the obstacle
+                [[xmin, xmax],[ymin, ymax]] = obstacle.shape.get_canvas_limits()
+                xmin += obstacle.signals['position'][:,-1][0]
+                xmax += obstacle.signals['position'][:,-1][0]
+                ymin += obstacle.signals['position'][:,-1][1]
+                ymax += obstacle.signals['position'][:,-1][1]
+                for f_chck in frame_chck:
+                    if (xmin <= f_chck[0] <= xmax) and (ymin <= f_chck[1] <= ymax):
+                        obstacles_in_frame.append(obstacle)
+                        break               
+
         return obstacles_in_frame
 
     def get_moving_obstacles_in_frame(self):
@@ -850,40 +867,38 @@ class MultiFrameProblem(Problem):
         start_time = time.time()
 
         scaled_frame = frame.copy()
-        xmin,ymin,xmax,ymax = scaled_frame['border']['limits']            
-        while True:
-            # enlarge in positive x-direction
+        xmin,ymin,xmax,ymax = scaled_frame['border']['limits']
 
-            # first try to put xmax = frame border
-            xmax_new = self.environment.room['shape'].get_canvas_limits()[0][1] + self.environment.room['position'][0]
-            scaled_frame['border'] = self.make_border(xmin,ymin,xmax_new,ymax)
-            if not self.get_stationary_obstacles_in_frame(frame=scaled_frame):
-                xmax = xmax_new  # assign new xmax
-                break
-            else: 
-                xmax_new = xmax + self.veh_size*self.scale_factor
-                scaled_frame['border'] = self.make_border(xmin,ymin,xmax_new,ymax)
-                if xmax_new > self.environment.room['shape'].get_canvas_limits()[0][1] + self.environment.room['position'][0]:
-                    # the frame hit the borders, this is the maximum size in this direction
-                    xmax = self.environment.room['shape'].get_canvas_limits()[0][1] + self.environment.room['position'][0]
-                    break
-                if not self.get_stationary_obstacles_in_frame(frame=scaled_frame):
-                    # there is no obstacle in the enlarged frame, so enlarge it
-                    xmax = xmax_new
-                else:
-                    # there is an obstacle in the enlarged frame, don't enlarge it
-                    scaled_frame['border'] = self.make_border(xmin,ymin,xmax,ymax)
-                    break
-        while True:
-            # enlarge in negative x-direction
+        # enlarge in positive x-direction
+        # first try to put xmax = frame border
+        xmax_new = self.environment.room['shape'].get_canvas_limits()[0][1] + self.environment.room['position'][0]
+        scaled_frame['border'] = self.make_border(xmin,ymin,xmax_new,ymax)
+        if not self.get_stationary_obstacles_in_frame(frame=scaled_frame):
+            xmax = xmax_new  # assign new xmax
+        else:
+            while True:            
+                    xmax_new = xmax + self.veh_size*self.scale_factor
+                    scaled_frame['border'] = self.make_border(xmin,ymin,xmax_new,ymax)
+                    if xmax_new > self.environment.room['shape'].get_canvas_limits()[0][1] + self.environment.room['position'][0]:
+                        # the frame hit the borders, this is the maximum size in this direction
+                        xmax = self.environment.room['shape'].get_canvas_limits()[0][1] + self.environment.room['position'][0]
+                        break
+                    if not self.get_stationary_obstacles_in_frame(frame=scaled_frame):
+                        # there is no obstacle in the enlarged frame, so enlarge it
+                        xmax = xmax_new
+                    else:
+                        # there is an obstacle in the enlarged frame, don't enlarge it
+                        scaled_frame['border'] = self.make_border(xmin,ymin,xmax,ymax)
+                        break
+        # enlarge in negative x-direction
 
-            # first try to put xmin = frame border
-            xmin_new = self.environment.room['shape'].get_canvas_limits()[0][0] + self.environment.room['position'][0]
-            scaled_frame['border'] = self.make_border(xmin_new,ymin,xmax,ymax)
-            if not self.get_stationary_obstacles_in_frame(frame=scaled_frame):
-                xmin = xmin_new  # assign new xmin
-                break
-            else:
+        # first try to put xmin = frame border
+        xmin_new = self.environment.room['shape'].get_canvas_limits()[0][0] + self.environment.room['position'][0]
+        scaled_frame['border'] = self.make_border(xmin_new,ymin,xmax,ymax)
+        if not self.get_stationary_obstacles_in_frame(frame=scaled_frame):
+            xmin = xmin_new  # assign new xmin
+        else:
+            while True:                
                 xmin_new = xmin - self.veh_size*self.scale_factor
                 scaled_frame['border'] = self.make_border(xmin_new,ymin,xmax,ymax)
                 if xmin_new < self.environment.room['shape'].get_canvas_limits()[0][0] + self.environment.room['position'][0]:
@@ -894,16 +909,15 @@ class MultiFrameProblem(Problem):
                 else:
                     scaled_frame['border'] = self.make_border(xmin,ymin,xmax,ymax)
                     break
-        while True:
-            # enlarge in positive y-direction
+        # enlarge in positive y-direction
 
-            # first try to put ymax = frame border
-            ymax_new = self.environment.room['shape'].get_canvas_limits()[1][1] + self.environment.room['position'][1]
-            scaled_frame['border'] = self.make_border(xmin,ymin,xmax,ymax_new)
-            if not self.get_stationary_obstacles_in_frame(frame=scaled_frame):
-                ymax = ymax_new  # assign new ymax
-                break
-            else:
+        # first try to put ymax = frame border
+        ymax_new = self.environment.room['shape'].get_canvas_limits()[1][1] + self.environment.room['position'][1]
+        scaled_frame['border'] = self.make_border(xmin,ymin,xmax,ymax_new)
+        if not self.get_stationary_obstacles_in_frame(frame=scaled_frame):
+            ymax = ymax_new  # assign new ymax
+        else:
+            while True:            
                 ymax_new = ymax + self.veh_size*self.scale_factor
                 scaled_frame['border'] = self.make_border(xmin,ymin,xmax,ymax_new)
                 if ymax_new > self.environment.room['shape'].get_canvas_limits()[1][1] + self.environment.room['position'][1]:
@@ -914,16 +928,15 @@ class MultiFrameProblem(Problem):
                 else:
                     scaled_frame['border'] = self.make_border(xmin,ymin,xmax,ymax)
                     break
-        while True:
-            # enlarge in negative y-direction
+        # enlarge in negative y-direction
 
-            # first try to put ymin = frame border
-            ymin_new = self.environment.room['shape'].get_canvas_limits()[1][0] + self.environment.room['position'][1]
-            scaled_frame['border'] = self.make_border(xmin,ymin_new,xmax,ymax)
-            if not self.get_stationary_obstacles_in_frame(frame=scaled_frame):
-                ymin = ymin_new  # assign new ymin
-                break
-            else:
+        # first try to put ymin = frame border
+        ymin_new = self.environment.room['shape'].get_canvas_limits()[1][0] + self.environment.room['position'][1]
+        scaled_frame['border'] = self.make_border(xmin,ymin_new,xmax,ymax)
+        if not self.get_stationary_obstacles_in_frame(frame=scaled_frame):
+            ymin = ymin_new  # assign new ymin
+        else:
+            while True:
                 ymin_new = ymin - self.veh_size*self.scale_factor
                 scaled_frame['border'] = self.make_border(xmin,ymin_new,xmax,ymax)
                 if ymin_new < self.environment.room['shape'].get_canvas_limits()[1][0] + self.environment.room['position'][1]:
