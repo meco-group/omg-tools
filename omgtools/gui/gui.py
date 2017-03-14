@@ -1,7 +1,10 @@
-from environment import Environment, Obstacle
+from ..environment.environment import Environment, Obstacle
 from ..basics.shape import Rectangle, Circle
+from svg_reader import SVGReader
 
 import Tkinter as tk
+import tkFileDialog as tkfiledialog
+import tkMessageBox as tkmessagebox
 import pickle
 
 class EnvironmentGUI(tk.Frame):
@@ -9,15 +12,19 @@ class EnvironmentGUI(tk.Frame):
     # width = environment border width
     # height = environment border height
     # position = top left corner point of environment
-    def __init__(self, parent, width=8,height=8, position=[0,0], options=None, *args, **kwargs):
+    def __init__(self, parent, width=8,height=8, position=[0,0], options={}, *args, **kwargs):
         tk.Frame.__init__(self, parent, *args, **kwargs)
 
+        # set root of frame
         self.root = parent
         self.root.title("Environment")
         self.root.resizable(0,0)
 
-        self.meter_to_pixel = 50  # conversion of meter to pixels
+        # assign svg-reader
+        self.reader = SVGReader()
 
+        # set constants
+        self.meter_to_pixel = 50  # conversion of meter to pixels
         cell_size = options['cell_size'] if 'cell_size' in options else 0.5
 
         # make environment frame and size it
@@ -60,6 +67,9 @@ class EnvironmentGUI(tk.Frame):
 
         self.load_button = tk.Button(self.root, text="Load", fg="black", command=self.load_environment)
         self.load_button.grid(row=5, column=0)
+
+        self.load_svg_button = tk.Button(self.root, text="LoadSVG", fg="black", command=self.load_svg)
+        self.load_svg_button.grid(row=6, column=0)
 
         self.save_env = tk.BooleanVar(value=False)
         label_save = tk.Checkbutton(self.root, text="Save [yes/no]", variable=self.save_env)
@@ -120,10 +130,56 @@ class EnvironmentGUI(tk.Frame):
         label_bounce = tk.Checkbutton(self.root, text="Bounce [yes/no]", variable=self.bounce)
         label_bounce.grid(row=8,column=2)
 
+        # add scrollbars
+        self.hbar=tk.Scrollbar(self.root,orient=tk.HORIZONTAL)
+        self.hbar.grid(row=9, column = 0)
+        self.hbar.config(command=self.canvas.xview)
+        self.vbar=tk.Scrollbar(self.root,orient=tk.VERTICAL)
+        self.vbar.grid(row=0, column = 3)
+        self.vbar.config(command=self.canvas.yview)
+        self.canvas.config(width=1000, height=600)  # limit canvas size such that it fits on screen
+        self.canvas.config(xscrollcommand=self.hbar.set, yscrollcommand=self.vbar.set)
+
+    def reinitialize(self, width=8,height=8, position=[0,0], options={}):
+        # change the original size of the environment, e.g. after loading an SVG image
+
+        # set constants
+        self.meter_to_pixel = options['meter_to_pixel'] if 'meter_to_pixel' in options else 50  # conversion of meter to pixels
+        # limit amount of cells
+        c_size = min(width, height)*0.02
+        cell_size = options['cell_size'] if 'cell_size' in options else c_size
+
+        self.canvas.delete('all')
+        self.canvas.config(width=1000, height=600)  # limit canvas size such that it fits on screen
+
+        # add cell_size button
+        self.cell_size['text'] = 'Cell size: ' + str(cell_size) + 'x' + str(cell_size) + ' [m]'
+
+        # make environment frame and size it
+        self.frame_width = width*self.meter_to_pixel
+        self.frame_height = height*self.meter_to_pixel
+        self.position = [pos * self.meter_to_pixel for pos in position]  # top left corner point of the frame
+        self.cell_width = int(cell_size*self.meter_to_pixel)  # in pixels, so int is required
+        self.cell_height = int(cell_size*self.meter_to_pixel)
+        self.columns = self.frame_width/self.cell_width
+        self.rows = self.frame_height/self.cell_height
+
+        # draw grid
+        self.rect = {}
+        for column in range(self.columns):
+            for row in range(self.rows):
+                x1 = column*self.cell_width
+                y1 = row * self.cell_height
+                x2 = x1 + self.cell_width
+                y2 = y1 + self.cell_height
+                self.rect[row,column] = self.canvas.create_rectangle(x1,y1,x2,y2, fill="white", tags="rect")
+
     def make_obstacle(self, event):
 
         obstacle = {}
-        clicked_pos = [event.x, event.y]
+        clicked_x = self.canvas.canvasx(event.x)  # get the position in the canvas, not in the window
+        clicked_y = self.canvas.canvasy(event.y)  # this deals with the scrollbars
+        clicked_pos = [clicked_x, clicked_y]
         snapped_pos = self.snap_to_grid(clicked_pos)
         clicked_pixel = [click+pos for click,pos in zip(snapped_pos,self.position)]  # shift click with position of frame
         pos = self.pixel_to_world(clicked_pixel)
@@ -187,7 +243,10 @@ class EnvironmentGUI(tk.Frame):
         return snapped
 
     def get_position(self, event):
-        clicked = [event.x,event.y]
+        clicked_x = self.canvas.canvasx(event.x)  # get the position in the canvas, not in the window
+        clicked_y = self.canvas.canvasy(event.y)  # this deals with the scrollbars
+        clicked = [clicked_x, clicked_y]
+        print 'You clicked on: ', clicked
         clicked = self.pixel_to_world(clicked)
         # self.clickedPos.set('['+str(clicked[0])+','+str(clicked[1])+']')
         print 'You clicked on: ', clicked
@@ -231,6 +290,25 @@ class EnvironmentGUI(tk.Frame):
         else:
             print 'Please right-click on the start and goal position first'
 
+    def add_obstacle(self, obstacle):
+        # adds an obstacle to the current canvas
+        pos = obstacle['pos']
+        snapped_pos = self.snap_to_grid(pos)
+        obstacle['pos'] = self.pixel_to_world(snapped_pos)
+        if obstacle['shape'] == 'rectangle':
+            obstacle_var = self.canvas.create_rectangle(snapped_pos[0]-obstacle['width']*0.5, snapped_pos[1]-obstacle['height']*0.5,
+                                             snapped_pos[0]+obstacle['width']*0.5, snapped_pos[1]+obstacle['height']*0.5,
+                                             fill="black")
+            obstacle['variable'] = obstacle_var
+            obstacle['width'] = obstacle['width']*1/self.meter_to_pixel  # change px to meter
+            obstacle['height'] = obstacle['height']*1/self.meter_to_pixel  # change px to meter
+            print 'Added obstacle: ', obstacle
+        elif obstacle['shape'] == 'circle':
+            obstacle_var = self.canvas.create_circle(snapped_pos[0], snapped_pos[1], obstacle['radius'], fill="black")
+            obstacle['variable'] = obstacle_var
+            obstacle['radius'] = obstacle['radius']*1/self.meter_to_pixel  # change px to meter
+            print 'Added obstacle: ', obstacle
+
     def save_environment(self):
         environment = {}
         environment['position'] = [0,0]
@@ -266,6 +344,34 @@ class EnvironmentGUI(tk.Frame):
                 self.canvas.create_circle(obs_pos[0], obs_pos[1], obs['radius']*self.meter_to_pixel, fill="black")
         
         self.clicked_positions = saved_env[2]
+
+    def load_svg(self):
+
+        filename = tkfiledialog.askopenfilename(filetypes=[('SVG figures', '.svg'), ('all files','.*')])
+        if filename:
+            try:
+                data = open(filename, 'rb')
+            except Exception, details:
+                tkmessagebox.showerror(('Error'),details)
+                return
+
+        self.reader.init(data)  # load the figure
+        self.reader.build_environment()  # save obstacles in figure
+
+        self.obstacles = self.reader.obstacles  # assign obstacles in loaded SVG
+        self.frame_width = int(self.reader.width)  # assign width of loaded SVG [px]
+        self.frame_height = int(self.reader.height)  # assign height of loaded SVG [px]
+
+        # redraw GUI
+        # since all data is taken from an svg-file, units are pixels
+        # convert them first with a conversion factor
+        # position is the top left corner of the image
+        meter_to_pixel = 100
+        # cell_size = 0.5
+        self.reinitialize(width=self.frame_width*1/meter_to_pixel,height=self.frame_height*1/meter_to_pixel, position=[0,0], options={'meter_to_pixel': meter_to_pixel})
+
+        for obstacle in self.obstacles:
+            self.add_obstacle(obstacle)
 
     def get_environment(self):
         return self.environment
