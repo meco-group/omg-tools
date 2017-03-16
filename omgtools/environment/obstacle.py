@@ -333,6 +333,8 @@ class Obstacle2D(ObstaclexD):
         # Circle - Polyhedron is based on: 
         # http://stackoverflow.com/questions/401847/circle-rectangle-collision-detection-intersection
         if isinstance(self.shape, Circle):
+            obstacle_shape = obstacle.shape
+            obstacle_pos = obstacle.signals['position'][:,-1]
             if isinstance(obstacle.shape, Circle):
                 self_checkpoints = self.shape.get_checkpoints()
                 obs_checkpoints = obstacle.shape.get_checkpoints()
@@ -346,16 +348,18 @@ class Obstacle2D(ObstaclexD):
                 # didn't find an overlap
                 return False
             elif isinstance(obstacle.shape, Polyhedron):
-                if (point_in_polyhedron(self.signals['position'][:,-1], obstacle) or
-                   circle_polyhedron_intersection(self, obstacle)):
+                if (point_in_polyhedron(self.signals['position'][:,-1], obstacle_shape, obstacle_pos) or
+                   circle_polyhedron_intersection(self, obstacle_shape, obstacle_pos)):
                     return True
                 else:
                     return False
 
         elif isinstance(self.shape, Polyhedron):
+            self_shape = self.shape
+            self_pos = self.signals['position'][:,-1]
             if isinstance(obstacle.shape, Circle):
-                if (point_in_polyhedron(obstacle.signals['position'][:,-1], self) or
-                   circle_polyhedron_intersection(obstacle, self)):
+                if (point_in_polyhedron(obstacle.signals['position'][:,-1], self_shape, self_pos) or
+                   circle_polyhedron_intersection(obstacle, self_shape, self_pos)):
                     return True
                 else:
                     return False
@@ -363,6 +367,7 @@ class Obstacle2D(ObstaclexD):
             elif isinstance(obstacle.shape, Polyhedron):
                 if isinstance(obstacle.shape, Rectangle):
                     if obstacle.shape.orientation == 0:
+                        # is self vertex inside obstacle?
                         self_checkpoints = self.shape.get_checkpoints()
                         [[xmin,xmax],[ymin,ymax]] = obstacle.shape.get_canvas_limits()
                         [posx,posy]= obstacle.signals['position'][:,-1]
@@ -371,7 +376,7 @@ class Obstacle2D(ObstaclexD):
                         ymin += posy
                         ymax += posy
                         for self_chck, _ in zip(*self_checkpoints):
-                            self_chck += self.signals['position'][:,-1]
+                            self_chck += self_pos
                             if xmin <= self_chck[0] <= xmax and ymin <= self_chck[1] <= ymax:
                                 return True
                     else: 
