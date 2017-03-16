@@ -244,6 +244,31 @@ class SVGReader(object):
             obstacle['pos'] = [x1 + w*0.5, y1 + h*0.5]
             self.obstacles.append(obstacle)
 
+    def compute_transform(self):
+        # Note: only works for translation for the moment
+        # check if figure is transformed, e.g. a translation
+        try:
+            trans1 = self.tree.find("{%s}g" %self.ns).get('transform')  # If not yet found, search for the word transform in the next branch
+            trans1 = trans1.split('translate')
+            trans1.remove('')
+            self.transform1 = np.array(map(eval, trans1)[0])
+        except:
+            print 'No transform1 found'
+        try:
+            trans2 = self.tree.find("{%s}g" %self.ns).find("{%s}g" %self.ns).get('transform')  # If not yet found, search for the word transform in the next branch
+            trans2 = trans2.split('translate')
+            trans2.remove('')
+            self.transform2 = np.array(map(eval, trans2)[0])
+        except:
+            print 'No transform2 found'
+        if hasattr(self, 'transform1') and hasattr(self, 'transform2'):
+            self.transform = self.transform1 + self.transform2  # coordinate frame transformation
+        elif hasattr(self, 'transform1') :
+            self.transform = self.transform1
+        elif hasattr(self, 'transform2') :
+            self.transform = self.transform2
+        else:
+            self.transform = [0, 0]  # no transforms found
 
     def reconstruct(self, file):
         points = []
@@ -272,8 +297,15 @@ class SVGReader(object):
 
     def build_environment(self):
 
-        self.convert_basic_shapes()  # gives self.rects and self.circs 
-        self.convert_path_to_points()  # completes self.rects and self.circs with shapes defined by path
+        # Todo: write code here to check which elements are in the svg:
+        # path, rectangle, circ, line, polyline,...
+        # and call the appropriate functions
+
+        self.compute_transform()  # fills in self.transform
+
+        self.convert_basic_shapes()  # looks for rect and circle shapes
+        self.convert_path_to_points()  # looks for shapes defined by a Bezier path
+        self.convert_lines()  # looks for shapes defined by polyline and line
         # if you found some paths, call function to transform them to an obstacle
         # e.g. rectangle or circle and place add it to self.obstacles
 
