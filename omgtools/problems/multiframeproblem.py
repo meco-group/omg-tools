@@ -21,6 +21,7 @@ from problem import Problem
 from point2point import Point2point
 from ..basics.shape import Rectangle, Circle
 from ..basics.geometry import distance_between_points, intersect_lines, intersect_line_segments
+from ..basics.geometry import point_in_polyhedron, circle_polyhedron_intersection
 from ..environment.environment import Environment
 from globalplanner import AStarPlanner
 
@@ -78,7 +79,6 @@ class MultiFrameProblem(Problem):
         self.global_planner.plot_path(self.global_path[:-1])
 
         # get a frame, this function fills in self.frame
-        import pdb; pdb.set_trace()  # breakpoint debdde20 //
         self.create_frame(frame_size=self.frame_size)
 
         # get initial guess (based on global path), get motion time
@@ -481,56 +481,72 @@ class MultiFrameProblem(Problem):
     def get_stationary_obstacles_in_frame(self, frame=None):
         obstacles_in_frame = []
         if frame is not None:
-            f_xmin, f_ymin, f_xmax, f_ymax= frame['border']['limits']
+            xmin_f, ymin_f, xmax_f, ymax_f= frame['border']['limits']
+            shape_f = frame['border']['shape']
+            pos_f = np.array(frame['border']['position'][:2])
         else:
-            f_xmin, f_ymin, f_xmax, f_ymax= self.frame['border']['limits']    
-        frame_chck = [[f_xmin, f_ymin],[f_xmin, f_ymax],[f_xmax, f_ymax],[f_xmax, f_ymin]] 
+            xmin_f, ymin_f, xmax_f, ymax_f= self.frame['border']['limits']    
+            shape_f = self.frame['border']['shape']
+            pos_f = np.array(self.frame['border']['position'][:2])
+        # note that these checkpoints already include pos_f
+        frame_checkpoints = [[xmin_f, ymin_f],[xmin_f, ymax_f],[xmax_f, ymax_f],[xmax_f, ymin_f]] 
         for obstacle in self.environment.obstacles:
             # check if obstacle is stationary, this is when:
             # there is no entry trajectories or there are trajectories but no velocity or 
             # all velocities are 0.
             if ((not 'trajectories' in obstacle.simulation) or (not 'velocity' in obstacle.simulation['trajectories'])
                or (all(vel == [0.]*obstacle.n_dim for vel in obstacle.simulation['trajectories']['velocity']['values']))):
-                # get obstacle checkpoints
-                if not isinstance(obstacle.shape, Circle):
-                    obs_chck = obstacle.shape.get_checkpoints()[0]  # element [0] gives vertices, not the corresponding radii
-                # for a circle only the center is returned as a checkpoint
-                # make a square representation of it and use those checkpoints
-                # Todo: circle is approximated as a square,
-                # so may be added to frame while not necessary
-                # Improvement: check if distance to frame < radius, by using extra
-                # input to point_in_frame(distance=radius)
-                else:
-                    [[xmin, xmax],[ymin, ymax]] = obstacle.shape.get_canvas_limits()
-                    obs_chck = [[xmin, ymin], [xmin, ymax], [xmax, ymax], [xmax, ymin]]                        
-                obs_pos = obstacle.signals['position'][:,-1]
-                for chck in obs_chck:
-                    # if it is not a circle, rotate the vertices
-                    if hasattr(obstacle.shape, 'orientation'):
-                        vertex = obstacle.shape.rotate(obstacle.shape.orientation, chck)
-                    else:
-                        vertex = chck
-                    # move to correct position
-                    vertex += obs_pos
-                    # check if vertex is in frame
-                    if self.point_in_frame(vertex, frame=frame):
-                        # add corresponding obstacle
-                        obstacles_in_frame.append(obstacle)
-                        # break from for chck in obs_chck, move on to next obstacle,
-                        # since if one vertex of obstacle is in frame then the whole
-                        # obstacle is added
-                        break
-                # check if any of the frame vertices is inside the obstacle
-                [[xmin, xmax],[ymin, ymax]] = obstacle.shape.get_canvas_limits()
-                xmin += obstacle.signals['position'][:,-1][0]
-                xmax += obstacle.signals['position'][:,-1][0]
-                ymin += obstacle.signals['position'][:,-1][1]
-                ymax += obstacle.signals['position'][:,-1][1]
-                for f_chck in frame_chck:
-                    if (xmin <= f_chck[0] <= xmax) and (ymin <= f_chck[1] <= ymax):
-                        obstacles_in_frame.append(obstacle)
-                        break               
+                # we have a stationary obstacle, Circle or Rectangle
+                # now check if frame intersects with the obstacle
+                
+                ###############################################
+                ###### Option1: handle circle as circular######
+                ###############################################
+                # if isinstance(obstacle.shape, Circle):
+                #     if (point_in_polyhedron(obstacle.signals['position'][:,-1], shape_f, pos_f) or
+                #        circle_polyhedron_intersection(obstacle, shape_f, pos_f)):
+                #         obstacles_in_frame.append(obstacle)
+                #         break
+                # elif isinstance(obstacle.shape, Rectangle):
+                #     if obstacle.shape.orientation == 0:
+                #         # is frame vertex inside obstacle? Check rectangle overlap
+                #         [[xmin_obs, xmax_obs],[ymin_obs, ymax_obs]] = obstacle.shape.get_canvas_limits()
+                #         posx, posy = obstacle.signals['position'][:,-1]
+                #         xmin_obs += posx
+                #         xmax_obs += posx
+                #         ymin_obs += posy
+                #         ymax_obs += posy
+                #         # based on: http://stackoverflow.com/questions/306316/determine-if-two-rectangles-overlap-each-other
+                #         if (xmin_f <= xmax_obs and xmax_f >= xmin_obs and ymin_f <= ymax_obs and ymax_f >= ymin_obs):
+                #                 obstacles_in_frame.append(obstacle)
+                #                 break
+                #     else:
+                #         raise RuntimeError('Only rectangle with zero orientation\
+                #                             are supported in multiframeproblem for now')
+                # else:
+                #     raise RuntimeError('Only Circle and Rectangle shaped obstacles\
+                #                         are supported for now')
 
+                #####################################################
+                ###### Option2: approximate circle as as square######
+                #####################################################
+                if ((isinstance(obstacle.shape, Rectangle) and obstacle.shape.orientation == 0) or
+                    isinstance(obstacle.shape, Circle)):
+                    # is frame vertex inside obstacle? Check rectangle overlap
+                    # if obstacle is Circle, it gets approximated by a square
+                    [[xmin_obs, xmax_obs],[ymin_obs, ymax_obs]] = obstacle.shape.get_canvas_limits()
+                    posx, posy = obstacle.signals['position'][:,-1]
+                    xmin_obs += posx
+                    xmax_obs += posx
+                    ymin_obs += posy
+                    ymax_obs += posy
+                    # based on: http://stackoverflow.com/questions/306316/determine-if-two-rectangles-overlap-each-other
+                    if (xmin_f <= xmax_obs and xmax_f >= xmin_obs and ymin_f <= ymax_obs and ymax_f >= ymin_obs):
+                            obstacles_in_frame.append(obstacle)
+                            break
+                else:
+                    raise RuntimeError('Only Circle and Rectangle shaped obstacles\
+                                        with orientation 0 are supported for now')
         return obstacles_in_frame
 
     def get_moving_obstacles_in_frame(self):
