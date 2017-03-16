@@ -102,12 +102,12 @@ def intersect_lines(line1, line2):
 
     return intersection_point
 
-def point_in_polyhedron(point, polyhedron):
+def point_in_polyhedron(point, polyhedron_shape, polyhedron_position):
     # is the point inside the polyhedron?
 
     # for each vertex couple (=side) check if point is at positive side of normal
     # if so return False, because the point can never be inside the polyhedron then
-    hyperplanes = polyhedron.shape.get_hyperplanes(position=polyhedron.signals['position'][:,-1])
+    hyperplanes = polyhedron_shape.get_hyperplanes(position=polyhedron_position)
     for idx, hyperplane in hyperplanes.items():
         a = hyperplane['a']
         b = hyperplane['b']
@@ -115,20 +115,20 @@ def point_in_polyhedron(point, polyhedron):
             return False
     return True
 
-def circle_polyhedron_intersection(circle, polyhedron):
+def circle_polyhedron_intersection(circle, polyhedron_shape, polyhedron_position):
     
     # Does one of the sides of the polyhedron have a point inside the circle?
     # Compute perpendicular from the circle center to the polyhedron side
     # Check if the intersection between the normal and the side is inside the circle
 
     # get polyhedron vertices
-    vertices = polyhedron.shape.vertices.copy()
+    vertices = polyhedron_shape.vertices.copy()
     # duplicate first vertex and place at the end, 
     # to check all sides
     vertices = np.c_[vertices, vertices[:,0]]
     # add current position to vertices
-    vertices[0] +=  polyhedron.signals['position'][:,-1][0]
-    vertices[1] +=  polyhedron.signals['position'][:,-1][1]
+    vertices[0] +=  polyhedron_position[0]
+    vertices[1] +=  polyhedron_position[1]
 
     center = circle.signals['position'][:,-1]
     for i in range(len(vertices)):
