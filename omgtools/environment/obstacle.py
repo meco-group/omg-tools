@@ -379,6 +379,17 @@ class Obstacle2D(ObstaclexD):
                             self_chck += self_pos
                             if xmin <= self_chck[0] <= xmax and ymin <= self_chck[1] <= ymax:
                                 return True
+                        # is obstacle vertex inside self?
+                        obstacle_checkpoints = obstacle.shape.get_checkpoints()
+                        [[self_xmin,self_xmax],[self_ymin,self_ymax]] = self_shape.get_canvas_limits()
+                        self_xmin += self_pos[0]
+                        self_xmax += self_pos[0]
+                        self_ymin += self_pos[1]
+                        self_ymax += self_pos[1]
+                        for obs_chck, _ in zip(*obstacle_checkpoints):
+                            obs_chck += np.array([posx,posy])
+                            if self_xmin <= obs_chck[0] <= self_xmax and self_ymin <= obs_chck[1] <= self_ymax:
+                                return True
                     else: 
                         print 'Rectangle bouncing with non-zero orientation not yet implemented'
                 else:
