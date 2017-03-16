@@ -71,7 +71,7 @@ class EnvironmentGUI(tk.Frame):
         self.load_button = tk.Button(self.root, text="Load", fg="black", command=self.load_environment)
         self.load_button.grid(row=5, column=0)
 
-        self.load_svg_button = tk.Button(self.root, text="LoadSVG", fg="black", command=self.load_svg)
+        self.load_svg_button = tk.Button(self.root, text="Load SVG", fg="black", command=self.load_svg)
         self.load_svg_button.grid(row=6, column=0)
 
         self.save_env = tk.BooleanVar(value=False)
