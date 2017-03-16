@@ -33,6 +33,8 @@ options={'cell_size': 0.25}
 gui = EnvironmentGUI(parent=root, width=16, height=16, position=[0,0], options=options)
 root.mainloop()
 environment = gui.get_environment()
+if hasattr(gui, 'cell_size'):  # set in reinitialize
+	options['cell_size'] = gui.cell_size
 
 # manually add moving obstacles to environment
 
