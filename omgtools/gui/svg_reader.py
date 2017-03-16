@@ -19,15 +19,22 @@ class SVGReader(object):
     def init(self, data):
         self.data = data
         self.tree = self.et.parse(data)
-        if (self.tree.get('width')[-2:] == 'mm'):  # units millimeter
+        if (self.tree.get('width')[-2:] in ['mm', 'px']):  # units millimeter or pixels
             viewbox = self.tree.get('viewBox').split(' ')
             xmin, ymin, xmax, ymax = viewbox
-            self.width = float(xmax) - float(xmin)
-            self.height = float(ymax) - float(ymin)
-            self.meter_to_pixel = self.width/float(self.tree.get('width')[:-2])
+            if (self.tree.get('width')[-2:] is 'mm'):
+                self.width_px = float(xmax) - float(xmin)
+                self.height_px = float(ymax) - float(ymin)
+                # self.width_mm = float(self.tree.get('width')[:-2])  # not necessary, can be obtained from meter_to_pixel and px
+                # self.height_mm = float(self.tree.get('height')[:-2])
+                self.meter_to_pixel = self.width_px/float(self.tree.get('width')[:-2])
+            else: # units px
+                self.width_px = float(xmax) - float(xmin)
+                self.height_px = float(ymax) - float(ymin)
         else:
-            self.width = float(self.tree.get('width'))  # get width from svg 
-            self.height = float(self.tree.get('height'))  # get height from svg
+            # if no unit mentioned, it is px
+            self.width_px = float(self.tree.get('width'))  # get width from svg
+            self.height_px = float(self.tree.get('height'))  # get height from svg
         self.obstacles = []
 
     def convert_path_to_points(self):
