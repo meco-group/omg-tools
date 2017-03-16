@@ -561,15 +561,15 @@ class MultiFrameProblem(Problem):
             # there is an entry trajectories, and there is a velocity,
             # and not all velocities are 0.
 
-            # if (('trajectories' in obstacle.simulation) and ('velocity' in obstacle.simulation['trajectories'])
-            #    and not (all(vel == [0.]*obstacle.n_dim for vel in obstacle.simulation['trajectories']['velocity']['values']))):
-            # no, this is a more accurate check, since it uses the last velocity value
+            avoid_old = obstacle.options['avoid']  # save avoid from previous check
+
             if not all(obstacle.signals['velocity'][:,-1] == [0.]*obstacle.n_dim):
                 # get obstacle checkpoints
                 if not isinstance(obstacle.shape, Circle):
                     obs_chck = obstacle.shape.get_checkpoints()[0]  # element [0] gives vertices, not the corresponding radii
                 # for a circle only the center is returned as a checkpoint
                 # make a square representation of it and use those checkpoints
+                
                 # Todo: circle is approximated as a square,
                 # so may be added to frame while not necessary
                 # Improvement: check if distance to frame < radius, by using extra
@@ -585,10 +585,6 @@ class MultiFrameProblem(Problem):
                 # add all moving obstacles, but only avoid those that matter
                 moving_obstacles.append(obstacle)
                 
-                # REMOVE: already checked this above
-                # # only check points for which the obstacle velocity is not all zero
-                # if any(obs_vel != np.zeros(obstacle.n_dim)):
-                
                 for chck in obs_chck:
                     # if it is not a circle, rotate the vertices
                     if hasattr(obstacle.shape, 'orientation'):
@@ -598,12 +594,14 @@ class MultiFrameProblem(Problem):
                     # move to correct position
                     vertex += obs_pos
                     # check if vertex is in frame during movement
-                    if self.point_in_frame(vertex, time=self.motion_time, velocity=obs_vel):
-                        if obstacle.options['avoid'] is not True:
-                            # obstacle was not avoided in previous frame, but it should be now
-                            obs_change = True                            
+                    if self.point_in_frame(vertex, time=self.motion_time, velocity=obs_vel):                        
                         # avoid corresponding obstacle
                         obstacle.set_options({'avoid': True})
+                        # if it was not avoided before, set obs_change to True
+                        if obstacle.options['avoid'] != avoid_old:
+                            obs_change = True
+                        else:
+                            obs_change = False
                         # break from for chck in obs_chck, move on to next obstacle, since
                         # obstacle is added to the frame if any of its vertices is in the frame
                         break
@@ -612,9 +610,22 @@ class MultiFrameProblem(Problem):
                         obs_change = True
                         # obstacle was not in the frame, so don't avoid
                         obstacle.set_options({'avoid': False})
+                        # Note: if one or more of the vertices are inside the frame, while others
+                        # are not, this leads to switching the avoid flag, therefore check
+                        # avoid_old before breaking from the loop, and set obs_change accordingly
 
         end_time = time.time()
         print 'elapsed time in get_moving_obstacles_in_frame', end_time-start_time
+
+        # Originally all moving obstacles are put to avoid = True, but if they all need to be
+        # added to the frame, obs_change will still be False, since there are no changes compared to before...
+        # Therefore, the obstacles will not be added
+
+        # Todo: right now we saved the moving_obstacles in a _attribute, but this is dirty?
+        if hasattr(self, '_moving_obs'):
+            if len(self._moving_obs) != len(moving_obstacles):
+                obs_change = True  # required in first iteration, when all obstacles need to be added
+        self._moving_obs = moving_obstacles
 
         return moving_obstacles, obs_change
 
@@ -1040,6 +1051,7 @@ class MultiFrameProblem(Problem):
             for l in range(N+1):
                 if xmin <= (x+l*Ts*vx) <= xmax and ymin <= (y+l*Ts*vy) <= ymax:
                     return True
+            return False
         else:
             raise RuntimeError('Argument time was of the wrong type, not None, float or int')  
 
