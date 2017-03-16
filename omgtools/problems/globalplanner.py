@@ -24,6 +24,7 @@ import time
 
 from matplotlib import pyplot as plt
 import numpy as np
+import math
 
 class GlobalPlanner:
     def __init__(self, environment):
@@ -265,13 +266,17 @@ class Grid:
         self.position = position
         # todo: dirty trick to avoid float division, alternative?
         if (width*1e5) % (cell_width*1e5) != 0:
-            raise ValueError('Selected width must be a multiple of square size')
+            self.width = self.round_nearest(width, cell_width)
+            print 'Selected width was not a multiple of square size, adapted width'
         elif (height*1e5) % (cell_height*1e5) != 0:
-            raise ValueError('Selected height must be a multiple of square size')
-        else:
-            self.cell_width = cell_width  # width of a cell
-            self.cell_height = cell_height  # height of a cell
+            self.height = self.round_nearest(height, cell_height)
+            print 'Selected height must be a multiple of square size, adapted height'
+        self.cell_width = cell_width  # width of a cell
+        self.cell_height = cell_height  # height of a cell
     
+    def round_nearest(self, value, a):
+        return round(value / a) * a
+
     def in_bounds(self, point):
         x, y = point
         return self.position[0] - 0.5*self.width <= x < self.position[0] + 0.5*self.width and self.position[1] - 0.5*self.height <= y < self.position[1] + 0.5*self.height
