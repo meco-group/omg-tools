@@ -121,6 +121,11 @@ def circle_polyhedron_intersection(circle, polyhedron_shape, polyhedron_position
     # Compute perpendicular from the circle center to the polyhedron side
     # Check if the intersection between the normal and the side is inside the circle
 
+    # The checks below can give problems when using floating point numbers:
+    # x1<=x4<=x2 can fail if x1~=x4~=x2 but e.g. just a little bigger for the n'th decimal
+    # to avoid this, we use some epsilon
+    eps = 1e-6
+
     # get polyhedron vertices
     vertices = polyhedron_shape.vertices.copy()
     # duplicate first vertex and place at the end, 
@@ -148,7 +153,7 @@ def circle_polyhedron_intersection(circle, polyhedron_shape, polyhedron_position
         # see if intersection point is within the two end points of line
         # and check distance between intersection point and circle center
         line1 = [[x1,y1],[x2,y2]]  # side of polyhedron
-        if (((x1<=x4<=x2 and y1<=y4<=y2) or (x1>=x4>=x2 and y1>=y4>=y2)) and
+        if (((x1-eps<=x4<=x2+eps and y1-eps<=y4<=y2+eps) or (x1+eps>=x4>=x2-eps and y1+eps>=y4>=y2-eps)) and
            (distance_between_points(center, [x4,y4]) <= circle.shape.radius)):
             return True
     return False
