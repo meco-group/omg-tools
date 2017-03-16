@@ -355,45 +355,75 @@ class Obstacle2D(ObstaclexD):
                     return False
 
         elif isinstance(self.shape, Polyhedron):
-            self_shape = self.shape
-            self_pos = self.signals['position'][:,-1]
+            shape_self = self.shape
+            pos_self = self.signals['position'][:,-1]
             if isinstance(obstacle.shape, Circle):
-                if (point_in_polyhedron(obstacle.signals['position'][:,-1], self_shape, self_pos) or
-                   circle_polyhedron_intersection(obstacle, self_shape, self_pos)):
+                if (point_in_polyhedron(obstacle.signals['position'][:,-1], shape_self, pos_self) or
+                   circle_polyhedron_intersection(obstacle, shape_self, pos_self)):
                     return True
                 else:
                     return False
                 return False
             elif isinstance(obstacle.shape, Polyhedron):
                 if isinstance(obstacle.shape, Rectangle):
-                    if obstacle.shape.orientation == 0:
-                        # is self vertex inside obstacle?
-                        self_checkpoints = self.shape.get_checkpoints()
-                        [[xmin,xmax],[ymin,ymax]] = obstacle.shape.get_canvas_limits()
-                        [posx,posy]= obstacle.signals['position'][:,-1]
-                        xmin += posx
-                        xmax += posx
-                        ymin += posy
-                        ymax += posy
-                        for self_chck, _ in zip(*self_checkpoints):
-                            self_chck += self_pos
-                            if xmin <= self_chck[0] <= xmax and ymin <= self_chck[1] <= ymax:
+                    if isinstance(shape_self, Rectangle):
+                        # Rectangle - Rectangle bouncing
+                        
+                        ###################################################################
+                        ### Option1: check for vertices of the one obstacle in the other###
+                        ###################################################################
+                        # if obstacle.shape.orientation == 0:
+                        #     # is self vertex inside obstacle?
+                        #     self_checkpoints = self.shape.get_checkpoints()
+                        #     [[xmin,xmax],[ymin,ymax]] = obstacle.shape.get_canvas_limits()
+                        #     [posx,posy]= obstacle.signals['position'][:,-1]
+                        #     xmin += posx
+                        #     xmax += posx
+                        #     ymin += posy
+                        #     ymax += posy
+                        #     for self_chck, _ in zip(*self_checkpoints):
+                        #         self_chck += pos_self
+                        #         if xmin <= self_chck[0] <= xmax and ymin <= self_chck[1] <= ymax:
+                        #             return True
+                        #     # is obstacle vertex inside self?
+                        #     obstacle_checkpoints = obstacle.shape.get_checkpoints()
+                        #     [[self_xmin,self_xmax],[self_ymin,self_ymax]] = shape_self.get_canvas_limits()
+                        #     self_xmin += pos_self[0]
+                        #     self_xmax += pos_self[0]
+                        #     self_ymin += pos_self[1]
+                        #     self_ymax += pos_self[1]
+                        #     for obs_chck, _ in zip(*obstacle_checkpoints):
+                        #         obs_chck += np.array([posx,posy])
+                        #         if self_xmin <= obs_chck[0] <= self_xmax and self_ymin <= obs_chck[1] <= self_ymax:
+                        #             return True
+                        # else: 
+                        #     raise RuntimeError('Rectangle bouncing with non-zero orientation not yet implemented')
+
+                        ################################################
+                        ### Option2: check for overlapping rectangles###
+                        ################################################
+                        # Advantage: this also works when no vertices of obstacles are inside each other
+                        if obstacle.shape.orientation == 0:
+                            [[xmin_obs,xmax_obs],[ymin_obs,ymax_obs]] = obstacle.shape.get_canvas_limits()
+                            [posx,posy]= obstacle.signals['position'][:,-1]
+                            xmin_obs += posx
+                            xmax_obs += posx
+                            ymin_obs += posy
+                            ymax_obs += posy
+                            [[xmin_self,xmax_self],[ymin_self,ymax_self]] = shape_self.get_canvas_limits()
+                            xmin_self += pos_self[0]
+                            xmax_self += pos_self[0]
+                            ymin_self += pos_self[1]
+                            ymax_self += pos_self[1]
+                            if (xmin_self <= xmax_obs and xmax_self >= xmin_obs and 
+                                ymin_self <= ymax_obs and ymax_self >= ymin_obs):
                                 return True
-                        # is obstacle vertex inside self?
-                        obstacle_checkpoints = obstacle.shape.get_checkpoints()
-                        [[self_xmin,self_xmax],[self_ymin,self_ymax]] = self_shape.get_canvas_limits()
-                        self_xmin += self_pos[0]
-                        self_xmax += self_pos[0]
-                        self_ymin += self_pos[1]
-                        self_ymax += self_pos[1]
-                        for obs_chck, _ in zip(*obstacle_checkpoints):
-                            obs_chck += np.array([posx,posy])
-                            if self_xmin <= obs_chck[0] <= self_xmax and self_ymin <= obs_chck[1] <= self_ymax:
-                                return True
-                    else: 
-                        print 'Rectangle bouncing with non-zero orientation not yet implemented'
+                        else: 
+                            raise RuntimeError('Rectangle bouncing with non-zero orientation not yet implemented')
+                    else:
+                        raise RuntimeError('Bouncing with a Polyhedron not yet implemented')
                 else:
-                    print 'Polyhedron - Polyhedron boucing not yet implemented'
+                    raise RuntimeError('Polyhedron - Polyhedron boucing not yet implemented')
                 return False
 
     def is_outside_of(self, room):
