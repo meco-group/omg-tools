@@ -6,6 +6,7 @@ import Tkinter as tk
 import tkFileDialog as tkfiledialog
 import tkMessageBox as tkmessagebox
 import pickle
+import numpy as np
 
 class EnvironmentGUI(tk.Frame):
     # Graphical assistant to make an environment
@@ -28,16 +29,18 @@ class EnvironmentGUI(tk.Frame):
         cell_size = options['cell_size'] if 'cell_size' in options else 0.5
 
         # make environment frame and size it
-        self.frame_width = width*self.meter_to_pixel
-        self.frame_height = height*self.meter_to_pixel
+        self.frame_width_px = width*self.meter_to_pixel
+        self.frame_height_px = height*self.meter_to_pixel
+        self.frame_width_m = width
+        self.frame_height_m = height
         self.position = [pos * self.meter_to_pixel for pos in position]  # top left corner point of the frame
-        self.canvas = tk.Canvas(self.root, width=self.frame_width, height=self.frame_height, borderwidth=0, highlightthickness=0)
+        self.canvas = tk.Canvas(self.root, width=self.frame_width_px, height=self.frame_height_px, borderwidth=0, highlightthickness=0)
         self.canvas.configure(cursor="tcross")
         self.canvas.grid(row=0,columnspan=3)
         self.cell_width = int(cell_size*self.meter_to_pixel)  # in pixels, so int is required
         self.cell_height = int(cell_size*self.meter_to_pixel)
-        self.rows = self.frame_width/self.cell_width
-        self.columns = self.frame_height/self.cell_height
+        self.rows = self.frame_width_px/self.cell_width
+        self.columns = self.frame_height_px/self.cell_height
 
         # draw grid
         self.rect = {}
@@ -76,8 +79,8 @@ class EnvironmentGUI(tk.Frame):
         label_save.grid(row=7,column=0)
 
         # add cell_size button
-        self.cell_size = tk.Label(self.root, text='Cell size: ' + str(cell_size) + 'x' + str(cell_size) + ' [m]')
-        self.cell_size.grid(row=1, column=1)
+        self.cell_size_label = tk.Label(self.root, text='Cell size: ' + str(cell_size) + 'x' + str(cell_size) + ' [m]')
+        self.cell_size_label.grid(row=1, column=1)
 
         # Clicked position label
         # self.clickedPos = tk.StringVar()
@@ -140,29 +143,48 @@ class EnvironmentGUI(tk.Frame):
         self.canvas.config(width=1000, height=600)  # limit canvas size such that it fits on screen
         self.canvas.config(xscrollcommand=self.hbar.set, yscrollcommand=self.vbar.set)
 
-    def reinitialize(self, width=8,height=8, position=[0,0], options={}):
+    def reinitialize(self, width_px=800,height_px=800, position=[0,0], n_cells=50, **kwargs):
         # change the original size of the environment, e.g. after loading an SVG image
-
-        # set constants
-        self.meter_to_pixel = options['meter_to_pixel'] if 'meter_to_pixel' in options else 50  # conversion of meter to pixels
-        # limit amount of cells
-        c_size = min(width, height)*0.02
-        cell_size = options['cell_size'] if 'cell_size' in options else c_size
 
         self.canvas.delete('all')
         self.canvas.config(width=1000, height=600)  # limit canvas size such that it fits on screen
 
-        # add cell_size button
-        self.cell_size['text'] = 'Cell size: ' + str(cell_size) + 'x' + str(cell_size) + ' [m]'
-
         # make environment frame and size it
-        self.frame_width = width*self.meter_to_pixel
-        self.frame_height = height*self.meter_to_pixel
+        self.frame_width_px = width_px
+        self.frame_height_px = height_px
+
+        # determine meter_to_pixel and cell_size
+        if 'meter_to_pixel' in kwargs:
+            self.meter_to_pixel = kwargs['meter_to_pixel']
+            self.cell_size = round(self.frame_width_px*1./self.meter_to_pixel*1./n_cells,2)  # [m]
+        elif 'cell_size' in kwargs:
+            self.cell_size = kwargs['cell_size']  # [m]
+            self.meter_to_pixel = round(self.frame_width_px*1./self.cell_size*1./n_cells,2)
+        else:
+            print 'Choosing a predefined cell_size and meter_to_pixel value'
+            self.meter_to_pixel = 50
+            self.cell_size = 0.25  # [m]
+
+        # make sure cell_size is a multiple of frame_width and frame_height, both in px and m
+        self.cell_width = int(self.cell_size*self.meter_to_pixel)  # in pixels, so int is required
+        self.cell_height = int(self.cell_size*self.meter_to_pixel)
+        
+        self.frame_width_px += self.frame_width_px % self.cell_width  # round to next multiple of cell_width
+        self.frame_height_px += self.frame_height_px % self.cell_height
+        self.columns = self.frame_width_px/self.cell_width
+        self.rows = self.frame_height_px/self.cell_height
+    
+        self.frame_width_m = round(self.frame_width_px*1./self.meter_to_pixel,2)
+        self.frame_height_m = round(self.frame_height_px*1./self.meter_to_pixel,2)
+        # self.frame_width_m += self.frame_width_m % self.cell_size  # round to next multiple of cell_size
+        # self.frame_width_m = round(self.frame_width_m,2)
+        # self.frame_height_m += self.frame_height_m % self.cell_size
+        # self.frame_height_m = round(self.frame_height_m,2)
+
         self.position = [pos * self.meter_to_pixel for pos in position]  # top left corner point of the frame
-        self.cell_width = int(cell_size*self.meter_to_pixel)  # in pixels, so int is required
-        self.cell_height = int(cell_size*self.meter_to_pixel)
-        self.columns = self.frame_width/self.cell_width
-        self.rows = self.frame_height/self.cell_height
+
+        # update cell_size text
+        self.cell_size_label['text'] = 'Cell size: ' + str(self.cell_size) + 'x' + str(self.cell_size) + ' [m]'
 
         # draw grid
         self.rect = {}
@@ -190,9 +212,9 @@ class EnvironmentGUI(tk.Frame):
         elif self.shape.get() == 'rectangle':
             if (self.width.get() <= 0 or self.height.get() <= 0):
                 print 'Select a strictly positive width and height for the rectangle first'
-            elif (self.width.get()*self.meter_to_pixel >= self.frame_width):
+            elif (self.width.get()*self.meter_to_pixel >= self.frame_width_px):
                 print 'Selected width is too big'
-            elif (self.height.get()*self.meter_to_pixel >= self.frame_height):
+            elif (self.height.get()*self.meter_to_pixel >= self.frame_height_px):
                 print 'Selected height is too big'
             else:
                 obstacle_var = self.canvas.create_rectangle(snapped_pos[0]-self.width.get()*self.meter_to_pixel/2., snapped_pos[1]-self.height.get()*self.meter_to_pixel/2.,
@@ -209,7 +231,7 @@ class EnvironmentGUI(tk.Frame):
         elif self.shape.get() == 'circle':
             if (self.radius.get() <= 0):
                 print 'Select a strictly positive radius before making a circle'
-            elif (self.radius.get()*self.meter_to_pixel >= (self.frame_width or self.frame_height)):
+            elif (self.radius.get()*self.meter_to_pixel >= (self.frame_width_px or self.frame_height_px)):
                 print 'Selected radius is too big'
             else:
                 obstacle_var = self.canvas.create_circle(snapped_pos[0], snapped_pos[1], self.radius.get()*self.meter_to_pixel, fill="black")
@@ -246,9 +268,7 @@ class EnvironmentGUI(tk.Frame):
         clicked_x = self.canvas.canvasx(event.x)  # get the position in the canvas, not in the window
         clicked_y = self.canvas.canvasy(event.y)  # this deals with the scrollbars
         clicked = [clicked_x, clicked_y]
-        print 'You clicked on: ', clicked
         clicked = self.pixel_to_world(clicked)
-        # self.clickedPos.set('['+str(clicked[0])+','+str(clicked[1])+']')
         print 'You clicked on: ', clicked
         self.clicked_positions.append(clicked)
         if (len(self.clicked_positions) > 2):
@@ -260,10 +280,10 @@ class EnvironmentGUI(tk.Frame):
         # only build environment and shut down GUI if start and goal positions are clicked
         if len(self.clicked_positions) == 2:
             # make border
-            self.environment = Environment(room={'shape': Rectangle(width = self.frame_width/self.meter_to_pixel,
-                                                                    height = self.frame_height/self.meter_to_pixel),
-                                                 'position':[(self.position[0]+self.frame_width/2.)/self.meter_to_pixel,
-                                                             (self.position[1]+self.frame_height/2.)/self.meter_to_pixel]})                
+            self.environment = Environment(room={'shape': Rectangle(width = self.frame_width_m,
+                                                                    height = self.frame_height_m),
+                                                 'position':[self.position[0]+self.frame_width_m*0.5,
+                                                             self.position[1]+self.frame_height_m*0.5]})                
             for obstacle in self.obstacles:
                 if obstacle['shape'] == 'rectangle':
                     rectangle = Rectangle(width=obstacle['width'],height=obstacle['height'])
@@ -293,7 +313,8 @@ class EnvironmentGUI(tk.Frame):
     def add_obstacle(self, obstacle):
         # adds an obstacle to the current canvas
         pos = obstacle['pos']
-        snapped_pos = self.snap_to_grid(pos)
+        # snapped_pos = self.snap_to_grid(pos)
+        snapped_pos = pos  # don't snap for a loaded obstacle, this gives a less accurate conversion from file to OMG-tools
         obstacle['pos'] = self.pixel_to_world(snapped_pos)
         if obstacle['shape'] == 'rectangle':
             obstacle_var = self.canvas.create_rectangle(snapped_pos[0]-obstacle['width']*0.5, snapped_pos[1]-obstacle['height']*0.5,
@@ -314,8 +335,8 @@ class EnvironmentGUI(tk.Frame):
         environment['position'] = [0,0]
         environment['position'][0] = self.position[0]/self.meter_to_pixel
         environment['position'][1] = self.position[1]/self.meter_to_pixel
-        environment['width'] = self.frame_width/self.meter_to_pixel
-        environment['height'] = self.frame_height/self.meter_to_pixel
+        environment['width'] = self.frame_width_m
+        environment['height'] = self.frame_height_m
         env_to_save = [environment, self.obstacles, self.clicked_positions]
         with open('environment.pickle', 'wb') as handle:
             pickle.dump(env_to_save, handle, protocol=pickle.HIGHEST_PROTOCOL)
@@ -328,8 +349,8 @@ class EnvironmentGUI(tk.Frame):
             saved_env = pickle.load(handle)
         env = saved_env[0]
         self.position = env['position']*self.meter_to_pixel
-        self.frame_width = env['width']*self.meter_to_pixel
-        self.frame_height = env['height']*self.meter_to_pixel
+        self.frame_width_px = env['width']*self.meter_to_pixel
+        self.frame_height_px = env['height']*self.meter_to_pixel
 
         self.obstacles = saved_env[1]
         for obs in self.obstacles:
@@ -359,16 +380,20 @@ class EnvironmentGUI(tk.Frame):
         self.reader.build_environment()  # save obstacles in figure
 
         self.obstacles = self.reader.obstacles  # assign obstacles in loaded SVG
-        self.frame_width = int(self.reader.width)  # assign width of loaded SVG [px]
-        self.frame_height = int(self.reader.height)  # assign height of loaded SVG [px]
+        self.frame_width_px = int(self.reader.width_px)  # assign width of loaded SVG [px]
+        self.frame_height_px = int(self.reader.height_px)  # assign height of loaded SVG [px]
 
         # redraw GUI
         # since all data is taken from an svg-file, units are pixels
         # convert them first with a conversion factor
         # position is the top left corner of the image
-        meter_to_pixel = 100
-        # cell_size = 0.5
-        self.reinitialize(width=self.frame_width*1/meter_to_pixel,height=self.frame_height*1/meter_to_pixel, position=[0,0], options={'meter_to_pixel': meter_to_pixel})
+        # Note: frame width and height are in pixels here, since it the data loaded from a figure
+        # if there is information in mm, this comes from the corresponding meter_to_pixel factor
+        if hasattr(self.reader, 'meter_to_pixel'):
+            meter_to_pixel = self.reader.meter_to_pixel
+            self.reinitialize(width_px=self.frame_width_px,height_px=self.frame_height_px, position=[0,0], n_cells=50, meter_to_pixel=meter_to_pixel)
+        else:
+            self.reinitialize(width_px=self.frame_width_px,height_px=self.frame_height_px, position=[0,0], n_cells=50, cell_size=0.25)
 
         for obstacle in self.obstacles:
             self.add_obstacle(obstacle)
@@ -390,7 +415,7 @@ class EnvironmentGUI(tk.Frame):
         # i.e. min value = bottom left, max value = top right
 
         vmin = self.position[1]
-        vmax = self.position[1] + self.frame_height
+        vmax = self.position[1] + self.frame_height_px
         # umin = self.position[0]
         # umax = self.frame_width
         # xmin = self.position[0]/self.meter_to_pixel
@@ -408,7 +433,7 @@ class EnvironmentGUI(tk.Frame):
         # = invert y-axis and shift
 
         vmin = self.position[1]
-        vmax = self.position[1] + self.frame_height
+        vmax = self.position[1] + self.frame_height_px
 
         x,y = world
         x,y = float(x), float(y)
