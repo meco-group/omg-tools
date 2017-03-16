@@ -77,24 +77,31 @@ class SVGReader(object):
         # Code for basic shapes <circle> and <rect>
 
         # Find svg-paths, describing the shapes
-        self.rectangles = self.tree.findall("{%s}rect" %self.ns)  # Search for the word rect in the outer branch of the SVG-file.
-        if not self.rectangles:
-            self.rectangles = self.tree.find("{%s}g" %self.ns).findall("{%s}rect" %self.ns)  # If not yet found, search for the word rect in the next branch
-        elif not self.rectangles:
-            self.rectangles = self.tree.find("{%s}g" %self.ns).find("{%s}g" %self.ns).findall("{%s}rect" %self.ns)  # If not yet found, search for the word rect in the next branch
-        self.n_rect = len(self.rectangles)  # number of paths which build up the figure
-        if self.n_rect == 0:
-            print 'No rectangles found'
+        try:
+            self.rectangles = self.tree.findall("{%s}rect" %self.ns)  # Search for the word rect in the outer branch of the SVG-file.
+            if not self.rectangles:
+                self.rectangles = self.tree.find("{%s}g" %self.ns).findall("{%s}rect" %self.ns)  # If not yet found, search for the word rect in the next branch
+            if not self.rectangles:
+                self.rectangles = self.tree.find("{%s}g" %self.ns).find("{%s}g" %self.ns).findall("{%s}rect" %self.ns)  # If not yet found, search for the word rect in the next branch
+            self.n_rect = len(self.rectangles)  # number of paths which build up the figure
+            if self.n_rect == 0:
+                print 'No rectangles found'
+        except:
+            print 'No shapes found which are described by a rect'
+
 
         # Find svg-paths, describing the shapes
-        self.circles = self.tree.findall("{%s}circle" %self.ns)  # Search for the word circ in the outer branch of the SVG-file.
-        if not self.circles:
-            self.circles = self.tree.find("{%s}g" %self.ns).findall("{%s}circle" %self.ns)  # If not yet found, search for the word circ in the next branch
-        elif not self.circles:
-            self.circles = self.tree.find("{%s}g" %self.ns).find("{%s}g" %self.ns).findall("{%s}circle" %self.ns)  # If not yet found, search for the word circ in the next branch
-        self.n_circ = len(self.circles)  # number of paths which build up the figure
-        if self.n_circ == 0:
-            print 'No circles found'
+        try:
+            self.circles = self.tree.findall("{%s}circle" %self.ns)  # Search for the word circ in the outer branch of the SVG-file.
+            if not self.circles:
+                self.circles = self.tree.find("{%s}g" %self.ns).findall("{%s}circle" %self.ns)  # If not yet found, search for the word circ in the next branch
+            if not self.circles:
+                self.circles = self.tree.find("{%s}g" %self.ns).find("{%s}g" %self.ns).findall("{%s}circle" %self.ns)  # If not yet found, search for the word circ in the next branch
+            self.n_circ = len(self.circles)  # number of paths which build up the figure
+            if self.n_circ == 0:
+                print 'No circles found'
+        except:
+            print 'No shapes found which are described by a circle'
 
         for rectangle in self.rectangles:
             obstacle = {}
