@@ -135,16 +135,115 @@ class SVGReader(object):
         # how represent a circle in bezier?
         # for rectangle check on straight lines --> is control point on line between start and end?
 
-    # def save_environment(self):
-    #     environment = {}
-    #     environment['position'] = [0,0]
-    #     environment['position'][0] = self.position[0]/self.meter_to_pixel
-    #     environment['position'][1] = self.position[1]/self.meter_to_pixel
-    #     environment['width'] = self.width/self.meter_to_pixel
-    #     environment['height'] = self.height/self.meter_to_pixel
-    #     env_to_save = [environment, self.obstacles]
-    #     with open('environment_svg.pickle', 'wb') as handle:
-    #         pickle.dump(env_to_save, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    def convert_lines(self):
+        # Code for basic shapes <line> and <polyline>
+
+        # Find svg-polylines
+        # example: <polyline fill="none" stroke="#333333" stroke-width="10" points="25.41,40.983 25.41,258.197 414.754,258.197 "/>
+        try: 
+            self.polylines = self.tree.findall("{%s}polyline" %self.ns)  # Search for the word circ in the outer branch of the SVG-file.
+            if not self.polylines:
+                self.polylines = self.tree.find("{%s}g" %self.ns).findall("{%s}polyline" %self.ns)  # If not yet found, search for the word circ in the next branch
+            if not self.polylines:
+                self.polylines = self.tree.find("{%s}g" %self.ns).find("{%s}g" %self.ns).findall("{%s}polyline" %self.ns)  # If not yet found, search for the word circ in the next branch
+            self.n_polylines = len(self.polylines)  # number of paths which build up the figure
+            if self.n_polylines == 0:
+                print 'No polylines found'
+        except:
+            print 'No shapes found which are described by a polyline'
+
+        # Find svg-lines
+        # example: <line fill="none" stroke="#333333" stroke-width="10" x1="25.41" y1="174.59" x2="69.672" y2="174.59"/>
+        try: 
+            self.lines = self.tree.findall("{%s}line" %self.ns)  # Search for the word line in the outer branch of the SVG-file.
+            if not self.lines:
+                self.lines = self.tree.find("{%s}g" %self.ns).findall("{%s}line" %self.ns)  # If not yet found, search for the word line in the next branch
+            if not self.lines:
+                self.lines = self.tree.find("{%s}g" %self.ns).find("{%s}g" %self.ns).findall("{%s}line" %self.ns)  # If not yet found, search for the word line in the next branch
+            self.n_lines = len(self.lines)  # number of paths which build up the figure
+            if self.n_lines == 0:
+                print 'No lines found'
+        except:
+            print 'No shapes found which are described by a line'
+
+        for polyline in self.polylines:
+            try:
+                stroke_width = float(polyline.get('stroke-width'))  # stroke-width given as basic element
+            except:  # stroke-width wrapped in style element
+                style = polyline.get('style').split(';')
+                for element in style:
+                    if 'stroke-width' in element:
+                        stroke_width = float(element.split(':')[1])
+            vertices = polyline.get('points').split(' ')
+            vertices[:] = (v for v in vertices if v != '')  # remove all empty strings
+            vertices = np.array(map(eval, vertices))  # gives array of arrays [[x,y],[],...]
+            vertices += self.transform
+
+            # make rectangle of each vertex couple
+            for l in range(len(vertices)-1):
+                obstacle = {}
+                obstacle['shape'] = 'rectangle'
+                obstacle['velocity'] = [0, 0]
+                obstacle['bounce'] = False
+
+                # Note: to avoid explicitly checking if the line goes from
+                # left to right / right to left
+                # bottom to top / top to bottom
+                # we use w and h separate from obstacle width and height
+                line = np.array(vertices[l+1]) - np.array(vertices[l])
+                if line[0] == 0:  # vertical line
+                    obstacle['width'] =  stroke_width
+                    obstacle['height'] = abs(line[1])
+                    h = line[1]
+                    w = cmp(h,0)*stroke_width  # give stroke_width same sign as h
+                elif line[1] == 0:  # horizontal line
+                    obstacle['width'] = abs(line[0])
+                    obstacle['height'] = stroke_width
+                    w = line[0]
+                    h = cmp(w,0)*stroke_width  # give stroke_width same sign as w
+                else:
+                    raise RuntimeError('Diagonal lines are not yet supported')
+                obstacle['pos'] = [vertices[l][0] + w*0.5, vertices[l][1] + h*0.5]
+                self.obstacles.append(obstacle)
+
+        for line in self.lines:
+            obstacle = {}
+            obstacle['shape'] = 'rectangle'
+            obstacle['velocity'] = [0, 0]
+            obstacle['bounce'] = False
+
+            try:
+                stroke_width = float(line.get('stroke-width'))  # stroke-width given as basic element
+            except:  # stroke-width wrapped in style element
+                style = line.get('style').split(';')
+                for element in style:
+                    if 'stroke-width' in element:
+                        stroke_width = float(element.split(':')[1])
+            x1, y1 = float(line.get('x1')), float(line.get('y1'))
+            x2, y2 = float(line.get('x2')), float(line.get('y2'))
+            # add transform
+            x1 += self.transform[0]
+            y1 += self.transform[1]
+            x2 += self.transform[0]
+            y2 += self.transform[1]
+            if x1 == x2:  # vertical line
+                obstacle['width'] =  stroke_width
+                obstacle['height'] = abs(y2-y1)
+                h = y2-y1  # signed value
+                w = cmp(h,0)*stroke_width
+            elif y1 == y2:  # horizontal line
+                obstacle['width'] = abs(x2-x1)
+                obstacle['height'] = stroke_width
+                w = x2-x1  # signed value
+                h = cmp(w,0)*stroke_width
+            else:
+                raise RuntimeError('Diagonal lines are not yet supported')
+
+            # don't use width and height since then you have to check if x1 > x2 etc,
+            # to decide if the line goes from left to right or the other way around
+            obstacle['pos'] = [x1 + w*0.5, y1 + h*0.5]
+            self.obstacles.append(obstacle)
+
 
     def reconstruct(self, file):
         points = []
