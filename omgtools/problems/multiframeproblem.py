@@ -675,6 +675,14 @@ class MultiFrameProblem(Problem):
                 time_y[idx] = 1
 
         # Make interpolation functions
+        if (all( t == 0 for t in time_x) and all(t == 0 for t in time_y)):
+            raise RuntimeError('Trying to make a prediction for goal = current position')
+        elif all(t == 0 for t in time_x):
+            # if you don't do this, f evaluates to NaN for f(0)
+            time_x = time_y
+        elif all(t == 0 for t in time_y):
+            # if you don't do this, f evaluates to NaN for f(0)
+            time_y = time_x
         fx = interp1d(time_x, x, kind='linear', bounds_error=False, fill_value=1.)  # kind='cubic' requires a minimum of 4 waypoints
         fy = interp1d(time_y, y, kind='linear', bounds_error=False, fill_value=1.)
 
