@@ -196,8 +196,16 @@ class AStarPlanner(GlobalPlanner):
             self.closed_list.append(self.current_node)
 
             if not self.open_list:
-                # open list was empty, meaning that no path could be found
-                raise RuntimeError('There is no path from the desired start to the desired end node!')
+                # current node is not the goal, and open list is empty
+                # check if there are neigbors left which you can reach and are not yet visited
+                neighbors = self.grid.get_neighbors(self.current_node.pos)
+                closed_list_pos = []
+                for node in self.closed_list:
+                    closed_list_pos.append(node.pos)
+                if not neighbors or all(item in neighbors for item in closed_list_pos):
+                    # there are no neighbors which are accessible or they are all in the closed list,
+                    # meaning that no path could be found
+                    raise RuntimeError('There is no path from the desired start to the desired end node!')
 
         t2 = time.time()
         print 'Elapsed time to find a global path: ', t2-t1
