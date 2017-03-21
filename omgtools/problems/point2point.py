@@ -22,7 +22,7 @@ from ..basics.spline import *
 from ..export.export_p2p import ExportP2P
 from casadi import inf
 import numpy as np
-
+import time
 
 class Point2point(object):
     # this class selects between fixed T and free T problem

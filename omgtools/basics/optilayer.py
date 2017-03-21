@@ -55,7 +55,7 @@ def create_nlp(var, par, obj, con, options, name=''):
     opt = {}
     for key, value in slv_opt.items():
         opt[key] = value
-    # opt.update({'expand': True})
+    opt.update({'expand': True})
     solver = nlpsol('solver', options['solver'], nlp, opt)
     name = 'nlp' if name == '' else 'nlp_' + name
     if codegen['build'] == 'jit':
