@@ -94,70 +94,73 @@ def crop_basis(basis, lb, ub):
     jmax = np.searchsorted(knots2, ub, side='right')
     return spl.BSplineBasis(knots2[jmin:jmax], degree), T[jmin:jmax-degree-1, :]
 
-def extrapolate_basis2(basis, t_extra, m=None):
+
+def extrapolate_basis(basis, t_extra, m=None):
+    if m is None:
+        m = 1
     knots = basis.knots()
     deg = basis.degree()
-    b2, Tex = basis.kick_boundary(knots[0], knots[-1]+t_extra)
+    b2, Tex = basis.kick_boundary([knots[0], knots[-1]+t_extra])
     b3, Tin = b2.insert_knots([knots[-1]]*m)
     return b3, Tin.dot(Tex)
 
-def extrapolate_basis(basis, t_extra, m=None):
-    # Create transformation matrix that extrapolates the spline over an extra
-    # knot interval of t_extra long.
-    knots = basis.knots()
-    deg = basis.degree()
-    N = basis.dimension()
-    if m is None:
-        # m is number of desired knots at interpolation border
-        # default value is # knots at second last knot place of original spline
-        m = 1
-        while knots[-deg-2-m] >= knots[-deg-2]:
-            m += 1
-    knots2 = np.r_[knots[:-deg-1], knots[-deg-1]*np.ones(m),
-                   (knots[-1]+t_extra)*np.ones(deg+1)]
-    basis2 = spl.BSplineBasis(knots2, deg)
-    A = np.zeros((deg+1, deg+1))
-    B = np.zeros((deg+1, deg+1))
-    # only (deg+1) last coefficients change: we need (deg+1) equations, giving
-    # a relation between (deg+1) last coefficients before and after extrapolation
+# def extrapolate_basis(basis, t_extra, m=None):
+#     # Create transformation matrix that extrapolates the spline over an extra
+#     # knot interval of t_extra long.
+#     knots = basis.knots()
+#     deg = basis.degree()
+#     N = basis.dimension()
+#     if m is None:
+#         # m is number of desired knots at interpolation border
+#         # default value is # knots at second last knot place of original spline
+#         m = 1
+#         while knots[-deg-2-m] >= knots[-deg-2]:
+#             m += 1
+#     knots2 = np.r_[knots[:-deg-1], knots[-deg-1]*np.ones(m),
+#                    (knots[-1]+t_extra)*np.ones(deg+1)]
+#     basis2 = spl.BSplineBasis(knots2, deg)
+#     A = np.zeros((deg+1, deg+1))
+#     B = np.zeros((deg+1, deg+1))
+#     # only (deg+1) last coefficients change: we need (deg+1) equations, giving
+#     # a relation between (deg+1) last coefficients before and after extrapolation
 
-    # (deg+1-m) relations based on evaluation of basis functions on (deg+1-m)
-    # last greville points
-    if m < deg+1:
-        eval_points = basis.greville()[-(deg+1-m):]
-        a = np.c_[[basis2(e)[-(deg+1+m):-m] for e in eval_points]]
-        b = np.c_[[basis(e)[-(deg+1):] for e in eval_points]]
-        a1, a2 = a[:, :m], a[:, m:]
-        b1, b2 = b[:, :m], b[:, m:]
-        A[:(deg+1-m), -(deg+1):-m] = a2
-        B[:(deg+1-m), :m] = b1 - a1  # this should be zeros
-        B[:(deg+1-m), m:] = b2
-    else:
-        A[0, -(deg+1)] = 1.
-        B[0, -1] = 1.
-    # m relations based on continuity of m last derivatives
-    A1, B1 = np.identity(deg+1), np.identity(deg+1)
-    for i in range(1, deg+1):
-        A1_tmp = np.zeros((deg+1-i, deg+1-i+1))
-        B1_tmp = np.zeros((deg+1-i, deg+1-i+1))
-        for j in range(deg+1-i):
-            B1_tmp[j, j] = -(deg+1-i)/(knots[j+N] - knots[j+N-deg-1+i])
-            B1_tmp[j, j+1] = (deg+1-i)/(knots[j+N] - knots[j+N-deg-1+i])
-            A1_tmp[j, j] = -(deg+1-i)/(knots2[j+N+m] - knots2[j+N-deg-1+m+i])
-            A1_tmp[j, j+1] = (deg+1-i)/(knots2[j+N+m] - knots2[j+N-deg-1+m+i])
-        A1, B1 = A1_tmp.dot(A1), B1_tmp.dot(B1)
-        if i >= deg+1-m:
-            b1 = B1[-1, :]
-            a1 = A1[-(deg-i+1), :]
-            A[i, :] = a1
-            B[i, :] = b1
-    # put everything in transformation matrix
-    _T = np.linalg.solve(A, B)
-    _T[abs(_T) < 1e-10] = 0.
-    T = np.zeros((N+m, N))
-    T[:N, :N] = np.eye(N)
-    T[-(deg+1):, -(deg+1):] = _T
-    return spl.BSplineBasis(knots2, deg), T
+#     # (deg+1-m) relations based on evaluation of basis functions on (deg+1-m)
+#     # last greville points
+#     if m < deg+1:
+#         eval_points = basis.greville()[-(deg+1-m):]
+#         a = np.c_[[basis2(e)[-(deg+1+m):-m] for e in eval_points]]
+#         b = np.c_[[basis(e)[-(deg+1):] for e in eval_points]]
+#         a1, a2 = a[:, :m], a[:, m:]
+#         b1, b2 = b[:, :m], b[:, m:]
+#         A[:(deg+1-m), -(deg+1):-m] = a2
+#         B[:(deg+1-m), :m] = b1 - a1  # this should be zeros
+#         B[:(deg+1-m), m:] = b2
+#     else:
+#         A[0, -(deg+1)] = 1.
+#         B[0, -1] = 1.
+#     # m relations based on continuity of m last derivatives
+#     A1, B1 = np.identity(deg+1), np.identity(deg+1)
+#     for i in range(1, deg+1):
+#         A1_tmp = np.zeros((deg+1-i, deg+1-i+1))
+#         B1_tmp = np.zeros((deg+1-i, deg+1-i+1))
+#         for j in range(deg+1-i):
+#             B1_tmp[j, j] = -(deg+1-i)/(knots[j+N] - knots[j+N-deg-1+i])
+#             B1_tmp[j, j+1] = (deg+1-i)/(knots[j+N] - knots[j+N-deg-1+i])
+#             A1_tmp[j, j] = -(deg+1-i)/(knots2[j+N+m] - knots2[j+N-deg-1+m+i])
+#             A1_tmp[j, j+1] = (deg+1-i)/(knots2[j+N+m] - knots2[j+N-deg-1+m+i])
+#         A1, B1 = A1_tmp.dot(A1), B1_tmp.dot(B1)
+#         if i >= deg+1-m:
+#             b1 = B1[-1, :]
+#             a1 = A1[-(deg-i+1), :]
+#             A[i, :] = a1
+#             B[i, :] = b1
+#     # put everything in transformation matrix
+#     _T = np.linalg.solve(A, B)
+#     _T[abs(_T) < 1e-10] = 0.
+#     T = np.zeros((N+m, N))
+#     T[:N, :N] = np.eye(N)
+#     T[-(deg+1):, -(deg+1):] = _T
+#     return spl.BSplineBasis(knots2, deg), T
 
 
 def shiftoverknot_basis(basis):
@@ -190,6 +193,7 @@ def shiftfirstknot_basis(basis, t_shift):
 #     knots = basis.knots()
 #     b2, T =  basis.kick_boundary([t_shift, knots[-1]])
 #     return b2, T
+
 
 def crop_inexact_basis(basis, lb, ub):
     degree = basis.degree()
@@ -287,6 +291,7 @@ spl.Function.shiftoverknot = shiftoverknot
 spl.Function.shiftfirstknot_fwd = shiftfirstknot_fwd
 spl.Function.shiftfirstknot_bwd = shiftfirstknot_bwd
 spl.Function.crop_inexact = crop_inexact
+
 
 """ other spline-related functions """
 """ ============================== """
