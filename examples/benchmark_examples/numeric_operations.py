@@ -79,3 +79,13 @@ t1 = time.time()
 T = spl_ex.insert_knots_T(B2, (0.1*np.ones(degree+1)).tolist())
 t2 = time.time()
 print 'insert_knots: ' + str(t1-t0) + ' vs ' + str(t2-t1)
+
+# extrapolate
+t0 = time.time()
+B1b = spl.BSplineBasis(knots2, degree)
+B1c, T = B1b.extrapolate(5.5)
+t1 = time.time()
+B2b = spl_ol.BSplineBasis(knots2, degree)
+T, knotsb = spl_ex.extrapolate_T(B2b, 0.1)
+t2 = time.time()
+print 'extrapolate: ' + str(t1-t0) + ' vs ' + str(t2-t1)
