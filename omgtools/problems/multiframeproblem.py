@@ -350,11 +350,12 @@ class MultiFrameProblem(Problem):
             self.frame = self.get_min_nobs_frame(self.curr_state)
 
             # try to scale up frame in all directions until it hits the borders or an obstacle
-            self.frame['border'] = self.scale_up_frame(self.frame)
+            self.frame['border'], self.frame['waypoints'] = self.scale_up_frame(self.frame)
 
             # Check if last waypoint is too close to the frame border, move the frame extra in that direction
             # This is possible if point was inside frame but is too close to border.
             # Update limits of frame
+            # Todo: maybe it's better to move the waypoint, because now you can get lots of obstacles inside a frame
             xmin,ymin,xmax,ymax = self.frame['border']['limits']
             dist_to_border = self.distance_to_border(self.frame['waypoints'][-1])
             if abs(dist_to_border[0]) <= self.veh_size:
@@ -451,7 +452,7 @@ class MultiFrameProblem(Problem):
         start_time = time.time()
 
         self.global_path = self.global_planner.get_path(start=self.curr_state, goal=self.goal_state)
-        self.global_path.append(self.goal_state)
+        self.global_path.append(self.goal_state)  # append goal state to path
         
         # make new frame
         if next_frame is not None:
@@ -543,7 +544,8 @@ class MultiFrameProblem(Problem):
                     # based on: http://stackoverflow.com/questions/306316/determine-if-two-rectangles-overlap-each-other
                     if (xmin_f <= xmax_obs and xmax_f >= xmin_obs and ymin_f <= ymax_obs and ymax_f >= ymin_obs):
                             obstacles_in_frame.append(obstacle)
-                            break
+                            # break
+                            # no, add all obstacles!
                 else:
                     raise RuntimeError('Only Circle and Rectangle shaped obstacles\
                                         with orientation 0 are supported for now')
@@ -676,6 +678,11 @@ class MultiFrameProblem(Problem):
 
         # Make interpolation functions
         if (all( t == 0 for t in time_x) and all(t == 0 for t in time_y)):
+            # motion_time = 0.1
+            # coeffs_x = x[0]*np.ones(len(self.vehicles[0].knots[self.vehicles[0].degree-1:-(self.vehicles[0].degree-1)]))
+            # coeffs_y = y[0]*np.ones(len(self.vehicles[0].knots[self.vehicles[0].degree-1:-(self.vehicles[0].degree-1)]))
+            # splines = np.c_[coeffs_x, coeffs_y]
+            # return splines, motion_time
             raise RuntimeError('Trying to make a prediction for goal = current position')
         elif all(t == 0 for t in time_x):
             # if you don't do this, f evaluates to NaN for f(0)
@@ -767,7 +774,7 @@ class MultiFrameProblem(Problem):
             next_frame = self.get_min_nobs_frame(start=frame['endpoint_frame'])
 
             # try to scale up frame
-            next_frame['border'] = self.scale_up_frame(next_frame)
+            next_frame['border'], next_frame['waypoints'] = self.scale_up_frame(next_frame)
 
             # Check if last waypoint is too close to the frame border, move the frame extra in that direction
             # This is possible if point was inside frame without shifting frame, but is too close to border
@@ -983,9 +990,20 @@ class MultiFrameProblem(Problem):
                     scaled_frame['border'] = self.make_border(xmin,ymin,xmax,ymax)
                     break
 
+        # update waypoints
+        for idx, point in enumerate(self.global_path):
+            if self.point_in_frame(point, frame=scaled_frame):
+                if not point in scaled_frame['waypoints']:
+                    # point was not yet a waypoint of the frame,
+                    # but it is inside the scaled frame
+                    scaled_frame['waypoints'].append(point)
+            else:
+                # waypoint was not inside the scaled_frame, stop looking
+                break
+
         end_time = time.time()
         print 'time in scale_up_frame', end_time-start_time
-        return scaled_frame['border']
+        return scaled_frame['border'], scaled_frame['waypoints']
 
     def move_frame(self, delta_x, delta_y, frame_size, move_limit):
         # determine direction we have to move in
