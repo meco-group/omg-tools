@@ -42,12 +42,12 @@ class Deployer:
         if not update_time:
             update_time = self.update_time
         if hasattr(self.problem.vehicles[0], 'signals'):
-            if update_time - float(self.problem.vehicles[0].signals['time'][:, -1] - self.current_time) > self.sample_time:
+            if round(update_time - float(self.problem.vehicles[0].signals['time'][:, -1] - self.current_time),4) >= self.sample_time:
                 update_time = float(self.problem.vehicles[0].signals['time'][:, -1] - self.current_time)
         # is there enough time left to update with the normal update time? 
         # if not, lower update time
         elif hasattr(self.problem.vehicles[0], 'trajectories'):
-            if update_time - float(self.problem.vehicles[0].trajectories['time'][:, -1] - self.current_time) > self.sample_time:
+            if round(update_time - float(self.problem.vehicles[0].trajectories['time'][:, -1] - self.current_time),4) >= self.sample_time:
                 update_time = float(self.problem.vehicles[0].trajectories['time'][:, -1] - self.current_time)
         if (self.iteration0):
             self.iteration0 = False
