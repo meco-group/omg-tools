@@ -424,6 +424,8 @@ class Grid:
                                 [pos[0]-r, pos[1]+r],
                                 [pos[0]-r, pos[1]-r]]
                 vertices = np.array(vertices)
+                vertices = np.round(vertices, 4)  # rounding off vertex positions
+                # Todo: remove, better work on pixels!
 
                 occ_cells = []
                 for cell in cells:
@@ -434,13 +436,14 @@ class Grid:
                     cell_vertices.append([cell[0] - 0.5*self.cell_width, cell[1] + 0.5*self.cell_height])
                     cell_vertices.append([cell[0] + 0.5*self.cell_width, cell[1] + 0.5*self.cell_height])
                     # cell is inside the vertices of an obstacle
-                    if (min(vertices[:,0]) <= cell[0] <= max(vertices[:,0]) and 
-                        min(vertices[:,1]) <= cell[1] <= max(vertices[:,1])):
+                    if (min(vertices[:,0]) < cell[0] < max(vertices[:,0]) and 
+                        min(vertices[:,1]) < cell[1] < max(vertices[:,1])):
                         occ_cells.append(cell)
+
                     else:
                         for cell_v in cell_vertices:
-                            if (min(vertices[:,0]) <= cell_v[0] <= max(vertices[:,0]) and 
-                                min(vertices[:,1]) <= cell_v[1] <= max(vertices[:,1])):
+                            if (min(vertices[:,0]) < cell_v[0] < max(vertices[:,0]) and 
+                                min(vertices[:,1]) < cell_v[1] < max(vertices[:,1])):
                                     occ_cells.append(cell)
                                     break
                     # if one of the vertices is inside the cell, add the cell and go to next cell
