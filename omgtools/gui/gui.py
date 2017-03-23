@@ -272,9 +272,10 @@ class EnvironmentGUI(tk.Frame):
         print 'You clicked on: ', clicked
         self.clicked_positions.append(clicked)
         if (len(self.clicked_positions) > 2):
+            self.clicked_positions[0] = self.clicked_positions[1]  # second = first
             self.clicked_positions[1] = self.clicked_positions[2]  # second last = last
             self.clicked_positions=self.clicked_positions[:2]  # remove last
-            print 'You clicked more than two times, the last click replaced the previous one'
+            print 'You clicked more than two times, your initial first click was removed'
 
     def build_environment(self):
         # only build environment and shut down GUI if start and goal positions are clicked
