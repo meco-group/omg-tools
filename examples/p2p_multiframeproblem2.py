@@ -23,13 +23,13 @@ sys.path.insert(0,os.getcwd()+'/..')
 from omgtools import *
 
 # create vehicle
-vehicle = Holonomic(shapes = Circle(radius=0.1), options={'syslimit': 'norm_inf'}, bounds={'vmax': 0.8, 'vmin':-1, 'amax':10, 'amin':-10})
+vehicle = Holonomic(shapes = Circle(radius=0.2), options={'syslimit': 'norm_inf'}, bounds={'vmax': 1.2, 'vmin':-1.2, 'amax':10, 'amin':-10})
 
 # create environment
 # stationary obstacles via GUI
 import Tkinter as tk
 root = tk.Tk()
-options={'cell_size': 0.25}
+options={'cell_size': 1}
 gui = EnvironmentGUI(parent=root, width=16, height=16, position=[0,0], options=options)
 root.mainloop()
 environment = gui.get_environment()
@@ -59,5 +59,5 @@ vehicle.plot('input', knots=True, prediction=True, labels=['v_x (m/s)', 'v_y (m/
 
 # run it!
 simulator.run()
-multiproblem.save_movie('scene', format='gif', name='multiproblemgif', number_of_frames=100, movie_time=5, axis=False)
+multiproblem.save_movie('scene', format='gif', name='multiproblemgif', number_of_frames=200, movie_time=20, axis=False)
 # multiproblem.save_movie('scene', format='tikz', name='multiproblemtikz', number_of_frames=100, movie_time=5, axis=False)
