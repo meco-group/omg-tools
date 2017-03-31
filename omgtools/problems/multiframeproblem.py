@@ -849,49 +849,57 @@ class MultiFrameProblem(Problem):
 
         points_in_frame = []  # holds all waypoints in the frame
         # run over all waypoints, starting from the waypoint closest to start
-        for idx, point in enumerate(self.global_path[index:]):
-            # update limits of frame
-            xmin,ymin,xmax,ymax = frame['border']['limits']
-            if not self.point_in_frame(point, frame=frame):
-                # next waypoint is not inside frame,
-                # enlarge frame such that it is in there
-                # determine which borders to move
-                if points_in_frame:
-                    # assign last point in frame
-                    prev_point = points_in_frame[-1]
-                else:
-                    # no points in frame yet, so compare with current state
-                    prev_point = start
-                # compare point with prev_point
-                xmin_new,ymin_new,xmax_new,ymax_new = xmin,ymin,xmax,ymax
-                if point[0] > prev_point[0]:
-                    xmax_new = point[0] + self.veh_size*self.scale_factor
-                elif point[0] < prev_point[0]:
-                    xmin_new = point[0] - self.veh_size*self.scale_factor
-                # else: xmin and xmax are kept
-                if point[1] > prev_point[1]:
-                    ymax_new = point[1] + self.veh_size*self.scale_factor
-                elif point[1] < prev_point[1]:
-                    ymin_new = point[1] - self.veh_size*self.scale_factor
-                    ymax_new = ymax
-                # else: ymin and ymax are kept
 
-                frame['border'] = self.make_border(xmin_new,ymin_new,xmax_new,ymax_new)
-                # check if there are any obstacles inside this new frame
-                stationary_obstacles = self.get_stationary_obstacles_in_frame(frame=frame)
-                if stationary_obstacles:
-                    # there is an obstacle inside the frame after enlarging
-                    # don't add point and keep old frame
-                    frame['border'] = self.make_border(xmin,ymin,xmax,ymax)
-                    # frame is finished
-                    break
-                else:
-                    points_in_frame.append(point)
-            else: 
-                # next waypoint is inside frame, without enlarging it
-                # so add it anyway
-                points_in_frame.append(point)
+        # first try if endpoint can be inside a frame without obstacles
+        point = self.global_path[-1]
+        if not self.point_in_frame(point, frame=frame):
+            # next waypoint is not inside frame,
+            # enlarge frame such that it is in there
+            # determine which borders to move
 
+            # make frame with first point = start and next point = goal
+            prev_point = start
+
+            frame, stationary_obstacles = self.update_frame_with_waypoint(frame, prev_point, point)
+            
+            if stationary_obstacles:
+                # there is an obstacle inside the frame after enlarging
+                # don't add point and keep old frame
+                frame['border'] = self.make_border(xmin,ymin,xmax,ymax)
+                # current frame cannot contain the endpoint
+                for idx, point in enumerate(self.global_path[index:]):
+                    # update limits of frame
+                    xmin,ymin,xmax,ymax = frame['border']['limits']
+
+                    if not self.point_in_frame(point, frame=frame):
+                        # next waypoint is not inside frame,
+                        # enlarge frame such that it is in there
+                        # determine which borders to move
+                        if points_in_frame:
+                            # assign last point in frame
+                            prev_point = points_in_frame[-1]
+                        else:
+                            # no points in frame yet, so compare with current state
+                            prev_point = start
+
+                        frame, stationary_obstacles = self.update_frame_with_waypoint(frame, prev_point, point)                        
+
+                        if stationary_obstacles:
+                            # there is an obstacle inside the frame after enlarging
+                            # don't add point and keep old frame
+                            frame['border'] = self.make_border(xmin,ymin,xmax,ymax)
+                            # frame is finished
+                            break
+                        else:
+                            points_in_frame.append(point)
+                    else: 
+                        # next waypoint is inside frame, without enlarging it
+                        # so add it anyway
+                        points_in_frame.append(point)
+            else:
+                # frame with first waypoint and goal position contained no obstacles
+                # directly using this frame
+                points_in_frame = self.global_path[index:]
         if not points_in_frame:
             raise RuntimeError('No waypoint was found inside min_nobs frame, something wrong with frame')
         else:
@@ -901,6 +909,29 @@ class MultiFrameProblem(Problem):
         print 'time in min_nobs_frame', end_time-start_time
 
         return frame
+
+    def update_frame_with_waypoint(self, frame, prev_point, point):
+        # updates the frame when adding a new waypoint to the frame
+        # compare point with prev_point
+        xmin,ymin,xmax,ymax = frame['border']['limits']
+        xmin_new,ymin_new,xmax_new,ymax_new = xmin,ymin,xmax,ymax
+        if point[0] > prev_point[0]:
+            xmax_new = point[0] + self.veh_size*self.scale_factor
+        elif point[0] < prev_point[0]:
+            xmin_new = point[0] - self.veh_size*self.scale_factor
+        # else: xmin and xmax are kept
+        if point[1] > prev_point[1]:
+            ymax_new = point[1] + self.veh_size*self.scale_factor
+        elif point[1] < prev_point[1]:
+            ymin_new = point[1] - self.veh_size*self.scale_factor
+            ymax_new = ymax
+        # else: ymin and ymax are kept
+
+        frame['border'] = self.make_border(xmin_new,ymin_new,xmax_new,ymax_new)
+        # check if there are any obstacles inside this new frame
+        stationary_obstacles = self.get_stationary_obstacles_in_frame(frame=frame)
+
+        return frame, stationary_obstacles
 
     def scale_up_frame(self, frame):
         # scale up the current frame in all directions, until it hits the borders
