@@ -41,6 +41,7 @@ class Deployer:
         current_time = float(current_time)
         if not update_time:
             update_time = self.update_time
+        ### Adapted
         if hasattr(self.problem.vehicles[0], 'signals'):
             if round(update_time - float(self.problem.vehicles[0].signals['time'][:, -1] - self.current_time),4) >= self.sample_time:
                 update_time = float(self.problem.vehicles[0].signals['time'][:, -1] - self.current_time)
