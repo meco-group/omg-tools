@@ -29,12 +29,9 @@ vehicle = Holonomic(shapes = Circle(radius=0.2), options={'syslimit': 'norm_inf'
 # stationary obstacles via GUI
 import Tkinter as tk
 root = tk.Tk()
-options={'cell_size': 1}
-gui = EnvironmentGUI(parent=root, width=16, height=16, position=[0,0], options=options)
+gui = EnvironmentGUI(parent=root, width=16, height=16, position=[0,0], options={})
 root.mainloop()
 environment = gui.get_environment()
-if hasattr(gui, 'cell_size'):  # set in reinitialize
-	options['cell_size'] = gui.cell_size
 
 # manually add moving obstacles to environment
 
@@ -45,7 +42,7 @@ vehicle.set_terminal_conditions(clicked[1])
 start, goal = clicked[0], clicked[1]
 
 # make global planner
-globalplanner = AStarPlanner(environment, options['cell_size'], start, goal)
+globalplanner = AStarPlanner(environment, gui.n_cells, start, goal)
 
 # make coordinator
 options={'freeT': True, 'horizon_time': 10, 'no_term_con_der': False}
@@ -59,5 +56,5 @@ vehicle.plot('input', knots=True, prediction=True, labels=['v_x (m/s)', 'v_y (m/
 
 # run it!
 simulator.run()
-multiproblem.save_movie('scene', format='gif', name='multiproblemgif', number_of_frames=200, movie_time=20, axis=False)
+multiproblem.save_movie('scene', format='gif', name='multiproblemgif', number_of_frames=300, movie_time=30, axis=False)
 # multiproblem.save_movie('scene', format='tikz', name='multiproblemtikz', number_of_frames=100, movie_time=5, axis=False)
