@@ -25,8 +25,6 @@ class SVGReader(object):
             if (self.tree.get('width')[-2:] is 'mm'):
                 self.width_px = float(xmax) - float(xmin)
                 self.height_px = float(ymax) - float(ymin)
-                # self.width_mm = float(self.tree.get('width')[:-2])  # not necessary, can be obtained from meter_to_pixel and px
-                # self.height_mm = float(self.tree.get('height')[:-2])
                 self.meter_to_pixel = self.width_px/float(self.tree.get('width')[:-2])
             else: # units px
                 self.width_px = float(xmax) - float(xmin)
@@ -35,6 +33,9 @@ class SVGReader(object):
             # if no unit mentioned, it is px
             self.width_px = float(self.tree.get('width'))  # get width from svg
             self.height_px = float(self.tree.get('height'))  # get height from svg
+
+        self.position = [0, 0]  # default
+
         self.obstacles = []
 
     def convert_path_to_points(self):
