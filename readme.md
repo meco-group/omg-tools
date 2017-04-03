@@ -20,8 +20,8 @@ The animations below give an overview of typical problems that OMG-tools can han
 <td align="center" valign="center" style="background-color:rgba(0, 0, 0, 0);">
 <img width=100% src="./doc/gifs/bicycle.gif" alt="Point-to-point motion of bicycle model"/>
 </td>
-<td align="center" valign="center" style="background-color:rgba(0, 0, 0, 0);">
-<img width=100% src="./doc/gifs/warehouse.gif" alt="Holonomic vehicle finding its way in a warehouse"/>
+<td align="center" valign="center" bgcolor="#FFFFFF">
+<img width=100% src="./doc/gifs/maze.gif" alt="Holonomic vehicle moving through a maze"/>
 </td>
 <td align="center" valign="center" style="background-color:rgba(0, 0, 0, 0);">
 <img width=100% src="./doc/gifs/revolving_door.gif" alt="Holonomic vehicle passing through a revolving door"/>
@@ -38,8 +38,8 @@ The animations below give an overview of typical problems that OMG-tools can han
 </td>
 </tr>
 <tr>
-<td align="center" valign="center" bgcolor="#FFFFFF">
-<img width=100% src="./doc/gifs/platform_landing.gif" alt="Quadrotors landing on platform"/>
+<td aliggn="center" valign="center" bgcolor="#FFFFFF">
+<img width=100% src="./doc/gifs/multiproblem_rect.gif" alt="Big warehouse with rectangular bouncing obstacles"/>
 </td>
 <td align="center" valign="center" bgcolor="#FFFFFF">
 <img width=100% src="./doc/gifs/formation_quad_ufo.gif" alt="Quadrotors avoiding a UFO"/>
@@ -63,11 +63,11 @@ The animations below give an overview of typical problems that OMG-tools can han
 <td align="center" valign="center" bgcolor="#FFFFFF">
 <img width=100% src="./doc/gifs/multiproblem_circ.gif" alt="Big warehouse with circular bouncing obstacles"/>
 </td>
-<td align="center" valign="center" bgcolor="#FFFFFF">
-<img width=100% src="./doc/gifs/maze.gif" alt="Holonomic vehicle moving through a maze"/>
+<td align="center" valign="center" style="background-color:rgba(0, 0, 0, 0);">
+<img width=100% src="./doc/gifs/warehouse.gif" alt="Holonomic vehicle finding its way in a warehouse"/>
 </td>
-<td aliggn="center" valign="center" bgcolor="#FFFFFF">
-<img width=100% src="./doc/gifs/multiproblem_rect.gif" alt="Big warehouse with rectangular bouncing obstacles"/>
+<td align="center" valign="center" bgcolor="#FFFFFF">
+<img width=100% src="./doc/gifs/platform_landing.gif" alt="Quadrotors landing on platform"/>
 </td>
 </tr>
 </table>
