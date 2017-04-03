@@ -59,6 +59,17 @@ The animations below give an overview of typical problems that OMG-tools can han
 <img width=100% src="./doc/gifs/revolving_door_diffdrive.gif" alt="Differential drive moving through a revolving door"/>
 </td>
 </tr>
+<tr>
+<td align="center" valign="center" bgcolor="#FFFFFF">
+<img width=100% src="./doc/gifs/multiproblem_circ.gif" alt="Big warehouse with circular bouncing obstacles"/>
+</td>
+<td align="center" valign="center" bgcolor="#FFFFFF">
+<img width=100% src="./doc/gifs/maze.gif" alt="Holonomic vehicle moving through a maze"/>
+</td>
+<td aliggn="center" valign="center" bgcolor="#FFFFFF">
+<img width=100% src="./doc/gifs/multiproblem_rect.gif" alt="Big warehouse with rectangular bouncing obstacles"/>
+</td>
+</tr>
 </table>
 
 ### Experimental validation
