@@ -900,6 +900,11 @@ class MultiFrameProblem(Problem):
                 # frame with first waypoint and goal position contained no obstacles
                 # directly using this frame
                 points_in_frame = self.global_path[index:]
+        else:
+            # all the remaining waypoints are in the current frame
+            points_in_frame.extend(self.global_path[index:])
+            # make endpoint_frame equal to the goal (point = self.global_path[-1] here)                 
+            frame['endpoint_frame'] = point
         if not points_in_frame:
             raise RuntimeError('No waypoint was found inside min_nobs frame, something wrong with frame')
         else:
