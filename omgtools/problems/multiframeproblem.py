@@ -1022,7 +1022,9 @@ class MultiFrameProblem(Problem):
                     break
 
         # update waypoints
-        for idx, point in enumerate(self.global_path):
+        # starting from the last waypoint which was already in the frame
+        index = self.global_path.index(frame['waypoints'][-1])
+        for idx, point in enumerate(self.global_path[index:]):
             if self.point_in_frame(point, frame=scaled_frame):
                 if not point in scaled_frame['waypoints']:
                     # point was not yet a waypoint of the frame,
