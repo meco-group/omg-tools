@@ -406,7 +406,7 @@ class MultiFrameProblem(Problem):
 
             # if final goal is not in the current frame, compare current distance
             # to the local goal with the initial distance
-            if not self.point_in_frame(self.goal_state):
+            if not self.frame['endpoint_frame'] == self.goal_state:
                     init_dist = distance_between_points(self.frame['waypoints'][0], self.frame['endpoint_frame'])
                     curr_dist = distance_between_points(self.curr_state[:2], self.frame['endpoint_frame'])
                     if curr_dist < init_dist*(1-(percentage/100.)):
