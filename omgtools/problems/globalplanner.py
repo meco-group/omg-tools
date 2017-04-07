@@ -514,8 +514,7 @@ class Grid:
                                 [pos[0] - r - self.offset[0], pos[1] + r + self.offset[1]],
                                 [pos[0] - r - self.offset[0], pos[1] - r - self.offset[1]]]
                 vertices = np.array(vertices)
-                vertices = np.round(vertices, 4)  # rounding off vertex positions
-                # Todo: remove, better work on pixels!
+                vertices = np.round(vertices, 4)  # rounding off vertex positions, for easier comparison below
 
                 occ_cells = []
                 for cell in cells:
