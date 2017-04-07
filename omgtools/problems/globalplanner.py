@@ -440,7 +440,7 @@ class Grid:
             if points_to_check is not None:
                 d_min = max(self.cell_height, self.cell_width)
                 for p in points_to_check:
-                    distance = self.distance_between_cells(p, point)
+                    distance = self.distance_between_cells(p, moved_point)
                     if distance < d_min:
                         d_min = distance
                         moved_point = p
