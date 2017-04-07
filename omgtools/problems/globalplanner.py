@@ -48,7 +48,7 @@ class QuadmapPlanner(GlobalPlanner):
         pass
 
 class AStarPlanner(GlobalPlanner):
-    def __init__(self, environment, n_cells, start, goal):
+    def __init__(self, environment, n_cells, start, goal, options={}):
 
         if isinstance(environment.room['shape'], (Rectangle,Square)):
             grid_width = environment.room['shape'].width
@@ -60,11 +60,14 @@ class AStarPlanner(GlobalPlanner):
         else:
             raise RuntimeError('Environment has invalid room shape, only Rectangle or Square is supported')
 
+        # check if vehicle size needs to be taken into account
+        self.veh_size = options['veh_size'] if 'veh_size' in options else [0.,0.]
+
         # make grid        
         if ((grid_width == grid_height) and (n_cells[0] == n_cells[1])):
-            self.grid = SquareGrid(size=grid_width, position=grid_position, n_cells=n_cells)
+            self.grid = SquareGrid(size=grid_width, position=grid_position, n_cells=n_cells, offset=self.veh_size)
         else:
-            self.grid = Grid(width=grid_width, height=grid_height, position=grid_position, n_cells=n_cells)
+            self.grid = Grid(width=grid_width, height=grid_height, position=grid_position, n_cells=n_cells, offset=self.veh_size)
 
         # occupy grid cells based on environment
         blocked = self.grid.get_occupied_cells(environment)
@@ -275,7 +278,7 @@ class Node:
 
 class Grid:
     # based on: http://www.redblobgames.com/pathfinding/a-star/implementation.html
-    def __init__(self, width, height, position, n_cells):
+    def __init__(self, width, height, position, n_cells, offset=[0.,0.]):
         self.occupied = []  # initialize grid as empty
         self.width = width
         self.height = height
@@ -283,6 +286,8 @@ class Grid:
         self.n_cells = n_cells  # number of cells in horizontal and vertical direction
         self.cell_width = self.width*1./self.n_cells[0]
         self.cell_height = self.height*1./self.n_cells[1]
+
+        self.offset = offset  # blows up obstacles, e.g. to take the vehicle size into account in the grid
 
         # # todo: dirty trick to avoid float division, alternative?
         # if (width*1e5) % (cell_width*1e5) != 0:
@@ -489,16 +494,25 @@ class Grid:
                     vertex_x = obstacle.shape.vertices[0]
                     vertex_y = obstacle.shape.vertices[1]
                     for k in range(len(vertex_x)):
-                        v_x = vertex_x[k] + pos[0]
-                        v_y = vertex_y[k] + pos[1]
+                        if vertex_x[k] == min(vertex_x):
+                            # take into account offset to avoid waypoints which are so close to obstacles that they are not reachable
+                            v_x = vertex_x[k] + pos[0] - self.offset[0]
+                        else:
+                            # take into account offset to avoid waypoints which are so close to obstacles that they are not reachable
+                            v_x = vertex_x[k] + pos[0] + self.offset[0]
+                        if vertex_y[k] == min(vertex_y):
+                            v_y = vertex_y[k] + pos[1] - self.offset[1]
+                        else:
+                            v_y = vertex_y[k] + pos[1] + self.offset[1]
                         vertices.append([v_x, v_y])
                 if isinstance(obstacle.shape, Circle):
                     r = obstacle.shape.radius
                     # approximate circle by a square and add these vertices
-                    vertices = [[pos[0]+r, pos[1]+r],
-                                [pos[0]+r, pos[1]-r],
-                                [pos[0]-r, pos[1]+r],
-                                [pos[0]-r, pos[1]-r]]
+                    # take into account offset, e.g. to avoid waypoints which are closer to obstacles than the vehicle can reach
+                    vertices = [[pos[0] + r + self.offset[0], pos[1] + r + self.offset[1]],
+                                [pos[0] + r + self.offset[0], pos[1] - r - self.offset[1]],
+                                [pos[0] - r - self.offset[0], pos[1] + r + self.offset[1]],
+                                [pos[0] - r - self.offset[0], pos[1] - r - self.offset[1]]]
                 vertices = np.array(vertices)
                 vertices = np.round(vertices, 4)  # rounding off vertex positions
                 # Todo: remove, better work on pixels!
