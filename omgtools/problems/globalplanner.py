@@ -518,26 +518,37 @@ class Grid:
 
                 occ_cells = []
                 for cell in cells:
+                    blocked = False  # boolean to indicate if cell is blocked
                     # one of the vertices is inside a cell
                     cell_vertices = []
                     cell_vertices.append([cell['pos'][0] - 0.5*self.cell_width, cell['pos'][1] - 0.5*self.cell_height])
                     cell_vertices.append([cell['pos'][0] + 0.5*self.cell_width, cell['pos'][1] - 0.5*self.cell_height])
                     cell_vertices.append([cell['pos'][0] - 0.5*self.cell_width, cell['pos'][1] + 0.5*self.cell_height])
                     cell_vertices.append([cell['pos'][0] + 0.5*self.cell_width, cell['pos'][1] + 0.5*self.cell_height])
-                    # cell is inside the vertices of an obstacle
+                    cell_vertices = np.array(cell_vertices)
+                    # cell center is inside the vertices of an obstacle
                     if (min(vertices[:,0]) < cell['pos'][0] < max(vertices[:,0]) and 
                         min(vertices[:,1]) < cell['pos'][1] < max(vertices[:,1])):
                         occ_cells.append(cell)
-
                     else:
+                        # check if any of the cell vertices are inside the obstacle vertices
                         for cell_v in cell_vertices:
                             if (min(vertices[:,0]) < cell_v[0] < max(vertices[:,0]) and 
                                 min(vertices[:,1]) < cell_v[1] < max(vertices[:,1])):
-                                    occ_cells.append(cell)
+                                    # avoid adding the same cell multiple times
+                                    if cell not in occ_cells:
+                                        occ_cells.append(cell)
+                                    blocked = True  # cell is blocked, go to next cell
                                     break
-                    # if one of the vertices is inside the cell, add the cell and go to next cell
-                    # if (cell in occ_cells):
-                    #     break
+                        # check if any of the obstacle vertices are inside the cell vertices
+                        if not blocked:  # cell was not detected as blocked yet
+                            for v in vertices:
+                                if (min(cell_vertices[:,0]) < v[0] < max(cell_vertices[:,0]) and 
+                                    min(cell_vertices[:,1]) < v[1] < max(cell_vertices[:,1])):
+                                        # avoid adding the same cell multiple times
+                                        if cell not in occ_cells:
+                                            occ_cells.append(cell)
+                                        break  # one obstacle vertex is inside the cell, go to next cell
                 # if cell is found to be occupied, remove it, don't check again for next obstacle
                 for cell in occ_cells:
                     cells.remove(cell)
