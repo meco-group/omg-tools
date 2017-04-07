@@ -951,6 +951,11 @@ class MultiFrameProblem(Problem):
         # first try to put xmax = frame border
         xmax_new = self.environment.room['shape'].get_canvas_limits()[0][1] + self.environment.room['position'][0]
         scaled_frame['border'] = self.make_border(xmin,ymin,xmax_new,ymax)
+        
+        # Todo: updating with self.veh_size*self.scale_factor may be too big
+        # leading to frames which are not as wide as they can be
+        # change e.g. to xmax_new = xmax + 0.1
+
         if not self.get_stationary_obstacles_in_frame(frame=scaled_frame):
             xmax = xmax_new  # assign new xmax
         else:
