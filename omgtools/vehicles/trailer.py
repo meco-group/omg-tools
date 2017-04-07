@@ -156,14 +156,14 @@ class Trailer(Vehicle):
         parameters.update(parameters_veh)
         return parameters
 
-    def define_collision_constraints(self, hyperplanes, environment, splines):
+    def define_collision_constraints_trailer(self, hyperplanes_lead_veh, hyperplanes_trailer, environment, splines):
         tg_ha_tr = splines[0]
         # get position of vehicle
         x_veh, y_veh = self.lead_veh.get_pos_splines(splines[1: ])
         # pass on vehicle position and trailer offset to determine anti-collision constraints
         # -self.l_hitch because trailer is behind the vehicle
-        self.define_collision_constraints_2d(hyperplanes, environment, [x_veh, y_veh], tg_ha_tr, -self.l_hitch)
-        self.lead_veh.define_collision_constraints(hyperplanes, environment, splines[1: ])
+        self.define_collision_constraints_2d(hyperplanes_trailer, environment, [x_veh, y_veh], tg_ha_tr, -self.l_hitch) #positie, hoek t.o.v. die positie en offset
+        self.lead_veh.define_collision_constraints(hyperplanes_lead_veh, environment, splines[1:])
 
     def splines2signals(self, splines, time):
         signals = {}

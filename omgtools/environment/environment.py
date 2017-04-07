@@ -106,8 +106,31 @@ class Environment(OptiChild, PlotLayer):
         for obstacle in self.obstacles:
             if obstacle.options['avoid']:
                 obstacle.define_collision_constraints(hyp_obs[obstacle])
-        for spline in vehicle.splines:
-            vehicle.define_collision_constraints(hyp_veh, self, spline)
+        if (vehicle.lead_veh is None): #als er dus geen trekkend voertuig is, wat erop duidt dat dit geen trailer is.
+            for spline in vehicle.splines:
+                vehicle.define_collision_constraints(hyp_veh, self, spline)
+
+        else: #vehicle is de trailer, vehicle.lead_veh is het trekkend voertuig
+            hyp_veh_lead, hyp_obs_lead = {}, {}
+            for k, shape in enumerate(vehicle.lead_veh.shapes):
+                hyp_veh_lead[shape] = []
+                for l, obstacle in enumerate(self.obstacles):
+                    if obstacle.options['avoid']:
+                        if obstacle not in hyp_obs_lead:
+                            hyp_obs_lead[obstacle] = []
+                        a_lead = self.define_spline_variable(
+                            'a' + '_' + vehicle.lead_veh.label + '_' + str(k) + str(l), self.n_dim, basis=basis)
+                        b_lead = self.define_spline_variable(
+                            'b' + '_' + vehicle.lead_veh.label + '_' + str(k) + str(l), 1, basis=basis)[0]
+                        self.define_constraint(
+                            sum([a_lead[p] * a_lead[p] for p in range(self.n_dim)]) - 1, -inf, 0.)
+                        hyp_veh_lead[shape].append({'a': a_lead, 'b': b_lead})
+                        hyp_obs_lead[obstacle].append({'a': a_lead, 'b': b_lead})
+            for obstacle in self.obstacles:
+                if obstacle.options['avoid']:
+                    obstacle.define_collision_constraints(hyp_obs_lead[obstacle])
+            for spline in vehicle.splines:
+                vehicle.define_collision_constraints_trailer(hyp_veh_lead,hyp_veh, self, spline)
 
     def define_intervehicle_collision_constraints(self, vehicles):
         hyp_veh = {veh: {sh: [] for sh in veh.shapes} for veh in vehicles}
