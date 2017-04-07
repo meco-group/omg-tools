@@ -20,8 +20,8 @@ The animations below give an overview of typical problems that OMG-tools can han
 <td align="center" valign="center" style="background-color:rgba(0, 0, 0, 0);">
 <img width=100% src="./doc/gifs/bicycle.gif" alt="Point-to-point motion of bicycle model"/>
 </td>
-<td align="center" valign="center" style="background-color:rgba(0, 0, 0, 0);">
-<img width=100% src="./doc/gifs/warehouse.gif" alt="Holonomic vehicle finding its way in a warehouse"/>
+<td align="center" valign="center" bgcolor="#FFFFFF">
+<img width=100% src="./doc/gifs/maze.gif" alt="Holonomic vehicle moving through a maze"/>
 </td>
 <td align="center" valign="center" style="background-color:rgba(0, 0, 0, 0);">
 <img width=100% src="./doc/gifs/revolving_door.gif" alt="Holonomic vehicle passing through a revolving door"/>
@@ -38,14 +38,36 @@ The animations below give an overview of typical problems that OMG-tools can han
 </td>
 </tr>
 <tr>
-<td align="center" valign="center" bgcolor="#FFFFFF">
-<img width=100% src="./doc/gifs/platform_landing.gif" alt="Quadrotors landing on platform"/>
+<td aliggn="center" valign="center" bgcolor="#FFFFFF">
+<img width=100% src="./doc/gifs/multiproblem_rect.gif" alt="Big warehouse with rectangular bouncing obstacles"/>
 </td>
 <td align="center" valign="center" bgcolor="#FFFFFF">
 <img width=100% src="./doc/gifs/formation_quad_ufo.gif" alt="Quadrotors avoiding a UFO"/>
 </td>
 <td aliggn="center" valign="center" bgcolor="#FFFFFF">
 <img width=100% src="./doc/gifs/3dquadrotor.gif" alt="3D quadrotor in obstructed environment"/>
+</td>
+</tr>
+<tr>
+<td align="center" valign="center" bgcolor="#FFFFFF">
+<img width=100% src="./doc/gifs/agv.gif" alt="Rear-wheel steered AGV parking"/>
+</td>
+<td align="center" valign="center" bgcolor="#FFFFFF">
+<img width=100% src="./doc/gifs/p2p_holonomic_blocking.gif" alt="Holonomic vehicle moving while suddenly blocked"/>
+</td>
+<td aliggn="center" valign="center" bgcolor="#FFFFFF">
+<img width=100% src="./doc/gifs/revolving_door_diffdrive.gif" alt="Differential drive moving through a revolving door"/>
+</td>
+</tr>
+<tr>
+<td align="center" valign="center" bgcolor="#FFFFFF">
+<img width=100% src="./doc/gifs/multiproblem_circ.gif" alt="Big warehouse with circular bouncing obstacles"/>
+</td>
+<td align="center" valign="center" style="background-color:rgba(0, 0, 0, 0);">
+<img width=100% src="./doc/gifs/warehouse.gif" alt="Holonomic vehicle finding its way in a warehouse"/>
+</td>
+<td align="center" valign="center" bgcolor="#FFFFFF">
+<img width=100% src="./doc/gifs/platform_landing.gif" alt="Quadrotors landing on platform"/>
 </td>
 </tr>
 </table>
@@ -61,6 +83,21 @@ OMG-tools implemented in real life.
 <p align="center">
 <a href="https://www.youtube.com/watch?v=J_ShOP_VWTg">
 <img src="https://img.youtube.com/vi/J_ShOP_VWTg/0.jpg" alt="Online distributed motion planning"/>
+</a>
+</p>
+<p align="center">
+<a href="https://www.youtube.com/watch?v=ozV3aJvEAyY">
+<img src="https://img.youtube.com/vi/ozV3aJvEAyY/0.jpg" alt="Spline-based motion planning"/>
+</a>
+</p>
+<p align="center">
+<a href="https://www.youtube.com/watch?v=yGGZv57eiB4">
+<img src="https://img.youtube.com/vi/yGGZv57eiB4/0.jpg" alt="Spline-based motion planning"/>
+</a>
+</p>
+<p align="center">
+<a href="https://www.youtube.com/watch?v=4JaY0_k24WM">
+<img src="https://img.youtube.com/vi/4JaY0_k24WM/0.jpg" alt="Spline-based motion planning"/>
 </a>
 </p>
 <p align="center">
@@ -119,7 +156,7 @@ OMG-tools is written in Python 2.7 and depends on the packages numpy, scipy and 
 
 `sudo apt-get install python-numpy python-scipy python-matplotlib`
 
-It uses [CasADi](http://casadi.org) as a framework for symbolic computations and interface to IPOPT, a software package for large-scale nonlinear optimization. For installation instructions regarding these software packages, the user is referred to the [CasADi installation page](http://install.casadi.org). The current implementation of this toolbox relies on CasADi 3.1. In the examples, we use the [HSL linear solvers](https://github.com/casadi/casadi/wiki/Obtaining-HSL), as they result in a much faster execution.
+It uses [CasADi](http://casadi.org) as a framework for symbolic computations and interface to IPOPT, a software package for large-scale nonlinear optimization. The current implementation of this toolbox relies on CasADi 3.1, which can be obtained from its [install page](http://install31.casadi.org). In the examples, we use the [HSL linear solvers](https://github.com/casadi/casadi/wiki/Obtaining-HSL), as they result in a much faster execution.
 
 If you want to save your simulation results in Tikz-format, you need [matplotlib2tikz](https://github.com/nschloe/matplotlib2tikz).
 
