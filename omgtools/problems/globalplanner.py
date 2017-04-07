@@ -114,8 +114,8 @@ class AStarPlanner(GlobalPlanner):
     def calculate_h_cost(self, node):
         # h_cost is determined by horizontal and vertical distance from current node to goal node
         # this is called the Manhattan way of determining the h cost
-        h_cost_x = abs(self.goal[0] - node.pos[0])
-        h_cost_y = abs(self.goal[1] - node.pos[1])
+        h_cost_x = abs(self.goal[0] - node.pos[0])*self.grid.cell_width
+        h_cost_y = abs(self.goal[1] - node.pos[1])*self.grid.cell_height
         h_cost = h_cost_x + h_cost_y
 
         return h_cost
