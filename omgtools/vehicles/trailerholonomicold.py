@@ -166,7 +166,7 @@ class TrailerHolonomicOld(Vehicle):
         tg_ha_tr, x_veh, y_veh = splines[:3]
         # pass on vehicle position and trailer offset to determine anti-collision constraints
         # -self.l_hitch because trailer is behind the vehicle
-        #self.define_collision_constraints_2d(hyperplanes_trailer, environment, [x_veh, y_veh], tg_ha_tr, -self.l_hitch) #positie, hoek t.o.v. die positie en offset
+        self.define_collision_constraints_2d(hyperplanes_trailer, environment, [x_veh, y_veh], tg_ha_tr, -self.l_hitch) #positie, hoek t.o.v. die positie en offset
         self.lead_veh.define_collision_constraints(hyperplanes_lead_veh, environment, splines[1: ])
 
     def splines2signals(self, splines, time):

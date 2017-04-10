@@ -177,3 +177,9 @@ class HolonomicOrient(Vehicle):
 
     def ode(self, state, input):
         return input
+    def update_signals(self, signals):
+        self.signals = signals
+
+    def update_prediction(self, prediction):
+        self.prediction = prediction
+

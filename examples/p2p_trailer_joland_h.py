@@ -24,7 +24,7 @@ sys.path.insert(0, os.getcwd()+"/..")
 from omgtools import *
 
 # create vehicle
-vehicle = HolonomicOrient(shapes=Circle(0.4))  # in deg
+vehicle = HolonomicOrient(shapes=Circle(0.2))  # in deg
 vehicle.define_knots(knot_intervals=9)  # adapt amount of knot intervals was eerst 9
 vehicle.set_initial_conditions([2., 5., 0.])  # input orientation in deg
 #vehicle.set_terminal_conditions([3., 3., 90.])
@@ -40,7 +40,7 @@ trailer.set_initial_conditions([0])  # input orientation in deg
 
 # create environment
 environment = Environment(room={'shape': Square(10.), 'position': [5.,5.]})
-rectangle = Rectangle(width=.2, height=5.2)
+rectangle = Rectangle(width=.2, height=4.)
 
 environment.add_obstacle(Obstacle({'position': [3., 3.]}, shape=rectangle))
 environment.add_obstacle(Obstacle({'position': [6., 7.]}, shape=rectangle))

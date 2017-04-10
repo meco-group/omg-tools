@@ -9,3 +9,7 @@ from agv import AGV
 from trailer import Trailer
 from fleet import Fleet
 from quadrotor3d import Quadrotor3D
+from trailerjoland import TrailerJoland
+from trailerholonomic import TrailerHolonomic
+from trailerjolandholonomic import TrailerJolandHolonomic
+from trailerholonomicold import TrailerHolonomicOld

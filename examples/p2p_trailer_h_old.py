@@ -27,7 +27,7 @@ number_knot_intervals = 15.
 vehicle.define_knots(knot_intervals=number_knot_intervals)  # adapt amount of knot intervals
 vehicle.set_initial_conditions([2., 5., -20.])  # input orientation in deg
 #vehicle.set_terminal_conditions([3., 3., 90.])
-vehicle.set_terminal_conditions([8., 5.,0.])
+vehicle.set_terminal_conditions([8., 0.,0.])
 
 # create trailer
 trailer = TrailerHolonomicOld(lead_veh=vehicle,  shapes=Square(0.4), l_hitch = 0.6,
@@ -39,7 +39,7 @@ trailer.set_terminal_conditions([0.])  # this depends on the application e.g. dr
 
 # create environment
 environment = Environment(room={'shape': Square(10.), 'position': [5.,5.]})
-rectangle = Rectangle(width=.2, height=4.8)
+rectangle = Rectangle(width=.2, height=5.)
 
 environment.add_obstacle(Obstacle({'position': [3., 3.]}, shape=rectangle))
 environment.add_obstacle(Obstacle({'position': [6., 7.]}, shape=rectangle))

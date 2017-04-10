@@ -47,14 +47,14 @@ environment.add_obstacle(Obstacle({'position': [6., 7.]}, shape=rectangle))
 
 # environment.add_obstacle(Obstacle({'position': [2., 1.5]}, shape=rectangle))
 # create a point-to-point problem
-problem = Point2point(trailer, environment, freeT=False)  # pass trailer to problem
+problem = Point2point(trailer, environment, freeT=True)  # pass trailer to problem
 # todo: isn't there are a cleaner way?
 problem.father.add(vehicle)  # add vehicle to optifather, such that it knows the trailer variables
 # extra solver settings which may improve performance https://www.coin-or.org/Ipopt/documentation/node53.html#SECTION0001113010000000000000
 #problem.set_options({'solver_options': {'ipopt': {'ipopt.hessian_approximation': 'limited-memory'}}})
 problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57','ipopt.print_level': 4}}})
 problem.init()
-problem.export()
+#problem.export()
 
 # create simulator
 simulator = Simulator(problem)
@@ -63,6 +63,6 @@ trailer.plot('input', knots=True, labels=['v_x (m/s)','v_y (m/s)'])
 trailer.plot('state', knots=True, labels=['x_tr (m)', 'y_tr (m)', 'theta_tr (rad)', 'x_veh (m)', 'y_veh (m)', 'theta_veh (rad)'])
 
 # run it!
-simulator.run()
+simulator.run_once()
 problem.save_movie('scene', format='gif', name='lead_off_rechtdoor5_ma57', number_of_frames=100, movie_time=5, axis=False)
 
