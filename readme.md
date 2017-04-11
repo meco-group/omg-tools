@@ -74,38 +74,50 @@ The animations below give an overview of typical problems that OMG-tools can han
 </table>
 
 ### Experimental validation
-OMG-tools implemented in real life.
+OMG-tools implemented on real-life motion systems. Click on a picture to watch the Youtube video.
 
-<p align="center">
+<table style="border: none; border-collapse: collapse;" border="0" cellspacing="0" cellpadding="0" width="100%" align="center">
+<tr>
+<td align="center" valign="center" style="background-color:rgba(0, 0, 0, 0);">
 <a href="https://www.youtube.com/watch?v=w7tfz2djHqU">
 <img src="https://img.youtube.com/vi/w7tfz2djHqU/0.jpg" alt="Online motion planning"/>
 </a>
-</p>
-<p align="center">
+</td>
+<td align="center" valign="center" bgcolor="#FFFFFF">
 <a href="https://www.youtube.com/watch?v=J_ShOP_VWTg">
 <img src="https://img.youtube.com/vi/J_ShOP_VWTg/0.jpg" alt="Online distributed motion planning"/>
 </a>
-</p>
-<p align="center">
+</td>
+</tr>
+
+<tr>
+<td align="center" valign="center" style="background-color:rgba(0, 0, 0, 0);">
 <a href="https://www.youtube.com/watch?v=ozV3aJvEAyY">
 <img src="https://img.youtube.com/vi/ozV3aJvEAyY/0.jpg" alt="Spline-based motion planning"/>
 </a>
-</p>
-<p align="center">
+</td>
+<td align="center" valign="center" bgcolor="#FFFFFF">
 <a href="https://www.youtube.com/watch?v=yGGZv57eiB4">
 <img src="https://img.youtube.com/vi/yGGZv57eiB4/0.jpg" alt="Spline-based motion planning"/>
 </a>
-</p>
-<p align="center">
+</td>
+</tr>
+
+<tr>
+<td align="center" valign="center" style="background-color:rgba(0, 0, 0, 0);">
 <a href="https://www.youtube.com/watch?v=4JaY0_k24WM">
 <img src="https://img.youtube.com/vi/4JaY0_k24WM/0.jpg" alt="Spline-based motion planning"/>
 </a>
-</p>
-<p align="center">
+</td>
+<td align="center" valign="center" bgcolor="#FFFFFF">
 <a href="https://www.youtube.com/watch?v=8GDlWS1OOOM">
 <img src="https://img.youtube.com/vi/8GDlWS1OOOM/0.jpg" alt="Plate transportation"/>
 </a>
-</p>
+</td>
+</tr>
+
+</table>
+
 
 ### Code example
 This elementary code example illustrates the basic functionality of the toolbox for steering a holonomic vehicle from an initial to terminal pose in a dynamic environment.
