@@ -18,7 +18,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from ..basics.optilayer import OptiFather, create_function
-from ..basics.spline_extra import shift_knot1_fwd, shiftoverknot
+from ..basics.spline import *
 from problem import Problem
 from dualmethod import DualUpdater, DualProblem
 from casadi import symvar, mtimes, MX, reshape, substitute
@@ -88,7 +88,7 @@ class DDUpdater(DualUpdater):
             T = self.define_symbol('T')
             t0 = t/T
             # transform spline variables: only consider future piece of spline
-            tf = lambda cfs, basis: shift_knot1_fwd(cfs, basis, t0)
+            tf = lambda cfs, basis: spl.Function(basis, cfs).shiftfirstknot_fwd(t0).data()
             self._transform_spline(x_i, tf, self.q_i)
             self._transform_spline([z_ij, l_ij], tf, self.q_ij)
             self._transform_spline(l_ji, tf, self.q_ji)
@@ -232,7 +232,7 @@ class DDUpdater(DualUpdater):
         # transform spline variables
         if ((current_time > 0. and
              np.round(current_time, 6) % self.problem.knot_time == 0)):
-            tf = shiftoverknot
+            tf = lambda cfs, basis: basis.shiftoverknot()[1].dot(cfs)
             for key in ['x_i']:
                 self.var_dd[key] = self._transform_spline(
                     self.var_dd[key], tf, self.q_i)
@@ -247,8 +247,7 @@ class DDUpdater(DualUpdater):
         t0 = time.time()
         current_time = np.round(current_time, 6) % self.problem.knot_time
         horizon_time = self.problem.options['horizon_time']
-        tf = lambda cfs, basis: shift_knot1_fwd(
-            cfs, basis, current_time/horizon_time)
+        tf = lambda cfs, basis: spl.Function(basis, cfs).shiftfirstknot_fwd(t0).data()
         x_j = self._transform_spline(self.var_dd['x_j'], tf, self.q_ij).cat
         z_ij = self._transform_spline(self.var_dd['z_ij'], tf, self.q_ij).cat
         pr = la.norm(x_j-z_ij)**2

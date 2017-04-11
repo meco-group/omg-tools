@@ -366,17 +366,17 @@ class Export(object):
 
     def _create_transformSplines(self, father, problem, point2point):
         code, cnt = '', 0
-        tf_len = len(problem.vehicles[0].basis)
+        tf_len = problem.vehicles[0].basis.dimension()
         if point2point.__class__.__name__ == 'FixedTPoint2point':
             code += '\tint interval_prev = (int)(round((current_time_prev*(vehicle->getKnotIntervals())/horizon_time)*1.e6)/1.e6);\n'
             code += '\tint interval_now = (int)(round((current_time*(vehicle->getKnotIntervals())/horizon_time)*1.e6)/1.e6);\n'
             code += '\tif(interval_now > interval_prev){\n'
-            code += ('\t\tvector<double> spline_tf(' + str(len(problem.vehicles[0].basis)) + ');\n')
+            code += ('\t\tvector<double> spline_tf(' + str(problem.vehicles[0].basis.dimension()) + ');\n')
             for label, child in father.children.items():
                 for name, var in child._variables.items():
                     if name in child._splines_prim:
-                        if (len(child._splines_prim[name]['basis']) > tf_len):
-                            tf_len = len(child._splines_prim[name]['basis'])
+                        if (child._splines_prim[name]['basis'].dimension() > tf_len):
+                            tf_len = child._splines_prim[name]['basis'].dimension()
                             code += ('\t\tspline_tf.resize(' + str(tf_len)+');\n')
                         tf = 'splines_tf["'+name+'"]'
                         code += ('\t\tfor(int k=0; k<' +

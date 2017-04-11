@@ -105,9 +105,9 @@ class ExportADMM(Export):
             for name, ind in q_i.items():
                 if name in child._splines_prim:
                     basis = child._splines_prim[name]['basis']
-                    for l in range(len(basis)):
-                        sl_min = l*len(basis)
-                        sl_max = (l+1)*len(basis)
+                    for l in range(basis.dimension()):
+                        sl_min = l*basis.dimension()
+                        sl_max = (l+1)*basis.dimension()
                         if set(range(sl_min, sl_max)) <= set(ind):
                             spl = child._splines_prim[name]
                             if spl['init'] is not None:
@@ -150,9 +150,9 @@ class ExportADMM(Export):
             for name, ind in q_i.items():
                 if name in child._splines_prim:
                     basis = child._splines_prim[name]['basis']
-                    for l in range(len(basis)):
-                        sl_min = l*len(basis)
-                        sl_max = (l+1)*len(basis)
+                    for l in range(basis.dimension()):
+                        sl_min = l*basis.dimension()
+                        sl_max = (l+1)*basis.dimension()
                         if set(range(sl_min, sl_max)) <= set(ind):
                             code += '\tsplines_tf["xvar_'+name+'"] = XVAR_'+name.upper()+'_TF;\n'
         return {'initSplines': code}
@@ -169,18 +169,18 @@ class ExportADMM(Export):
             for name, ind in q_i.items():
                 if name in child._splines_prim:
                     basis = child._splines_prim[name]['basis']
-                    for l in range(len(basis)):
-                        sl_min = l*len(basis)
-                        sl_max = (l+1)*len(basis)
+                    for l in range(basis.dimension()):
+                        sl_min = l*basis.dimension()
+                        sl_max = (l+1)*basis.dimension()
                         if set(range(sl_min, sl_max)) <= set(ind):
-                            code += ('\t\tfor(int i=0; i<' + str(len(basis)) + '; i++){\n')
+                            code += ('\t\tfor(int i=0; i<' + str(basis.dimension()) + '; i++){\n')
                             for var in ['x_i', 'z_i', 'l_i']:
                                 code += ('\t\t\t' + var + '_tf['+str(cnt)+'+i] = 0;\n')
                             code += ('\t\t\tfor(int k=0; k<n_nghb; k++){\n')
                             for var in ['z_ji', 'l_ji', 'z_ij', 'l_ij']:
                                 code += ('\t\t\t\t' + var + '_tf['+str(cnt)+'+i+k*n_shared] = 0;\n')
                             code += '\t\t\t}\n'
-                            code += ('\t\t\tfor(int j=0; j<' + str(len(basis)) + '; j++){\n')
+                            code += ('\t\t\tfor(int j=0; j<' + str(basis.dimension()) + '; j++){\n')
                             for var in ['x_i', 'z_i', 'l_i']:
                                 code += ('\t\t\t\t'+var+'_tf['+str(cnt)+'+i] += splines_tf["xvar_'+name+'"][i][j]*variables_admm["'+var+'"]['+str(cnt)+'+j];\n')
                             code += ('\t\t\t\tfor(int k=0; k<n_nghb; k++){\n')

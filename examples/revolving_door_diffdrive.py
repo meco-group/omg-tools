@@ -60,7 +60,7 @@ if solver is 'ipopt':
     problem.set_options(
         {'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57',
         							  'ipopt.hessian_approximation': 'limited-memory',
-        							  'ipopt.warm_start_mult_bound_push': 1e-6}}}) 
+        							  'ipopt.warm_start_mult_bound_push': 1e-6}}})
 problem.init()
 
 # problem.export2AMPL()

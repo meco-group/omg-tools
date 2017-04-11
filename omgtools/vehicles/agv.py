@@ -19,8 +19,7 @@
 
 from vehicle import Vehicle
 from ..basics.shape import Rectangle
-from ..basics.spline_extra import sample_splines, evalspline
-from ..basics.spline_extra import running_integral
+from ..basics.spline import *
 from casadi import inf
 import numpy as np
 
@@ -47,6 +46,7 @@ import numpy as np
 # Spline variables of the problem: v_til and tg_ha
 # delta follows from v_til, tg_ha, dtg_ha
 
+
 class AGV(Vehicle):
 
     def __init__(self, length=0.4, options=None, bounds=None):
@@ -61,7 +61,6 @@ class AGV(Vehicle):
         self.ddmin = bounds['ddmin'] if 'ddmin' in bounds else -np.pi/4.  # dsteering angle [rad/s]
         self.ddmax = bounds['ddmax'] if 'ddmax' in bounds else np.pi/4.
         self.length = length
-
 
     def set_default_options(self):
         Vehicle.set_default_options(self)
@@ -119,8 +118,8 @@ class AGV(Vehicle):
 
         hop0 = self.define_parameter('hop0', 1)
         tdelta0 = self.define_parameter('tdelta0', 1)  # tan(delta)
-        self.define_constraint(hop0*(-2.*evalspline(ddtg_ha, self.t/self.T)*self.length
-                               -tdelta0*(evalspline(dv_til, self.t/self.T)*(1.+tg_ha0**2)**2)*self.T), 0., 0.)
+        self.define_constraint(hop0*(-2.*ddtg_ha(self.t/self.T)*self.length
+                               - tdelta0*(dv_til(self.t/self.T)*(1.+tg_ha0**2)**2)*self.T), 0., 0.)
         # This constraint is obtained by using l'Hopital's rule on the expression of
         # tan(delta) = 2*dtg_ha*self.length / (v_til*(1+tg_ha**2)**2)
         # this constraint is used to impose a specific steering angle when v_til = 0, e.g. when
@@ -154,9 +153,9 @@ class AGV(Vehicle):
         ddtg_ha = tg_ha.derivative(2)
         dx = v_til*(1-tg_ha**2)
         dy = v_til*(2*tg_ha)
-        x_int, y_int = self.T*running_integral(dx), self.T*running_integral(dy)
-        x = x_int-evalspline(x_int, self.t/self.T) + self.pos0[0]  # self.pos0 was already defined in init
-        y = y_int-evalspline(y_int, self.t/self.T) + self.pos0[1]
+        x_int, y_int = self.T*dx.antiderivative(), self.T*dy.antiderivative()
+        x = x_int-x_int(self.t/self.T) + self.pos0[0]  # self.pos0 was already defined in init
+        y = y_int-y_int(self.t/self.T) + self.pos0[1]
         term_con = [(x, posT[0]), (y, posT[1]), (tg_ha, tg_haT)]
         term_con_der = [(v_til, v_tilT), (dtg_ha, self.T*dtg_haT),
                         (dv_til, dv_tilT), (ddtg_ha, self.T**2*ddtg_haT)]
@@ -175,12 +174,12 @@ class AGV(Vehicle):
 
     def get_init_spline_value(self):
         # generate initial guess for spline variables
-        init_value = np.zeros((len(self.basis), 2))
-        v_til0 = np.zeros(len(self.basis))
+        init_value = np.zeros((self.basis.dimension(), 2))
+        v_til0 = np.zeros(self.basis.dimension())
         tg_ha0 = np.tan(self.prediction['state'][2]/2.)
         tg_haT = np.tan(self.poseT[2]/2.)
         init_value[:, 0] = v_til0
-        init_value[:, 1] = np.linspace(tg_ha0, tg_haT, len(self.basis))
+        init_value[:, 1] = np.linspace(tg_ha0, tg_haT, self.basis.dimension())
         return init_value
 
     def check_terminal_conditions(self):
@@ -221,9 +220,9 @@ class AGV(Vehicle):
         v_til, tg_ha = splines[0], splines[1]
         dx = v_til*(1-tg_ha**2)
         dy = v_til*(2*tg_ha)
-        x_int, y_int = self.T*running_integral(dx), self.T*running_integral(dy)
-        x = x_int-evalspline(x_int, self.t/self.T) + self.pos0[0]
-        y = y_int-evalspline(y_int, self.t/self.T) + self.pos0[1]
+        x_int, y_int = self.T*dx.antiderivative(), self.T*dy.antiderivative()
+        x = x_int-x_int(self.t/self.T) + self.pos0[0]
+        y = y_int-y_int(self.t/self.T) + self.pos0[1]
         self.define_collision_constraints_2d(hyperplanes, environment, [x, y], tg_ha)
 
     def splines2signals(self, splines, time):
@@ -236,11 +235,11 @@ class AGV(Vehicle):
         dx = v_til*(1-tg_ha**2)
         dy = v_til*(2*tg_ha)
         if not hasattr(self, 'signals'):  # first iteration
-            dx_int, dy_int = running_integral(dx), running_integral(dy)
+            dx_int, dy_int = dx.antiderivative(), dy.antiderivative()
             x = dx_int - dx_int(time[0]) + self.pose0[0]
             y = dy_int - dy_int(time[0]) + self.pose0[1]
         else:
-            dx_int, dy_int = running_integral(dx), running_integral(dy)  # current state
+            dx_int, dy_int = dx.antiderivative(), dy.antiderivative()  # current state
             x = dx_int - dx_int(time[0]) + self.signals['state'][0, -1]
             y = dy_int - dy_int(time[0]) + self.signals['state'][1, -1]
         # sample splines

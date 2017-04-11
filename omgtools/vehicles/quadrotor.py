@@ -19,7 +19,7 @@
 
 from vehicle import Vehicle
 from ..basics.shape import Circle
-from ..basics.spline import *
+from ..basics.spline import sample_splines
 from casadi import inf
 import numpy as np
 
@@ -40,7 +40,6 @@ class Quadrotor(Vehicle):
     def set_default_options(self):
         Vehicle.set_default_options(self)
         self.options['stop_tol'] = 1.e-2
-
 
     def init(self):
         # time horizon

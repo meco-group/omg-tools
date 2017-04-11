@@ -18,7 +18,6 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from point2point import FixedTPoint2point
-from ..basics.spline_extra import definite_integral
 from casadi import inf
 
 
@@ -70,7 +69,7 @@ class FormationPoint2pointCentral(FixedTPoint2point):
                     if self.options['soft_formation']:
                         weight = self.options['soft_formation_weight']
                         eps = self.define_spline_variable('eps_form_'+str(ind_v)+str(ind_n), basis=veh.basis)[0]
-                        obj = weight*definite_integral(eps, t/T, 1.)
+                        obj = weight*eps.integral([t/T, 1.])
                         self.define_objective(obj)
                         self.define_constraint(pos_c_veh[ind_v] - pos_c_nghb[ind_n] - eps, -inf, 0.)
                         self.define_constraint(-pos_c_veh[ind_v] + pos_c_nghb[ind_n] - eps, -inf, 0.)

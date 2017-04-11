@@ -20,7 +20,7 @@
 from vehicle import Vehicle
 from ..basics.shape import Sphere
 from ..basics.spline import *
-from casadi import inf, SX, MX
+from casadi import inf
 import numpy as np
 import time as tt
 

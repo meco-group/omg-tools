@@ -295,7 +295,7 @@ class Vehicle(OptiChild, PlotLayer):
             for key in self.trajectories:
                 if key not in ['state', 'input', 'pose']:
                     self.prediction[key] = self.trajectories[key][:, n_samp+delay]
-            input = self.trajectories['input'][delay:]
+            input = self.trajectories['input'][:, delay:]
             if state0 is None:
                 state0 = self.signals['state'][:, -n_samp-1]  # current state
             state = self.integrate_ode(

@@ -20,7 +20,7 @@
 from vehicle import Vehicle
 from dubins import Dubins
 from ..basics.shape import Circle, Rectangle, Square
-from ..basics.spline_extra import sample_splines
+from ..basics.spline import sample_splines
 from casadi import inf
 import numpy as np
 
@@ -113,13 +113,13 @@ class Trailer(Vehicle):
         self.theta_trT = theta
 
     def get_init_spline_value(self):
-        init_value_tr = np.zeros((len(self.basis), 1))
+        init_value_tr = np.zeros((self.basis.dimension(), 1))
         tg_ha_tr0 = np.tan(self.prediction['state'][2]/2.)
         if hasattr(self, 'theta_trT'):
             tg_ha_trT = np.tan(self.theta_trT/2.)
         else:
             tg_ha_trT = tg_ha_tr0
-        init_value_tr[:, 0] = np.linspace(tg_ha_tr0, tg_ha_trT, len(self.basis))
+        init_value_tr[:, 0] = np.linspace(tg_ha_tr0, tg_ha_trT, self.basis.dimension())
         init_value_veh = self.lead_veh.get_init_spline_value()
         init_value = np.c_[init_value_tr, init_value_veh]
         return init_value

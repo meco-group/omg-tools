@@ -19,7 +19,7 @@
 
 from vehicle import Vehicle
 from ..basics.shape import Rectangle
-from ..basics.spline_extra import sample_splines, definite_integral
+from ..basics.spline import sample_splines
 from casadi import inf
 import numpy as np
 
@@ -76,14 +76,14 @@ class HolonomicOrient(Vehicle):
         if (self.options['reg_type'] == 'norm_1' and self.options['reg_weight'] != 0.0):
             dtg_ha = tg_ha.derivative()
             g_reg = self.define_spline_variable(
-                        'g_reg', 1, basis=dtg_ha.basis)[0]
-            objective = definite_integral(g_reg, self.t/self.T, 1.)
+                        'g_reg', 1, basis=dtg_ha.basis())[0]
+            objective = g_reg.integral([self.t/self.T, 1.])
             self.define_constraint(dtg_ha - g_reg, -inf, 0.)
             self.define_constraint(-dtg_ha - g_reg, -inf, 0.)
             self.define_objective(self.options['reg_weight']*objective)
         if (self.options['reg_type'] == 'norm_2'and self.options['reg_weight'] != 0.0):
             dtg_ha = tg_ha.derivative()
-            objective = definite_integral(dtg_ha**2, self.t/self.T, 1.)
+            (dtg_ha**2).integral([self.t/self.T, 1.])
             self.define_objective(self.options['reg_weight']*objective)
 
     def get_initial_constraints(self, splines):
@@ -118,7 +118,7 @@ class HolonomicOrient(Vehicle):
 
     def get_init_spline_value(self):
         # for the optimization problem so use tg_ha
-        init_value = np.zeros((len(self.basis), 3))
+        init_value = np.zeros((self.basis.dimension(), 3))
         pose0 = np.zeros(3)
         pose0[:2] = self.prediction['state'][:2]  # x,y,theta[rad]
         pose0[2] =  np.tan(self.prediction['state'][2]/2)  # tg_ha
@@ -128,7 +128,7 @@ class HolonomicOrient(Vehicle):
         for k in range(2):
             # init_value[:, k] = np.r_[pos0[k]*np.ones(self.degree), np.linspace(
             #     pos0[k], posT[k], len(self.basis) - 2*self.degree), posT[k]*np.ones(self.degree)]
-            init_value[:, k] = np.linspace(pose0[k], poseT[k], len(self.basis))
+            init_value[:, k] = np.linspace(pose0[k], poseT[k], self.basis.dimension())
         return init_value
 
     def check_terminal_conditions(self):
@@ -160,8 +160,8 @@ class HolonomicOrient(Vehicle):
         signals = {}
         x, y, tg_ha = splines[0], splines[1], splines[2]
         dx, dy, dtg_ha = x.derivative(), y.derivative(), tg_ha.derivative()
-        theta = 2*np.arctan2(sample_splines([tg_ha], time),1)
-        dtheta = 2*np.array(sample_splines([dtg_ha],time))/(1+np.array(sample_splines([tg_ha], time))**2)
+        theta = 2*np.arctan2(sample_splines([tg_ha], time), 1)
+        dtheta = 2*np.array(sample_splines([dtg_ha], time))/(1+np.array(sample_splines([tg_ha], time))**2)
         ddx, ddy = x.derivative(2), y.derivative(2)
         input = np.c_[sample_splines([dx, dy], time)]
         input = np.r_[input,dtheta]

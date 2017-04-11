@@ -58,7 +58,7 @@ for vehicle in vehicles:
     splines = problem.father.get_variables(vehicle, 'splines0')
     pos_c = vehicle.get_fleet_center(
         splines, vehicle.rel_pos_c, substitute=False)
-    pos_c = np.hstack([c.coeffs for c in pos_c])
+    pos_c = np.hstack([c.data() for c in pos_c])
     var_central = np.vstack((var_central, np.c_[pos_c]))
 
 # create & solve ADMM problem

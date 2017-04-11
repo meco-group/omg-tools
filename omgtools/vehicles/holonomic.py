@@ -19,7 +19,7 @@
 
 from vehicle import Vehicle
 from ..basics.shape import Circle
-from ..basics.spline import *
+from ..basics.spline import sample_splines
 from casadi import inf
 import numpy as np
 

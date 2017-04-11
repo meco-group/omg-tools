@@ -19,7 +19,7 @@
 
 from vehicle import Vehicle
 from ..basics.shape import Rectangle
-from ..basics.spline import *
+from ..basics.spline import sample_splines
 from casadi import inf
 import numpy as np
 
@@ -75,7 +75,9 @@ class Holonomic1D(Vehicle):
         len_basis = self.basis.dimension()
         pos0 = self.prediction['state'][0]
         posT = self.positionT[0]
-        # init_value = np.r_[pos0[0]*np.ones(self.degree), np.linspace(pos0[0], posT[0], len(self.basis) - 2*self.degree), posT[0]*np.ones(self.degree)]
+        # init_value = np.r_[pos0[0]*np.ones(self.degree), np.linspace(
+        # pos0[0], posT[0], len(self.basis) - 2*self.degree),
+        # posT[0]*np.ones(self.degree)]
         init_value = np.linspace(pos0, posT, len_basis)
         return init_value
 

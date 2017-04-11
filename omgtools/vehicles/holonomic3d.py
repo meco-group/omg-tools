@@ -18,7 +18,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from vehicle import Vehicle
-from ..basics.spline_extra import sample_splines
+from ..basics.spline import sample_splines
 from casadi import inf
 import numpy as np
 
@@ -99,14 +99,14 @@ class Holonomic3D(Vehicle):
         self.positionT = position
 
     def get_init_spline_value(self):
-        init_value = np.zeros((len(self.basis), 3))
+        init_value = np.zeros((self.basis.dimension(), 3))
         pos0 = self.prediction['state']
         posT = self.positionT
         for k in range(3):
             # init_value[:, k] = np.r_[pos0[k]*np.ones(self.degree), np.linspace(
             # pos0[k], posT[k], len(self.basis) - 2*self.degree),
             # posT[k]*np.ones(self.degree)]
-            init_value[:, k] = np.linspace(pos0[k], posT[k], len(self.basis))
+            init_value[:, k] = np.linspace(pos0[k], posT[k], self.basis.dimension())
         return init_value
 
     def check_terminal_conditions(self):

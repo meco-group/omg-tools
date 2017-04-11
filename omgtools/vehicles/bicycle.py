@@ -21,7 +21,7 @@ from vehicle import Vehicle
 from ..problems.point2point import FreeTPoint2point, FixedTPoint2point
 from ..basics.shape import Rectangle, Circle
 from ..basics.spline import *
-from casadi import inf, SX, MX
+from casadi import inf
 import numpy as np
 
 # Elaboration of the vehicle model:

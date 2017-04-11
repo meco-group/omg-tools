@@ -85,7 +85,6 @@ class ADMM(DualUpdater):
             # transform spline variables: only consider future piece of spline
             tf = lambda cfs, basis: spl.Function(basis, cfs).shiftfirstknot_fwd(t0).data()
             # tf = lambda cfs, basis: mtimes(basis.shiftfirstknot(t0)[1], cfs)
-            self._transform_spline([x_i], tf, self.q_i)
             self._transform_spline([x_i, z_i, l_i], tf, self.q_i)
             self._transform_spline([z_ji, l_ji], tf, self.q_ji)
             # construct objective

@@ -3,79 +3,10 @@ try:
 except ImportError:
     print "meco_binaries not found."
 import splines as spl
-# import spline_old as spl_old
-# import spline_extra as spl_ex
 import numpy as np
 from scipy.interpolate import splev
 from casadi import SX, MX, DM, Function
 
-
-""" helper functions -> should vanish """
-""" ================================= """
-
-
-# def old2new(spline_old):
-#     basis = spl.BSplineBasis(spline_old.basis.knots, spline_old.basis.degree)
-#     coeffs = spline_old.coeffs
-#     return spl.Function(basis, coeffs)
-
-
-# def new2old(spline_new):
-#     basis = spl_old.BSplineBasis(spline_new.basis().knots(), spline_new.basis().degree())
-#     coeffs = spline_new.data()
-#     return spl_old.BSpline(basis, coeffs)
-
-
-# def new2oldbasis(basis_new):
-#     return spl_old.BSplineBasis(basis_new.knots(), basis_new.degree())
-
-
-""" methods desired to implement in spline toolbox -> should vanish """
-""" =============================================================== """
-
-
-# def __add__(self, other):
-#     if isinstance(other, self.__class__):
-#         return old2new(new2old(self).__add__(new2old(other)))
-#     else:
-#         return old2new(new2old(self).__add__(other))
-
-
-# def __neg__(self):
-#     return old2new(new2old(self).__neg__())
-
-
-# def __sub__(self, other):
-#     return self + (-other)
-
-
-# def __rsub__(self, other):
-#     return other + (-self)
-
-
-# def __mul__(self, other):
-#     if isinstance(other, self.__class__):
-#         return old2new(new2old(self).__mul__(new2old(other)))
-#     else:
-#         return old2new(new2old(self).__mul__(other))
-
-
-# def __rmul__(self, other):
-#     return self.__mul__(other)
-
-
-# def __pow__(self, power):
-#     return old2new(new2old(self).__pow__(power))
-
-
-# spl.Function.__add__ = __add__
-# spl.Function.__radd__ = __add__
-# spl.Function.__neg__ = __neg__
-# spl.Function.__sub__ = __sub__
-# spl.Function.__rsub__ = __rsub__
-# spl.Function.__mul__ = __mul__
-# spl.Function.__rmul__ = __rmul__
-# spl.Function.__pow__ = __pow__
 
 """ extra BSplineBasis functions """
 """ ============================ """
@@ -104,64 +35,6 @@ def extrapolate_basis(basis, t_extra, m=None):
     b3, Tin = b2.insert_knots([knots[-1]]*m)
     return b3, Tin.dot(Tex)
 
-# def extrapolate_basis(basis, t_extra, m=None):
-#     # Create transformation matrix that extrapolates the spline over an extra
-#     # knot interval of t_extra long.
-#     knots = basis.knots()
-#     deg = basis.degree()
-#     N = basis.dimension()
-#     if m is None:
-#         # m is number of desired knots at interpolation border
-#         # default value is # knots at second last knot place of original spline
-#         m = 1
-#         while knots[-deg-2-m] >= knots[-deg-2]:
-#             m += 1
-#     knots2 = np.r_[knots[:-deg-1], knots[-deg-1]*np.ones(m),
-#                    (knots[-1]+t_extra)*np.ones(deg+1)]
-#     basis2 = spl.BSplineBasis(knots2, deg)
-#     A = np.zeros((deg+1, deg+1))
-#     B = np.zeros((deg+1, deg+1))
-#     # only (deg+1) last coefficients change: we need (deg+1) equations, giving
-#     # a relation between (deg+1) last coefficients before and after extrapolation
-
-#     # (deg+1-m) relations based on evaluation of basis functions on (deg+1-m)
-#     # last greville points
-#     if m < deg+1:
-#         eval_points = basis.greville()[-(deg+1-m):]
-#         a = np.c_[[basis2(e)[-(deg+1+m):-m] for e in eval_points]]
-#         b = np.c_[[basis(e)[-(deg+1):] for e in eval_points]]
-#         a1, a2 = a[:, :m], a[:, m:]
-#         b1, b2 = b[:, :m], b[:, m:]
-#         A[:(deg+1-m), -(deg+1):-m] = a2
-#         B[:(deg+1-m), :m] = b1 - a1  # this should be zeros
-#         B[:(deg+1-m), m:] = b2
-#     else:
-#         A[0, -(deg+1)] = 1.
-#         B[0, -1] = 1.
-#     # m relations based on continuity of m last derivatives
-#     A1, B1 = np.identity(deg+1), np.identity(deg+1)
-#     for i in range(1, deg+1):
-#         A1_tmp = np.zeros((deg+1-i, deg+1-i+1))
-#         B1_tmp = np.zeros((deg+1-i, deg+1-i+1))
-#         for j in range(deg+1-i):
-#             B1_tmp[j, j] = -(deg+1-i)/(knots[j+N] - knots[j+N-deg-1+i])
-#             B1_tmp[j, j+1] = (deg+1-i)/(knots[j+N] - knots[j+N-deg-1+i])
-#             A1_tmp[j, j] = -(deg+1-i)/(knots2[j+N+m] - knots2[j+N-deg-1+m+i])
-#             A1_tmp[j, j+1] = (deg+1-i)/(knots2[j+N+m] - knots2[j+N-deg-1+m+i])
-#         A1, B1 = A1_tmp.dot(A1), B1_tmp.dot(B1)
-#         if i >= deg+1-m:
-#             b1 = B1[-1, :]
-#             a1 = A1[-(deg-i+1), :]
-#             A[i, :] = a1
-#             B[i, :] = b1
-#     # put everything in transformation matrix
-#     _T = np.linalg.solve(A, B)
-#     _T[abs(_T) < 1e-10] = 0.
-#     T = np.zeros((N+m, N))
-#     T[:N, :N] = np.eye(N)
-#     T[-(deg+1):, -(deg+1):] = _T
-#     return spl.BSplineBasis(knots2, deg), T
-
 
 def shiftoverknot_basis(basis):
     knots = basis.knots()
@@ -188,6 +61,7 @@ def shiftfirstknot_basis(basis, t_shift):
     b2, T = basis.insert_knots(knots_ins)
     knots2 = b2.knots()
     return spl.BSplineBasis(knots2[degree+1:], degree), T[degree+1:, :]
+
 
 # def shiftfirstknot_basis(basis, t_shift):
 #     knots = basis.knots()

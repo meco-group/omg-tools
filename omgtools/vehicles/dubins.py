@@ -21,7 +21,7 @@ from vehicle import Vehicle
 from ..problems.point2point import FreeTPoint2point, FixedTPoint2point
 from ..basics.shape import Square, Circle
 from ..basics.spline import *
-from casadi import inf, SX, MX
+from casadi import inf
 import numpy as np
 
 # Elaboration of the vehicle model:
@@ -119,7 +119,6 @@ class Dubins(Vehicle):
         # add constraints on change in orientation
         self.define_constraint(2*dtg_ha - (1+tg_ha**2)*self.T*self.wmax, -inf, 0.)
         self.define_constraint(-2*dtg_ha + (1+tg_ha**2)*self.T*self.wmin, -inf, 0.)
-
 
     def get_fleet_center(self, splines, rel_pos, substitute=True):
         T = self.define_symbol('T')

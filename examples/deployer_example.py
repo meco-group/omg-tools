@@ -60,9 +60,6 @@ input_traj = np.c_[[0.0, 0.0]]
 
 n_samp = int(np.round(update_time/sample_time, 6))
 t00 = time.time()
-
-t00 = time.time()
-
 for via_point, obstacle_pos in zip(via_points, obstacle_positions):
     vehicle.set_terminal_conditions(via_point)
     target_reached = False

@@ -18,6 +18,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from ..basics.optilayer import OptiFather, OptiChild
+from ..basics.spline import *
 from ..vehicles.fleet import get_fleet_vehicles
 from ..execution.plotlayer import PlotLayer
 from itertools import groupby
@@ -180,10 +181,15 @@ class Problem(OptiChild, PlotLayer):
             spline_values = vehicle.signals['splines'][:, -1]
             spline_values = [self.father.get_variables(
                 vehicle, 'splines'+str(k), spline=False)[-1, :] for k in range(vehicle.n_seg)]
+            sleep_segments = []
             for segment, values in zip(spline_segments, spline_values):
-                for spl, value in zip(segment, values):
-                    spl.coeffs = value*np.ones(len(spl.basis))
-            vehicle.store(current_time, sample_time, spline_segments, sleep_time)
+                seg = []
+                for s, value in zip(segment, values):
+                    # spl.coeffs = value*np.ones(len(spl.basis))
+                    basis = s.basis()
+                    seg.append(spl.Function(basis, value*np.ones(basis.dimension())))
+                sleep_segments.append(seg)
+            vehicle.store(current_time, sample_time, sleep_segments, sleep_time)
         # no correction for update time!
         Problem.simulate(self, current_time, sleep_time, sample_time)
 
