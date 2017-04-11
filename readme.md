@@ -6,8 +6,9 @@
 Optimal Motion Generation-tools is a Python software toolbox facilitating the modeling, simulation and embedding of motion planning problems. Its main goal is to collect research topics concerning (spline-based) motion planning into a user-friendly package in order to enlarge its visibility towards the scientific and industrial world.
 
 This toolbox focuses on receding horizon control for single-agent systems as well as on distributed control for multi-agent systems. The approaches implemented in OMG-tools are described in the following publications:
-* T. Mercy, W. Van Loock and G. Pipeleers. "Real-time motion planning in the presence of moving obstacles", European Control Conference, 2016. ([pdf](https://lirias.kuleuven.be/bitstream/123456789/538718/1/TimMercy_2016_ECC.pdf))
-* R. Van Parys and G. Pipeleers. "Online distributed motion-planning for multi-vehicle systems", European Control Conference, 2016. ([pdf](https://lirias.kuleuven.be/bitstream/123456789/526758/3/RubenVanParys_2016_ECC.pdf))
+* Mercy T., Van Loock W., Pipeleers G. (2016). Real-time motion planning in the presence of moving obstacles. Proceedings of the 2016 European Control Conference. European Control Conference. Aalborg, 29 June - 1 July 2016 (pp. 1586-1591). ([pdf](https://lirias.kuleuven.be/bitstream/123456789/538718/1/TimMercy_2016_ECC.pdf))
+* Van Parys R., Pipeleers G. (2016). Online distributed motion planning for multi-vehicle systems. Proceedings of the 2016 European Control Conference. European Control Conference. Aalborg, 29 June - 1 July 2016 (pp. 1580-1585). ([pdf](https://lirias.kuleuven.be/bitstream/123456789/526758/3/RubenVanParys_2016_ECC.pdf))
+* Van Parys R., Pipeleers G. (2017). Spline-Based Motion Planning in an Obstructed 3D environment. Proceedings of the 20th IFAC World Congress. IFAC World Congress. Toulouse, France, 9-14 July 2017. ([pdf](https://lirias.kuleuven.be/bitstream/123456789/575111/3/RubenVanParys_2017_IFAC_lirias.pdf))
 
 If these methods help you with your research, please cite us!
 
