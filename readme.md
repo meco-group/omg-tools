@@ -6,8 +6,9 @@
 Optimal Motion Generation-tools is a Python software toolbox facilitating the modeling, simulation and embedding of motion planning problems. Its main goal is to collect research topics concerning (spline-based) motion planning into a user-friendly package in order to enlarge its visibility towards the scientific and industrial world.
 
 This toolbox focuses on receding horizon control for single-agent systems as well as on distributed control for multi-agent systems. The approaches implemented in OMG-tools are described in the following publications:
-* T. Mercy, W. Van Loock and G. Pipeleers. "Real-time motion planning in the presence of moving obstacles", European Control Conference, 2016. ([pdf](https://lirias.kuleuven.be/bitstream/123456789/538718/1/TimMercy_2016_ECC.pdf))
-* R. Van Parys and G. Pipeleers. "Online distributed motion-planning for multi-vehicle systems", European Control Conference, 2016. ([pdf](https://lirias.kuleuven.be/bitstream/123456789/526758/3/RubenVanParys_2016_ECC.pdf))
+* Mercy T., Van Loock W., Pipeleers G. (2016). Real-time motion planning in the presence of moving obstacles. Proceedings of the 2016 European Control Conference. European Control Conference. Aalborg, 29 June - 1 July 2016 (pp. 1586-1591). ([pdf](https://lirias.kuleuven.be/bitstream/123456789/538718/1/TimMercy_2016_ECC.pdf))
+* Van Parys R., Pipeleers G. (2016). Online distributed motion planning for multi-vehicle systems. Proceedings of the 2016 European Control Conference. European Control Conference. Aalborg, 29 June - 1 July 2016 (pp. 1580-1585). ([pdf](https://lirias.kuleuven.be/bitstream/123456789/526758/3/RubenVanParys_2016_ECC.pdf))
+* Van Parys R., Pipeleers G. (2017). Spline-Based Motion Planning in an Obstructed 3D environment. Proceedings of the 20th IFAC World Congress. IFAC World Congress. Toulouse, France, 9-14 July 2017. ([pdf](https://lirias.kuleuven.be/bitstream/123456789/575111/3/RubenVanParys_2017_IFAC_lirias.pdf))
 
 If these methods help you with your research, please cite us!
 
@@ -20,8 +21,8 @@ The animations below give an overview of typical problems that OMG-tools can han
 <td align="center" valign="center" style="background-color:rgba(0, 0, 0, 0);">
 <img width=100% src="./doc/gifs/bicycle.gif" alt="Point-to-point motion of bicycle model"/>
 </td>
-<td align="center" valign="center" style="background-color:rgba(0, 0, 0, 0);">
-<img width=100% src="./doc/gifs/warehouse.gif" alt="Holonomic vehicle finding its way in a warehouse"/>
+<td align="center" valign="center" bgcolor="#FFFFFF">
+<img width=100% src="./doc/gifs/maze.gif" alt="Holonomic vehicle moving through a maze"/>
 </td>
 <td align="center" valign="center" style="background-color:rgba(0, 0, 0, 0);">
 <img width=100% src="./doc/gifs/revolving_door.gif" alt="Holonomic vehicle passing through a revolving door"/>
@@ -38,8 +39,8 @@ The animations below give an overview of typical problems that OMG-tools can han
 </td>
 </tr>
 <tr>
-<td align="center" valign="center" bgcolor="#FFFFFF">
-<img width=100% src="./doc/gifs/platform_landing.gif" alt="Quadrotors landing on platform"/>
+<td aliggn="center" valign="center" bgcolor="#FFFFFF">
+<img width=100% src="./doc/gifs/multiproblem_rect.gif" alt="Big warehouse with rectangular bouncing obstacles"/>
 </td>
 <td align="center" valign="center" bgcolor="#FFFFFF">
 <img width=100% src="./doc/gifs/formation_quad_ufo.gif" alt="Quadrotors avoiding a UFO"/>
@@ -48,26 +49,75 @@ The animations below give an overview of typical problems that OMG-tools can han
 <img width=100% src="./doc/gifs/3dquadrotor.gif" alt="3D quadrotor in obstructed environment"/>
 </td>
 </tr>
+<tr>
+<td align="center" valign="center" bgcolor="#FFFFFF">
+<img width=100% src="./doc/gifs/agv.gif" alt="Rear-wheel steered AGV parking"/>
+</td>
+<td align="center" valign="center" bgcolor="#FFFFFF">
+<img width=100% src="./doc/gifs/p2p_holonomic_blocking.gif" alt="Holonomic vehicle moving while suddenly blocked"/>
+</td>
+<td aliggn="center" valign="center" bgcolor="#FFFFFF">
+<img width=100% src="./doc/gifs/revolving_door_diffdrive.gif" alt="Differential drive moving through a revolving door"/>
+</td>
+</tr>
+<tr>
+<td align="center" valign="center" bgcolor="#FFFFFF">
+<img width=100% src="./doc/gifs/multiproblem_circ.gif" alt="Big warehouse with circular bouncing obstacles"/>
+</td>
+<td align="center" valign="center" style="background-color:rgba(0, 0, 0, 0);">
+<img width=100% src="./doc/gifs/warehouse.gif" alt="Holonomic vehicle finding its way in a warehouse"/>
+</td>
+<td align="center" valign="center" bgcolor="#FFFFFF">
+<img width=100% src="./doc/gifs/platform_landing.gif" alt="Quadrotors landing on platform"/>
+</td>
+</tr>
 </table>
 
 ### Experimental validation
-OMG-tools implemented in real life.
+OMG-tools implemented on real-life motion systems. Click on a picture to watch the Youtube video.
 
-<p align="center">
+<table style="border: none; border-collapse: collapse;" border="0" cellspacing="0" cellpadding="0" width="100%" align="center">
+<tr>
+<td align="center" valign="center" style="background-color:rgba(0, 0, 0, 0);">
 <a href="https://www.youtube.com/watch?v=w7tfz2djHqU">
 <img src="https://img.youtube.com/vi/w7tfz2djHqU/0.jpg" alt="Online motion planning"/>
 </a>
-</p>
-<p align="center">
+</td>
+<td align="center" valign="center" bgcolor="#FFFFFF">
 <a href="https://www.youtube.com/watch?v=J_ShOP_VWTg">
 <img src="https://img.youtube.com/vi/J_ShOP_VWTg/0.jpg" alt="Online distributed motion planning"/>
 </a>
-</p>
-<p align="center">
+</td>
+</tr>
+
+<tr>
+<td align="center" valign="center" style="background-color:rgba(0, 0, 0, 0);">
+<a href="https://www.youtube.com/watch?v=ozV3aJvEAyY">
+<img src="https://img.youtube.com/vi/ozV3aJvEAyY/0.jpg" alt="Spline-based motion planning"/>
+</a>
+</td>
+<td align="center" valign="center" bgcolor="#FFFFFF">
+<a href="https://www.youtube.com/watch?v=yGGZv57eiB4">
+<img src="https://img.youtube.com/vi/yGGZv57eiB4/0.jpg" alt="Spline-based motion planning"/>
+</a>
+</td>
+</tr>
+
+<tr>
+<td align="center" valign="center" style="background-color:rgba(0, 0, 0, 0);">
+<a href="https://www.youtube.com/watch?v=4JaY0_k24WM">
+<img src="https://img.youtube.com/vi/4JaY0_k24WM/0.jpg" alt="Spline-based motion planning"/>
+</a>
+</td>
+<td align="center" valign="center" bgcolor="#FFFFFF">
 <a href="https://www.youtube.com/watch?v=8GDlWS1OOOM">
 <img src="https://img.youtube.com/vi/8GDlWS1OOOM/0.jpg" alt="Plate transportation"/>
 </a>
-</p>
+</td>
+</tr>
+
+</table>
+
 
 ### Code example
 This elementary code example illustrates the basic functionality of the toolbox for steering a holonomic vehicle from an initial to terminal pose in a dynamic environment.
@@ -119,7 +169,7 @@ OMG-tools is written in Python 2.7 and depends on the packages numpy, scipy and 
 
 `sudo apt-get install python-numpy python-scipy python-matplotlib`
 
-It uses [CasADi](http://casadi.org) as a framework for symbolic computations and interface to IPOPT, a software package for large-scale nonlinear optimization. For installation instructions regarding these software packages, the user is referred to the [CasADi installation page](http://install.casadi.org). The current implementation of this toolbox relies on CasADi 3.1. In the examples, we use the [HSL linear solvers](https://github.com/casadi/casadi/wiki/Obtaining-HSL), as they result in a much faster execution.
+It uses [CasADi](http://casadi.org) as a framework for symbolic computations and interface to IPOPT, a software package for large-scale nonlinear optimization. The current implementation of this toolbox relies on CasADi 3.1, which can be obtained from its [install page](http://install31.casadi.org). In the examples, we use the [HSL linear solvers](https://github.com/casadi/casadi/wiki/Obtaining-HSL), as they result in a much faster execution.
 
 If you want to save your simulation results in Tikz-format, you need [matplotlib2tikz](https://github.com/nschloe/matplotlib2tikz).
 

@@ -154,31 +154,30 @@ class Vehicle(OptiChild, PlotLayer):
             # then decide on type of constraints to use:
             # room_limits or hyperplanes
             if self.options['room_constraints']:
-                for shape in self.shapes:  # loop over vehicle shapes
-                    if ((isinstance(environment.room['shape'], (Rectangle, Square)) and
-                        environment.room['shape'].orientation == 0.0) and
-                        (isinstance(shape, Circle) or
-                        (isinstance(shape, (Rectangle, Square)) and
-                         shape.orientation == 0)) and
-                        (isinstance(tg_ha, (int, float, long)) and tg_ha == 0.)):
-                        room_limits = environment.get_canvas_limits()
-                        for chck in checkpoints:
-                            for k in range(2):
-                                self.define_constraint(-(chck[k]+position[k]) + room_limits[k][0] + rad[0], -inf, 0.)
-                                self.define_constraint((chck[k]+position[k]) - room_limits[k][1] + rad[0], -inf, 0.)
-                    else:
-                        hyp_room = environment.room['shape'].get_hyperplanes(position = environment.room['position'])
-                        for l, chck in enumerate(checkpoints):
-                            for hpp in hyp_room.itervalues():
-                                con = 0
-                                con += (hpp['a'][0]*chck[0] + hpp['a'][1]*chck[1])*(1.-tg_ha**2)
-                                con += (-hpp['a'][0]*chck[1] + hpp['a'][1]*chck[0])*(2*tg_ha)
-                                pos = [0, 0]  # next part gives an offset to input position e.g. for trailer position
-                                pos[0] = position[0]*(1+tg_ha**2) + offset*(1-tg_ha**2)  # = real_pos*(1+tg_ha**2)
-                                pos[1] = position[1]*(1+tg_ha**2) + offset*(2*tg_ha)  # = real_pos*(1+tg_ha**2)
-                                con += (hpp['a'][0]*pos[0] + hpp['a'][1]*pos[1])
-                                con += (-hpp['b']+rad[l])*(1+tg_ha**2)
-                                self.define_constraint(con, -inf, 0)
+                if ((isinstance(environment.room['shape'], (Rectangle, Square)) and
+                    environment.room['shape'].orientation == 0.0) and
+                    (isinstance(shape, Circle) or
+                    (isinstance(shape, (Rectangle, Square)) and
+                     shape.orientation == 0)) and
+                    (isinstance(tg_ha, (int, float, long)) and tg_ha == 0.)):
+                    room_limits = environment.get_canvas_limits()
+                    for chck in checkpoints:
+                        for k in range(2):
+                            self.define_constraint(-(chck[k]+position[k]) + room_limits[k][0] + rad[0], -inf, 0.)
+                            self.define_constraint((chck[k]+position[k]) - room_limits[k][1] + rad[0], -inf, 0.)
+                else:
+                    hyp_room = environment.room['shape'].get_hyperplanes(position = environment.room['position'])
+                    for l, chck in enumerate(checkpoints):
+                        for hpp in hyp_room.itervalues():
+                            con = 0
+                            con += (hpp['a'][0]*chck[0] + hpp['a'][1]*chck[1])*(1.-tg_ha**2)
+                            con += (-hpp['a'][0]*chck[1] + hpp['a'][1]*chck[0])*(2*tg_ha)
+                            pos = [0, 0]  # next part gives an offset to input position e.g. for trailer position
+                            pos[0] = position[0]*(1+tg_ha**2) + offset*(1-tg_ha**2)  # = real_pos*(1+tg_ha**2)
+                            pos[1] = position[1]*(1+tg_ha**2) + offset*(2*tg_ha)  # = real_pos*(1+tg_ha**2)
+                            con += (hpp['a'][0]*pos[0] + hpp['a'][1]*pos[1])
+                            con += (-hpp['b']+rad[l])*(1+tg_ha**2)
+                            self.define_constraint(con, -inf, 0)
 
     def define_collision_constraints_3d(self, hyperplanes, environment, positions):
         # orientation for 3d not yet implemented!

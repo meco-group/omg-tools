@@ -22,15 +22,13 @@ warnings.filterwarnings("ignore")
 import os
 import shutil
 import matplotlib
+matplotlib.use('TKAgg')
 import matplotlib.pyplot as plt
 from matplotlib import animation
 from mpl_toolkits.mplot3d import Axes3D, proj3d
 import numpy as np
-import warnings
-matplotlib.use('TKAgg')
 from matplotlib.collections import PolyCollection, LineCollection
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection, Line3DCollection
-
 
 # def orthogonal_proj(zfront, zback):
 #     a = (zfront+zback)/(zfront-zback)
