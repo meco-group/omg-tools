@@ -202,17 +202,14 @@ class Problem(OptiChild, PlotLayer):
             indices = [int([''.join(g) for _, g in groupby(
                 v.label, str.isalpha)][-1]) % n_colors for v in self.vehicles]
             for v in range(len(self.vehicles)):
-                info[0][0]['lines'].append(
-                    {'color': self.colors_w[indices[v]]})
+                info[0][0]['lines'] += [{'color': self.colors_w[indices[v]]}]
             for v in range(len(self.vehicles)):
-                info[0][0]['lines'].append({'color': self.colors[indices[v]]})
+                info[0][0]['lines'] += [{'color': self.colors[indices[v]]}]
             for v, vehicle in enumerate(self.vehicles):
-                info[0][0]['lines'].append({'color': self.colors[indices[v]]})
-                info[0][0]['surfaces'].append({'facecolor': self.colors_w[indices[v]], 'edgecolor': self.colors[indices[v]], 'linewidth': 1.2})
-
-                # for _ in vehicle.draw():
-                #     info[0][0]['lines'].append(
-                #         {'color': self.colors[indices[v]]})
+                s, l = vehicle.draw()
+                info[0][0]['lines'] += [{'color': self.colors[indices[v]]} for _ in l]
+                info[0][0]['surfaces'] += [{'facecolor': self.colors_w[indices[v]],
+                    'edgecolor': self.colors[indices[v]], 'linewidth': 1.2} for _ in s]
             info[0][0]['labels'] = labels
             return info
         else:
@@ -224,25 +221,16 @@ class Problem(OptiChild, PlotLayer):
                 return None
             data = self.environment.update_plot(None, t, **kwargs)
             for vehicle in self.vehicles:
-                data[0][0]['lines'].append([vehicle.traj_storage['pose'][t][:3, :]])
-                # data[0][0].append(
-                #     [vehicle.traj_storage['pose'][t][k, :] for k in range(vehicle.n_dim)])
+                data[0][0]['lines'] += [vehicle.traj_storage['pose'][t][:3, :]]
             for vehicle in self.vehicles:
                 if t == -1:
-                    data[0][0]['lines'].append([vehicle.signals['pose'][:3, :]])
-                    # data[0][0].append(
-                    #     [vehicle.signals['pose'][k, :] for k in range(vehicle.n_dim)])
+                    data[0][0]['lines'] += [vehicle.signals['pose'][:3, :]]
                 else:
-                    data[0][0]['lines'].append([vehicle.signals['pose'][:3, :t+1]])
-                    # data[0][0].append(
-                    #     [vehicle.signals['pose'][k, :t+1] for k in range(vehicle.n_dim)])
+                    data[0][0]['lines'] += [vehicle.signals['pose'][:3, :t+1]]
             for vehicle in self.vehicles:
                 surfaces, lines = vehicle.draw(t)
-                data[0][0]['surfaces'].append(surfaces)
-                data[0][0]['lines'].append(lines)
-                # data[0][0].append(vehicle.draw(t))
-                # for l in vehicle.draw(t):
-                #     data[0][0].append([l[k, :] for k in range(vehicle.n_dim)])
+                data[0][0]['surfaces'] += surfaces
+                data[0][0]['lines'] += lines
             return data
         else:
             return None

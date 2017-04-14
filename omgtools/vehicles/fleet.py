@@ -135,10 +135,13 @@ class Fleet(PlotLayer):
                 inf = []
                 for l in range(len(infos[0][0])):
                     labels = infos[0][k][l]['labels']
-                    lines = []
+                    surfaces, lines = [], []
                     for v in range(len(vehicles)):
-                        lines += infos[v][k][l]['lines']
-                    dic = {'labels': labels, 'lines': lines}
+                        if 'surfaces' in infos[v][k][l]:
+                            surfaces += infos[v][k][l]['surfaces']
+                        if 'lines' in infos[v][k][l]:
+                            lines += infos[v][k][l]['lines']
+                    dic = {'labels': labels, 'surfaces': surfaces, 'lines': lines}
                     if 'xlim' in kwargs:
                         dic['xlim'] = kwargs['xlim']
                     if 'ylim' in kwargs:
@@ -156,11 +159,14 @@ class Fleet(PlotLayer):
             datas = [v.update_plot(signal, t, **kwargs) for v in vehicles]
             for k in range(len(datas[0])):
                 dat = []
-                for l in range(len(datas[0][0])):
-                    lines = []
+                for l in range(len(datas[0][k])):
+                    surfaces, lines = [], []
                     for v in range(len(vehicles)):
-                        lines += datas[v][k][l]
-                    dat.append(lines)
+                        if 'surfaces' in datas[v][k][l]:
+                            surfaces += datas[v][k][l]['surfaces']
+                        if 'lines' in datas[v][k][l]:
+                            lines += datas[v][k][l]['lines']
+                    dat.append({'surfaces': surfaces, 'lines': lines})
                 data.append(dat)
         return data
 

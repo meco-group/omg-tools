@@ -39,7 +39,7 @@ problem = Point2point(vehicle, environment, freeT=True)
 problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem.init()
 
-vehicle.problem = problem  # to plot error if using substitution 
+vehicle.problem = problem  # to plot error if using substitution
 
 # create simulator
 simulator = Simulator(problem)

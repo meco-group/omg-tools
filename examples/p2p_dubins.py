@@ -28,7 +28,7 @@ vehicle.set_initial_conditions([0., 0., 0.])  # input orientation in rad
 vehicle.set_terminal_conditions([3., 3., 0.])
 
 # create environment
-environment = Environment(room={'shape': Square(5.), 'position': [1.5, 1.5], 'draw':True})
+environment = Environment(room={'shape': Square(5.), 'position': [1.5, 1.5]})
 
 trajectories = {'velocity': {'time': [0.5],
                              'values': [[0.25, 0.0]]}}

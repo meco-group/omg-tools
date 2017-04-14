@@ -418,14 +418,15 @@ class Vehicle(OptiChild, PlotLayer):
         for key in dictionary.keys():
             if not (key in memory):
                 memory[key] = []
-            # memory[key].extend([np.c_[dictionary[key]] for k in range(repeat)])
             memory[key].extend([dictionary[key] for k in range(repeat)])
 
     def draw(self, t=-1):
-        ret = []
+        surf, lines = [], []
         for shape in self.shapes:
-            ret += shape.draw(self.signals['pose'][:, t])
-        return ret
+            s, l = shape.draw(self.signals['pose'][:, t])
+            surf += s
+            lines += l
+        return surf, lines
 
     # ========================================================================
     # Plot related functions
@@ -450,16 +451,12 @@ class Vehicle(OptiChild, PlotLayer):
             inf = []
             for _ in range(ax_c):
                 lines = []
-                lines.append(
-                    {'linestyle': '-', 'color': self.colors_w[index]})
-                lines.append(
-                    {'linestyle': '-', 'color': self.colors[index]})
+                lines += [{'linestyle': '-', 'color': self.colors_w[index]}]
+                lines += [{'linestyle': '-', 'color': self.colors[index]}]
                 if 'knots' in kwargs and kwargs['knots']:
-                    lines.append(
-                        {'linestyle': 'None', 'marker': 'x', 'color': self.colors[index]})
+                    lines += [{'linestyle': 'None', 'marker': 'x', 'color': self.colors[index]}]
                 if 'prediction' in kwargs and kwargs['prediction']:
-                    lines.append(
-                        {'linestyle': 'None', 'marker': 'o', 'color': self.colors[index]})
+                    lines += [{'linestyle': 'None', 'marker': 'o', 'color': self.colors[index]}]
                 dic = {'labels': ['t (s)', labels[k]], 'lines': lines}
                 if 'xlim' in kwargs:
                     dic['xlim'] = kwargs['xlim']
@@ -479,20 +476,16 @@ class Vehicle(OptiChild, PlotLayer):
             dat = []
             for l in range(ax_c):
                 lines = []
-                lines.append(
-                    [self.traj_storage['time'][t], self.traj_storage[signal][t][k, :]])
+                lines += [np.vstack((self.traj_storage['time'][t], self.traj_storage[signal][t][k, :]))]
                 if t == -1:
-                    lines.append(
-                        [self.signals['time'], self.signals[signal][k, :]])
+                    lines += [np.vstack((self.signals['time'], self.signals[signal][k, :]))]
                 else:
-                    lines.append(
-                        [self.signals['time'][:, :t+1], self.signals[signal][k, :t+1]])
+                    lines += [np.vstack((self.signals['time'][:, :t+1], self.signals[signal][k, :t+1]))]
                 if 'knots' in kwargs and kwargs['knots']:
-                    lines.append(
-                        [self.traj_storage_kn['time'][t], self.traj_storage_kn[signal][t][k, :]])
+                    lines += [np.vstack((self.traj_storage_kn['time'][t], self.traj_storage_kn[signal][t][k, :]))]
                 if 'prediction' in kwargs and kwargs['prediction']:
-                    lines.append([self.traj_storage['time'][t][:, 0], self.pred_storage[signal][t][k]])
-                dat.append(lines)
+                    lines += [np.vstack((self.traj_storage['time'][t][:, 0], self.pred_storage[signal][t][k]))]
+                dat.append({'lines': lines})
             data.append(dat)
         return data
 

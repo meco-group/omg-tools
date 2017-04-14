@@ -87,7 +87,7 @@ class Dubins(Vehicle):
         if self.options['substitution']:
             # substitute velocity and introduce equality constraints
             dx = v_til*(1-tg_ha**2)
-            dy = v_til*(2*tg_ha)        
+            dy = v_til*(2*tg_ha)
             if self.options['exact_substitution']:
                 self.dx = self.define_spline_variable('dx', 1, 1, basis=dx.basis)[0]
                 self.dy = self.define_spline_variable('dy', 1, 1, basis=dy.basis)[0]
@@ -303,27 +303,27 @@ class Dubins(Vehicle):
         return np.r_[u1*np.cos(state[2]), u1*np.sin(state[2]), u2].T
 
     def draw(self, t=-1):
-        ret = []
+        surfaces = []
         for shape in self.shapes:
             if isinstance(shape, Circle):
                 wheel = Square(shape.radius/3.)
                 front = Circle(shape.radius/8.)
-                ret += shape.draw(self.signals['pose'][:, t])
-                ret += wheel.draw(self.signals['pose'][:, t]+
+                surfaces += shape.draw(self.signals['pose'][:, t])[0]
+                surfaces += wheel.draw(self.signals['pose'][:, t]+
                                   (shape.radius/2.)*np.array([np.cos(self.signals['pose'][2, t]-np.pi/2.),
                                                              np.sin(self.signals['pose'][2, t]-np.pi/2.),
-                                                             self.signals['pose'][2, t]]))
-                ret += wheel.draw(self.signals['pose'][:, t]+
+                                                             self.signals['pose'][2, t]]))[0]
+                surfaces += wheel.draw(self.signals['pose'][:, t]+
                                   (shape.radius/2.)*np.array([np.cos(self.signals['pose'][2, t]+np.pi/2.),
                                                              np.sin(self.signals['pose'][2, t]+np.pi/2.),
-                                                             self.signals['pose'][2, t]]))
-                ret += front.draw(self.signals['pose'][:, t]+
+                                                             self.signals['pose'][2, t]]))[0]
+                surfaces += front.draw(self.signals['pose'][:, t]+
                                   (shape.radius/1.5)*np.array([np.cos(self.signals['pose'][2, t]),
                                                                np.sin(self.signals['pose'][2, t]),
-                                                               self.signals['pose'][2, t]]))
+                                                               self.signals['pose'][2, t]]))[0]
             else:
-                ret += shape.draw(self.signals['pose'][:, t])
-        return ret
+                surfaces += shape.draw(self.signals['pose'][:, t])[0]
+        return surfaces, []
 
     def get_pos_splines(self, splines):
         T = self.define_symbol('T')  # motion time

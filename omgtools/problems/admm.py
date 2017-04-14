@@ -655,14 +655,14 @@ class ADMMProblem(DualProblem):
                 if t == -1:
                     n_it = len(residual)
                     iterations = np.linspace(1, n_it, n_it)
-                    lines.append([iterations, np.log10(residual)])
+                    lines += [np.vstack((iterations, np.log10(residual)))]
                 else:
                     ind = (self.options['init_iter'] +
                            t*self.options['max_iter_per_update'])
                     n_it = ind + 1
                     iterations = np.linspace(1, n_it, n_it)
-                    lines.append([iterations, np.log10(residual[:ind+1])])
-                data.append([lines])
+                    lines += [np.vstack((iterations, np.log10(residual[:ind+1])))]
+                data.append([{'lines': lines}])
             return data
         else:
             return Problem.update_plot(self, argument, t, **kwargs)

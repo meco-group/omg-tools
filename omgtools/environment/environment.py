@@ -19,7 +19,7 @@
 
 from ..basics.optilayer import OptiChild
 from ..basics.spline import BSplineBasis
-from ..execution.plotlayer import PlotLayer
+from ..execution.plotlayer import PlotLayer, mix_with_white
 from obstacle import Obstacle
 from casadi import inf
 import numpy as np
@@ -155,16 +155,14 @@ class Environment(OptiChild, PlotLayer):
 
     def draw(self, t=-1):
         surfaces, lines = [], []
+        if self.room['draw']:
+            s, l = self.room['shape'].draw()
+            surfaces += s
+            lines += l
         for obstacle in self.obstacles:
             s, l = obstacle.draw(t)
-            surfaces.append(s)
-            lines.append(l)
-        # if self.room['draw']:
-        #     roomPoints = []
-        #     for point in self.room['shape'].draw():
-        #         roomPoints.append(np.array([point[0]+self.room['position'][0],
-        #                                     point[1]+self.room['position'][1]]))
-        #     draw.extend(roomPoints)
+            surfaces += s
+            lines += l
         return surfaces, lines
 
     def get_canvas_limits(self):
@@ -177,9 +175,13 @@ class Environment(OptiChild, PlotLayer):
 
     def init_plot(self, argument, **kwargs):
         s, l = self.draw()
-        surfaces = [{'facecolor': 'gray', 'edgecolor': 'black', 'linewidth': 1.2} for _ in s]
+        gray = [60./255., 61./255., 64./255.]
+        surfaces = [{'facecolor': mix_with_white(gray, 50), 'edgecolor': 'black', 'linewidth': 1.2} for _ in s]
         lines = [{'color': 'black', 'linewidth': 1.2} for _ in l]
-        # lines = [{'color': 'black', 'linewidth': 1.2} for _ in self.draw()]
+        if self.room['draw']:
+            s_, l_ = self.room['shape'].draw()
+            for k, _ in enumerate(s_):
+                surfaces[k]['facecolor'] = mix_with_white(gray, 90)
         if 'limits' in kwargs:
             limits = kwargs['limits']
         else:
@@ -194,9 +196,5 @@ class Environment(OptiChild, PlotLayer):
                       'projection': '3d'}]]
 
     def update_plot(self, argument, t, **kwargs):
-        surfaces, lines = self.draw(t)
-        # lines = []
-        # for l in self.draw(t):
-        #     lines.append(l)
-            # lines.append([l[k, :] for k in range(self.n_dim)])
-        return [[{'surfaces': surfaces, 'lines': lines}]]
+        s, l = self.draw(t)
+        return [[{'surfaces': s, 'lines': l}]]

@@ -204,9 +204,9 @@ class Trailer(Vehicle):
         return np.r_[pose_tr , pose_veh]
 
     def draw(self, t=-1):
-        ret = []
+        surfaces, lines = [], []
         for shape in self.shapes:
-            ret += shape.draw(self.signals['pose'][:3, t])
+            surfaces += shape.draw(self.signals['pose'][:3, t])[0]
             # plot connection between car and trailer
             if isinstance(shape, (Circle, Square)):
                 dist = shape.radius
@@ -222,7 +222,7 @@ class Trailer(Vehicle):
             # midpoint of trailer and connection point on vehicle so this already contains 'dist' --> use l_hitch
             pt2 = self.signals['pose'][:2, t] + (self.l_hitch)*np.array([np.cos(self.signals['pose'][2, t]),
                                                                          np.sin(self.signals['pose'][2, t])])
-            ret += [np.array([pt1, pt2]).T]
+            lines += [np.array([pt1, pt2]).T]
         # signals are required for drawing
         # since this vehicle is not simulated separately it doesn't get a self.signals attribute
         signals_veh = {}
@@ -230,5 +230,5 @@ class Trailer(Vehicle):
         signals_veh['state'] = self.signals['state'][3:, ]
         signals_veh['input'] = self.signals['input']
         self.lead_veh.update_signals(signals_veh)
-        ret += self.lead_veh.draw(t)
-        return ret
+        surfaces += self.lead_veh.draw(t)[0]
+        return surfaces, lines

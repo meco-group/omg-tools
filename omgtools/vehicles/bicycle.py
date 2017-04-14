@@ -95,7 +95,7 @@ class Bicycle(Vehicle):
         if self.options['substitution']:
             # substitute velocity and introduce equality constraints
             dx = v_til*(1-tg_ha**2)
-            dy = v_til*(2*tg_ha)        
+            dy = v_til*(2*tg_ha)
             if self.options['exact_substitution']:
                 self.dx = self.define_spline_variable('dx', 1, 1, basis=dx.basis)[0]
                 self.dy = self.define_spline_variable('dy', 1, 1, basis=dy.basis)[0]
@@ -362,11 +362,11 @@ class Bicycle(Vehicle):
         return np.r_[u1*np.cos(state[2]), u1*np.sin(state[2]), u1/self.length*np.tan(state[3]) , u2].T
 
     def draw(self, t=-1):
-        ret = []
+        surfaces = []
         if self.options['plot_type'] is 'car':
             car = Rectangle(width=self.length, height=self.length/4.)
             wheel = Rectangle(self.length/8., self.length/10.)
-            ret += car.draw(self.signals['pose'][:3, t])  # vehicle
+            surfaces += car.draw(self.signals['pose'][:3, t])[0]  # vehicle
             pos_front_l = self.signals['pose'][:2, t] + np.array([(self.length/2.5)*np.cos(self.signals['pose'][2, t]+np.radians(30.)),
                                                          (self.length/2.5)*np.sin(self.signals['pose'][2, t]+np.radians(30.))])
             pos_front_r = self.signals['pose'][:2, t] + np.array([(self.length/2.5)*np.cos(self.signals['pose'][2, t]-np.radians(30.)),
@@ -377,21 +377,21 @@ class Bicycle(Vehicle):
             pos_back_r = self.signals['pose'][:2, t] - np.array([(self.length/2.5)*np.cos(self.signals['pose'][2, t]-np.radians(30.)),
                                                          (self.length/2.5)*np.sin(self.signals['pose'][2, t]-np.radians(30.))])
             orient_back = self.signals['pose'][2, t]
-            ret += wheel.draw(np.r_[pos_front_l, orient_front])  # front wheel left
-            ret += wheel.draw(np.r_[pos_front_r, orient_front])  # front wheel right
-            ret += wheel.draw(np.r_[pos_back_l, orient_back])  # back wheel left
-            ret += wheel.draw(np.r_[pos_back_r, orient_back])  # back wheel right
+            surfaces += wheel.draw(np.r_[pos_front_l, orient_front])[0]  # front wheel left
+            surfaces += wheel.draw(np.r_[pos_front_r, orient_front])[0]  # front wheel right
+            surfaces += wheel.draw(np.r_[pos_back_l, orient_back])[0]  # back wheel left
+            surfaces += wheel.draw(np.r_[pos_back_r, orient_back])[0]  # back wheel right
 
         if self.options['plot_type'] is 'bicycle':
             car = Rectangle(width=self.length, height=self.length/4.)
             wheel = Rectangle(self.length/2., self.length/6.)
-            ret += car.draw(self.signals['pose'][:3, t])  # vehicle
+            surfaces += car.draw(self.signals['pose'][:3, t])[0]  # vehicle
             pos_front = self.signals['pose'][:2, t] + (self.length/3)*np.array([np.cos(self.signals['pose'][2, t]),
                                                          np.sin(self.signals['pose'][2, t])])
             orient_front = self.signals['pose'][2, t] + self.signals['delta'][0, t]
             pos_back = self.signals['pose'][:2, t] - (self.length/3)*np.array([np.cos(self.signals['pose'][2, t]),
                                                          np.sin(self.signals['pose'][2, t])])
             orient_back = self.signals['pose'][2, t]
-            ret += wheel.draw(np.r_[pos_front, orient_front])  # front wheel
-            ret += wheel.draw(np.r_[pos_back, orient_back])  # back wheel
-        return ret
+            surfaces += wheel.draw(np.r_[pos_front, orient_front])[0]  # front wheel
+            surfaces += wheel.draw(np.r_[pos_back, orient_back])[0]  # back wheel
+        return surfaces, []

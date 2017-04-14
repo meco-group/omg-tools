@@ -42,13 +42,13 @@ problem = Point2point(trailer, environment, freeT=True)  # pass trailer to probl
 problem.father.add(vehicle)  # add vehicle to optifather, such that it knows the trailer variables
 problem.vehicles.append(vehicle)
 # todo: isn't there are a cleaner way?
-vehicle.to_simulate = False 
+vehicle.to_simulate = False
 # extra solver settings which may improve performance
 problem.set_options({'solver_options': {'ipopt': {'ipopt.hessian_approximation': 'limited-memory', 'ipopt.linear_solver': 'ma57'}}})
 problem.init()
 
 # problem.set_options({'hard_term_con': True, 'horizon_time': 12})
-# vehicle.problem = problem  # to plot error 
+# vehicle.problem = problem  # to plot error
 
 # create simulator
 simulator = Simulator(problem)

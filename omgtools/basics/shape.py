@@ -58,7 +58,7 @@ class Circle(Shape2D):
         s = np.linspace(0, 1-1./48, 48)
         points = np.vstack(
             (self.radius*np.cos(s*2*np.pi), self.radius*np.sin(s*2*np.pi)))
-        return [s]
+        return [points]
 
     def get_checkpoints(self):
         return [[0., 0.]], [self.radius]
@@ -224,33 +224,49 @@ class Sphere(Shape3D):
 
     def __init__(self, radius):
         self.radius = radius
-        self.surfaces = []
         self.n_chck = 1
-        Shape3D.__init__(self, self.surfaces)
+        Shape3D.__init__(self, [])
+        Shape3D.__init__(self, self.get_surfaces())
 
-    def _prepare_draw(self):
-        self.plt_lines = []
-        s = np.linspace(0, 1-1./48, 48)
-        # vertical circles
-        circle_v = np.vstack((self.radius*np.cos(s*2*np.pi), np.zeros(len(s)), self.radius*np.sin(s*2*np.pi)))
-        for k in range(6):
-            points = self.rotate([0, 0, k*np.pi/6], circle_v)
-            n_vert = points.shape[1]
-            self.plt_lines += [np.c_[points[:, l], points[:, (l+1)%n_vert]] for l in range(n_vert)]
-        # horizontal circles
-        for k in range(4):
-            radius = self.radius*np.cos(k*np.pi/8)
-            height = self.radius*np.sin(k*np.pi/8)
-            circle_h = np.vstack((radius*np.cos(s*2*np.pi), radius*np.sin(s*2*np.pi), np.zeros(len(s))))
-            if height > 0:
-                for j in range(2):
-                    points = circle_h + ((-1)**j)*np.vstack((0., 0., height))
-                    n_vert = points.shape[1]
-                    self.plt_lines += [np.c_[points[:, l], points[:, (l+1)%n_vert]] for l in range(n_vert)]
-            else:
-                points = circle_h
-                n_vert = points.shape[1]
-                self.plt_lines += [np.c_[points[:, l], points[:, (l+1)%n_vert]] for l in range(n_vert)]
+    def get_surfaces(self):
+        surf = []
+        pnts = []
+        nk, nl = 5, 12
+        for k in range(nk):
+            radius = self.radius*np.cos(k*np.pi/(2*(nk-1)))
+            height = self.radius*np.sin(k*np.pi/(2*(nk-1)))
+            pnt0 = np.r_[radius, 0, height]
+            pnts.append([self.rotate([0, 0, l*np.pi/(nl/2.)], pnt0) for l in range(12)])
+        for k in range(nk):
+            for l in range(nl):
+                srf = np.c_[pnts[k][l], pnts[k][(l+1)%nl], pnts[(k+1)%nk][(l+1)%nl], pnts[(k+1)%nk][l]]
+                srf2 = np.vstack((srf[:2, :], -srf[2, :]))
+                surf += [srf, srf2]
+        return surf
+
+    # def _prepare_draw(self):
+    #     self.plt_lines = []
+    #     s = np.linspace(0, 1-1./48, 48)
+    #     # vertical circles
+    #     circle_v = np.vstack((self.radius*np.cos(s*2*np.pi), np.zeros(len(s)), self.radius*np.sin(s*2*np.pi)))
+    #     for k in range(6):
+    #         points = self.rotate([0, 0, k*np.pi/6], circle_v)
+    #         n_vert = points.shape[1]
+    #         self.plt_lines += [np.c_[points[:, l], points[:, (l+1)%n_vert]] for l in range(n_vert)]
+    #     # horizontal circles
+    #     for k in range(4):
+    #         radius = self.radius*np.cos(k*np.pi/8)
+    #         height = self.radius*np.sin(k*np.pi/8)
+    #         circle_h = np.vstack((radius*np.cos(s*2*np.pi), radius*np.sin(s*2*np.pi), np.zeros(len(s))))
+    #         if height > 0:
+    #             for j in range(2):
+    #                 points = circle_h + ((-1)**j)*np.vstack((0., 0., height))
+    #                 n_vert = points.shape[1]
+    #                 self.plt_lines += [np.c_[points[:, l], points[:, (l+1)%n_vert]] for l in range(n_vert)]
+    #         else:
+    #             points = circle_h
+    #             n_vert = points.shape[1]
+    #             self.plt_lines += [np.c_[points[:, l], points[:, (l+1)%n_vert]] for l in range(n_vert)]
 
     def get_checkpoints(self):
         return [[0., 0., 0.]], [self.radius]

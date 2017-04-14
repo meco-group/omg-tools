@@ -156,7 +156,4 @@ class Quadrotor(Vehicle):
         plt_x = [r, r-2*rw, r-rw, r-rw, -r+rw, -r+rw, -r, -r+2*rw]
         plt_y = [h, h, h, 0, 0, h, h, h]
         points = np.vstack((plt_x, plt_y))
-        n_points = points.shape[1]
-        lines = [np.c_[points[:, l], points[:, l+1]]
-                 for l in range(n_points-1)]
-        return [np.c_[self.signals['pose'][:2, t]] + rot.dot(line) for line in lines]
+        return [], [np.c_[self.signals['pose'][:2, t]] + rot.dot(points)]
