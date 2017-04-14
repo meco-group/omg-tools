@@ -206,7 +206,7 @@ class ObstaclexD(OptiChild):
 
     def draw(self, t=-1):
         if not self.options['draw']:
-            return []
+            return [], []
         pose = np.zeros(2*self.n_dim)
         pose[:self.n_dim] = self.signals['position'][:, t]
         return self.shape.draw(pose)
