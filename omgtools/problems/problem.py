@@ -19,9 +19,8 @@
 
 from ..basics.optilayer import OptiFather, OptiChild
 from ..vehicles.fleet import get_fleet_vehicles
-from ..execution.plotlayer import PlotLayer
+from ..simulation.plotlayer import PlotLayer
 from itertools import groupby
-import numpy as np
 import time
 
 
@@ -50,7 +49,7 @@ class Problem(OptiChild, PlotLayer):
     # ========================================================================
     # Problem options
     # ========================================================================
-
+#https://www.coin-or.org/Ipopt/documentation/node40.html
     def set_default_options(self):
         self.options = {'verbose': 2}
         self.options['solver'] = 'ipopt'
@@ -73,7 +72,7 @@ class Problem(OptiChild, PlotLayer):
                 self.options[key] = options[key]
 
     # ========================================================================
-    # Create problem
+    # Create and solve problem
     # ========================================================================
 
     def construct(self):
@@ -88,10 +87,6 @@ class Problem(OptiChild, PlotLayer):
         self.father.init_transformations(self.init_primal_transform,
                                          self.init_dual_transform)
         return buildtime
-
-    # ========================================================================
-    # Deploying related functions
-    # ========================================================================
 
     def reinitialize(self, father=None):
         if father is None:
@@ -114,14 +109,8 @@ class Problem(OptiChild, PlotLayer):
         self.father.set_variables(result['x'])
         stats = self.problem.stats()
         if stats['return_status'] != 'Solve_Succeeded':
-            if stats['return_status'] == 'Maximum_CpuTime_Exceeded':
-                if current_time != 0.0:  # first iteration can be slow, neglect time here
-                    print 'Maximum solving time exceeded, resetting initial guess'
-                    self.reset_init_guess()
-                    print stats['return_status']
-            else:
-                # there was another problem
-                print stats['return_status']
+            print stats['return_status']
+        # print
         if self.options['verbose'] >= 2:
             self.iteration += 1
             if ((self.iteration-1) % 20 == 0):
@@ -130,62 +119,6 @@ class Problem(OptiChild, PlotLayer):
                 print "----|------------|------------"
             print "%3d | %.4e | %.4e " % (self.iteration, t_upd, current_time)
         self.update_times.append(t_upd)
-
-    def predict(self, current_time, predict_time, sample_time, states=None, delay=0):
-        if states is None:
-            states = [None for k in range(len(self.vehicles))]
-        if len(self.vehicles) == 1:
-            if not isinstance(states, list):
-                states = [states]
-            elif isinstance(states[0], float):
-                states = [states]
-        enforce = True if (current_time == self.start_time) else False
-        for k, vehicle in enumerate(self.vehicles):
-            vehicle.predict(current_time, predict_time, sample_time, states[k], delay, enforce)
-
-    def reset_init_guess(self, init_guess=None):
-            if init_guess is None:  # no user provided initial guess
-                init_guess = []
-                for k, vehicle in enumerate(self.vehicles):  # build list
-                    init_guess.append(vehicle.get_init_spline_value())
-            elif not isinstance(init_guess, list):  # guesses must be in a list
-                init_guess = [init_guess]
-
-            for k, vehicle in enumerate(self.vehicles):
-                if len(init_guess) != vehicle.n_seg:
-                    raise ValueError('Each spline segment of the vehicle should receive an initial guess.')
-                else:
-                    for l in range(vehicle.n_seg):
-                        if init_guess[l].shape[1] != vehicle.n_spl:
-                            raise ValueError('Each vehicle spline should receive an initial guess.')
-                        else:
-                            self.father.set_variables(init_guess[l].tolist(),child=vehicle, name='splines'+str(l))
-
-    # ========================================================================
-    # Simulation related functions
-    # ========================================================================
-
-    def simulate(self, current_time, simulation_time, sample_time):
-        for vehicle in self.vehicles:
-            vehicle.simulate(simulation_time, sample_time)
-        self.environment.simulate(simulation_time, sample_time)
-        self.fleet.update_plots()
-        self.update_plots()
-
-    def sleep(self, current_time, sleep_time, sample_time):
-        # update vehicles
-        for vehicle in self.vehicles:
-            spline_segments = [self.father.get_variables(
-                vehicle, 'splines'+str(k)) for k in range(vehicle.n_seg)]
-            spline_values = vehicle.signals['splines'][:, -1]
-            spline_values = [self.father.get_variables(
-                vehicle, 'splines'+str(k), spline=False)[-1, :] for k in range(vehicle.n_seg)]
-            for segment, values in zip(spline_segments, spline_values):
-                for spl, value in zip(segment, values):
-                    spl.coeffs = value*np.ones(len(spl.basis))
-            vehicle.store(current_time, sample_time, spline_segments, sleep_time)
-        # no correction for update time!
-        Problem.simulate(self, current_time, sleep_time, sample_time)
 
     # ========================================================================
     # Plot related functions
@@ -202,14 +135,14 @@ class Problem(OptiChild, PlotLayer):
             indices = [int([''.join(g) for _, g in groupby(
                 v.label, str.isalpha)][-1]) % n_colors for v in self.vehicles]
             for v in range(len(self.vehicles)):
-                info[0][0]['lines'] += [{'color': self.colors_w[indices[v]]}]
+                info[0][0]['lines'].append(
+                    {'linestyle': '-', 'color': self.colors_w[indices[v]]})
             for v in range(len(self.vehicles)):
-                info[0][0]['lines'] += [{'color': self.colors[indices[v]]}]
+                info[0][0]['lines'].append({'color': self.colors[indices[v]]})
             for v, vehicle in enumerate(self.vehicles):
-                s, l = vehicle.draw()
-                info[0][0]['lines'] += [{'color': self.colors[indices[v]]} for _ in l]
-                info[0][0]['surfaces'] += [{'facecolor': self.colors_w[indices[v]],
-                    'edgecolor': self.colors[indices[v]], 'linewidth': 1.2} for _ in s]
+                for _ in vehicle.draw():
+                    info[0][0]['lines'].append(
+                        {'color': self.colors[indices[v]]})
             info[0][0]['labels'] = labels
             return info
         else:
@@ -221,16 +154,18 @@ class Problem(OptiChild, PlotLayer):
                 return None
             data = self.environment.update_plot(None, t, **kwargs)
             for vehicle in self.vehicles:
-                data[0][0]['lines'] += [vehicle.traj_storage['pose'][t][:3, :]]
+                data[0][0].append(
+                    [vehicle.traj_storage['pose'][t][k, :] for k in range(vehicle.n_dim)])
             for vehicle in self.vehicles:
                 if t == -1:
-                    data[0][0]['lines'] += [vehicle.signals['pose'][:3, :]]
+                    data[0][0].append(
+                        [vehicle.signals['pose'][k, :] for k in range(vehicle.n_dim)])
                 else:
-                    data[0][0]['lines'] += [vehicle.signals['pose'][:3, :t+1]]
+                    data[0][0].append(
+                        [vehicle.signals['pose'][k, :t+1] for k in range(vehicle.n_dim)])
             for vehicle in self.vehicles:
-                surfaces, lines = vehicle.draw(t)
-                data[0][0]['surfaces'] += surfaces
-                data[0][0]['lines'] += lines
+                for l in vehicle.draw(t):
+                    data[0][0].append([l[k, :] for k in range(vehicle.n_dim)])
             return data
         else:
             return None
@@ -262,9 +197,6 @@ class Problem(OptiChild, PlotLayer):
     # ========================================================================
 
     def update(self, current_time, update_time, sample_time):
-        raise NotImplementedError('Please implement this method!')
-
-    def store(self, current_time, update_time, sample_time):
         raise NotImplementedError('Please implement this method!')
 
     def stop_criterium(self, current_time, update_time):

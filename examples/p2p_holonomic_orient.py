@@ -26,8 +26,8 @@ vehicle = HolonomicOrient()
 # By default no regularization is added.
 vehicle.set_options({'reg_type': 'norm_1', 'reg_weight': 10})
 
-vehicle.set_initial_conditions([-1.5, -1.5, np.pi/4.])  # input orientation in deg
-vehicle.set_terminal_conditions([2., 2., np.pi/2.])
+vehicle.set_initial_conditions([-1.5, -1.5, 0.])  # input orientation in deg
+vehicle.set_terminal_conditions([1.5, 1.5, 0.])
 
 # create environment
 environment = Environment(room={'shape': Square(5.)})
@@ -42,7 +42,9 @@ environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
 
 # create a point-to-point problem
 problem = Point2point(vehicle, environment, freeT=True)
-problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
+#problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
+problem.set_options({'solver_options': {'ipopt': {'ipopt.hessian_approximation': 'limited-memory'}}})
+
 problem.init()
 
 # create simulator
@@ -53,3 +55,4 @@ vehicle.plot('state', knots=True, labels=['x (m)', 'y (m)', 'theta (rad)'])
 
 # run it!
 simulator.run()
+problem.save_movie('scene', format='gif', name='holonomic_orient', number_of_frames=100, movie_time=5, axis=False)

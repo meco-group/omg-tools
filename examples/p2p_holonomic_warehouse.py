@@ -20,9 +20,8 @@
 from omgtools import *
 
 # create vehicle
-vehicle = Holonomic(options={'syslimit': 'norm_2', 'safety_distance': 0.1})
+vehicle = Holonomic(options={'syslimit': 'norm_2'})
 
-vehicle.define_knots(knot_intervals = 10)
 vehicle.set_initial_conditions([0., 0.])
 vehicle.set_terminal_conditions([6., 3.5])
 
@@ -36,9 +35,9 @@ environment.add_obstacle(Obstacle({'position': [5., 1.]}, shape=rectangle))
 environment.add_obstacle(Obstacle({'position': [1., 2.5]}, shape=rectangle))
 environment.add_obstacle(Obstacle({'position': [3., 2.5]}, shape=rectangle))
 environment.add_obstacle(Obstacle({'position': [5., 2.5]}, shape=rectangle))
-trajectories1 = {'velocity': {'time': [0, 2],
+trajectories1 = {'velocity': {'time': [1., 2.],
                              'values': [[0., 0.0], [0., 0.15]]}}
-trajectories2 = {'velocity': {'time': [0, 2],
+trajectories2 = {'velocity': {'time': [1., 2.],
                              'values': [[0., 0.0], [0., -0.1]]}}
 environment.add_obstacle(Obstacle({'position': [4., 2.5]}, shape=Circle(0.5),
                                   simulation={'trajectories': trajectories2}))
@@ -54,9 +53,7 @@ problem.init()
 # create simulator
 simulator = Simulator(problem)
 problem.plot('scene')
-vehicle.plot('input', knots=True,labels=['v (m/s)', 'w (rad/s)'])
+vehicle.plot('input', knots=True, labels=['v (m/s)', 'w (rad/s)'])
 
 # run it!
 simulator.run()
-
-# problem.save_movie('scene', number_of_frames=60, name='warehouse', axis=False)

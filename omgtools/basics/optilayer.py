@@ -22,7 +22,10 @@ try:
 except:
     from casadi import Importer
     Compiler = Importer
+
 from casadi import DM, MX, inf, Function, nlpsol, external
+
+
 from casadi import symvar, substitute
 from casadi.tools import struct, struct_MX, struct_symMX, entry
 from spline import BSpline
@@ -33,7 +36,6 @@ import copy
 import os
 import shutil
 import collections as col
-
 
 def evalf(fun, x):
     x = x if isinstance(x, list) else [x]
@@ -596,14 +598,14 @@ class OptiChild(object):
     def set_value(self, name, value):
         self._values[name] = value
 
-    def define_constraint(self, expr, lb, ub, shutdown=False, name=None):
+    def define_constraint(self, expr, lb, ub, shutdown=False, name=None):#expr moet tussen lb (lowerbound) en ub(upperbound) zitten
         if isinstance(expr, (float, int)):
             return
         if name is None:
-            name = 'c_'+str(self._constraint_cnt)
-        else:
-            name = name + '_' + str(self._constraint_cnt)
-        self._constraint_cnt += 1
+            name = 'c'+str(self._constraint_cnt)
+            self._constraint_cnt += 1
+        if name in self._constraints:
+            raise ValueError('Name %s already used for constraint!' % (name))
         if isinstance(expr, BSpline):
             self._constraints[name] = (
                 expr.coeffs, lb*np.ones(expr.coeffs.shape[0]),

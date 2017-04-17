@@ -17,36 +17,37 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
+import sys, os
+sys.path.insert(0, os.getcwd()+"/..")
 from omgtools import *
-
 # create vehicle
-vehicle = Holonomic()
-vehicle.set_options({'safety_distance': 0.1})
-vehicle.set_options({'ideal_prediction': False})
+vehicle = Holonomic(shapes=Square(0.2))
+vehicle.define_knots(knot_intervals=15)  # adapt amount of knot intervals
 
-vehicle.set_initial_conditions([-1.5, -1.5])
-vehicle.set_terminal_conditions([2., 2.])
+#vehicle.set_options({'safety_distance': 0.1})
+
+vehicle.set_initial_conditions([0., 0.])
+vehicle.set_terminal_conditions([3., 3.])
+vehicle.define_knots(knot_intervals=15)  # adapt amount of knot intervals
 
 # create environment
-environment = Environment(room={'shape': Square(5.)})
-rectangle = Rectangle(width=3., height=0.2)
+environment = Environment(room={'shape': Square(10.), 'position': [1.5, 1.5]})
+rectangle = Rectangle(width=.2, height=3.)
 
-environment.add_obstacle(Obstacle({'position': [-2.1, -0.5]}, shape=rectangle))
-environment.add_obstacle(Obstacle({'position': [1.7, -0.5]}, shape=rectangle))
-trajectories = {'velocity': {'time': [3., 4.],
-                             'values': [[-0.15, 0.0], [0., 0.15]]}}
-environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
-                                  simulation={'trajectories': trajectories}))
+environment.add_obstacle(Obstacle({'position': [1.5, 1.]}, shape=rectangle))
+
 
 # create a point-to-point problem
-problem = Point2point(vehicle, environment, freeT=False)
-problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
+problem = Point2point(vehicle, environment, freeT=True)
+#problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57','ipopt.print_level': 4}}})
+problem.set_options({'solver_options': {'ipopt': {'ipopt.hessian_approximation': 'limited-memory'}}})
+
 problem.init()
 
 # create simulator
 simulator = Simulator(problem)
 problem.plot('scene')
-vehicle.plot('input', knots=True, prediction=True, labels=['v_x (m/s)', 'v_y (m/s)'])
-
+vehicle.plot('input', knots=True, labels=['v_x (m/s)', 'v_y (m/s)'])
+#problem.export()
 # run it!
-simulator.run()
+simulator.run_once()

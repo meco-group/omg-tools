@@ -18,20 +18,12 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from point2point import FixedTPoint2point
-from ..basics.spline_extra import definite_integral
-from casadi import inf
 
 
 class FormationPoint2pointCentral(FixedTPoint2point):
 
     def __init__(self, fleet, environment, options=None):
         FixedTPoint2point.__init__(self, fleet, environment, options)
-
-    def set_default_options(self):
-        FixedTPoint2point.set_default_options(self)
-        self.options['soft_formation'] = False
-        self.options['soft_formation_weight'] = 10
-        self.options['max_formation_deviation'] = inf
 
     def construct(self):
         config = self.fleet.configuration
@@ -55,11 +47,6 @@ class FormationPoint2pointCentral(FixedTPoint2point):
         if self.fleet.interconnection == 'circular':
             couples.pop(self.vehicles[-1], None)
             couples.pop(self.vehicles[-2], None)
-
-
-        t = self.define_symbol('t')
-        T = self.define_symbol('T')
-
         for veh, nghbs in couples.items():
             ind_veh = sorted(config[veh].keys())
             pos_c_veh = centra[veh]
@@ -67,18 +54,7 @@ class FormationPoint2pointCentral(FixedTPoint2point):
                 ind_nghb = sorted(config[nghb].keys())
                 pos_c_nghb = centra[nghb]
                 for ind_v, ind_n in zip(ind_veh, ind_nghb):
-                    if self.options['soft_formation']:
-                        weight = self.options['soft_formation_weight']
-                        eps = self.define_spline_variable('eps_form_'+str(ind_v)+str(ind_n), basis=veh.basis)[0]
-                        obj = weight*definite_integral(eps, t/T, 1.)
-                        self.define_objective(obj)
-                        self.define_constraint(pos_c_veh[ind_v] - pos_c_nghb[ind_n] - eps, -inf, 0.)
-                        self.define_constraint(-pos_c_veh[ind_v] + pos_c_nghb[ind_n] - eps, -inf, 0.)
-                        if self.options['max_formation_deviation'] != inf:
-                            max_dev = abs(self.options['max_formation_deviation'])
-                            self.define_constraint(eps, -max_dev, max_dev)
-                    else:
-                        self.define_constraint(pos_c_veh[ind_v] - pos_c_nghb[ind_n], 0., 0.)
+                    self.define_constraint(pos_c_veh[ind_v] - pos_c_nghb[ind_n], 0., 0.)
 
     def update(self, current_time, update_time, sample_time):
         FixedTPoint2point.update(self, current_time, update_time, sample_time)

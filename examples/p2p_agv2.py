@@ -23,7 +23,7 @@ from omgtools import *
 vehicle = AGV(length=0.8, options={'plot_type': 'agv'})
 vehicle.define_knots(knot_intervals=5)  # choose lower amount of knot intervals
 
-vehicle.set_initial_conditions([-1., -0.5, 0., 0.])  # x, y, theta, delta
+vehicle.set_initial_conditions([-1., -0.5, 0.], [0.])  # x, y, theta, delta
 vehicle.set_terminal_conditions([4., 2., 0.])  # x, y, theta
 
 # create environment

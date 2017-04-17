@@ -19,7 +19,7 @@
 
 from ..basics.optilayer import OptiChild
 from ..basics.spline import BSplineBasis
-from ..execution.plotlayer import PlotLayer, mix_with_white
+from ..simulation.plotlayer import PlotLayer
 from obstacle import Obstacle
 from casadi import inf
 import numpy as np
@@ -106,35 +106,33 @@ class Environment(OptiChild, PlotLayer):
         for obstacle in self.obstacles:
             if obstacle.options['avoid']:
                 obstacle.define_collision_constraints(hyp_obs[obstacle])
-        for spline in vehicle.splines:
-            vehicle.define_collision_constraints(hyp_veh, self, spline)
 
-    def define_intervehicle_collision_constraints(self, vehicles):
-        hyp_veh = {veh: {sh: [] for sh in veh.shapes} for veh in vehicles}
-        for k in range(len(vehicles)):
-            for l in range(k+1, len(vehicles)):
-                veh1 = vehicles[k]
-                veh2 = vehicles[l]
-                if veh1 != veh2:
-                    if veh1.n_dim != veh2.n_dim:
-                        raise ValueError('Not possible to combine ' +
-                                         str(veh1.n_dim) + 'D and ' + str(veh2.n_dim) + 'D vehicle.')
-                    degree = 1
-                    knots = np.r_[np.zeros(degree), np.union1d(veh1.knots[veh1.degree:-veh1.degree], veh2.knots[veh2.degree:-veh2.degree]), np.ones(degree)]
-                    basis = BSplineBasis(knots, degree)
-                    for kk, shape1 in enumerate(veh1.shapes):
-                        for ll, shape2 in enumerate(veh2.shapes):
-                            a = self.define_spline_variable(
-                                'a'+'_'+veh1.label+'_'+str(kk)+'_'+veh2.label+'_'+str(ll), self.n_dim, basis=basis)
-                            b = self.define_spline_variable(
-                                'b'+'_'+veh1.label+'_'+str(kk)+'_'+veh2.label+'_'+str(ll), 1, basis=basis)[0]
-                            self.define_constraint(
-                                sum([a[p]*a[p] for p in range(self.n_dim)])-1, -inf, 0.)
-                            hyp_veh[veh1][shape1].append({'a': a, 'b': b})
-                            hyp_veh[veh2][shape2].append({'a': [-a_i for a_i in a], 'b': -b})
-        for vehicle in vehicles:
+        if (vehicle.lead_veh is None): #als er dus geen trekkend voertuig is, wat erop duidt dat dit geen trailer is.
             for spline in vehicle.splines:
-                vehicle.define_collision_constraints(hyp_veh[vehicle], self, spline)
+                vehicle.define_collision_constraints(hyp_veh, self, spline)
+
+        else: #vehicle is de trailer, vehicle.lead_veh is het trekkend voertuig
+            hyp_veh_lead, hyp_obs_lead = {}, {}
+            for k, shape in enumerate(vehicle.lead_veh.shapes):
+                hyp_veh_lead[shape] = []
+                for l, obstacle in enumerate(self.obstacles):
+                    if obstacle.options['avoid']:
+                        if obstacle not in hyp_obs_lead:
+                            hyp_obs_lead[obstacle] = []
+                        a_lead = self.define_spline_variable(
+                            'a' + '_' + vehicle.lead_veh.label + '_' + str(k) + str(l), self.n_dim, basis=basis)
+                        b_lead = self.define_spline_variable(
+                            'b' + '_' + vehicle.lead_veh.label + '_' + str(k) + str(l), 1, basis=basis)[0]
+                        self.define_constraint(
+                            sum([a_lead[p] * a_lead[p] for p in range(self.n_dim)]) - 1, -inf, 0.)
+                        hyp_veh_lead[shape].append({'a': a_lead, 'b': b_lead})
+                        hyp_obs_lead[obstacle].append({'a': a_lead, 'b': b_lead})
+            for obstacle in self.obstacles:
+                if obstacle.options['avoid']:
+                    obstacle.define_collision_constraints(hyp_obs_lead[obstacle])
+            for spline in vehicle.splines:
+                vehicle.define_collision_constraints_trailer(hyp_veh_lead,hyp_veh, self, spline)
+
 
     # ========================================================================
     # Optimization modelling related functions
@@ -145,25 +143,21 @@ class Environment(OptiChild, PlotLayer):
             obstacle.init()
 
     # ========================================================================
-    # Simulate environment
+    # Update environment
     # ========================================================================
 
-    def simulate(self, simulation_time, sample_time):
+    def update(self, update_time, sample_time):
         for obstacle in self.obstacles:
-            obstacle.simulate(simulation_time, sample_time)
+            obstacle.update(update_time, sample_time)
         self.update_plots()
 
     def draw(self, t=-1):
-        surfaces, lines = [], []
-        if self.room['draw']:
-            s, l = self.room['shape'].draw()
-            surfaces += s
-            lines += l
+        draw = []
         for obstacle in self.obstacles:
-            s, l = obstacle.draw(t)
-            surfaces += s
-            lines += l
-        return surfaces, lines
+            draw.extend(obstacle.draw(t))
+        if self.room['draw']:
+            draw.extend(self.room['shape'].draw())
+        return draw
 
     def get_canvas_limits(self):
         limits = self.room['shape'].get_canvas_limits()
@@ -174,27 +168,22 @@ class Environment(OptiChild, PlotLayer):
     # ========================================================================
 
     def init_plot(self, argument, **kwargs):
-        s, l = self.draw()
-        gray = [60./255., 61./255., 64./255.]
-        surfaces = [{'facecolor': mix_with_white(gray, 50), 'edgecolor': 'black', 'linewidth': 1.2} for _ in s]
-        lines = [{'color': 'black', 'linewidth': 1.2} for _ in l]
-        if self.room['draw']:
-            s_, l_ = self.room['shape'].draw()
-            for k, _ in enumerate(s_):
-                surfaces[k]['facecolor'] = mix_with_white(gray, 90)
+        lines = [{'color': 'black', 'linewidth': 1.2} for _ in self.draw()]
         if 'limits' in kwargs:
             limits = kwargs['limits']
         else:
             limits = self.get_canvas_limits()
         labels = ['' for k in range(self.n_dim)]
         if self.n_dim == 2:
-            return [[{'labels': labels,'surfaces': surfaces, 'lines': lines, 'aspect_equal': True,
+            return [[{'labels': labels, 'lines': lines, 'aspect_equal': True,
                       'xlim': limits[0], 'ylim': limits[1]}]]
         else:
-            return [[{'labels': labels, 'surfaces': surfaces, 'lines': lines, 'aspect_equal': True,
+            return [[{'labels': labels, 'lines': lines, 'aspect_equal': True,
                       'xlim': limits[0], 'ylim': limits[1], 'zlim': limits[2],
                       'projection': '3d'}]]
 
     def update_plot(self, argument, t, **kwargs):
-        s, l = self.draw(t)
-        return [[{'surfaces': s, 'lines': l}]]
+        lines = []
+        for l in self.draw(t):
+            lines.append([l[k, :] for k in range(self.n_dim)])
+        return [[lines]]

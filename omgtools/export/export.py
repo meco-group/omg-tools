@@ -122,7 +122,6 @@ class Export(object):
                 else:
                     raise ValueError('File '+ file +
                                      ' does not exist!')
-
     def copy_files(self, source_dirs, export_dir):
         this_path = os.path.dirname(os.path.realpath(__file__))
         files = {}
@@ -247,7 +246,7 @@ class Export(object):
         code.update(self._create_getParameterVector(father))
         code.update(self._create_getVariableVector(father))
         code.update(self._create_getVariableDict(father))
-        code.update(self._create_updateBounds(father, point2point))
+        code.update(self._create_updateBounds(father))
         code.update(self._create_initSplines(father, problem))
         code.update(self._create_transformSplines(father, problem, point2point))
         return code
@@ -313,12 +312,9 @@ class Export(object):
                 cnt += var.size(1)*var.size(2)
         return {'getVariableDict': code}
 
-    def _create_updateBounds(self, father, point2point):
+    def _create_updateBounds(self, father):
         code, cnt = '', 0
         _lbg, _ubg = father._lb.cat, father._ub.cat
-        obstacles = point2point.environment.obstacles
-        obst_avoid_code = ['' for k in range(len(obstacles))]
-        obst_nonavoid_code = ['' for k in range(len(obstacles))]
         for child in father.children.values():
             for name, con in child._constraints.items():
                 if child._add_label(name) in father._constraint_shutdown:
@@ -327,8 +323,8 @@ class Export(object):
                     cond = shutdown.replace('t', 'current_time')
                     code += '\tif(' + cond + '){\n'
                     for i in range(con[0].size(1)):
-                        code += '\t\tlbg['+str(cnt+i)+'] = -inf;\n'
-                        code += '\t\tubg['+str(cnt+i)+'] = +inf;\n'
+                        code += '\t\tlbg['+str(cnt+i)+'] = -INF;\n'
+                        code += '\t\tubg['+str(cnt+i)+'] = +INF;\n'
                     code += '\t}else{\n'
                     for i in range(con[0].size(1)):
                         code += ('\t\tlbg['+str(cnt+i)+'] = ' +
@@ -336,24 +332,7 @@ class Export(object):
                         code += ('\t\tubg['+str(cnt+i)+'] = ' +
                                  str(_ubg[cnt+i]) + ';\n')
                     code += '\t}\n'
-                for k, obs in enumerate(obstacles):
-                    if child == obs:
-                        for i in range(con[0].size(1)):
-                            obst_avoid_code[k] += '\t\tlbg['+str(cnt+i)+'] = -inf;\n'
-                            obst_avoid_code[k] += '\t\tubg['+str(cnt+i)+'] = +inf;\n'
-                            obst_nonavoid_code[k] += ('\t\tlbg['+str(cnt+i)+'] = ' +
-                                     str(_lbg[cnt+i]) + ';\n')
-                            obst_nonavoid_code[k] += ('\t\tubg['+str(cnt+i)+'] = ' +
-                                     str(_ubg[cnt+i]) + ';\n')
                 cnt += con[0].size(1)
-
-        for k, obs in enumerate(obstacles):
-            code += '\tif(!obstacles['+str(k)+'].avoid){\n'
-            code += obst_avoid_code[k]
-            code += '\t}else{\n'
-            code += obst_nonavoid_code[k]
-            code += '\t}\n'
-
         return {'updateBounds': code}
 
     def _create_initSplines(self, father, problem):
@@ -368,9 +347,10 @@ class Export(object):
         code, cnt = '', 0
         tf_len = len(problem.vehicles[0].basis)
         if point2point.__class__.__name__ == 'FixedTPoint2point':
-            code += '\tint interval_prev = (int)(round((current_time_prev*(vehicle->getKnotIntervals())/horizon_time)*1.e6)/1.e6);\n'
-            code += '\tint interval_now = (int)(round((current_time*(vehicle->getKnotIntervals())/horizon_time)*1.e6)/1.e6);\n'
-            code += '\tif(interval_now > interval_prev){\n'
+            code += ('\tif(((current_time > 0) and ' +
+                     'fabs(fmod(round(current_time*1000.)/1000., ' +
+                     'horizon_time/' +
+                     str(point2point.vehicles[0].knot_intervals)+')) <1.e-6)){\n')
             code += ('\t\tvector<double> spline_tf(' + str(len(problem.vehicles[0].basis)) + ');\n')
             for label, child in father.children.items():
                 for name, var in child._variables.items():

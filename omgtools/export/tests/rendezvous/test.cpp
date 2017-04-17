@@ -29,7 +29,7 @@ using namespace std;
 
 int main()
 {
-    int n_iter = 20;
+    int n_iter = 30;
     int init_iter = 5;
     int N = 4;
     double horizon_time = 10;
@@ -69,32 +69,13 @@ int main()
     rel_pos_c[3] = {0.2, 0.0};
 
     // obstacles
-    vector<omg::obstacle_t> obstacles(1);
-    double width = 3.0;
-    double height = 0.2;
-    double radius = 0.001;
-
-    for (int k=0; k<1; k++){
-        obstacles[k].position.resize(2);
-        obstacles[k].velocity.resize(2);
-        obstacles[k].acceleration.resize(2);
-        obstacles[k].checkpoints.resize(2*4);
-        obstacles[k].radii.resize(4);
-        obstacles[k].checkpoints[0] = 0.5*width;
-        obstacles[k].checkpoints[1] = 0.5*height;
-        obstacles[k].checkpoints[2] = 0.5*width;
-        obstacles[k].checkpoints[3] = -0.5*height;
-        obstacles[k].checkpoints[4] = -0.5*width;
-        obstacles[k].checkpoints[5] = -0.5*height;
-        obstacles[k].checkpoints[6] = -0.5*width;
-        obstacles[k].checkpoints[7] = 0.5*height;
-        obstacles[k].avoid = true;
-        for (int i=0; i<4; i++){
-            obstacles[k].radii[i] = radius;
-        }
-    }
+    vector<omg::obstacle_t> obstacles(problems[0]->n_obs);
     obstacles[0].position[0] = 3.2;
     obstacles[0].position[1] = 1.0;
+    obstacles[0].velocity[0] = 0.0;
+    obstacles[0].velocity[1] = 0.0;
+    obstacles[0].acceleration[0] = 0.0;
+    obstacles[0].acceleration[1] = 0.0;
 
     vector<vector<double>> x_var(N, vector<double>(n_shared));
     vector<vector<vector<double>>> x_j_var(N, vector<vector<double>>(2, vector<double>(n_shared)));
@@ -195,14 +176,14 @@ int main()
                         else {
                             err = (data_state[v][i-init_iter][j][k] - state_trajectory[v][j][k])/data_state[v][i-init_iter][j][k];
                         }
-                        assert(err < 1e-2);
+                        assert(err < 5e-3);
                         if (data_input[v][i-init_iter][j][k] < 1e-14){
                             err = (data_input[v][i-init_iter][j][k] - input_trajectory[v][j][k]);
                         }
                         else {
                             err = (data_input[v][i-init_iter][j][k] - input_trajectory[v][j][k])/data_input[v][i-init_iter][j][k];
                         }
-                        assert(err < 1e-2);
+                        assert(err < 5e-3);
                     }
                 }
             }

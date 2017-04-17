@@ -18,7 +18,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from vehicle import Vehicle
-from ..execution.plotlayer import PlotLayer
+from ..simulation.plotlayer import PlotLayer
 
 
 def get_fleet_vehicles(var):
@@ -96,11 +96,9 @@ class Fleet(PlotLayer):
     def get_rel_config(self, vehicle):
         return self.rel_config[vehicle]
 
-    def set_initial_conditions(self, states, inputs=None):
-        if inputs is None:
-            inputs = [None for _ in range(len(states))]
-        for state, input, vehicle in zip(states, inputs, self.vehicles):
-            vehicle.set_initial_conditions(state, input)
+    def set_initial_conditions(self, conditions):
+        for condition, vehicle in zip(conditions, self.vehicles):
+            vehicle.set_initial_conditions(condition)
 
     def set_terminal_conditions(self, conditions):
         for condition, vehicle in zip(conditions, self.vehicles):
@@ -135,13 +133,10 @@ class Fleet(PlotLayer):
                 inf = []
                 for l in range(len(infos[0][0])):
                     labels = infos[0][k][l]['labels']
-                    surfaces, lines = [], []
+                    lines = []
                     for v in range(len(vehicles)):
-                        if 'surfaces' in infos[v][k][l]:
-                            surfaces += infos[v][k][l]['surfaces']
-                        if 'lines' in infos[v][k][l]:
-                            lines += infos[v][k][l]['lines']
-                    dic = {'labels': labels, 'surfaces': surfaces, 'lines': lines}
+                        lines += infos[v][k][l]['lines']
+                    dic = {'labels': labels, 'lines': lines}
                     if 'xlim' in kwargs:
                         dic['xlim'] = kwargs['xlim']
                     if 'ylim' in kwargs:
@@ -159,14 +154,11 @@ class Fleet(PlotLayer):
             datas = [v.update_plot(signal, t, **kwargs) for v in vehicles]
             for k in range(len(datas[0])):
                 dat = []
-                for l in range(len(datas[0][k])):
-                    surfaces, lines = [], []
+                for l in range(len(datas[0][0])):
+                    lines = []
                     for v in range(len(vehicles)):
-                        if 'surfaces' in datas[v][k][l]:
-                            surfaces += datas[v][k][l]['surfaces']
-                        if 'lines' in datas[v][k][l]:
-                            lines += datas[v][k][l]['lines']
-                    dat.append({'surfaces': surfaces, 'lines': lines})
+                        lines += datas[v][k][l]
+                    dat.append(lines)
                 data.append(dat)
         return data
 

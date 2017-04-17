@@ -88,11 +88,8 @@ class Holonomic3D(Vehicle):
                                  (z.derivative(d), 0.)])
         return [term_con, term_con_der]
 
-    def set_initial_conditions(self, state, input=None):
-        if input is None:
-            input = np.zeros(3)
-        # list all predictions that are used in set_parameters
-        self.prediction['state'] = state
+    def set_initial_conditions(self, position, input=np.zeros(3)):
+        self.prediction['state'] = position
         self.prediction['input'] = input
 
     def set_terminal_conditions(self, position):

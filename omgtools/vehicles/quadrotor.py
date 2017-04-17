@@ -80,8 +80,8 @@ class Quadrotor(Vehicle):
             term_con_der.extend([(x.derivative(d), 0.), (y.derivative(d), 0.)])
         return [term_con, term_con_der]
 
-    def set_initial_conditions(self, state, input=None):
-        self.prediction['state'] = np.r_[state[:2], np.zeros(3)].T
+    def set_initial_conditions(self, position):
+        self.prediction['state'] = np.r_[position, np.zeros(3)].T
         self.prediction['dspl'] = np.zeros(2)
         self.prediction['ddspl'] = np.zeros(2)
 
@@ -156,4 +156,7 @@ class Quadrotor(Vehicle):
         plt_x = [r, r-2*rw, r-rw, r-rw, -r+rw, -r+rw, -r, -r+2*rw]
         plt_y = [h, h, h, 0, 0, h, h, h]
         points = np.vstack((plt_x, plt_y))
-        return [], [np.c_[self.signals['pose'][:2, t]] + rot.dot(points)]
+        n_points = points.shape[1]
+        lines = [np.c_[points[:, l], points[:, l+1]]
+                 for l in range(n_points-1)]
+        return [np.c_[self.signals['pose'][:2, t]] + rot.dot(line) for line in lines]

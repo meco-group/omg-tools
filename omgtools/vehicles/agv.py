@@ -56,16 +56,16 @@ class AGV(Vehicle):
             self, n_spl=2, degree=2, shapes=Rectangle(width=0.8, height=0.2), options=options)
         self.vmax = bounds['vmax'] if 'vmax' in bounds else 0.5
         self.amax = bounds['amax'] if 'amax' in bounds else 1.
-        self.dmin = bounds['dmin'] if 'dmin' in bounds else -np.pi/6.  # steering angle [rad]
-        self.dmax = bounds['dmax'] if 'dmax' in bounds else np.pi/6.
-        self.ddmin = bounds['ddmin'] if 'ddmin' in bounds else -np.pi/4.  # dsteering angle [rad/s]
-        self.ddmax = bounds['ddmax'] if 'ddmax' in bounds else np.pi/4.
+        self.dmin = bounds['dmin'] if 'dmin' in bounds else -30.  # steering angle [deg]
+        self.dmax = bounds['dmax'] if 'dmax' in bounds else 30.
+        self.ddmin = bounds['ddmin'] if 'ddmin' in bounds else -45.  # dsteering angle [deg/s]
+        self.ddmax = bounds['ddmax'] if 'ddmax' in bounds else 45.
         self.length = length
 
 
     def set_default_options(self):
         Vehicle.set_default_options(self)
-        self.options.update({'plot_type': 'agv'})  # by default plot a bicycle-shape
+        self.options.update({'plot_type': 'bicycle'})  # by default plot a bicycle
 
     def init(self):
         self.T = self.define_symbol('T')  # motion time
@@ -91,20 +91,20 @@ class AGV(Vehicle):
 
         # limit steering angle
         self.define_constraint(
-             -2*dtg_ha*self.length - v_til*(1+tg_ha**2)**2*np.tan(self.dmax)*self.T, -inf, 0.)
+             -2*dtg_ha*self.length - v_til*(1+tg_ha**2)**2*np.tan(np.radians(self.dmax))*self.T, -inf, 0.)
         self.define_constraint(
-             +2*dtg_ha*self.length + v_til*(1+tg_ha**2)**2*np.tan(self.dmin)*self.T, -inf, 0.)
-        # limit rate of change of steering angle
+             +2*dtg_ha*self.length + v_til*(1+tg_ha**2)**2*np.tan(np.radians(self.dmin))*self.T, -inf, 0.)
+    # limit rate of change of steering angle
         self.define_constraint(
              -2*self.length*ddtg_ha*(v_til*(1+tg_ha**2)**2)
              +2*self.length*dtg_ha*(dv_til*(1+tg_ha**2)**2
              +v_til*(4*tg_ha+4*tg_ha**3)*dtg_ha) - ((self.T**2)*v_til**2*(1+tg_ha**2)**4
-             +(2*self.length*dtg_ha)**2)*self.ddmax, -inf, 0.)
+             +(2*self.length*dtg_ha)**2)*np.radians(self.ddmax), -inf, 0.)
         self.define_constraint(
              2*self.length*ddtg_ha*(v_til*(1+tg_ha**2)**2)
              -2*self.length*dtg_ha*(dv_til*(1+tg_ha**2)**2
              +v_til*(4*tg_ha+4*tg_ha**3)*dtg_ha) + ((self.T**2)*v_til**2*(1+tg_ha**2)**4
-             +(2*self.length*dtg_ha)**2)*self.ddmin, -inf, 0.)
+             +(2*self.length*dtg_ha)**2)*np.radians(self.ddmin), -inf, 0.)
         self.define_constraint(-v_til, -inf, 0)  # model requires positive V, so positive v_tilde
 
     def get_initial_constraints(self, splines):
@@ -162,16 +162,20 @@ class AGV(Vehicle):
                         (dv_til, dv_tilT), (ddtg_ha, self.T**2*ddtg_haT)]
         return [term_con, term_con_der]
 
-    def set_initial_conditions(self, state, input=None):
-        if input is None:
-            input = np.zeros(2)
-        self.prediction['state'] = state
-        self.prediction['input'] = input
-        self.pose0 = state[:3]
-        self.delta0 = state[3]
+    def set_initial_conditions(self, pose, delta, input=np.zeros(2)):
+        # comes from the user so theta[deg]
+        pose[2] = np.radians(pose[2])  # theta
+        delta = np.radians(delta)  # delta
+        self.prediction['state'] = np.r_[pose, delta]  # x, y, theta[rad], delta[rad]
+        self.pose0 = pose # for use in first iteration of splines2signals()
+        self.delta0 = delta
+        self.prediction['input'] = input  # V, ddelta
 
     def set_terminal_conditions(self, pose):
-        self.poseT = pose
+        # comes from the user so theta[deg]
+        pose[2] = np.radians(pose[2])  # theta
+        # pose[3] = np.radians(pose[3])  # delta
+        self.poseT = pose  # x, y, theta[rad]
 
     def get_init_spline_value(self):
         # generate initial guess for spline variables
@@ -291,11 +295,11 @@ class AGV(Vehicle):
         return state[:3]
 
     def draw(self, t=-1):
-        surfaces = []
+        ret = []
         if self.options['plot_type'] is 'car':
             car = Rectangle(width=self.length, height=self.length/4.)
             wheel = Rectangle(width=self.length/8., height=self.length/10.)
-            surfaces += car.draw(self.signals['pose'][:3, t])[0]  # vehicle
+            ret += car.draw(self.signals['pose'][:3, t])  # vehicle
             pos_front_l = self.signals['pose'][:2, t] + np.array([(self.length/2.5)*np.cos(self.signals['pose'][2, t]+np.radians(30.)),
                                                          (self.length/2.5)*np.sin(self.signals['pose'][2, t]+np.radians(30.))])
             pos_front_r = self.signals['pose'][:2, t] + np.array([(self.length/2.5)*np.cos(self.signals['pose'][2, t]-np.radians(30.)),
@@ -306,22 +310,24 @@ class AGV(Vehicle):
             pos_back_r = self.signals['pose'][:2, t] - np.array([(self.length/2.5)*np.cos(self.signals['pose'][2, t]-np.radians(30.)),
                                                          (self.length/2.5)*np.sin(self.signals['pose'][2, t]-np.radians(30.))])
             orient_back = self.signals['pose'][2, t] + self.signals['delta'][0, t]
-            surfaces += wheel.draw(np.r_[pos_front_l, orient_front])[0]  # front wheel left
-            surfaces += wheel.draw(np.r_[pos_front_r, orient_front])[0]  # front wheel right
-            surfaces += wheel.draw(np.r_[pos_back_l, orient_back])[0]  # back wheel left
-            surfaces += wheel.draw(np.r_[pos_back_r, orient_back])[0]  # back wheel right
+            ret += wheel.draw(np.r_[pos_front_l, orient_front])  # front wheel left
+            ret += wheel.draw(np.r_[pos_front_r, orient_front])  # front wheel right
+            ret += wheel.draw(np.r_[pos_back_l, orient_back])  # back wheel left
+            ret += wheel.draw(np.r_[pos_back_r, orient_back])  # back wheel right
 
         if self.options['plot_type'] is 'agv':
             # plot approximation of vehicle
+            # real = Circle(self.length/2.)
+            # ret += real.draw(self.signals['pose'][:2,t])
             car = Rectangle(width=self.length, height=self.length/4.)
             wheel = Rectangle(width=self.length/10., height=self.length/14.)
-            surfaces += car.draw(self.signals['pose'][:3, t])[0]  # vehicle
+            ret += car.draw(self.signals['pose'][:3, t])  # vehicle
             pos_front = self.signals['pose'][:2, t] + (self.length/3)*np.array([np.cos(self.signals['pose'][2, t]),
                                                          np.sin(self.signals['pose'][2, t])])
             orient_front = self.signals['pose'][2, t]
             pos_back = self.signals['pose'][:2, t] - (self.length/3)*np.array([np.cos(self.signals['pose'][2, t]),
                                                          np.sin(self.signals['pose'][2, t])])
             orient_back = self.signals['pose'][2, t] + self.signals['delta'][0, t]
-            surfaces += wheel.draw(np.r_[pos_front, orient_front])[0]  # front wheel
-            surfaces += wheel.draw(np.r_[pos_back, orient_back])[0]  # back wheel
-        return surfaces, []
+            ret += wheel.draw(np.r_[pos_front, orient_front])  # front wheel
+            ret += wheel.draw(np.r_[pos_back, orient_back])  # back wheel
+        return ret

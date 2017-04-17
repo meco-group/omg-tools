@@ -38,14 +38,14 @@ class ADMMPoint2Point: public Point2Point{
 
         const int n_nghb = N_NGHB;
 
-        bool solveUpdx(double, std::vector<obstacle_t>&);
+        bool solveUpdx(std::vector<obstacle_t>&);
         bool solveUpdz();
         bool solveUpdl();
         bool computeResiduals();
         void initVariablesADMM();
         void extractData();
         void retrieveSharedVariables(std::map<std::string, std::map<std::string, std::vector<double>>>&);
-        void transformSharedSplines(double, double);
+        void transformSharedSplines(double);
         void setParameters(std::vector<obstacle_t>&);
         virtual void generateProblem();
 
@@ -64,8 +64,6 @@ class ADMMPoint2Point: public Point2Point{
         virtual void reset();
         virtual void resetTime();
         int getIteration();
-        double getCurrentTime();
-        void stepBack();
     };
 }
 

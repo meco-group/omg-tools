@@ -80,10 +80,6 @@ class ObstaclexD(OptiChild):
         # pos spline over time horizon
         self.pos_spline = [BSpline(self.basis, vertcat(x0[k], 0.5*v0[k]*self.T + x0[k], x0[k] + v0[k]*self.T + 0.5*a0[k]*(self.T**2)))
                            for k in range(self.n_dim)]
-        # checkpoints + radii
-        checkpoints, _ = self.shape.get_checkpoints()
-        self.checkpoints = self.define_parameter('checkpoints', len(checkpoints)*self.n_dim)
-        self.rad = self.define_parameter('rad', len(checkpoints))
 
     def define_collision_constraints(self, hyperplanes):
         raise ValueError('Please implement this method.')
@@ -93,21 +89,7 @@ class ObstaclexD(OptiChild):
         parameters['x'] = self.signals['position'][:, -1]
         parameters['v'] = self.signals['velocity'][:, -1]
         parameters['a'] = self.signals['acceleration'][:, -1]
-        checkpoints, rad = self.shape.get_checkpoints()
-        parameters['checkpoints'] = np.reshape(checkpoints, (len(checkpoints)*self.n_dim, ))
-        parameters['rad'] = rad
         return parameters
-
-    # ========================================================================
-    # Deploying related functions
-    # ========================================================================
-
-    def set_state(self, dictionary):
-        for key in ['position', 'velocity', 'acceleration']:
-            if key in dictionary:
-                self.signals[key] = np.c_[dictionary[key]]
-            else:
-                self.signals[key] = np.zeros((self.n_dim, 1))
 
     # ========================================================================
     # Simulation related functions
@@ -184,8 +166,8 @@ class ObstaclexD(OptiChild):
         B = self.simulation_model['B']
         return A.dot(state) + B.dot(input)
 
-    def simulate(self, simulation_time, sample_time):
-        n_samp = int(np.round(simulation_time/sample_time, 6))+1
+    def update(self, update_time, sample_time):
+        n_samp = int(update_time/sample_time)+1
         time0 = self.signals['time'][-1]
         time_axis = np.linspace(time0, (n_samp-1)*sample_time+time0, n_samp)
         state0 = np.r_[self.signals['position'][:, -1],
@@ -206,7 +188,7 @@ class ObstaclexD(OptiChild):
 
     def draw(self, t=-1):
         if not self.options['draw']:
-            return [], []
+            return []
         pose = np.zeros(2*self.n_dim)
         pose[:self.n_dim] = self.signals['position'][:, t]
         return self.shape.draw(pose)
@@ -275,30 +257,19 @@ class Obstacle2D(ObstaclexD):
     def define_collision_constraints(self, hyperplanes):
         for hyperplane in hyperplanes:
             a, b = hyperplane['a'], hyperplane['b']
-            for l in range(self.checkpoints.shape[0]/self.n_dim):
+            checkpoints, rad = self.shape.get_checkpoints()
+            for l, chck in enumerate(checkpoints):
                 xpos = self.pos_spline[
-                    0]*self.gon_weight + self.checkpoints[l*self.n_dim+0]*self.cos - self.checkpoints[l*self.n_dim+1]*self.sin
+                    0]*self.gon_weight + chck[0]*self.cos - chck[1]*self.sin
                 ypos = self.pos_spline[
-                    1]*self.gon_weight + self.checkpoints[l*self.n_dim+0]*self.sin + self.checkpoints[l*self.n_dim+1]*self.cos
+                    1]*self.gon_weight + chck[0]*self.sin + chck[1]*self.cos
                 self.define_constraint(-(a[0]*xpos + a[1] *
-                                         ypos) + self.gon_weight*(b+self.rad[l]), -inf, 0.)
+                                         ypos) + self.gon_weight*(b+rad[l]), -inf, 0.)
 
     def set_parameters(self, current_time):
         parameters = ObstaclexD.set_parameters(self, current_time)
         parameters['theta'] = self.signals['orientation'][:, -1]
         return parameters
-
-    # ========================================================================
-    # Deploying related functions
-    # ========================================================================
-
-    def set_state(self, dictionary):
-        ObstaclexD.set_state(self, dictionary)
-        for key in ['orientation', 'angular_velocity']:
-            if key in dictionary:
-                self.signals[key] = np.c_[dictionary[key]]
-            else:
-                self.signals[key] = np.zeros((1, 1))
 
     # ========================================================================
     # Simulation related functions
@@ -313,9 +284,9 @@ class Obstacle2D(ObstaclexD):
             else:
                 self.signals[key] = np.zeros((1, 1))
 
-    def simulate(self, simulation_time, sample_time):
-        ObstaclexD.simulate(self, simulation_time, sample_time)
-        n_samp = int(np.round(simulation_time/sample_time, 6))
+    def update(self, update_time, sample_time):
+        ObstaclexD.update(self, update_time, sample_time)
+        n_samp = int(update_time/sample_time)
         for _ in range(n_samp):
             theta0 = self.signals['orientation'][:, -1][0]
             omega0 = self.signals['angular_velocity'][:, -1][0]
@@ -347,6 +318,7 @@ class Obstacle3D(ObstaclexD):
     def define_collision_constraints(self, hyperplanes):
         for hyperplane in hyperplanes:
             a, b = hyperplane['a'], hyperplane['b']
-            for l in range(self.checkpoints.shape[0]/self.n_dim):
-                self.define_constraint(-sum([a[k]*(self.checkpoints[l*self.shape.n_dim+k]+self.pos_spline[k])
-                                             for k in range(self.n_dim)]) + b + self.rad[l], -inf, 0.)
+            checkpoints, rad = self.shape.get_checkpoints()
+            for l, chck in enumerate(checkpoints):
+                self.define_constraint(-sum([a[k]*(chck[k]+self.pos_spline[k])
+                                             for k in range(self.n_dim)]) + b + rad[l], -inf, 0.)

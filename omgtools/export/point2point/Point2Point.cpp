@@ -108,7 +108,6 @@ void Point2Point::reset(){
 
 void Point2Point::resetTime(){
     current_time = 0.0;
-    current_time_prev = 0.0;
 }
 
 bool Point2Point::update(vector<double>& condition0, vector<double>& conditionT,
@@ -124,13 +123,11 @@ bool Point2Point::update(vector<double>& condition0, vector<double>& conditionT,
     clock_t begin;
     clock_t end;
     #endif
-    // correct current_time with predict_shift:
-    current_time += predict_shift*sample_time;
     // transform splines: good init guess for this update
     #ifdef DEBUG
     begin = clock();
     #endif
-    transformSplines(current_time, current_time_prev);
+    transformSplines(current_time);
     #ifdef DEBUG
     end = clock();
     tmeas = double(end-begin)/CLOCKS_PER_SEC;
@@ -164,16 +161,12 @@ bool Point2Point::update(vector<double>& condition0, vector<double>& conditionT,
     #ifdef DEBUG
     begin = clock();
     #endif
-    bool check = solve(current_time, obstacles);
+    bool check = solve(obstacles);
     #ifdef DEBUG
     end = clock();
     tmeas = double(end-begin)/CLOCKS_PER_SEC;
     cout << "time in solve: " << tmeas << "s" << endl;
     #endif
-    if (!check){
-        current_time_prev = current_time; // prevent to transform again after infeasible!
-        return false; // user should retry
-    }
     // retrieve splines
     #ifdef DEBUG
     begin = clock();
@@ -194,17 +187,16 @@ bool Point2Point::update(vector<double>& condition0, vector<double>& conditionT,
         }
     }
     // update current time
-    current_time_prev = current_time;
     current_time += update_time;
-    return true;
+
+    return check;
 }
 
-bool Point2Point::solve(double current_time, vector<obstacle_t>& obstacles){
+bool Point2Point::solve(vector<obstacle_t>& obstacles){
     // init variables if first time
     if(fabs(current_time)<=1.e-6){
         initVariables();
     }
-    updateBounds(current_time, obstacles);
     setParameters(obstacles);
     args["p"] = parameters;
     args["x0"] = variables;
@@ -212,14 +204,14 @@ bool Point2Point::solve(double current_time, vector<obstacle_t>& obstacles){
     args["ubg"] = ubg;
     sol = problem(args);
     solver_output = string(problem.stats().at("return_status"));
+    vector<double> var(sol.at("x"));
+    for (int k=0; k<n_var; k++){
+        variables[k] = var[k];
+    }
     if (solver_output.compare("Solve_Succeeded") != 0){
         cout << solver_output << endl;
         return false;
     } else{
-        vector<double> var(sol.at("x"));
-        for (int k=0; k<n_var; k++){
-            variables[k] = var[k];
-        }
         return true;
     }
 }
@@ -256,24 +248,19 @@ void Point2Point::fillParameterDict(vector<obstacle_t>& obstacles, map<string, m
     } else{
         par_dict[P2PLBL]["t"] = {0.0};
     }
-    string obstacle_lbls [N_OBS] = OBSTACLELBLS;
-    std::vector<double> pos0(2), vel0(2), acc0(2);
-    std::vector<double> posT(2), velT(2), accT(2);
     for (int k=0; k<n_obs; k++){
-        pos0 = obstacles[k].position;
-        vel0 = obstacles[k].velocity;
-        acc0 = obstacles[k].acceleration;
-        // prediction over update_time
-        for (int j=0; j<2; j++){
-            posT[j] = pos0[j] + update_time*vel0[j] + 0.5*pow(update_time,2)*acc0[j];
-            velT[j] = vel0[j] + update_time*acc0[j];
-            accT[j] = acc0[j];
+        vector<double> x_obs(n_dim);
+        vector<double> v_obs(n_dim);
+        vector<double> a_obs(n_dim);
+        for (int i=0; i<n_dim; i++){
+            x_obs[i] = obstacles[k].position[i];
+            v_obs[i] = obstacles[k].velocity[i];
+            a_obs[i] = obstacles[k].acceleration[i];
         }
-        par_dict[obstacle_lbls[k]]["x"] = posT;
-        par_dict[obstacle_lbls[k]]["v"] = velT;
-        par_dict[obstacle_lbls[k]]["a"] = accT;
-        par_dict[obstacle_lbls[k]]["checkpoints"] = obstacles[k].checkpoints;
-        par_dict[obstacle_lbls[k]]["rad"] = obstacles[k].radii;
+        string obstacles [N_OBS] = OBSTACLELBLS;
+        par_dict[obstacles[k]]["x"] = x_obs;
+        par_dict[obstacles[k]]["v"] = v_obs;
+        par_dict[obstacles[k]]["a"] = a_obs;
     }
 }
 
@@ -320,11 +307,11 @@ void Point2Point::getVariableDict(vector<double>& var_vect, map<string, map<stri
 @getVariableDict@
 }
 
-void Point2Point::updateBounds(double current_time, vector<obstacle_t>& obstacles){
+void Point2Point::updateBounds(double current_time){
 @updateBounds@
 }
 
-void Point2Point::transformSplines(double current_time, double current_time_prev){
+void Point2Point::transformSplines(double current_time){
 @transformSplines@
 }
 

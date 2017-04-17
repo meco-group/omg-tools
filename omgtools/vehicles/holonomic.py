@@ -18,42 +18,26 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from vehicle import Vehicle
-from ..basics.shape import Circle
+from ..basics.shape import Circle, Rectangle
 from ..basics.spline_extra import sample_splines
 from casadi import inf
 import numpy as np
 
-
+#Rectangle(0.2,0.2)Circle(0.2)
 class Holonomic(Vehicle):
 
-    def __init__(self, shapes=Circle(0.1), options=None, bounds=None):
+    def __init__(self, shapes=Rectangle(0.4, 0.4), options=None, bounds=None):
         bounds = bounds or {}
         Vehicle.__init__(
             self, n_spl=2, degree=3, shapes=shapes, options=options)
-        
-        if ((not 'syslimit' in self.options) or  # default choose norm_inf 
-                (self.options['syslimit'] is 'norm_inf')):
-            # user specified a single velocity for x and y
-            self.vxmin = self.vymin = bounds['vmin'] if 'vmin' in bounds else None
-            self.vxmax = self.vymax = bounds['vmax'] if 'vmax' in bounds else None
-            self.axmin = self.aymin = bounds['amin'] if 'amin' in bounds else None
-            self.axmax = self.aymax = bounds['amax'] if 'amax' in bounds else None
-            # user specified separate velocities for x and y
-            self.vxmin = bounds['vxmin'] if 'vxmin' in bounds else -0.5
-            self.vymin = bounds['vymin'] if 'vymin' in bounds else -0.5
-            self.vxmax = bounds['vxmax'] if 'vxmax' in bounds else 0.5
-            self.vymax = bounds['vymax'] if 'vymax' in bounds else 0.5
-            self.axmin = bounds['axmin'] if 'axmin' in bounds else -1.
-            self.aymin = bounds['aymin'] if 'aymin' in bounds else -1.
-            self.axmax = bounds['axmax'] if 'axmax' in bounds else 1.
-            self.aymax = bounds['aymax'] if 'aymax' in bounds else 1.
-        elif self.options['syslimit'] is 'norm_2':
-            self.vmax = bounds['vmax'] if 'vmax' in bounds else 0.5
-            self.amax = bounds['vmin'] if 'amax' in bounds else 1.
+        self.vmin = bounds['vmin'] if 'vmin' in bounds else -0.5
+        self.vmax = bounds['vmax'] if 'vmax' in bounds else 0.5
+        self.amin = bounds['amin'] if 'amin' in bounds else -1.
+        self.amax = bounds['amax'] if 'amax' in bounds else 1.
 
     def set_default_options(self):
         Vehicle.set_default_options(self)
-        self.options.update({'syslimit': 'norm_inf'})
+        self.options.update({'syslimit': 'norm_2'})
 
     def init(self):
         # time horizon
@@ -63,23 +47,21 @@ class Holonomic(Vehicle):
         x, y = splines
         dx, dy = x.derivative(), y.derivative()
         ddx, ddy = x.derivative(2), y.derivative(2)
-        # constrain total velocity
         if self.options['syslimit'] is 'norm_2':
             self.define_constraint(
                 (dx**2+dy**2) - (self.T**2)*self.vmax**2, -inf, 0.)
             self.define_constraint(
                 (ddx**2+ddy**2) - (self.T**4)*self.amax**2, -inf, 0.)
-        # constrain local velocity
         elif self.options['syslimit'] is 'norm_inf':
-            self.define_constraint(-dx + self.T*self.vxmin, -inf, 0.)
-            self.define_constraint(-dy + self.T*self.vymin, -inf, 0.)
-            self.define_constraint(dx - self.T*self.vxmax, -inf, 0.)
-            self.define_constraint(dy - self.T*self.vymax, -inf, 0.)
+            self.define_constraint(-dx + self.T*self.vmin, -inf, 0.)
+            self.define_constraint(-dy + self.T*self.vmin, -inf, 0.)
+            self.define_constraint(dx - self.T*self.vmax, -inf, 0.)
+            self.define_constraint(dy - self.T*self.vmax, -inf, 0.)
 
-            self.define_constraint(-ddx + (self.T**2)*self.axmin, -inf, 0.)
-            self.define_constraint(-ddy + (self.T**2)*self.aymin, -inf, 0.)
-            self.define_constraint(ddx - (self.T**2)*self.axmax, -inf, 0.)
-            self.define_constraint(ddy - (self.T**2)*self.aymax, -inf, 0.)
+            self.define_constraint(-ddx + (self.T**2)*self.amin, -inf, 0.)
+            self.define_constraint(-ddy + (self.T**2)*self.amin, -inf, 0.)
+            self.define_constraint(ddx - (self.T**2)*self.amax, -inf, 0.)
+            self.define_constraint(ddy - (self.T**2)*self.amax, -inf, 0.)
         else:
             raise ValueError(
                 'Only norm_2 and norm_inf are defined as system limit.')
@@ -101,11 +83,8 @@ class Holonomic(Vehicle):
             term_con_der.extend([(x.derivative(d), 0.), (y.derivative(d), 0.)])
         return [term_con, term_con_der]
 
-    def set_initial_conditions(self, state, input=None):
-        if input is None:
-            input = np.zeros(2)
-        # list all predictions that are used in set_parameters
-        self.prediction['state'] = state
+    def set_initial_conditions(self, position, input=np.zeros(2)):
+        self.prediction['state'] = position
         self.prediction['input'] = input
 
     def set_terminal_conditions(self, position):
@@ -157,3 +136,12 @@ class Holonomic(Vehicle):
 
     def ode(self, state, input):
         return input
+
+        # Next two functions are required if vehicle is not passed to problem, but is still used in the optimization
+        # problem e.g. when considering a vehicle with a trailer. You manually have to update signals and prediction,
+        # here the inputs are coming from e.g. the trailer class.
+    def update_signals(self, signals):
+        self.signals = signals
+
+    def update_prediction(self, prediction):
+        self.prediction = prediction

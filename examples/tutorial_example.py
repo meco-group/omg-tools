@@ -16,7 +16,11 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+import sys, os
 
+from omgtools.vehicles.trailertest import TrailerTest
+
+sys.path.insert(0, os.getcwd()+"/..")
 from omgtools import *
 
 """
@@ -66,18 +70,18 @@ options['safety_distance'] = 0.1
 # options['time_constant'] = 0.1
 
 # Create the vehicle instance
-vehicle = Holonomic(options=options)
+vehicle = HolonomicOrient(options=options)
 
 # We provide our vehicle with a desired initial and terminal position:
-vehicle.set_initial_conditions([-1.5, -1.5])
-vehicle.set_terminal_conditions([2., 2.])
+vehicle.set_initial_conditions([-1.5, -1.5,0.])
+vehicle.set_terminal_conditions([2, -1.5,0.])
 
 # Now, we create an environment
 # An environment is determined by a room with certain shape
 environment = Environment(room={'shape': Square(5.)})
 # Also we can add some obstacles
 # Let's first define a rectangular shape
-rectangle = Rectangle(width=3., height=0.2)
+rectangle = Rectangle(width=0.2, height=2.)
 # We create 2 obstacles with this shape and with certain initial position
 # (we could also provide an initial velocity or acceleration)
 environment.add_obstacle(Obstacle({'position': [-2.1, -0.5]}, shape=rectangle))
@@ -130,21 +134,23 @@ problem.init()
 # relevant signals while simulating.
 simulator = Simulator(problem)
 # We plot our input trajectory of our vehicle
-vehicle.plot('input', labels=['v_x (m/s)', 'v_y (m/s)'], knots=True)
+
+# vehicle.plot('input', labels=['v_x (m/s)', 'v_y (m/s)'], knots=True)
+
 # And also the 'scene': this plots the vehicle moving in its environment
 problem.plot('scene')
 
 # Run the simulator!
 trajectories, signals = simulator.run()
 
-# Show scene plot at some time (no time argument means 'at the end')
-problem.plot('scene', time=2.)
-# Show movie (you can make a movie of all possible plot data)
-problem.plot_movie('scene', number_of_frames=100, repeat=False)
-# Save a plot as Tikz: you need matplotlib2tikz for this!
-vehicle.save_plot('state', name='state')
-# Save a movie as multiple Tikz: you need matplotlib2tikz for this!
-vehicle.save_movie('input', number_of_frames=4, knots=True, prediction=True, axis=False)
-problem.save_movie('scene', number_of_frames=4, name='holonomic', axis=False)
+### Show scene plot at some time (no time argument means 'at the end')
+##problem.plot('scene', time=2.)
+### Show movie (you can make a movie of all possible plot data)
+##problem.plot_movie('scene', number_of_frames=100, repeat=False)
+### Save a plot as Tikz: you need matplotlib2tikz for this!
+##vehicle.save_plot('state', name='state')
+### Save a movie as multiple Tikz: you need matplotlib2tikz for this!
+##vehicle.save_movie('input', number_of_frames=4, knots=True, prediction=True, axis=False)
+##problem.save_movie('scene', number_of_frames=4, name='holonomic', axis=False)
 # Save a movie as gif: you need imagemagick for this!
 problem.save_movie('scene', format='gif', name='holonomic', number_of_frames=100, movie_time=5, axis=False)

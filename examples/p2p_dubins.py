@@ -17,43 +17,34 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
+import sys, os
+sys.path.insert(0, os.getcwd()+"/..")
 from omgtools import *
-
 # create vehicle
-vehicle = Dubins(bounds={'vmax': 0.7, 'wmax': np.pi/3., 'wmin': -np.pi/3.}, # in rad/s
-                 options={'substitution': True})
-vehicle.define_knots(knot_intervals=5)  # choose lower amount of knot intervals
-
-vehicle.set_initial_conditions([0., 0., 0.])  # input orientation in rad
+vehicle = Dubins(shapes=Circle(0.2), bounds={'vmax': 0.8, 'wmax': 60., 'wmin': -60.})  # in deg
+vehicle.define_knots(knot_intervals=9)  # adapt amount of knot intervals
+vehicle.set_initial_conditions([0., 0., 0.])  # input orientation in deg
+#vehicle.set_terminal_conditions([3., 3., 90.])
 vehicle.set_terminal_conditions([3., 3., 0.])
 
 # create environment
-environment = Environment(room={'shape': Square(5.), 'position': [1.5, 1.5]})
+environment = Environment(room={'shape': Square(7.), 'position': [1.5, 1.5]})
+rectangle = Rectangle(width=.2, height=3)
 
-trajectories = {'velocity': {'time': [0.5],
-                             'values': [[0.25, 0.0]]}}
-environment.add_obstacle(Obstacle({'position': [1., 1.]}, shape=Circle(0.5),
-                                  simulation={'trajectories': trajectories}))
+environment.add_obstacle(Obstacle({'position': [1.5, -1.]}, shape=rectangle))
+
 
 # create a point-to-point problem
-problem = Point2point(vehicle, environment, freeT=True)
+problem = Point2point(vehicle, environment, freeT=False)
 # extra solver settings which may improve performance
-problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57',
-                     'ipopt.hessian_approximation': 'limited-memory'}}})
-
+problem.set_options({'solver_options': {'ipopt': {'ipopt.hessian_approximation': 'limited-memory'}}})
 problem.init()
-
-vehicle.problem = problem  # to plot error when using substitution
 
 # create simulator
 simulator = Simulator(problem)
 problem.plot('scene')
 vehicle.plot('input', knots=True, labels=['v (m/s)', 'w (rad/s)'])
 vehicle.plot('state', knots=True, labels=['x (m)', 'y (m)', 'theta (rad)'])
-
-if vehicle.options['substitution']:
-    vehicle.plot('err_pos', knots=True)
-    vehicle.plot('err_dpos', knots=True)
 
 # run it!
 simulator.run()

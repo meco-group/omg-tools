@@ -18,7 +18,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from problem import Problem
-from casadi import symvar, Function
+from casadi import symvar, Function, sum1
 import collections as col
 import numpy as np
 
@@ -29,7 +29,7 @@ def get_dependency(expression):
     dep = col.OrderedDict()
     for index, sym in enumerate(sym):
         J = f.sparsity_jac(index, 0)
-        dep[sym] = sorted(set(J.T.row()))
+        dep[sym] = sorted(sum1(J).find())
     return dep
 
 
@@ -43,11 +43,6 @@ class DistributedProblem(Problem):
     def set_default_options(self):
         Problem.set_default_options(self)
         self.options['separate_build'] = False
-
-    def set_options(self, options):
-        Problem.set_options(self, options)
-        for problem in self.problems:
-            problem.set_options(options)
 
     # ========================================================================
     # Create problem
@@ -182,42 +177,21 @@ class DistributedProblem(Problem):
         return col.OrderedDict(sorted(dic.iteritems(), key=lambda x: x[0]._index if(x[0]._index > ref) else x[0]._index + self.fleet.N))
 
     # ========================================================================
-    # Deploying related functions
+    # Methods required for simulation
     # ========================================================================
 
     def initialize(self, current_time):
         for problem in self.problems:
             problem.initialize(current_time)
 
-    def store(self, current_time, update_time, sample_time):
+    def update(self, current_time, update_time, sample_time):
         for problem in self.problems:
-            problem.store(current_time, update_time, sample_time)
-
-
-    def predict(self, current_time, predict_time, sample_time, states=None, delay=0):
-        if states is None:
-            states = [None for k in range(len(self.problems))]
-        for problem, state in zip(self.problems, states):
-            problem.predict(current_time, predict_time, sample_time, state, delay)
-
-    # ========================================================================
-    # Simulation related functions
-    # ========================================================================
-
-    def simulate(self, current_time, simulation_time, sample_time):
-        for problem in self.problems:
-            problem.simulate(current_time, simulation_time, sample_time)
-        horizon_time = self.problems[0].options['horizon_time']
-        if horizon_time < simulation_time:
-            simulation_time = horizon_time
-        self.environment.simulate(simulation_time, sample_time)
+            problem.update(current_time, update_time, sample_time)
+        if self.problems[0].options['horizon_time'] < update_time:
+            update_time = self.problems[0].options['horizon_time']
+        self.environment.update(update_time, sample_time)
         self.fleet.update_plots()
         self.update_plots()
-
-    def sleep(self, current_time, sleep_time, sample_time):
-        for problem in self.problems:
-            problem.sleep(current_time, sleep_time, sample_time)
-        self.environment.simulate(sleep_time, sample_time)
 
     def stop_criterium(self, current_time, update_time):
         stop = True

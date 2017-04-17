@@ -34,12 +34,12 @@ class HolonomicOrient(Vehicle):
         self.vmax = bounds['vmax'] if 'vmax' in bounds else 0.5
         self.amin = bounds['amin'] if 'amin' in bounds else -1.
         self.amax = bounds['amax'] if 'amax' in bounds else 1.
-        self.wmin = bounds['wmin'] if 'wmin' in bounds else -np.pi/6. # in rad/s
-        self.wmax = bounds['wmax'] if 'wmax' in bounds else np.pi/6.
+        self.wmin = bounds['wmin'] if 'wmin' in bounds else -30.  # in deg/s
+        self.wmax = bounds['wmax'] if 'wmax' in bounds else 30.
 
     def set_default_options(self):
         Vehicle.set_default_options(self)
-        self.options.update({'syslimit': 'norm_inf'})
+        self.options.update({'syslimit': 'norm_2'})
         self.options.update({'reg_type': None})  # no reg by default
 
     def init(self):
@@ -70,8 +70,8 @@ class HolonomicOrient(Vehicle):
             raise ValueError(
                 'Only norm_2 and norm_inf are defined as system limit.')
         # add constraints on change in orientation
-        self.define_constraint(2*dtg_ha - (1+tg_ha**2)*self.T*self.wmax, -inf, 0.)
-        self.define_constraint(-2*dtg_ha + (1+tg_ha**2)*self.T*self.wmin, -inf, 0.)
+        self.define_constraint(2*dtg_ha - (1+tg_ha**2)*self.T*np.radians(self.wmax), -inf, 0.)
+        self.define_constraint(-2*dtg_ha + (1+tg_ha**2)*self.T*np.radians(self.wmin), -inf, 0.)
         # add regularization on dtg_ha
         if (self.options['reg_type'] == 'norm_1' and self.options['reg_weight'] != 0.0):
             dtg_ha = tg_ha.derivative()
@@ -106,15 +106,16 @@ class HolonomicOrient(Vehicle):
             term_con_der.extend([(x.derivative(d), 0.), (y.derivative(d), 0.), (tg_ha.derivative(d), 0.)])
         return [term_con, term_con_der]
 
-    def set_initial_conditions(self, state, input=None):
-        if input is None:
-            input = np.zeros(3)
-        # list all predictions that are used in set_parameters
-        self.prediction['state'] = state
-        self.prediction['input'] = input
+    def set_initial_conditions(self, pose, input=np.zeros(3)):
+        # comes from the user so theta is in deg
+        pose[2] = np.radians(pose[2])
+        self.prediction['state'] = pose  # x, y, theta[rad]
+        self.prediction['input'] = input  # dx, dy, dtheta
 
     def set_terminal_conditions(self, pose):
-        self.poseT = pose
+        # comes from the user so theta is in deg
+        pose[2] = np.radians(pose[2])
+        self.poseT = pose  # x, y, theta[rad]
 
     def get_init_spline_value(self):
         # for the optimization problem so use tg_ha
@@ -177,3 +178,14 @@ class HolonomicOrient(Vehicle):
 
     def ode(self, state, input):
         return input
+
+
+# Next two functions are required if vehicle is not passed to problem, but is still used in the optimization
+# problem e.g. when considering a vehicle with a trailer. You manually have to update signals and prediction,
+# here the inputs are coming from e.g. the trailer class.
+    def update_signals(self, signals):
+        self.signals = signals
+
+
+    def update_prediction(self, prediction):
+        self.prediction = prediction
