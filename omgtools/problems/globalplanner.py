@@ -590,6 +590,6 @@ class Grid:
 
 class SquareGrid(Grid):
     
-    def __init__(self, size, position, n_cells):
+    def __init__(self, size, position, n_cells, offset=[0.,0.]):
         # make a general grid, with square cell
         Grid.__init__(self, size, size, position, n_cells)
