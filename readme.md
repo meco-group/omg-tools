@@ -110,8 +110,8 @@ OMG-tools implemented on real-life motion systems. Click on a picture to watch t
 </a>
 </td>
 <td align="center" valign="center" bgcolor="#FFFFFF">
-<a href="https://www.youtube.com/watch?v=8GDlWS1OOOM">
-<img src="https://img.youtube.com/vi/8GDlWS1OOOM/0.jpg" alt="Plate transportation"/>
+<a href="https://www.youtube.com/watch?v=0ftMz0JTojE">
+<img src="https://img.youtube.com/vi/0ftMz0JTojE/0.jpg" alt="Plate transportation"/>
 </a>
 </td>
 </tr>
