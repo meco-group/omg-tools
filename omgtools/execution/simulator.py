@@ -43,9 +43,10 @@ class Simulator:
             stop = self.update()
             if stop:
                 update_time = float(self.problem.vehicles[0].signals['time'][:, -1] - self.current_time)
-                self.update_timing(update_time)
+                self.update_timing(update_time-self.sample_time) #correcting for first time
             else:
                 self.update_timing()
+
         self.problem.final()
         # return trajectories and signals
         trajectories, signals = {}, {}
