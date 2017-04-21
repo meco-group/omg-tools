@@ -22,7 +22,8 @@ matrix:
   include:
     - script:
         - chmod 644 *.py # nose doesnt match executable files
-        - "nosetests -s --verbosity=4 --tests='$(python .select_examples.py 3 1)' --with-xcoverage --cover-package=omgtools --cover-tests 2> >(grep -v -P 'DEBUG: (?!wantFile)')"
+        # - files = "$(python .select_examples.py 3 1)""
+        - "nosetests -s --verbosity=4 --tests=$(python .select_examples.py 3 1) --with-xcoverage --cover-package=omgtools --cover-tests 2> >(grep -v -P 'DEBUG: (?!wantFile)')"
     - script:
         - chmod 644 *.py # nose doesnt match executable files
         - "nosetests -s --verbosity=4 --tests='$(python .select_examples.py 3 2)' --with-xcoverage --cover-package=omgtools --cover-tests 2> >(grep -v -P 'DEBUG: (?!wantFile)')"
