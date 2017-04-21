@@ -24,14 +24,14 @@ matrix:
       language: generic
       script:
         - chmod 644 *.py # nose doesnt match executable files
-        - "nosetests -s --verbosity=4 --tests=$(python .select_examples.py 3 1) --with-xcoverage --cover-package=omgtools --cover-tests 2> >(grep -v -P 'DEBUG: (?!wantFile)')"
+        - "sudo nosetests -s --verbosity=4 --tests=$(python .select_examples.py 3 1) --with-xcoverage --cover-package=omgtools --cover-tests 2> >(grep -v -P 'DEBUG: (?!wantFile)')"
         - python examples/test_export.py
     - sudo: required
       dist: trusty
       language: generic
       script:
         - chmod 644 *.py # nose doesnt match executable files
-        - "nosetests -s --verbosity=4 --tests=$(python .select_examples.py 3 2) --with-xcoverage --cover-package=omgtools --cover-tests 2> >(grep -v -P 'DEBUG: (?!wantFile)')"
+        - "sudo nosetests -s --verbosity=4 --tests=$(python .select_examples.py 3 2) --with-xcoverage --cover-package=omgtools --cover-tests 2> >(grep -v -P 'DEBUG: (?!wantFile)')"
         - python examples/test_export.py
 
     - sudo: required
@@ -39,7 +39,7 @@ matrix:
       language: generic
       script:
         - chmod 644 *.py # nose doesnt match executable files
-        - "nosetests -s --verbosity=4 --tests=$(python .select_examples.py 3 3) --with-xcoverage --cover-package=omgtools --cover-tests 2> >(grep -v -P 'DEBUG: (?!wantFile)')"
+        - "sudo nosetests -s --verbosity=4 --tests=$(python .select_examples.py 3 3) --with-xcoverage --cover-package=omgtools --cover-tests 2> >(grep -v -P 'DEBUG: (?!wantFile)')"
         - python examples/test_export.py
 
 after_success:
