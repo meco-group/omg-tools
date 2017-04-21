@@ -6,6 +6,7 @@ examples/export*
 examples/data/*
 lvd/*
 .*
+!.select_examples.py
 !.gitignore
 *.c
 *.so

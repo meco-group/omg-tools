@@ -6,7 +6,7 @@ env:
 
 # works from matplotlib 1.5 onwards
  #   - MPLBACKEND=Agg # Matplotlib backend; must be headless to run on travis
- 
+
 sudo: required
 dist: trusty
 language: generic
@@ -17,11 +17,41 @@ before_script:
   - git clone https://github.com/meco-group/bob.git
   - pushd bob && source setup.sh && popd
   - bob_get libhsl.tar.gz && mkdir $HOME/libhsl && tar -xf libhsl.tar.gz -C $HOME/libhsl
-  
+
+matrix:
+  include:
+    - script:
+        - chmod 644 *.py # nose doesnt match executable files
+        - "nosetests -s --verbosity=4 --tests='$(python .select_examples.py 3 1)' --with-xcoverage --cover-package=omgtools --cover-tests 2> >(grep -v -P 'DEBUG: (?!wantFile)')"
+    - script:
+        - chmod 644 *.py # nose doesnt match executable files
+        - "nosetests -s --verbosity=4 --tests='$(python .select_examples.py 3 2)' --with-xcoverage --cover-package=omgtools --cover-tests 2> >(grep -v -P 'DEBUG: (?!wantFile)')"
+    - script:
+        - chmod 644 *.py # nose doesnt match executable files
+        - "nosetests -s --verbosity=4 --tests='$(python .select_examples.py 3 3)' --with-xcoverage --cover-package=omgtools --cover-tests 2> >(grep -v -P 'DEBUG: (?!wantFile)')"
+
+
+
+  # - pushd export
+  # - make && pushd bin
+  # - ./Point2Point
+  # - popd
+  # - popd
+  # - pushd export_f
+  # - make && pushd bin
+  # - ./FormationPoint2Point
+  # - popd
+  # - popd
+  # - pushd export_r
+  # - make && pushd bin
+  # - ./RendezVous
+  # - popd
+  # - popd
 script:
   - cd examples
   - chmod 644 *.py # nose doesnt match executable files
   - "nosetests -s --verbosity=4 -i '\\.py$' . --with-xcoverage --cover-package=omgtools --cover-tests 2> >(grep -v -P 'DEBUG: (?!wantFile)')"
+
   - pushd export
   - make && pushd bin
   - ./Point2Point
@@ -44,7 +74,7 @@ after_success:
 install:
   - export DISPLAY=':99.0'
   - Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
-  - sudo python setup.py install 
+  - sudo python setup.py install
 
 before_install:
   - wget http://sourceforge.net/projects/casadi/files/CasADi/$CASADIVERSION/linux/casadi-py27-np1.9.1-v$CASADIVERSION.tar.gz/download -O casadi-py27-np1.9.1-v$CASADIVERSION.tar.gz
