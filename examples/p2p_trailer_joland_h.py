@@ -24,7 +24,7 @@ sys.path.insert(0, os.getcwd()+"/..")
 from omgtools import *
 
 # create vehicle
-vehicle = HolonomicOrient(shapes=Circle(0.2))  # in deg
+vehicle = HolonomicOrient(shapes=Square(0.4))  # in deg
 vehicle.define_knots(knot_intervals=9)  # adapt amount of knot intervals was eerst 9
 vehicle.set_initial_conditions([2., 5., 0.])  # input orientation in deg
 #vehicle.set_terminal_conditions([3., 3., 90.])
@@ -51,8 +51,8 @@ problem = Point2point(trailer, environment, freeT=True)  # pass trailer to probl
 # todo: isn't there are a cleaner way?
 problem.father.add(vehicle)  # add vehicle to optifather, such that it knows the trailer variables
 # extra solver settings which may improve performance https://www.coin-or.org/Ipopt/documentation/node53.html#SECTION0001113010000000000000
-#problem.set_options({'solver_options': {'ipopt': {'ipopt.hessian_approximation': 'limited-memory'}}})
-problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57','ipopt.print_level': 4}}})
+problem.set_options({'solver_options': {'ipopt': {'ipopt.hessian_approximation': 'limited-memory'}}})
+#problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57','ipopt.print_level': 4}}})
 
 problem.init()
 
