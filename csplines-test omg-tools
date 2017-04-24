@@ -1,0 +1,73 @@
+csplines-test omg-tools
+-----------------------
+tb: build time
+tav: average solve time
+tmax: max solve time
+
+questions for joris:
+- not working formatioon
+- how to check dependency with einstein?
+
+old toolbox
+-----------
+- formation_dubins:
+    * tb: 2.27s
+    * tav: 304.167ms
+    * tmax: 913.906ms
+- formation_holonomics:
+    * tb: 0.09s
+    * tav: 28.73ms
+    * tmax: 98.54ms
+- p2p_3dquadrotor:
+    * tb: 2.07s
+    * tav: 333.004ms
+    * tmax: 1014.13ms
+- p2p_bicycle:
+    * tb: 1.02s
+    * tav: 198.294ms
+    * tmax: 1043.45ms
+- p2p_dubins:
+    * tb: 0.69s
+    * tav: 145.94ms
+    * tmax: 637.04ms
+- p2p_holonomic.py
+    * tb: 0.11s
+    * tav: 34.71ms
+    * tmax: 60.2ms
+- platform_landing.py
+    * tb: 0.13s
+    * tav: 95.7ms
+    * tmax: 46.7ms
+- revolving_door.py
+    * tb: 0.16s
+    * tav: 28.65ms
+    * tmax: 172.325ms
+
+csplines
+--------
+- formation_dubins: not working
+- formation_holonomics: not working
+- p2p_3dquadrotor:
+    * tb: 15.2s
+    * tav: 1289.77ms
+    * tmax: 3386.9ms
+- p2p_bicycle:
+    * tb: 11.8s
+    * tav: 2015.55ms
+    * tmax: 2015.55ms
+- p2p_dubins:
+    * tb: 12.2s
+    * tav: 767.905ms
+    * tmax: 3875.97ms
+- p2p_holonomic.py
+    * tb: 1.29s
+    * tav: 97.9848ms
+    * tmax: 180.167ms
+- platform_landing.py
+    * tb: 1.603s
+    * tav: 171.034ms
+    * tmax: 333.234ms
+- revolving_door.py
+    * tb: 2.77s
+    * tav: 125.424ms
+    * tmax: 642.6772ms

@@ -6,6 +6,7 @@ env:
 
 # works from matplotlib 1.5 onwards
  #   - MPLBACKEND=Agg # Matplotlib backend; must be headless to run on travis
+
 sudo: required
 dist: trusty
 language: generic
@@ -20,15 +21,15 @@ before_script:
 matrix:
   include:
     - script:
-        - chmod 644 *.py # nose doesnt match executable files
+        - chmod 644 examples/*.py # nose doesnt match executable files
         - "sudo nosetests -s --verbosity=4 --tests=$(python .select_examples.py 3 1) --with-xcoverage --cover-package=omgtools --cover-tests 2> >(grep -v -P 'DEBUG: (?!wantFile)')"
         - python ./examples/test_export.py
     - script:
-        - chmod 644 *.py # nose doesnt match executable files
+        - chmod 644 examples/*.py # nose doesnt match executable files
         - "sudo nosetests -s --verbosity=4 --tests=$(python .select_examples.py 3 2) --with-xcoverage --cover-package=omgtools --cover-tests 2> >(grep -v -P 'DEBUG: (?!wantFile)')"
         - python examples/test_export.py
     - script:
-        - chmod 644 *.py # nose doesnt match executable files
+        - chmod 644 examples/*.py # nose doesnt match executable files
         - "sudo nosetests -s --verbosity=4 --tests=$(python .select_examples.py 3 3) --with-xcoverage --cover-package=omgtools --cover-tests 2> >(grep -v -P 'DEBUG: (?!wantFile)')"
         - python ./examples/test_export.py
 
