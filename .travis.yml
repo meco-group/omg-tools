@@ -1,3 +1,27 @@
+language: python
+python:
+  - "2.7"
+
+sudo: required
+dist: trusty
+
+before_install:
+  - wget http://sourceforge.net/projects/casadi/files/CasADi/$CASADIVERSION/linux/casadi-py27-np1.9.1-v$CASADIVERSION.tar.gz/download -O casadi-py27-np1.9.1-v$CASADIVERSION.tar.gz
+  - mkdir $HOME/casadi-py27-np1.9.1-v$CASADIVERSION
+  - tar -zxf casadi-py27-np1.9.1-v$CASADIVERSION.tar.gz -C $HOME/casadi-py27-np1.9.1-v$CASADIVERSION
+  - sudo apt-get install -y python-numpy python-scipy python-matplotlib python-pip xvfb
+  # - mkdir -p $HOME/.matplotlib/
+  #- "echo 'backend : Agg' > $HOME/.matplotlib/matplotlibrc"
+  - sudo pip install matplotlib2tikz
+  - export PYTHONPATH=$PYTHONPATH:$HOME/casadi-py27-np1.9.1-v$CASADIVERSION
+  - sudo pip install nosexcover coveralls
+  - sudo apt-get install valgrind
+
+install:
+  - export DISPLAY=':99.0'
+  - Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
+  - sudo python setup.py install
+
 env:
   global:
     - CASADIVERSION=3.1.0-rc1
@@ -19,48 +43,48 @@ before_script:
   - bob_get libhsl.tar.gz && mkdir $HOME/libhsl && tar -xf libhsl.tar.gz -C $HOME/libhsl
 
 matrix:
-  include:
-    - sudo: required
-      dist: trusty
-      language: generic
-      script:
-        - export PYTHONPATH=$PYTHONPATH:$HOME/casadi-py27-np1.9.1-v$CASADIVERSION
-        - chmod 644 examples/*.py # nose doesnt match executable files
-        - "sudo nosetests -s --verbosity=4 --tests=$(python .select_examples.py 3 1) --with-xcoverage --cover-package=omgtools --cover-tests 2> >(grep -v -P 'DEBUG: (?!wantFile)')"
-        - python ./examples/test_export.py
-    - sudo: required
-      dist: trusty
-      language: generic
-      script:
-        - export PYTHONPATH=$PYTHONPATH:$HOME/casadi-py27-np1.9.1-v$CASADIVERSION
-        - chmod 644 examples/*.py # nose doesnt match executable files
-        - "sudo nosetests -s --verbosity=4 --tests=$(python .select_examples.py 3 2) --with-xcoverage --cover-package=omgtools --cover-tests 2> >(grep -v -P 'DEBUG: (?!wantFile)')"
-        - python examples/test_export.py
-    - sudo: required
-      dist: trusty
-      language: generic
-      script:
-        - export PYTHONPATH=$PYTHONPATH:$HOME/casadi-py27-np1.9.1-v$CASADIVERSION
-        - chmod 644 examples/*.py # nose doesnt match executable files
-        - "sudo nosetests -s --verbosity=4 --tests=$(python .select_examples.py 3 3) --with-xcoverage --cover-package=omgtools --cover-tests 2> >(grep -v -P 'DEBUG: (?!wantFile)')"
-        - python ./examples/test_export.py
+  - script:
+      - chmod 644 examples/*.py # nose doesnt match executable files
+      - "sudo nosetests -s --verbosity=4 --tests=$(python .select_examples.py 3 1) --with-xcoverage --cover-package=omgtools --cover-tests 2> >(grep -v -P 'DEBUG: (?!wantFile)')"
+      # - python ./examples/test_export.py
+  - script:
+      - chmod 644 examples/*.py # nose doesnt match executable files
+      - "sudo nosetests -s --verbosity=4 --tests=$(python .select_examples.py 3 2) --with-xcoverage --cover-package=omgtools --cover-tests 2> >(grep -v -P 'DEBUG: (?!wantFile)')"
+      # - python ./examples/test_export.py
+  - script:
+      - chmod 644 examples/*.py # nose doesnt match executable files
+      - "sudo nosetests -s --verbosity=4 --tests=$(python .select_examples.py 3 3) --with-xcoverage --cover-package=omgtools --cover-tests 2> >(grep -v -P 'DEBUG: (?!wantFile)')"
+      # - python ./examples/test_export.py
+
+
+# matrix:
+#   include:
+#     - sudo: required
+#       dist: trusty
+#       language: generic
+#       script:
+#         - export PYTHONPATH=$PYTHONPATH:$HOME/casadi-py27-np1.9.1-v$CASADIVERSION
+#         - chmod 644 examples/*.py # nose doesnt match executable files
+#         - "sudo nosetests -s --verbosity=4 --tests=$(python .select_examples.py 3 1) --with-xcoverage --cover-package=omgtools --cover-tests 2> >(grep -v -P 'DEBUG: (?!wantFile)')"
+#         - python ./examples/test_export.py
+#     - sudo: required
+#       dist: trusty
+#       language: generic
+#       script:
+#         - export PYTHONPATH=$PYTHONPATH:$HOME/casadi-py27-np1.9.1-v$CASADIVERSION
+#         - chmod 644 examples/*.py # nose doesnt match executable files
+#         - "sudo nosetests -s --verbosity=4 --tests=$(python .select_examples.py 3 2) --with-xcoverage --cover-package=omgtools --cover-tests 2> >(grep -v -P 'DEBUG: (?!wantFile)')"
+#         - python examples/test_export.py
+#     - sudo: required
+#       dist: trusty
+#       language: generic
+#       script:
+#         - export PYTHONPATH=$PYTHONPATH:$HOME/casadi-py27-np1.9.1-v$CASADIVERSION
+#         - chmod 644 examples/*.py # nose doesnt match executable files
+#         - "sudo nosetests -s --verbosity=4 --tests=$(python .select_examples.py 3 3) --with-xcoverage --cover-package=omgtools --cover-tests 2> >(grep -v -P 'DEBUG: (?!wantFile)')"
+#         - python ./examples/test_export.py
 
 after_success:
   - coveralls
 
-install:
-  - export DISPLAY=':99.0'
-  - Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
-  - sudo python setup.py install
 
-before_install:
-  - wget http://sourceforge.net/projects/casadi/files/CasADi/$CASADIVERSION/linux/casadi-py27-np1.9.1-v$CASADIVERSION.tar.gz/download -O casadi-py27-np1.9.1-v$CASADIVERSION.tar.gz
-  - mkdir $HOME/casadi-py27-np1.9.1-v$CASADIVERSION
-  - tar -zxf casadi-py27-np1.9.1-v$CASADIVERSION.tar.gz -C $HOME/casadi-py27-np1.9.1-v$CASADIVERSION
-  - sudo apt-get install -y python-numpy python-scipy python-matplotlib python-pip xvfb
-  - mkdir -p $HOME/.matplotlib/
-  #- "echo 'backend : Agg' > $HOME/.matplotlib/matplotlibrc"
-  - sudo pip install matplotlib2tikz
-  - export PYTHONPATH=$PYTHONPATH:$HOME/casadi-py27-np1.9.1-v$CASADIVERSION
-  - sudo pip install nosexcover coveralls
-  - sudo apt-get install valgrind
