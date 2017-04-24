@@ -49,7 +49,7 @@ class Holonomic(Vehicle):
             self.aymax = bounds['aymax'] if 'aymax' in bounds else 1.
         elif self.options['syslimit'] is 'norm_2':
             self.vmax = bounds['vmax'] if 'vmax' in bounds else 0.5
-            self.amax = bounds['vmin'] if 'amax' in bounds else 1.
+            self.amax = bounds['amax'] if 'amax' in bounds else 1.
 
     def set_default_options(self):
         Vehicle.set_default_options(self)
