@@ -24,6 +24,7 @@ matrix:
       dist: trusty
       language: generic
       script:
+        - export PYTHONPATH=$PYTHONPATH:$HOME/casadi-py27-np1.9.1-v$CASADIVERSION
         - chmod 644 examples/*.py # nose doesnt match executable files
         - "sudo nosetests -s --verbosity=4 --tests=$(python .select_examples.py 3 1) --with-xcoverage --cover-package=omgtools --cover-tests 2> >(grep -v -P 'DEBUG: (?!wantFile)')"
         - python ./examples/test_export.py
@@ -31,6 +32,7 @@ matrix:
       dist: trusty
       language: generic
       script:
+        - export PYTHONPATH=$PYTHONPATH:$HOME/casadi-py27-np1.9.1-v$CASADIVERSION
         - chmod 644 examples/*.py # nose doesnt match executable files
         - "sudo nosetests -s --verbosity=4 --tests=$(python .select_examples.py 3 2) --with-xcoverage --cover-package=omgtools --cover-tests 2> >(grep -v -P 'DEBUG: (?!wantFile)')"
         - python examples/test_export.py
@@ -38,6 +40,7 @@ matrix:
       dist: trusty
       language: generic
       script:
+        - export PYTHONPATH=$PYTHONPATH:$HOME/casadi-py27-np1.9.1-v$CASADIVERSION
         - chmod 644 examples/*.py # nose doesnt match executable files
         - "sudo nosetests -s --verbosity=4 --tests=$(python .select_examples.py 3 3) --with-xcoverage --cover-package=omgtools --cover-tests 2> >(grep -v -P 'DEBUG: (?!wantFile)')"
         - python ./examples/test_export.py
