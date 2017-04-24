@@ -19,28 +19,18 @@ before_script:
 
 matrix:
   include:
-    - sudo: required
-      dist: trusty
-      language: generic
-      script:
+    - script:
         - chmod 644 *.py # nose doesnt match executable files
         - "sudo nosetests -s --verbosity=4 --tests=$(python .select_examples.py 3 1) --with-xcoverage --cover-package=omgtools --cover-tests 2> >(grep -v -P 'DEBUG: (?!wantFile)')"
-        - python examples/test_export.py
-    - sudo: required
-      dist: trusty
-      language: generic
-      script:
+        - python ./examples/test_export.py
+    - script:
         - chmod 644 *.py # nose doesnt match executable files
         - "sudo nosetests -s --verbosity=4 --tests=$(python .select_examples.py 3 2) --with-xcoverage --cover-package=omgtools --cover-tests 2> >(grep -v -P 'DEBUG: (?!wantFile)')"
         - python examples/test_export.py
-
-    - sudo: required
-      dist: trusty
-      language: generic
-      script:
+    - script:
         - chmod 644 *.py # nose doesnt match executable files
         - "sudo nosetests -s --verbosity=4 --tests=$(python .select_examples.py 3 3) --with-xcoverage --cover-package=omgtools --cover-tests 2> >(grep -v -P 'DEBUG: (?!wantFile)')"
-        - python examples/test_export.py
+        - python ./examples/test_export.py
 
 after_success:
   - coveralls
