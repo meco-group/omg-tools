@@ -18,11 +18,9 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 import warnings
-warnings.filterwarnings("ignore")
 import os
 import shutil
 import matplotlib
-matplotlib.use('TKAgg')
 import matplotlib.pyplot as plt
 from matplotlib import animation
 from mpl_toolkits.mplot3d import Axes3D, proj3d
@@ -343,7 +341,8 @@ class PlotLayer(object):
                 plt.savefig(output, bbox_inches='tight', pad_inches=0)
             filenames = [os.path.join(directory, name+'_'+str(k)+'.png') for k in range(cnt)]
             output = os.path.join(path, name+'.gif')
-            os.system('convert -delay %f %s %s' % (interval, ' '.join(filenames), output))
+            if (os.system('convert -delay %f %s %s' % (interval, ' '.join(filenames), output)) != 0):
+                warnings.warn('Could not create gif. Is imagemagick correctly installed on your system?')
             shutil.rmtree(directory)
         elif format == 'tikz':
             from matplotlib2tikz import save as tikz_save

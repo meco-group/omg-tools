@@ -1,32 +1,36 @@
-from distutils.core import setup
-import os
-
+from setuptools import setup, find_packages
 
 setup(
-    name="omg-tools",
-    version="0.1.0",
-    author="Ruben Van Parys",
-    author_email="ruben.vanparys@kuleuven.be",
+    name='omg-tools',
+    version='0.1.5',
+    author='Ruben Van Parys',
+    author_email='ruben.vanparys@kuleuven.be',
     description=('Optimal Motion Generation tools: a user-friendly tool for ' +
                  'modeling, simulating and embedding of (spline-based) motion ' +
                  'planning problems'),
-    license="LGPLv3",
-    keywords="optimization motion planning splines distributed multi-agent",
-    url="https://github.com/meco-group/omg-tools",
-    packages=['omgtools', 'omgtools.basics', 'omgtools.environment',
-              'omgtools.problems', 'omgtools.execution', 'omgtools.vehicles',
-              'omgtools.export'],
-    package_data={'': ['export/point2point/Makefile',
-                       'export/point2point/instructions.txt',
-                       'export/*.cpp', 'export/*.hpp',
-                       'export/*/*.cpp', 'export/*/*.hpp',
-                       'export/*/*/*.cpp', 'export/*/*/*.hpp',
-                       'export/*/*/*/*.cpp', 'export/*/*/*/*.hpp']},
-    long_description=open(os.path.join(os.path.dirname(__file__), 'readme.md')).read(),
+    long_description=('Optimal Motion Generation-tools is a Python software ' +
+                      'toolbox facilitating the modeling, simulation and ' +
+                      'embedding of motion planning problems. ' +
+                      'Its main goal is to collect research topics ' +
+                      'concerning (spline-based) motion planning into a ' +
+                      'user-friendly package in order to enlarge its ' +
+                      'visibility towards the scientific and industrial world.'),
+    license='LGPLv3',
+    keywords='optimization motion planning splines distributed multi-agent mpc',
+    url='https://github.com/meco-group/omg-tools',
+    packages=find_packages(),
+    package_data={'omgtools.export': ['*/Makefile', '*/instructions.txt',
+                                      '*.cpp', '*.hpp',
+                                      '*/*.cpp', '*/*.hpp',
+                                      '*/*/*.cpp', '*/*/*.hpp',
+                                      '*/*/*/*.cpp', '*/*/*/*.hpp']},
+    install_requires=['numpy', 'scipy', 'matplotlib', 'matplotlib2tikz', 'casadi'],
     classifiers=[
-        "Development Status :: 3 - Alpha",
-        "Intended Audience :: Science/Research",
-        "Topic :: Scientific/Engineering",
-        "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
+        'Development Status :: 3 - Alpha',
+        'Intended Audience :: Science/Research',
+        'Topic :: Scientific/Engineering',
+        'License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)',
+        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 2.7',
     ],
 )
