@@ -45,7 +45,7 @@ simulator = Simulator(problem0, sample_time=0.01, update_time=0.1)
 simulator.run_once(simulate=False)
 
 problem = Point2point(vehicle, environment, freeT=False, options={'horizon_time': 5.})
-problem.set_options({'solver': 'blocksqp', 'solver_options': {'blocksqp': {'verbose':True, 'hess_lim_mem': 0, 'print_header': False}}})
+problem.set_options({'solver': 'blocksqp', 'solver_options': {'blocksqp': {'verbose':True, 'warmstart': True, 'qp_init' : False, 'hess_lim_mem': 0, 'print_header': False}}})
 problem.set_options({'hard_term_con': True, 'horizon_time': 12})
 vehicle.problem = problem
 problem.init()
