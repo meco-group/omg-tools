@@ -32,7 +32,7 @@ class ExportADMM(Export):
         src_files = src_files + ['ADMMPoint2Point.cpp', 'Point2Point.cpp', 'Vehicle.cpp']
         if problem.options['separate_build']:
             for updater in problem.updaters:
-                dest_dir = os.path.join(self.options['directory'], str(updater))
+                dest_dir = os.path.join(self.options['directory'], str(updater)) + '/'
                 self.export(source_dirs, dest_dir, src_files, updater.father_updx, updater, updater.problem)
         else:
             updaters = problem.separate_per_build()
