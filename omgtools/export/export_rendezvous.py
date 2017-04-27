@@ -1,4 +1,3 @@
-# This file is part of OMG-tools.
 #
 # OMG-tools -- Optimal Motion Generation-tools
 # Copyright (C) 2016 Ruben Van Parys & Tim Mercy, KU Leuven.

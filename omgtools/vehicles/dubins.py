@@ -233,6 +233,8 @@ class Dubins(Vehicle):
         # inputs: V, dtheta
         # find relation between dstate and state, inputs: dx = Ax+Bu
         # dstate = dx, dy, dtheta
+        # dx = V*cos(theta)
+        # dy = V*sin(theta)
         # dstate[2] = input[1]
         u1, u2 = input[0], input[1]
         return np.r_[u1*np.cos(state[2]), u1*np.sin(state[2]), u2].T

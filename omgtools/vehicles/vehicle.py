@@ -301,7 +301,7 @@ class Vehicle(OptiChild, PlotLayer):
             state0 = self.signals['state'][:, -1]  # current state
             state = self.integrate_ode(
                 state0, input, predict_time, sample_time)
-            self.prediction['state'] = state[:, -1]
+            self.prediction['state'] = state[:, -1] #state geeft de states voor elk tijdstip (stap van sample_time) tot predict_time. De prediction van de state is dus de laatste kolom
             self.prediction['input'] = self.trajectories['input'][:, n_samp]
             self.prediction['pose'] = self._state2pose(state[:, -1])
 

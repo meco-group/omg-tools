@@ -101,6 +101,8 @@ void Point2Point::initSplines(){
 	splines_tf["g1"] = G1_TF;
 	splines_tf["a_vehicle0_00"] = A_VEHICLE0_00_TF;
 	splines_tf["b_vehicle0_00"] = B_VEHICLE0_00_TF;
+	splines_tf["a_vehicle0_01"] = A_VEHICLE0_01_TF;
+	splines_tf["b_vehicle0_01"] = B_VEHICLE0_01_TF;
 
 }
 
@@ -320,42 +322,63 @@ void Point2Point::getParameterVector(vector<double>& par_vect, map<string, map<s
 	for (int i=0; i<2; i++){
 		par_vect[10+i] = par_dict["obstacle0"]["a"][i];
 	}
-	par_vect[12] = par_dict["p2p0"]["T"][0];
-	par_vect[13] = par_dict["p2p0"]["t"][0];
+	for (int i=0; i<2; i++){
+		par_vect[12+i] = par_dict["obstacle1"]["x"][i];
+	}
+	for (int i=0; i<2; i++){
+		par_vect[14+i] = par_dict["obstacle1"]["v"][i];
+	}
+	for (int i=0; i<2; i++){
+		par_vect[16+i] = par_dict["obstacle1"]["a"][i];
+	}
+	par_vect[18] = par_dict["p2p0"]["T"][0];
+	par_vect[19] = par_dict["p2p0"]["t"][0];
 
 }
 
 void Point2Point::getVariableVector(vector<double>& var_vect, map<string, map<string, vector<double>>>& var_dict){
 	if (var_dict.find("vehicle0") != var_dict.end()){
 		if (var_dict["vehicle0"].find("splines0") != var_dict["vehicle0"].end()){
-			for (int i=0; i<36; i++){
+			for (int i=0; i<26; i++){
 				var_vect[0+i] = var_dict["vehicle0"]["splines0"][i];
 			}
 		}
 	}
 	if (var_dict.find("obstacle0") != var_dict.end()){
 	}
+	if (var_dict.find("obstacle1") != var_dict.end()){
+	}
 	if (var_dict.find("p2p0") != var_dict.end()){
 		if (var_dict["p2p0"].find("g0") != var_dict["p2p0"].end()){
-			for (int i=0; i<18; i++){
-				var_vect[36+i] = var_dict["p2p0"]["g0"][i];
+			for (int i=0; i<13; i++){
+				var_vect[26+i] = var_dict["p2p0"]["g0"][i];
 			}
 		}
 		if (var_dict["p2p0"].find("g1") != var_dict["p2p0"].end()){
-			for (int i=0; i<18; i++){
-				var_vect[54+i] = var_dict["p2p0"]["g1"][i];
+			for (int i=0; i<13; i++){
+				var_vect[39+i] = var_dict["p2p0"]["g1"][i];
 			}
 		}
 	}
 	if (var_dict.find("environment0") != var_dict.end()){
 		if (var_dict["environment0"].find("a_vehicle0_00") != var_dict["environment0"].end()){
-			for (int i=0; i<32; i++){
-				var_vect[72+i] = var_dict["environment0"]["a_vehicle0_00"][i];
+			for (int i=0; i<22; i++){
+				var_vect[52+i] = var_dict["environment0"]["a_vehicle0_00"][i];
 			}
 		}
 		if (var_dict["environment0"].find("b_vehicle0_00") != var_dict["environment0"].end()){
-			for (int i=0; i<16; i++){
-				var_vect[104+i] = var_dict["environment0"]["b_vehicle0_00"][i];
+			for (int i=0; i<11; i++){
+				var_vect[74+i] = var_dict["environment0"]["b_vehicle0_00"][i];
+			}
+		}
+		if (var_dict["environment0"].find("a_vehicle0_01") != var_dict["environment0"].end()){
+			for (int i=0; i<22; i++){
+				var_vect[85+i] = var_dict["environment0"]["a_vehicle0_01"][i];
+			}
+		}
+		if (var_dict["environment0"].find("b_vehicle0_01") != var_dict["environment0"].end()){
+			for (int i=0; i<11; i++){
+				var_vect[107+i] = var_dict["environment0"]["b_vehicle0_01"][i];
 			}
 		}
 	}
@@ -363,31 +386,41 @@ void Point2Point::getVariableVector(vector<double>& var_vect, map<string, map<st
 }
 
 void Point2Point::getVariableDict(vector<double>& var_vect, map<string, map<string, vector<double>>>& var_dict){
-	vector<double> vec;	vec.resize(36);
-	for (int i=0; i<36; i++){
+	vector<double> vec;	vec.resize(26);
+	for (int i=0; i<26; i++){
 		vec[i] = var_vect[0+i];
 	}
 	var_dict["vehicle0"]["splines0"] = vec;
-	vec.resize(18);
-	for (int i=0; i<18; i++){
-		vec[i] = var_vect[36+i];
+	vec.resize(13);
+	for (int i=0; i<13; i++){
+		vec[i] = var_vect[26+i];
 	}
 	var_dict["p2p0"]["g0"] = vec;
-	vec.resize(18);
-	for (int i=0; i<18; i++){
-		vec[i] = var_vect[54+i];
+	vec.resize(13);
+	for (int i=0; i<13; i++){
+		vec[i] = var_vect[39+i];
 	}
 	var_dict["p2p0"]["g1"] = vec;
-	vec.resize(32);
-	for (int i=0; i<32; i++){
-		vec[i] = var_vect[72+i];
+	vec.resize(22);
+	for (int i=0; i<22; i++){
+		vec[i] = var_vect[52+i];
 	}
 	var_dict["environment0"]["a_vehicle0_00"] = vec;
-	vec.resize(16);
-	for (int i=0; i<16; i++){
-		vec[i] = var_vect[104+i];
+	vec.resize(11);
+	for (int i=0; i<11; i++){
+		vec[i] = var_vect[74+i];
 	}
 	var_dict["environment0"]["b_vehicle0_00"] = vec;
+	vec.resize(22);
+	for (int i=0; i<22; i++){
+		vec[i] = var_vect[85+i];
+	}
+	var_dict["environment0"]["a_vehicle0_01"] = vec;
+	vec.resize(11);
+	for (int i=0; i<11; i++){
+		vec[i] = var_vect[107+i];
+	}
+	var_dict["environment0"]["b_vehicle0_01"] = vec;
 
 }
 
@@ -396,61 +429,83 @@ void Point2Point::updateBounds(double current_time){
 }
 
 void Point2Point::transformSplines(double current_time){
-	if(((current_time > 0) and fabs(fmod(round(current_time*1000.)/1000., horizon_time/15)) <1.e-6)){
-		vector<double> spline_tf(18);
+	if(((current_time > 0) and fabs(fmod(round(current_time*1000.)/1000., horizon_time/10)) <1.e-6)){
+		vector<double> spline_tf(13);
 		for(int k=0; k<2; k++){
-			for(int i=0; i<18; i++){
+			for(int i=0; i<13; i++){
 			spline_tf[i] = 0.0;
-				for(int j=0; j<18; j++){
-					spline_tf[i] += splines_tf["splines0"][i][j]*variables[0+k*18+j];
+				for(int j=0; j<13; j++){
+					spline_tf[i] += splines_tf["splines0"][i][j]*variables[0+k*13+j];
 				}
 			}
-			for(int i=0; i<18; i++){
-				variables[0+k*18+i] = spline_tf[i];
+			for(int i=0; i<13; i++){
+				variables[0+k*13+i] = spline_tf[i];
 			}
 		}
 		for(int k=0; k<1; k++){
-			for(int i=0; i<18; i++){
+			for(int i=0; i<13; i++){
 			spline_tf[i] = 0.0;
-				for(int j=0; j<18; j++){
-					spline_tf[i] += splines_tf["g0"][i][j]*variables[18+k*18+j];
+				for(int j=0; j<13; j++){
+					spline_tf[i] += splines_tf["g0"][i][j]*variables[13+k*13+j];
 				}
 			}
-			for(int i=0; i<18; i++){
-				variables[18+k*18+i] = spline_tf[i];
+			for(int i=0; i<13; i++){
+				variables[13+k*13+i] = spline_tf[i];
 			}
 		}
 		for(int k=0; k<1; k++){
-			for(int i=0; i<18; i++){
+			for(int i=0; i<13; i++){
 			spline_tf[i] = 0.0;
-				for(int j=0; j<18; j++){
-					spline_tf[i] += splines_tf["g1"][i][j]*variables[36+k*18+j];
+				for(int j=0; j<13; j++){
+					spline_tf[i] += splines_tf["g1"][i][j]*variables[26+k*13+j];
 				}
 			}
-			for(int i=0; i<18; i++){
-				variables[36+k*18+i] = spline_tf[i];
+			for(int i=0; i<13; i++){
+				variables[26+k*13+i] = spline_tf[i];
 			}
 		}
 		for(int k=0; k<2; k++){
-			for(int i=0; i<16; i++){
+			for(int i=0; i<11; i++){
 			spline_tf[i] = 0.0;
-				for(int j=0; j<16; j++){
-					spline_tf[i] += splines_tf["a_vehicle0_00"][i][j]*variables[54+k*16+j];
+				for(int j=0; j<11; j++){
+					spline_tf[i] += splines_tf["a_vehicle0_00"][i][j]*variables[39+k*11+j];
 				}
 			}
-			for(int i=0; i<16; i++){
-				variables[54+k*16+i] = spline_tf[i];
+			for(int i=0; i<11; i++){
+				variables[39+k*11+i] = spline_tf[i];
 			}
 		}
 		for(int k=0; k<1; k++){
-			for(int i=0; i<16; i++){
+			for(int i=0; i<11; i++){
 			spline_tf[i] = 0.0;
-				for(int j=0; j<16; j++){
-					spline_tf[i] += splines_tf["b_vehicle0_00"][i][j]*variables[70+k*16+j];
+				for(int j=0; j<11; j++){
+					spline_tf[i] += splines_tf["b_vehicle0_00"][i][j]*variables[50+k*11+j];
 				}
 			}
-			for(int i=0; i<16; i++){
-				variables[70+k*16+i] = spline_tf[i];
+			for(int i=0; i<11; i++){
+				variables[50+k*11+i] = spline_tf[i];
+			}
+		}
+		for(int k=0; k<2; k++){
+			for(int i=0; i<11; i++){
+			spline_tf[i] = 0.0;
+				for(int j=0; j<11; j++){
+					spline_tf[i] += splines_tf["a_vehicle0_01"][i][j]*variables[61+k*11+j];
+				}
+			}
+			for(int i=0; i<11; i++){
+				variables[61+k*11+i] = spline_tf[i];
+			}
+		}
+		for(int k=0; k<1; k++){
+			for(int i=0; i<11; i++){
+			spline_tf[i] = 0.0;
+				for(int j=0; j<11; j++){
+					spline_tf[i] += splines_tf["b_vehicle0_01"][i][j]*variables[72+k*11+j];
+				}
+			}
+			for(int i=0; i<11; i++){
+				variables[72+k*11+i] = spline_tf[i];
 			}
 		}
 	}

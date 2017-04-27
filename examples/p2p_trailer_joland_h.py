@@ -22,9 +22,10 @@ import sys, os
 
 sys.path.insert(0, os.getcwd()+"/..")
 from omgtools import *
-
+options = {}
+options['safety_distance'] = 0.3;
 # create vehicle
-vehicle = HolonomicOrient(shapes=Circle(0.2))  # in deg
+vehicle = HolonomicOrient(shapes=Rectangle(0.3, 0.263), options=options)  # in deg
 vehicle.define_knots(knot_intervals=9)  # adapt amount of knot intervals was eerst 9
 vehicle.set_initial_conditions([2., 5., 0.])  # input orientation in deg
 #vehicle.set_terminal_conditions([3., 3., 90.])
@@ -32,7 +33,7 @@ vehicle.set_terminal_conditions([8., 5., 0.]) #eerste waarde naar rechts en twee
 
 # create trailer
 trailer = TrailerJolandHolonomic(lead_veh=vehicle,  shapes=Square(0.4), l_hitch = 0.3, l_hitch1 = 0.4,
-                  bounds={'tmax': 40., 'tmin': -40.})  # limit angle between vehicle and trailer
+                  bounds={'tmax': 40., 'tmin': -40.}, options=options)  # limit angle between vehicle and trailer
 # Note: the knot intervals of lead_veh and trailer should be the same
 trailer.define_knots(knot_intervals=9)  # adapjkt amount of knot intervals was eerst 9
 trailer.set_initial_conditions([0])  # input orientation in deg
@@ -40,10 +41,10 @@ trailer.set_initial_conditions([0])  # input orientation in deg
 
 # create environment
 environment = Environment(room={'shape': Square(10.), 'position': [5.,5.]})
-rectangle = Rectangle(width=.2, height=4.)
-
-environment.add_obstacle(Obstacle({'position': [3., 3.]}, shape=rectangle))
-environment.add_obstacle(Obstacle({'position': [6., 7.]}, shape=rectangle))
+# rectangle = Rectangle(width=.2, height=3.8)
+#
+# environment.add_obstacle(Obstacle({'position': [3., 3.]}, shape=rectangle))
+# environment.add_obstacle(Obstacle({'position': [6., 7.]}, shape=rectangle))
 
 
 # create a point-to-point problem
@@ -64,4 +65,4 @@ trailer.plot('state', knots=True, labels=['x_tr (m)', 'y_tr (m)', 'theta_tr (rad
 
 # run it!
 simulator.run_once()
-problem.save_movie('scene', format='gif', name='traileroff_rechtdoor7', number_of_frames=100, movie_time=5, axis=False)
+problem.save_movie('scene', format='gif', name='safety_0.3', number_of_frames=100, movie_time=5, axis=False)

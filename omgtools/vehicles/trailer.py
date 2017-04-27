@@ -68,13 +68,14 @@ class Trailer(Vehicle):
         self.lead_veh.define_trajectory_constraints(splines[1: ])
 
     def get_initial_constraints(self, splines):
-        # trailer has a certain theta0 --> trailer position follows from this
+        # trailer has a certain theta0 --> trailer position follows from this. We leggen constraints op
         T = self.define_symbol('T')
         tg_ha_tr0 = self.define_parameter('tg_ha_tr0', 1) #tan(\theta_0/2) = 1? 
         dtg_ha_tr0 = self.define_parameter('dtg_ha_tr0', 1)
         tg_ha_tr = splines[0]
         dtg_ha_tr = tg_ha_tr.derivative()
-        con_tr = [(tg_ha_tr, tg_ha_tr0, dtg_ha_tr, T*dtg_ha_tr0)]
+        con_tr = [(tg_ha_tr, tg_ha_tr0), (dtg_ha_tr, T*dtg_ha_tr0)]
+        #con_tr = [(tg_ha_tr, tg_ha_tr0)]
         con_veh = self.lead_veh.get_initial_constraints(splines[1: ])
         return con_tr + con_veh  # put in one list
 
