@@ -45,7 +45,7 @@ trajectories1 = simulator.run_once()
 # #theta_traj1 = np.linspace(0, np.pi, pos_traj1.shape[1])
 
 
-vehicle.set_terminal_conditions([0.5, 0.5])
+vehicle.set_terminal_conditions([0.5, 0.5, 0.])
 trailer.set_terminal_conditions([0.])  # this depends on the application e.g. driving vs parking
 
 problem.reinitialize()
