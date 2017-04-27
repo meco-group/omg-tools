@@ -35,7 +35,7 @@ problem.init()
 # vehicle.plot('input')
 simulator = Simulator(problem)
 problem.plot('scene')
-trailer.plot('input', knots=True, labels=['v_x (m/s)','v_y (m/s)'])
+trailer.plot('input', knots=True, labels=['v_x (m/s)','v_y (m/s)', 'theta_veh (rad)'])
 trailer.plot('state', knots=True, labels=['x_tr (m)', 'y_tr (m)', 'theta_tr (rad)', 'x_veh (m)', 'y_veh (m)', 'theta_veh (rad)'])
 trajectories1 = simulator.run_once()
 
