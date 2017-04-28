@@ -2,6 +2,7 @@
 
 [![Build Status](https://travis-ci.org/meco-group/omg-tools.svg?branch=master)](https://travis-ci.org/meco-group/omg-tools) [![Coverage Status](https://coveralls.io/repos/github/meco-group/omg-tools/badge.svg?branch=master)](https://coveralls.io/github/meco-group/omg-tools?branch=master)
 [![Codacy Badge](https://api.codacy.com/project/badge/grade/a44dd52c358e4cd09b12585915738627)](https://www.codacy.com/app/joris-gillis42/omg-tools)
+[![PyPI version](https://badge.fury.io/py/omg-tools.svg)](https://badge.fury.io/py/omg-tools)
 
 Optimal Motion Generation-tools is a Python software toolbox facilitating the modeling, simulation and embedding of motion planning problems. Its main goal is to collect research topics concerning (spline-based) motion planning into a user-friendly package in order to enlarge its visibility towards the scientific and industrial world.
 
