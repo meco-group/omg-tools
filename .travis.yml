@@ -2,6 +2,7 @@ env:
   global:
     - LD_LIBRARY_PATH=$HOME/libhsl
     # - IPOPT_DEFAULT_LINEAR_SOLVER=ma57
+    - COVERALLS_PARALLEL=true
     - NODE_TOTAL=4
   matrix:
     - NODE_INDEX=0
@@ -12,6 +13,9 @@ env:
 sudo: required
 dist: trusty
 language: generic
+
+notifications:
+  webhooks: https://coveralls.io/webhook?repo_token=COVERALLS_REPO_TOKEN
 
 before_script:
   - set -e
