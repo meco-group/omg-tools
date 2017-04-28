@@ -54,7 +54,7 @@ class Problem(OptiChild, PlotLayer):
     def set_default_options(self):
         self.options = {'verbose': 2}
         self.options['solver'] = 'ipopt'
-        ipopt_options = {'ipopt.tol': 1e-3, 'ipopt.linear_solver': 'mumps',
+        ipopt_options = {'ipopt.tol': 1e-3,
                          'ipopt.warm_start_init_point': 'yes',
                          'ipopt.print_level': 0, 'print_time': 0}
         self.options['solver_options'] = {'ipopt': ipopt_options}
