@@ -20,13 +20,12 @@
 import warnings
 import os
 import shutil
-import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib import animation
 from mpl_toolkits.mplot3d import Axes3D, proj3d
 import numpy as np
-from matplotlib.collections import PolyCollection, LineCollection
-from mpl_toolkits.mplot3d.art3d import Poly3DCollection, Line3DCollection
+from matplotlib.collections import PolyCollection
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 # def orthogonal_proj(zfront, zback):
 #     a = (zfront+zback)/(zfront-zback)
@@ -195,7 +194,6 @@ class PlotLayer(object):
 
     def plot(self, argument=None, **kwargs):
         plot = {'argument': argument, 'kwargs': kwargs}
-        # plot = {'argument': argument, 'kwargs': kwargs, 'figure': plt.figure()}
         self.plots.append(plot)
         if 'time' in kwargs:
             index = self.__class__.simulator.time2index(kwargs['time'])
@@ -222,7 +220,8 @@ class PlotLayer(object):
         plot['figure'] = figure
         for k in range(ax_r):
             for l in range(ax_c):
-                if 'projection' in info[k][l] and info[k][l]['projection'] == '3d':
+                if ('projection' in info[k][l] and
+                        info[k][l]['projection'] == '3d'):
                     axis = figure.add_subplot(
                         ax_r, ax_c, k*ax_c+l+1, projection='3d')
                     _init_axis_3d(axis, info[k][l], view)
@@ -255,7 +254,8 @@ class PlotLayer(object):
         for k in range(ax_r):
             for l in range(ax_c):
                 axis = fig.axes[k*ax_c+l]
-                if 'projection' in info[k][l] and info[k][l]['projection'] == '3d':
+                if ('projection' in info[k][l] and
+                        info[k][l]['projection'] == '3d'):
                     _update_axis_3d(axis, info[k][l], data[k][l])
                 else:
                     _update_axis_2d(axis, info[k][l], data[k][l])
@@ -277,7 +277,8 @@ class PlotLayer(object):
         proj_3d = False
         for k, _ in enumerate(info):
             for l, _ in enumerate(info[0]):
-                if 'projection' in info[k][l] and info[k][l]['projection'] == '3d':
+                if ('projection' in info[k][l] and
+                        info[k][l]['projection'] == '3d'):
                     proj_3d = True
         if proj_3d:
             warnings.warn('3D plotting is not supported by matplotlib2tikz. ' +
@@ -299,13 +300,14 @@ class PlotLayer(object):
 
     def plot_movie(self, argument=None, repeat=False, **kwargs):
         t = self.__class__.simulator.time
-        if ('number_of_frames' in kwargs and kwargs['number_of_frames'] <= (len(t)-1)):
-            number_of_frames = kwargs['number_of_frames']
+        if ('number_of_frames' in kwargs and
+                kwargs['number_of_frames'] <= (len(t)-1)):
+            nof = kwargs['number_of_frames']
         else:
-            number_of_frames = len(t)-1
-        subsample = (len(t)-1)/(number_of_frames-1)
+            nof = len(t)-1
+        subsample = (len(t)-1)/(nof-1)
         indices = range(0, len(t)-1, subsample)
-        indices.extend([len(t)-1 for k in range(number_of_frames-len(indices))])
+        indices.extend([len(t)-1 for k in range(nof-len(indices))])
         kwargs['no_update'] = True
         plot = self.plot(argument, **kwargs)
         while True:
@@ -314,19 +316,21 @@ class PlotLayer(object):
             if not repeat:
                 break
 
-    def save_movie(self, argument=None, name='movie', path='movies/', format='tikz', **kwargs):
+    def save_movie(self, argument=None, name='movie', path='movies/',
+                   format='tikz', **kwargs):
         t = self.__class__.simulator.time
-        if ('number_of_frames' in kwargs and kwargs['number_of_frames'] <= (len(t)-1)):
-            number_of_frames = kwargs['number_of_frames']
+        if ('number_of_frames' in kwargs and
+                kwargs['number_of_frames'] <= (len(t)-1)):
+            nof = kwargs['number_of_frames']
         else:
-            number_of_frames = len(t)-1
+            nof = len(t)-1
         if 'movie_time' in kwargs:
-            interval = kwargs['movie_time']/(number_of_frames-1)
+            interval = kwargs['movie_time']/(nof-1)
         else:
-            interval = 10./(number_of_frames-1)
-        subsample = (len(t)-1)/(number_of_frames-1)
+            interval = 10./(nof-1)
+        subsample = (len(t)-1)/(nof-1)
         indices = range(0, len(t)-1, subsample)
-        indices.extend([len(t)-1 for k in range(number_of_frames-len(indices))])
+        indices.extend([len(t)-1 for k in range(nof-len(indices))])
         kwargs['no_update'] = True
         plot = self.plot(argument, **kwargs)
         directory = path+'/'+name
@@ -339,10 +343,13 @@ class PlotLayer(object):
                 output = os.path.join(directory, name+'_'+str(cnt)+'.png')
                 cnt += 1
                 plt.savefig(output, bbox_inches='tight', pad_inches=0)
-            filenames = [os.path.join(directory, name+'_'+str(k)+'.png') for k in range(cnt)]
+            filenames = [os.path.join(directory, name+'_'+str(k)+'.png')
+                         for k in range(cnt)]
             output = os.path.join(path, name+'.gif')
-            if (os.system('convert -delay %f %s %s' % (interval, ' '.join(filenames), output)) != 0):
-                warnings.warn('Could not create gif. Is imagemagick correctly installed on your system?')
+            if (os.system('convert -delay %f %s %s' %
+                          (interval, ' '.join(filenames), output)) != 0):
+                warnings.warn(('Could not create gif. ' +
+                               'Did you install imagemagick on your system?'))
             shutil.rmtree(directory)
         elif format == 'tikz':
             from matplotlib2tikz import save as tikz_save
@@ -366,7 +373,8 @@ class PlotLayer(object):
                             if 'projection' in i and i['projection'] == '3d':
                                 proj_3d = True
                     if proj_3d:
-                        warnings.warn('3D plotting is not supported by matplotlib2tikz. ' +
+                        warnings.warn('3D plotting is not supported by ' +
+                                      'matplotlib2tikz. ' +
                                       'Saving to pdf instead.')
                 if proj_3d:
                     path = directory+'/'+name+'_'+str(cnt)+'.pdf'
@@ -375,12 +383,14 @@ class PlotLayer(object):
                     path = directory+'/'+name+'_'+str(cnt)+'.tikz'
                     if figureheight is None:
                         tikz_save(path, figurewidth=figurewidth,
-                                  extra={'scale only axis='+str(scaleonlyaxis).lower()})
+                                  extra={'scale only axis=' +
+                                         str(scaleonlyaxis).lower()})
                         # tikz requires a lowercase true/false
                     else:
-                        tikz_save(
-                            path, figurewidth=figurewidth, figureheight=figureheight,
-                            extra={['scale only axis='+str(scaleonlyaxis).lower()]})
+                        tikz_save(path, figurewidth=figurewidth,
+                                  figureheight=figureheight,
+                                  extra={['scale only axis=' +
+                                          str(scaleonlyaxis).lower()]})
                         # tikz requires a lowercase true/false
                     _cleanup_rubbish(path, info, root)
                 cnt += 1
