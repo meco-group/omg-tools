@@ -1,4 +1,6 @@
 import os
+import imp
+import subprocess
 
 
 def test_generator():
@@ -29,12 +31,12 @@ def test_export():
              'export_f': 'FormationPoint2Point',
              'export_r': 'RendezVous'}
     for d, f in files.items():
-        if os.path.isdir(os.path.join(os.getcwd()+'/examples', d)):
-            os.system('cd %s && make && ./bin/%s' %
-                      (os.path.join(os.getcwd()+'/examples', d), f))
+        if os.path.isdir(os.path.join(os.getcwd(), d)):
+            print ("cd %s && make && ./bin/%s") % (d, f)
+            print subprocess.check_output(("cd %s && make && ./bin/%s") % (d, f), shell=True, stderr=subprocess.STDOUT)
 
 
 def run_example(filename):
     example_dir = os.path.join(os.getcwd(), 'examples')
     print ''
-    os.system('python %s' % os.path.join(example_dir, filename))
+    imp.load_source(filename.split('.')[-2], os.path.join(example_dir, filename))
