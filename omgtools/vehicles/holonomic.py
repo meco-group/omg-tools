@@ -139,3 +139,11 @@ class Holonomic(Vehicle):
 
     def ode(self, state, input):
         return input
+    # Next two functions are required if vehicle is not passed to problem, but is still used in the optimization
+    # problem e.g. when considering a vehicle with a trailer. You manually have to update signals and prediction,
+    # here the inputs are coming from e.g. the trailer class.
+    def update_signals(self, signals):
+        self.signals = signals
+
+    def update_prediction(self, prediction):
+        self.prediction = prediction

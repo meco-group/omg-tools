@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
-
 import sys, os
 sys.path.insert(0, os.getcwd()+'/..')
 from omgtools import *
@@ -38,24 +37,41 @@ trailer.set_terminal_conditions(0.)  # this depends on the application e.g. driv
 environment = Environment(room={'shape': Square(5.), 'position': [1.5, 1.5]})
 
 # create a point-to-point problem
-problem = Point2point(trailer, environment, freeT=True)  # pass trailer to problem
+problem0 = Point2point(trailer, environment, freeT=True)  # pass trailer to problem
 # todo: isn't there are a cleaner way?
-problem.father.add(vehicle)  # add vehicle to optifather, such that it knows the trailer variables
-problem.vehicles.append(vehicle)
+problem0.father.add(vehicle)  # add vehicle to optifather, such that it knows the trailer variables
+problem0.vehicles.append(vehicle)
 # todo: isn't there are a cleaner way?
 vehicle.to_simulate = False
 # extra solver settings which may improve performance
-problem.set_options({'solver_options': {'ipopt': {'ipopt.hessian_approximation': 'limited-memory'}}})
-problem.init()
+problem0.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
+problem0.set_options({'hard_term_con': True, 'horizon_time': 12})
+problem0.init()
 
 # problem.set_options({'hard_term_con': True, 'horizon_time': 12})
 # vehicle.problem = problem  # to plot error
 
 # create simulator
-simulator = Simulator(problem)
-problem.plot('scene')
+simulator = Simulator(problem0, sample_time=0.01, update_time=0.1)
+simulator.run_once(simulate=False)
+
+
+problem = Point2point(trailer, environment, freeT=True, options={'horizon_time': 5.})
+problem.father.add(vehicle)  # add vehicle to optifather, such that it knows the trailer variables
+problem.vehicles.append(vehicle)
+problem.set_options({'solver': 'blocksqp', 'solver_options': {'blocksqp': {'verbose':True, 'hess_lim_mem': 0, 'print_header': False}}})
+problem.set_options({'hard_term_con': True, 'horizon_time': 12})
+trailer.problem = problem
+vehicle.problem = problem
+problem.init()
+problem.father._var_result = problem0.father._var_result
+problem.father._dual_var_result = problem0.father._dual_var_result
+simulator = Simulator(problem, sample_time=0.01, update_time=0.1)
+
 trailer.plot('input', knots=True, prediction=True, labels=['v (m/s)', 'ddelta (rad/s)'])
+problem.plot('scene')
 trailer.plot('state', knots=True, labels=['x_tr (m)', 'y_tr (m)', 'theta_tr (rad)', 'x_veh (m)', 'y_veh (m)', 'theta_veh (rad)'])
 
+
 # run it!
-simulator.run()
+simulator.run(init_reset=False)

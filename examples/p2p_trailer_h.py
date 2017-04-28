@@ -16,19 +16,18 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
-
 import sys, os
 sys.path.insert(0, os.getcwd()+'/..')
 from omgtools import *
+
 # create vehicle
-vehicle = Dubins(shapes=Circle(0.2), bounds={'vmax': 0.8, 'wmax': np.pi/3., 'wmin': -np.pi/3.})
+vehicle = Holonomic(shapes=Square(0.2))
 vehicle.define_knots(knot_intervals=9)  # adapt amount of knot intervals
-vehicle.set_initial_conditions([0., 0., 0.])  # input orientation in rad
-vehicle.set_terminal_conditions([3., 3., 0.])
+vehicle.set_initial_conditions([0., 0.])  # input orientation in rad
+vehicle.set_terminal_conditions([3., 3.])
 
 # create trailer
-trailer = Trailer(lead_veh=vehicle,  shapes=Rectangle(0.2, 0.2), l_hitch = 0.6,
-                  bounds={'tmax': np.pi/4., 'tmin': -np.pi/4.})  # limit angle between vehicle and trailer
+trailer = TrailerHolonomic(lead_veh=vehicle,  shapes=Rectangle(0.2, 0.2), l_hitch = 0.6)  # limit angle between vehicle and trailer
 # Note: the knot intervals of lead_veh and trailer should be the same
 trailer.define_knots(knot_intervals=9)  # adapt amount of knot intervals
 trailer.set_initial_conditions(0.)  # input orientation in rad
