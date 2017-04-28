@@ -29,7 +29,7 @@ def test_export():
              'export_f': 'FormationPoint2Point',
              'export_r': 'RendezVous'}
     for d, f in files.items():
-        if os.path.isdir(os.path.join(os.getcwd()+'examples', d)):
+        if os.path.isdir(os.path.join(os.getcwd()+'/examples', d)):
             os.system('cd %s && make && ./bin/%s' %
                       (os.path.join(os.getcwd()+'/examples', d), f))
 
