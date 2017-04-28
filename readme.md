@@ -179,19 +179,25 @@ problem.save_movie('scene')
 Check out the examples directory for more code examples. There you can find a simple tutorial example which provides a documented overview of the basic functionality of the toolbox.
 
 ## Installation
-OMG-tools is written in Python 2.7 and depends on the packages numpy, scipy and matplotlib:
+### Recommended installation
+OMG-tools is written in Python 2.7 and depends on the following packages:
 
-`sudo apt-get install python-numpy python-scipy python-matplotlib`
+`sudo apt-get install python-pip python-numpy python-scipy python-matplotlib`
 
-It uses [CasADi](http://casadi.org) as a framework for symbolic computations and interface to IPOPT, a software package for large-scale nonlinear optimization. The current implementation of this toolbox relies on CasADi 3.1, which can be obtained from its [install page](http://install31.casadi.org). In the examples, we use the [HSL linear solvers](https://github.com/casadi/casadi/wiki/Obtaining-HSL), as they result in a much faster execution.
+OMG-tools itself is installed using `pip`:
 
-If you want to save your simulation results in Tikz-format, you need [matplotlib2tikz](https://github.com/nschloe/matplotlib2tikz).
+`sudo pip install omg-tools`
 
-If you want to save your simulation results in gif-format, you need [imagemagick](www.imagemagick.org).
+### Advanced installation
+If you want to install OMG-tools for development purposes, you can link your installed files to the cloned repository, by invoking the following command in the repository's root folder:
 
-To install the toolbox itself, run the following command in the root directory of this repository:
+`sudo pip install -e .`
 
-`sudo python setup.py install`
+If you want to save simulation results in gif-format, you need [imagemagick](www.imagemagick.org):
+
+`sudo add-apt-repository main && apt-get update && install imagemagick `
+
+For faster solving of the motion problems, we recommend to install the [HSL linear solvers](https://github.com/casadi/casadi/wiki/Obtaining-HSL).
 
 ## Authors
 OMG-tools is developed by Ruben Van Parys and Tim Mercy as part of their research in spline-based motion planning, under supervision of Goele Pipeleers within the [MECO research team](https://www.mech.kuleuven.be/en/pma/research/meco). Any questions, comments or propositions of collaboration can be addressed to ruben[dot]vanparys[at]kuleuven[dot]be and tim[dot]mercy[at]kuleuven[dot]be.
