@@ -1,6 +1,6 @@
 env:
   global:
-    - CASADIVERSION=3.1.0-rc1
+    # - CASADIVERSION=3.1.0-rc1
     - LD_LIBRARY_PATH=$HOME/libhsl
     - IPOPT_DEFAULT_LINEAR_SOLVER=ma57
 
@@ -21,22 +21,24 @@ before_script:
 script:
   - cd examples
   - chmod 644 *.py # nose doesnt match executable files
-  - "nosetests -s --verbosity=4 -i '\\.py$' . --with-xcoverage --cover-package=omgtools --cover-tests 2> >(grep -v -P 'DEBUG: (?!wantFile)')"
+  - echo $LD_LIBRARY_PATH
+  - python p2p_holonomic_export.py
+  # - "nosetests -s --verbosity=4 -i '\\.py$' . --with-xcoverage --cover-package=omgtools --cover-tests 2> >(grep -v -P 'DEBUG: (?!wantFile)')"
   - pushd export
   - make && pushd bin
   - ./Point2Point
   - popd
   - popd
-  - pushd export_f
-  - make && pushd bin
-  - ./FormationPoint2Point
-  - popd
-  - popd
-  - pushd export_r
-  - make && pushd bin
-  - ./RendezVous
-  - popd
-  - popd
+  # - pushd export_f
+  # - make && pushd bin
+  # - ./FormationPoint2Point
+  # - popd
+  # - popd
+  # - pushd export_r
+  # - make && pushd bin
+  # - ./RendezVous
+  # - popd
+  # - popd
 
 after_success:
   - coveralls
@@ -44,16 +46,23 @@ after_success:
 install:
   - export DISPLAY=':99.0'
   - Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
-  - sudo python setup.py install
+  # - sudo python setup.py install
+  # - sudo pip install -i https://testpypi.python.org/pypi omg-tools
+  - sudo pip install .
 
 before_install:
-  - wget http://sourceforge.net/projects/casadi/files/CasADi/$CASADIVERSION/linux/casadi-py27-np1.9.1-v$CASADIVERSION.tar.gz/download -O casadi-py27-np1.9.1-v$CASADIVERSION.tar.gz
-  - mkdir $HOME/casadi-py27-np1.9.1-v$CASADIVERSION
-  - tar -zxf casadi-py27-np1.9.1-v$CASADIVERSION.tar.gz -C $HOME/casadi-py27-np1.9.1-v$CASADIVERSION
-  - sudo apt-get install -y python-numpy python-scipy python-matplotlib python-pip xvfb
-  - mkdir -p $HOME/.matplotlib/
+  # - wget http://sourceforge.net/projects/casadi/files/CasADi/$CASADIVERSION/linux/casadi-py27-np1.9.1-v$CASADIVERSION.tar.gz/download -O casadi-py27-np1.9.1-v$CASADIVERSION.tar.gz
+  # - mkdir $HOME/casadi-py27-np1.9.1-v$CASADIVERSION
+  # - tar -zxf casadi-py27-np1.9.1-v$CASADIVERSION.tar.gz -C $HOME/casadi-py27-np1.9.1-v$CASADIVERSION
+  # - sudo apt-get install -y python-numpy python-scipy python-matplotlib python-pip xvfb
+  # - mkdir -p $HOME/.matplotlib/
   #- "echo 'backend : Agg' > $HOME/.matplotlib/matplotlibrc"
-  - sudo pip install matplotlib2tikz
-  - export PYTHONPATH=$PYTHONPATH:$HOME/casadi-py27-np1.9.1-v$CASADIVERSION
+  # - sudo pip install matplotlib2tikz
+  # - export PYTHONPATH=$PYTHONPATH:$HOME/casadi-py27-np1.9.1-v$CASADIVERSION
+  - sudo add-apt-repository main
+  - sudo apt-get update
+  - sudo apt-get install -y imagemagick python-tk python-pip python-dev
+  - sudo apt-get install -y libatlas3-base libgfortran3 liblapack3 libslicot0 --install-recommends
   - sudo pip install nosexcover coveralls
   - sudo apt-get install valgrind
+  - sudo apt-get install xvfb

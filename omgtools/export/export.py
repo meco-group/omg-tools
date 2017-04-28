@@ -21,6 +21,18 @@ import os
 import shutil
 
 
+def search_casadi():
+    import casadi
+    module_path = os.path.dirname(casadi.__file__)
+    search_path = os.path.join(module_path, os.pardir)
+    for root, dirnames, files in os.walk(search_path):
+        if 'libcasadi.so' in files:
+            libdir = root
+        if 'casadi.hpp' in files:
+            incdir = os.path.join(root, os.pardir)
+    return libdir, incdir
+
+
 class Export(object):
 
     def __init__(self, label, problem, options):
@@ -29,11 +41,12 @@ class Export(object):
         self.set_options(options)
 
     def set_default_options(self):
+        libcasadi, inccasadi = search_casadi()
         self.options = {}
         self.options['directory'] = os.path.join(os.getcwd(), 'export/')
         self.options['casadi_optiflags'] = ''  # '', '-O3', '-Os'
-        self.options['casadilib'] = '/usr/local/lib/'
-        self.options['casadiinc'] = '/usr/local/include/casadi/'
+        self.options['casadilib'] = libcasadi
+        self.options['casadiinc'] = inccasadi
         self.options['casadiobj'] = '.'
         self.options['sourcefiles'] = ' '.join(self.add_label(['test.cpp', 'Holonomic.cpp']))
         self.options['executable'] = 'Executable'
