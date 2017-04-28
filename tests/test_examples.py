@@ -20,9 +20,18 @@ def test_generator():
         test_files = example_files[node_index*n_files:]
     else:
         test_files = example_files[node_index*n_files:(node_index+1)*n_files]
-    print test_files
     for f in test_files:
         yield run_example, f
+
+
+def test_export():
+    files = {'export': 'Point2Point',
+             'export_f': 'FormationPoint2Point',
+             'export_r': 'RendezVous'}
+    for d, f in files.items():
+        if os.path.isdir(os.path.join(os.getcwd()+'examples', d)):
+            os.system('cd %s && make && ./bin/%s' %
+                      (os.path.join(os.getcwd()+'/examples', d), f))
 
 
 def run_example(filename):
