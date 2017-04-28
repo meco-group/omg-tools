@@ -63,7 +63,7 @@ for vehicle in vehicles:
 
 # create & solve ADMM problem
 options = {'rho': 0.04, 'horizon_time': 5., 'init_iter': number_of_iterations-1,
-           'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57', 'ipopt.tol': 1e-8}}}
+           'solver_options': {'ipopt': {'ipopt.tol': 1e-8}}}
 problem = FormationPoint2point(fleet, environment, options=options)
 problem.init()
 simulator = Simulator(problem)
@@ -72,7 +72,7 @@ var_admm = problem.get_stacked_x()
 
 # create & solve AMA problem
 options = {'rho': 0.006, 'horizon_time': 5., 'init_iter': number_of_iterations-1,
-           'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57', 'ipopt.tol': 1e-8}},
+           'solver_options': {'ipopt': {'ipopt.tol': 1e-8}},
            'AMA': True}
 problem = FormationPoint2point(fleet, environment, options=options)
 problem.init()
@@ -82,7 +82,7 @@ var_ama = problem.get_stacked_x()
 
 # create & solve Fast ADMM problem
 options = {'rho': 0.03, 'horizon_time': 5., 'init_iter': number_of_iterations-1,
-           'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57', 'ipopt.tol': 1e-8}},
+           'solver_options': {'ipopt': {'ipopt.tol': 1e-8}},
            'nesterov_acceleration': True, 'nesterov_reset': False}
 problem = FormationPoint2point(fleet, environment, options=options)
 problem.init()
@@ -92,7 +92,7 @@ var_fastadmm = problem.get_stacked_x()
 
 # create & solve Dual decomposition problem
 options = {'rho': 0.003, 'horizon_time': 5., 'init_iter': number_of_iterations-1,
-           'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57', 'ipopt.tol': 1e-8}}}
+           'solver_options': {'ipopt': {'ipopt.tol': 1e-8}}}
 problem = FormationPoint2pointDualDecomposition(
     fleet, environment, options=options)
 problem.init()

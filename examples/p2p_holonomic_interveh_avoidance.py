@@ -33,7 +33,6 @@ rectangle = Rectangle(width=3., height=0.2)
 
 # create a point-to-point problem
 problem = Point2point(vehicles, environment, freeT=False)
-problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem.set_options({'inter_vehicle_avoidance': True})
 problem.init()
 

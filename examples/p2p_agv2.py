@@ -33,8 +33,8 @@ rectangle = Rectangle(width=0.8, height=0.2)
 # create a point-to-point problem
 problem = Point2point(vehicle, environment, freeT=True)
 # extra solver settings which may improve performance
-problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57',
-    'ipopt.hessian_approximation': 'limited-memory'}}})
+problem.set_options({'solver_options':
+    {'ipopt': {'ipopt.hessian_approximation': 'limited-memory'}}})
 problem.init()
 
 # create simulator

@@ -43,9 +43,6 @@ solver = 'ipopt'
 if solver is 'ipopt':
     options = {'solver': solver}
     problem = Point2point(vehicle, environment, options, freeT=False)
-    problem.set_options(
-        {'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'
-                                      }}}) #'ipopt.hessian_approximation': 'limited-memory'
 elif solver is 'worhp':
     options = {'solver': solver}
     worhp_options = {  # 'worhp.qp_ipLsMethod': 'MA57',  # todo: option not found?

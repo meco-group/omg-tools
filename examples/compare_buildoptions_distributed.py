@@ -38,21 +38,17 @@ environment.add_obstacle(Obstacle({'position': [1.7, -0.5]}, shape=rectangle))
 
 problem1 = FormationPoint2point(fleet, environment)
 problem1.set_options({'rho': 2., 'verbose': 1})
-problem1.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 
 problem2 = FormationPoint2point(fleet, environment)
 problem2.set_options({'rho': 2., 'verbose': 1})
-problem2.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem2.set_options({'codegen': {'build': 'jit', 'flags': '-O0'}}) # just-in-time compilation
 
 problem3 = FormationPoint2point(fleet, environment)
 problem3.set_options({'rho': 2., 'verbose': 1})
-problem3.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem3.set_options({'codegen': {'build': 'shared', 'flags': '-O0'}}) # compile to shared objects
 
 problem4 = FormationPoint2point(fleet, environment)
 problem4.set_options({'rho': 2., 'verbose': 1})
-problem4.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem4.set_options({'codegen': {'build': 'existing'}}) # use existing shared objects
 
 fleet.plot('input', knots=True)

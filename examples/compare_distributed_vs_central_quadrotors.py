@@ -48,8 +48,7 @@ for N in fleet_sizes:
                                       shape=Rectangle(width=0.2, height=3.)))
     environment.add_obstacle(Obstacle({'position': [0., -5.4]},
                                       shape=Rectangle(width=0.2, height=10.)))
-    options = {'rho': rho, 'horizon_time': 5.,
-               'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}}
+    options = {'rho': rho, 'horizon_time': 5.}
     problem_admm = FormationPoint2point(fleet, environment, options=options)
     t_b_admm[N] = problem_admm.init()
     simulator = Simulator(problem_admm)
@@ -77,8 +76,7 @@ for N in fleet_sizes:
     fleet.set_configuration(configuration.tolist())
     fleet.set_initial_conditions(init_positions.tolist())
     fleet.set_terminal_conditions(terminal_positions.tolist())
-    options = {'horizon_time': 5., 'solver_options': {
-        'ipopt': {'ipopt.linear_solver': 'ma57'}}}
+    options = {'horizon_time': 5.}
     problem_central = FormationPoint2pointCentral(
         fleet, environment, options=options)
     t_b_central[N] = problem_central.init()

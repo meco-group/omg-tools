@@ -51,7 +51,6 @@ environment.add_obstacle(Obstacle({'position': [3.2, 1.0]}, shape=rectangle))
 # create a formation point-to-point problem
 options = {'rho': 2., 'horizon_time': 10, 'init_iter': 5}
 problem = FormationPoint2point(fleet, environment, options=options)
-problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem.init()
 
 options = {}

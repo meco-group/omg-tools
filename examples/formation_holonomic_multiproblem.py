@@ -48,11 +48,9 @@ environment.add_obstacle([obstacle1, obstacle2, obstacle3])
 # create problems
 options = {'rho': 1., 'horizon_time': 10}
 problem1 = FormationPoint2point(fleet, environment, options=options)
-problem1.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem1.init()
 obstacle3.set_options({'avoid': False})
 problem2 = FormationPoint2point(fleet, environment, options=options)
-problem2.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem2.init()
 
 # create simulator & plots

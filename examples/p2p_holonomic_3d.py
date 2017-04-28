@@ -36,7 +36,6 @@ environment.add_obstacle(Obstacle(
 
 # create a point-to-point problem
 problem = Point2point(vehicle, environment, freeT=False)
-problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem.set_options({'hard_term_con': True, 'horizon_time': 12})
 problem.init()
 

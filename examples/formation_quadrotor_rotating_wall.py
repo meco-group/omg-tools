@@ -48,7 +48,6 @@ environment.add_obstacle(Obstacle({'position': [0., 0.], 'angular_velocity': ome
 # create a formation point-to-point problem
 options = {'horizon_time': horizon_time, 'rho': 0.3}
 problem = FormationPoint2point(fleet, environment, options=options)
-problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem.init()
 
 # create simulator

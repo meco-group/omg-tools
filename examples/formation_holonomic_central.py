@@ -43,7 +43,6 @@ environment.add_obstacle(Obstacle({'position': [1.7, 0.5]}, shape=rectangle))
 # create a formation point-to-point problem
 options = {'rho': 1., 'horizon_time': 15}
 problem = FormationPoint2pointCentral(fleet, environment, options=options)
-problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem.set_options({'soft_formation': True})
 problem.set_options({'soft_formation_weight': 100})
 problem.set_options({'max_formation_deviation': inf})

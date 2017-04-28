@@ -43,21 +43,17 @@ environment.add_obstacle(Obstacle({'position': [1.7, -0.5]}, shape=rectangle))
 
 problem1 = Point2point(vehicle, environment, freeT=False)
 problem1.set_options({'verbose': 1})
-problem1.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 
 problem2 = Point2point(vehicle, environment, freeT=False)
 problem2.set_options({'verbose': 1})
-problem2.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem2.set_options({'codegen': {'build': 'jit', 'flags': '-O0'}}) # just-in-time compilation
 
 problem3 = Point2point(vehicle, environment, freeT=False)
 problem3.set_options({'verbose': 1})
-problem3.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem3.set_options({'codegen': {'build': 'shared', 'flags': '-O0'}}) # compile to shared object
 
 problem4 = Point2point(vehicle, environment, freeT=False)
 problem4.set_options({'verbose': 1})
-problem4.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem4.set_options({'codegen': {'build': 'existing'}}) # use existing shared object
 
 vehicle.plot('input', knots=True)

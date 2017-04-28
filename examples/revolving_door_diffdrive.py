@@ -58,9 +58,8 @@ if solver is 'ipopt':
     options={'solver': solver, 'horizon_time': horizon_time, 'hard_term_con': True}
     problem = Point2point(vehicle, environment, options, freeT=False)
     problem.set_options(
-        {'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57',
-        							  'ipopt.hessian_approximation': 'limited-memory',
-        							  'ipopt.warm_start_mult_bound_push': 1e-6}}}) 
+        {'solver_options': {'ipopt': {'ipopt.hessian_approximation': 'limited-memory',
+        							  'ipopt.warm_start_mult_bound_push': 1e-6}}})
 problem.init()
 
 # problem.export2AMPL()

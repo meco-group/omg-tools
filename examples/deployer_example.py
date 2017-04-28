@@ -40,7 +40,6 @@ environment.add_obstacle(obstacle)
 
 # create a point-to-point problem
 problem = Point2point(vehicle, environment, freeT=False)
-problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem.init()
 
 # create deployer
