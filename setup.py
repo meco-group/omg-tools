@@ -1,16 +1,13 @@
+from distutils.core import setup
 import os
-from setuptools import setup
-
-
-def read(fname):
-    return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 
 setup(
-    name='omg-tools',
-    version='0.1',
-    author='Ruben Van Parys',
-    author_email='ruben.vanparys@kuleuven.be',
+
+    name="omg-tools",
+    version="0.1.0",
+    author="Ruben Van Parys",
+    author_email="ruben.vanparys@kuleuven.be",
     description=('Optimal Motion Generation tools: a user-friendly tool for ' +
                  'modeling, simulating and embedding of (spline-based) motion ' +
                  'planning problems'),
@@ -26,7 +23,7 @@ setup(
                        'export/*/*.cpp', 'export/*/*.hpp',
                        'export/*/*/*.cpp', 'export/*/*/*.hpp',
                        'export/*/*/*/*.cpp', 'export/*/*/*/*.hpp']},
-    long_description=read('readme.md'),
+    long_description=open(os.path.join(os.path.dirname(__file__), 'readme.md')).read(),
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Science/Research',
