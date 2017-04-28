@@ -39,7 +39,7 @@ environment.add_obstacle(Obstacle({'position': [1., 1.]}, shape=Circle(0.5),
 problem = Point2point(vehicle, environment, freeT=True)
 # extra solver settings which may improve performance
 problem.set_options({'solver_options':
-    {'ipopt': 'ipopt.hessian_approximation': 'limited-memory'}})
+    {'ipopt': {'ipopt.hessian_approximation': 'limited-memory'}}})
 
 problem.init()
 
