@@ -4,6 +4,10 @@ examples/movies/*
 examples/images/*
 examples/export*
 examples/data/*
+movies/*
+images/*
+export*
+data/*
 lvd/*
 .*
 !.gitignore
@@ -13,6 +17,7 @@ lvd/*
 *.csv
 *.p
 *.sh
+coverage.xml
 todo*
 build/*
 dist/*
