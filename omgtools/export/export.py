@@ -197,8 +197,11 @@ class Export(object):
         defines['N_PAR'] = father._par_struct.size
         defines['N_CON'] = father._con_struct.size
         defines['TOL'] = problem.options['solver_options']['ipopt']['ipopt.tol']
-        defines['LINEAR_SOLVER'] = '"' + \
-            problem.options['solver_options']['ipopt']['ipopt.linear_solver']+'"'
+        if 'ipopt.linear_solver' in problem.options['solver_options']['ipopt']:
+            defines['LINEAR_SOLVER'] = '"' + \
+                problem.options['solver_options']['ipopt']['ipopt.linear_solver'] +'"'
+        else:
+            defines['LINEAR_SOLVER'] = '"mumps"'
         defines['N_DIM'] = problem.vehicles[0].n_dim
         defines['N_OBS'] = problem.environment.n_obs
         defines['VEHICLELBL'] = '"' + problem.vehicles[0].label + '"'
