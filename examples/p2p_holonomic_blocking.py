@@ -39,10 +39,9 @@ environment.add_obstacle(Obstacle({'position': [5., 1.]}, shape=rectangle))
 environment.add_obstacle(Obstacle({'position': [1., 2.5]}, shape=rectangle))
 environment.add_obstacle(Obstacle({'position': [3., 2.5]}, shape=rectangle))
 environment.add_obstacle(Obstacle({'position': [5., 2.5]}, shape=rectangle))
-trajectories1 = {'velocity': {'time': [0],
-                             'values': [[0., 0.15]]}}
-trajectories2 = {'position': {'time': [0, 3.5], 'values': [[0,0],[14,12.5]]}}
-trajectories3 = {'position': {'time': [0, 3.5], 'values': [[0,0],[15,11.75]]}}
+trajectories1 = {'velocity': {'time': [0], 'values': [[0., 0.15]]}}
+trajectories2 = {'position': {'time': [0, 2.5], 'values': [[0, 0], [14, 12.5]]}}
+trajectories3 = {'position': {'time': [0, 2.5], 'values': [[0, 0], [15, 11.75]]}}
 circle1 = Circle(0.5)
 circle2 = Circle(0.25)
 environment.add_obstacle(Obstacle({'position': [2., 0.]}, shape=circle1,
@@ -54,14 +53,13 @@ environment.add_obstacle(Obstacle({'position': [-10, -10]}, shape=circle2,
 
 # create a point-to-point problem
 problem = Point2point(vehicle, environment, freeT=True)
-problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57',
-                                        'ipopt.max_cpu_time': 1}}})
+problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem.init()
 
 # create simulator
 simulator = Simulator(problem)
 problem.plot('scene')
-vehicle.plot('input', knots=True,labels=['v (m/s)', 'w (rad/s)'])
+vehicle.plot('input', knots=True,labels=['vx (m/s)', 'vy (m/s)'])
 
 # run it!
 simulator.run()

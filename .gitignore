@@ -6,15 +6,15 @@ examples/export*
 examples/data/*
 lvd/*
 .*
-!.select_examples.py
 !.gitignore
+!.travis.yml
 *.c
 *.so
 *.csv
 *.p
+*.sh
 todo*
 build/*
 dist/*
 omg_tools.egg-info/*
-OMG_tools.egg-info/*
 lvd/*
