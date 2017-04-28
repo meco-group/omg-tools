@@ -25,12 +25,11 @@ setup(
                                       '*/*/*.cpp', '*/*/*.hpp',
                                       '*/*/*/*.cpp', '*/*/*/*.hpp']},
     install_requires=[
-        'numpy',
-        'scipy',
-        'matplotlib',
         'matplotlib2tikz',
         'casadi >= 3.1.0'
         ],
+    test_suite='nose.collector',
+    tests_require=['nose'],
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Science/Research',

@@ -85,7 +85,7 @@ install:
 before_install:
   - sudo add-apt-repository main
   - sudo apt-get update
-  - sudo apt-get install -y imagemagick python-tk python-pip python-dev
-  - sudo apt-get install -y libatlas3-base libgfortran3 liblapack3 libslicot0 --install-recommends
+  - sudo apt-get install -y python-pip python-numpy python-scipy python-matplotlib
+  - sudo apt-get install imagemagick
   - sudo pip install nosexcover coveralls
   - sudo apt-get install -y valgrind xvfb

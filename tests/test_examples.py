@@ -2,7 +2,7 @@ import os
 
 
 def test_generator():
-    if 'NODE_TOTAL' or 'NODE_INDEX' not in os.environ:
+    if 'NODE_TOTAL' not in os.environ or 'NODE_INDEX' not in os.environ:
         node_total = 1
         node_index = 0
     else:
@@ -14,11 +14,13 @@ def test_generator():
     for f in files:
         if os.path.isfile(os.path.join(example_dir, f)) and f.endswith('.py'):
             example_files.append(f)
+    example_files.sort()
     n_files = len(example_files)/node_total
     if node_index == node_total-1:
         test_files = example_files[node_index*n_files:]
     else:
         test_files = example_files[node_index*n_files:(node_index+1)*n_files]
+    print test_files
     for f in test_files:
         yield run_example, f
 
