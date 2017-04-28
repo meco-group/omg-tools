@@ -51,6 +51,7 @@ environment.add_obstacle(Obstacle({'position': [0., 2.2]}, shape=beam0))
 options = {'rho': 3., 'horizon_time': 5., 'hard_term_con': True}
 # options = {'rho': 5., 'horizon_time': 5., 'hard_term_con': True}
 problem = FormationPoint2point(fleet, environment, options=options)
+problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}}) # hsl solvers required for this!!
 problem.init()
 
 # create simulator
