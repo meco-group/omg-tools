@@ -2,7 +2,7 @@ env:
   global:
     - LD_LIBRARY_PATH=$HOME/libhsl
     # - IPOPT_DEFAULT_LINEAR_SOLVER=ma57
-    - COVERALLS_PARALLEL=true
+    - COVERALLS_PARALLEL=1
     - NODE_TOTAL=4
   matrix:
     - NODE_INDEX=0
