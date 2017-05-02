@@ -32,8 +32,7 @@ def test_export():
              'export_r': 'RendezVous'}
     for d, f in files.items():
         if os.path.isdir(os.path.join(os.getcwd(), d)):
-            print ("cd %s && make && ./bin/%s") % (d, f)
-            print subprocess.check_output(("cd %s && make && ./bin/%s") % (d, f), shell=True, stderr=subprocess.STDOUT)
+            print subprocess.check_output(("cd %s && make && cd bin && ./%s && cd ../..") % (d, f), shell=True, stderr=subprocess.STDOUT)
 
 
 def run_example(filename):
