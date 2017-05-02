@@ -32,10 +32,13 @@ def test_export():
              'export_r': 'RendezVous'}
     for d, f in files.items():
         if os.path.isdir(os.path.join(os.getcwd(), d)):
-            print subprocess.check_output(("cd %s && make && cd bin && ./%s && cd ../..") % (d, f), shell=True, stderr=subprocess.STDOUT)
+            print subprocess.check_output(
+                ("cd %s && make && cd bin && ./%s && cd ../..") %
+                (d, f), shell=True, stderr=subprocess.STDOUT)
 
 
 def run_example(filename):
     example_dir = os.path.join(os.getcwd(), 'examples')
     print ''
-    imp.load_source(filename.split('.')[-2], os.path.join(example_dir, filename))
+    imp.load_source(filename.split('.')[-2],
+                    os.path.join(example_dir, filename))
