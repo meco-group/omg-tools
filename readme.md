@@ -184,7 +184,7 @@ OMG-tools is written in Python 2.7 and requires the installation of the followin
 
 `sudo apt-get install python-pip python-numpy python-scipy python-matplotlib`
 
-OMG-tools itself is downloaded from the PyPI repository and installed using `pip`:
+OMG-tools itself is downloaded from the [PyPI repository](https://pypi.python.org/pypi/omg-tools#downloads) and installed using `pip`:
 
 `sudo pip install omg-tools`
 
