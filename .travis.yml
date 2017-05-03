@@ -28,7 +28,6 @@ script:
   - python setup.py nosetests
 
 after_success:
-  # - coverage xml examples/*.py
   - coveralls
 
 install:
