@@ -35,18 +35,22 @@ trajectories = {'velocity': {'time': [0.],
 environment.add_obstacle(Obstacle({'position': [1., 1.]}, shape=Circle(0.5)))
 
 # create a point-to-point problem
-problem0 = Point2point(vehicle, environment, freeT=False)
-# problem0.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
-problem0.set_options({'hard_term_con': True, 'horizon_time': 12})
+problem0 = Point2point(vehicle, environment, freeT=True)
+problem0.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57', 'ipopt.hessian_approximation': 'limited-memory'}}})
+# problem0.set_options({'hard_term_con': True, 'horizon_time': 12})
 problem0.init()
 
 # create simulator
 simulator = Simulator(problem0, sample_time=0.01, update_time=0.1)
 simulator.run_once(simulate=False)
 
-problem = Point2point(vehicle, environment, freeT=False, options={'horizon_time': 5.})
+options={}
+# options['codegen'] = {'build': 'shared', 'flags': '-O2'} # just-in-time compilation
+problem = Point2point(vehicle, environment, options, freeT=True)
 problem.set_options({'solver': 'blocksqp', 'solver_options': {'blocksqp': {'verbose':True, 'warmstart': True, 'qp_init' : False, 'hess_lim_mem': 0, 'print_header': False}}})
-problem.set_options({'hard_term_con': True, 'horizon_time': 12})
+# options['codegen'] = {'build': 'jit', 'flags': '-O2'} # just-in-time compilation
+
+# problem.set_options({'hard_term_con': True, 'horizon_time': 12})
 vehicle.problem = problem
 problem.init()
 problem.father._var_result = problem0.father._var_result
@@ -58,3 +62,35 @@ problem.plot('scene', view=[20, -80])
 
 # run it!
 simulator.run(init_reset=False)
+
+
+
+
+#### ipopt
+
+# simulator = Simulator(problem0, sample_time=0.01, update_time=0.1)
+
+
+# vehicle.plot('input', knots=True)
+# problem0.plot('scene', view=[20, -80])
+
+# simulator.run()
+
+# # # create simulator
+# # simulator = Simulator(problem0, sample_time=0.01, update_time=0.1)
+# # simulator.run_once(simulate=False)
+
+# # problem = Point2point(vehicle, environment, freeT=True)
+# # problem.set_options({'solver': 'blocksqp', 'solver_options': {'blocksqp': {'verbose':True, 'warmstart': True, 'qp_init' : False, 'hess_lim_mem': 1, 'print_header': False}}})
+# # # problem.set_options({'hard_term_con': True, 'horizon_time': 12})
+# # vehicle.problem = problem
+# # problem.init()
+# # problem.father._var_result = problem0.father._var_result
+# # problem.father._dual_var_result = problem0.father._dual_var_result
+# # simulator = Simulator(problem, sample_time=0.01, update_time=0.1)
+
+# # vehicle.plot('input', knots=True)
+# # problem.plot('scene', view=[20, -80])
+
+# # # run it!
+# # simulator.run(init_reset=False)

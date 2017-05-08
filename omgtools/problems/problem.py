@@ -119,6 +119,11 @@ class Problem(OptiChild, PlotLayer):
         stats = self.problem.stats()
         # if stats['return_status'] != 'Solve_Succeeded':
         #     print stats['return_status']
+
+        with file('testlog_'+self.options['solver']+'.txt', 'a') as logfile:
+            logfile.write(str(stats))
+            logfile.write(',')
+
         if self.options['verbose'] >= 2:
             self.iteration += 1
             if ((self.iteration-1) % 20 == 0):

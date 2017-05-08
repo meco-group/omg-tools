@@ -52,9 +52,12 @@ def create_nlp(var, par, obj, con, options, name=''):
     nlp = {'x': var, 'p': par, 'f': obj, 'g': con}
     slv_opt = options['solver_options'][options['solver']]
     opt = {}
+    
+    file('testlog_'+ options['solver'] + '.txt', 'w').close()
+
     for key, value in slv_opt.items():
         opt[key] = value
-    opt.update({'expand': True})
+    opt.update({'expand': True})  #'monitor':['nlp_fg']
     solver = nlpsol('solver', options['solver'], nlp, opt)
     name = 'nlp' if name == '' else 'nlp_' + name
     if codegen['build'] == 'jit':
@@ -489,6 +492,8 @@ class OptiChild(object):
         self._objective = 0.
         self._constraint_cnt = 0
 
+        self.n_cons = 0
+
     def __str__(self):
         return self.label
 
@@ -614,6 +619,10 @@ class OptiChild(object):
             self._splines_dual[name] = {'basis': expr.basis}
         else:
             self._constraints[name] = (expr, lb, ub, shutdown)
+        plus = self._constraints[name][0].size()[0]
+        self.n_cons += plus
+        # print self.n_cons
+        # print self.label
 
     def define_objective(self, expr):
         self._objective += expr
