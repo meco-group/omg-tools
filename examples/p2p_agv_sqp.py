@@ -41,6 +41,20 @@ problem0.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'
     'ipopt.hessian_approximation': 'limited-memory'}}}) #for gridding comparison: ,'ipopt.tol': 1e-12
 problem0.init()
 
+#####ipopt
+
+
+# # create simulator
+# simulator = Simulator(problem0, sample_time=0.01, update_time=0.1)
+# vehicle.plot('input', knots=True)
+# problem0.plot('scene', view=[20, -80])
+# simulator.run()
+
+
+
+#####blocksqp
+
+
 # create simulator
 simulator = Simulator(problem0, sample_time=0.01, update_time=0.1)
 simulator.run_once(simulate=False)
