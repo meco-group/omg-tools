@@ -16,7 +16,8 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
-
+import os, sys
+sys.path.insert(0,os.getcwd()+'/..')
 from omgtools import *
 
 # create vehicle
@@ -44,7 +45,7 @@ problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}
 problem.init()
 
 # create simulator
-simulator = Simulator(problem)
+simulator = Simulator(problem, sample_time=0.2, update_time=0.1)
 problem.plot('scene')
 vehicle.plot('input', knots=True, prediction=True, labels=['v_x (m/s)', 'v_y (m/s)'])
 

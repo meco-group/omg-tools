@@ -5,8 +5,6 @@ for solver in ["ipopt","blocksqp"]:
 
     logfile = eval(file('/home/tim/Dropbox/EigenDocumenten/Doctoraat/MotionPlanning/omg-tools/examples/testlog_%s.txt' % solver,'r').read())
 
-
-
     overhead = np.array([ sum(d[k] for k in d.keys() if k.startswith('t_wall') and 'mainloop' not in k)  for d in logfile])
     mainloop =  np.array([d['t_wall_mainloop']  for d in logfile])
     iter_count =  np.array([d['iter_count']  for d in logfile])

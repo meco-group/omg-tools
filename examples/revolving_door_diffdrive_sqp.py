@@ -84,7 +84,14 @@ options={}
 options={'solver': solver, 'horizon_time': horizon_time, 'hard_term_con': True}
 # options['codegen'] = {'build': 'shared', 'flags': '-O2'} # just-in-time compilation
 problem = Point2point(vehicle, environment, options, freeT=False)
-problem.set_options({'solver': 'blocksqp', 'solver_options': {'blocksqp': {'verbose':True, 'warmstart': True, 'qp_init' : False, 'hess_lim_mem': 0, 'print_header': False}}})
+problem.set_options({'solver': 'blocksqp', 'solver_options': {'blocksqp': 
+    {'verbose':True, 'warmstart': True, 'qp_init' : False, 'print_header': True,
+     # 'block_hess':1, 'hess_update':2, 'hess_lim_mem':0}}})  #1
+     # 'block_hess':1, 'hess_update':2, 'hess_lim_mem':1 }}}) #2
+     # 'block_hess':1, 'hess_update':1, 'fallback_update':2, 'hess_lim_mem':0 }}}) #3
+     # 'block_hess':1, 'hess_update':1, 'fallback_update':2, 'hess_lim_mem':1 }}}) #4
+     # 'block_hess':0, 'hess_update':2, 'hess_lim_mem':0 }}}) #5
+     'block_hess':0, 'hess_update':1, 'fallback_update':2, 'hess_lim_mem':0 }}}) #6
 # options['codegen'] = {'build': 'jit', 'flags': '-O2'} # just-in-time compilation
 
 vehicle.problem = problem
