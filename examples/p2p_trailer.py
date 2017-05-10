@@ -22,11 +22,12 @@ sys.path.insert(0, os.getcwd()+'/..')
 from omgtools import *
 # create vehicle
 vehicle = Dubins(shapes=Circle(0.2), bounds={'vmax': 0.8, 'wmax': np.pi/3., 'wmin': -np.pi/3.})
-vehicle.define_knots(knot_intervals=9)  # adapt amount of knot intervals
-vehicle.set_initial_conditions([0., 0., 0.])  # input orientation in rad
-vehicle.set_terminal_conditions([3., 3., 0.])
+vehicle.define_knots(knot_intervals=9)  # adapt amount of knot intervals was eerst 9
+vehicle.set_initial_conditions([2., 5., 0.])  # input orientation in deg
+#vehicle.set_terminal_conditions([3., 3., 90.])
+vehicle.set_terminal_conditions([8., 5., 0.]) #eerste waarde naar rechts en tweede omhoog
+vehicle.set_options({'ideal_prediction': False})
 
-# create trailer
 trailer = Trailer(lead_veh=vehicle,  shapes=Rectangle(0.2, 0.2), l_hitch = 0.6,
                   bounds={'tmax': np.pi/4., 'tmin': -np.pi/4.})  # limit angle between vehicle and trailer
 # Note: the knot intervals of lead_veh and trailer should be the same
@@ -35,7 +36,10 @@ trailer.set_initial_conditions(0.)  # input orientation in rad
 trailer.set_terminal_conditions(0.)  # this depends on the application e.g. driving vs parking
 
 # create environment
-environment = Environment(room={'shape': Square(5.), 'position': [1.5, 1.5]})
+environment = Environment(room={'shape': Square(10.), 'position': [5.,5.]})
+rectangle = Rectangle(width=.2, height=3.8)
+environment.add_obstacle(Obstacle({'position': [3., 3.]}, shape=rectangle))
+environment.add_obstacle(Obstacle({'position': [6., 7.]}, shape=rectangle))
 
 # create a point-to-point problem
 problem = Point2point(trailer, environment, freeT=True)  # pass trailer to problem

@@ -140,6 +140,10 @@ class TrailerHolonomic(Vehicle):
         return result
 
     def set_parameters(self, current_time):
+        pred_veh = {}
+        pred_veh['input'] = self.prediction['input']
+        pred_veh['state'] = self.prediction['state'][3:, ]
+        self.lead_veh.update_prediction(pred_veh)
         parameters = Vehicle.set_parameters(self, current_time)
         parameters_tr = {}
         parameters_tr['tg_ha_tr0'] = np.tan(self.prediction['state'][2]/2.)
@@ -155,16 +159,6 @@ class TrailerHolonomic(Vehicle):
         parameters.update(parameters_tr)
         parameters.update(parameters_veh)
         return parameters
-
-    def define_collision_constraints_trailer(self, hyperplanes_lead_veh, hyperplanes_trailer, environment, splines):
-
-        # get position of vehicle
-        tg_ha_tr, x_veh, y_veh = splines[:3]
-        # pass on vehicle position and trailer offset to determine anti-collision constraints
-        # -self.l_hitch because trailer is behind the vehicle
-        self.define_collision_constraints_2d(hyperplanes_trailer, environment, [x_veh, y_veh], tg_ha_tr, -self.l_hitch) #positie, hoek t.o.v. die positie en offset
-        self.lead_veh.define_collision_constraints(hyperplanes_lead_veh, environment, splines[1: ])
-
 
     def define_collision_constraints(self, hyperplanes, environment, splines):
         tg_ha_tr, x_veh, y_veh = splines[:3]
@@ -242,9 +236,8 @@ class TrailerHolonomic(Vehicle):
         # print 'input', self.signals['input']
         # print 'state', self.signals['state']
         self.lead_veh.update_signals(signals_veh)
-        pred_veh = {}
-        pred_veh['input'] = self.prediction['input']
-        pred_veh['state'] = self.prediction['state'][3:, ]
-        self.lead_veh.update_prediction(pred_veh)
         ret += self.lead_veh.draw(t)
         return ret
+
+
+

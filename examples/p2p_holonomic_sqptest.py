@@ -39,7 +39,7 @@ simulator.run_once(simulate=False)
 # use solution as init guess for blocksqp
 vehicle = Holonomic(options={'safety_distance': 0.1})
 vehicle.set_options({'1storder_delay': True, 'time_constant': 0.1})
-vehicle.set_options({'input_disturbance': {'fc': 0.01, 'stdev': 0.05*np.ones(2)}})
+#vehicle.set_options({'input_disturbance': {'fc': 0.01, 'stdev': 0.05*np.ones(2)}})
 vehicle.set_initial_conditions([-1.5, -1.5])
 vehicle.set_terminal_conditions([2., 2.])
 environment = Environment(room={'shape': Square(5.)})
@@ -50,7 +50,7 @@ environment.add_obstacle(Obstacle({'position': [1.7, -0.5]}, shape=rectangle))
 problem1 = Point2point(vehicle, environment, freeT=False)
 # problem1.set_options({'solver': 'blocksqp', 'solver_options': {'blocksqp': {'verbose':True, 'max_iter': 1, 'max_it_qp': 50, 'qp_init': False, 'hess_lim_mem': 0, 'print_header': False}}})
 # problem1.set_options({'max_iter': 11, 'solver': 'blocksqp', 'solver_options': {'blocksqp': {'verbose':True, 'opttol': 1e-3, 'nlinfeastol': 1e-3, 'qp_init': False, 'hess_lim_mem': 0, 'print_header': False}}})
-problem1.set_options({'solver': 'blocksqp', 'solver_options': {'blocksqp': {'verbose':True, 'qp_init': False, 'hess_lim_mem': 0, 'print_header': False}}})
+problem1.set_options({'solver': 'blocksqp', 'solver_options': {'blocksqp': {'verbose':True, 'hess_lim_mem': 0, 'print_header': False}}})
 problem1.init()
 problem1.father._var_result = problem0.father._var_result
 problem1.father._dual_var_result = problem0.father._dual_var_result
