@@ -383,13 +383,13 @@ class PlotLayer(object):
                     path = directory+'/'+name+'_'+str(cnt)+'.tikz'
                     if figureheight is None:
                         tikz_save(path, figurewidth=figurewidth,
-                                  extra={'scale only axis=' +
+                                  extra_axis_parameters={'scale only axis=' +
                                          str(scaleonlyaxis).lower()})
                         # tikz requires a lowercase true/false
                     else:
                         tikz_save(path, figurewidth=figurewidth,
                                   figureheight=figureheight,
-                                  extra={['scale only axis=' +
+                                  extra_axis_parameters={['scale only axis=' +
                                           str(scaleonlyaxis).lower()]})
                         # tikz requires a lowercase true/false
                     _cleanup_rubbish(path, info, root)
