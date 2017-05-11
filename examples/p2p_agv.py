@@ -37,7 +37,7 @@ environment.add_obstacle(Obstacle({'position': [3.4, -0.35]}, shape=rectangle))
 problem = Point2point(vehicle, environment, freeT=True)
 # extra solver settings which may improve performance
 problem.set_options({'solver_options':
-    {'ipopt': {'ipopt.hessian_approximation': 'limited-memory'}}})
+    {'ipopt': {'ipopt.hessian_approximation': 'limited-memory', 'ipopt.linear_solver': 'ma57'}}})
 problem.init()
 
 # create simulator
