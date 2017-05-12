@@ -9,21 +9,21 @@ import numpy as np
 
 options = {}
 options['safety_distance'] = 0.3;
-vehicle = HolonomicOrient(shapes=Rectangle( 0.3, 0.263), options=options)  # in deg
+vehicle = HolonomicOrient(shapes=Rectangle(0.4, 0.32), options=options)  # in deg
 number_knot_intervals = 9.
 vehicle.define_knots(knot_intervals=number_knot_intervals)  # adapt amount of knot intervals
-vehicle.set_initial_conditions([0.5, 0.5, 0.])
-vehicle.set_terminal_conditions([4.5, 4.5, 0.])
+vehicle.set_initial_conditions([1.5, .5, 0.])
+vehicle.set_terminal_conditions([3.1, .5, 0.])
 
 # create trailer
-trailer = TrailerJolandHolonomic(lead_veh=vehicle,  shapes=Square(0.4), l_hitch = 0.3, l_hitch1 = 0.4,
-                  bounds={'tmax': 40., 'tmin': -40.}, options=options) # ldie limiet boeit niet, wordt niet in rekening gebracht.
+trailer = TrailerJolandHolonomic(lead_veh=vehicle,  shapes=Rectangle(0.3,0.2), l_hitch = 0.215, l_hitch1 = 0.2075,
+                  bounds={'tmax': 40., 'tmin': -40.}, options=options)
 # Note: the knot intervals of lead_veh and trailer should be the same
 trailer.define_knots(knot_intervals=number_knot_intervals)  # adapt amount of knot intervals
 trailer.set_initial_conditions([0.])  # input orientation in deg
 trailer.set_terminal_conditions([0.])  # this depends on the application e.g. driving vs parking
 # set up environment
-environment = Environment(room={'shape': Rectangle(7., 7.), 'position': [2.5, 2.5]})
+environment = Environment(room={'shape': Rectangle(5., 3.), 'position': [2.5, 1.5]})
 
 # set up problem
 problem = Point2point(trailer, environment, freeT=True)
@@ -40,18 +40,19 @@ trailer.plot('state', knots=True, labels=['x_tr (m)', 'y_tr (m)', 'theta_tr (rad
 trajectories1 = simulator.run_once()
 
 
-# pos_traj1 = trajectories1['vehicle0']['state'][:, :]
-# vel_traj1 = trajectories1['vehicle0']['input'][:, :]
+pos_veh = trajectories1['vehicle1']['state'][3:, :]
+vel_veh = trajectories1['vehicle1']['input'][:, :]
+theta_tr = trajectories1['vehicle1']['state'][2, :]
 # #theta_traj1 = np.linspace(0, np.pi, pos_traj1.shape[1])
 
 
-vehicle.set_terminal_conditions([0.5, 0.5, 0.])
-trailer.set_terminal_conditions([0.])  # this depends on the application e.g. driving vs parking
+# vehicle.set_terminal_conditions([0.5, 0.5, 0.])
+# trailer.set_terminal_conditions([0.])  # this depends on the application e.g. driving vs parking
 
-problem.reinitialize()
+# problem.reinitialize()
 
-trajectories2 = simulator.run_once()
-problem.save_movie('scene', format='gif', name='lead_off_rechtdoor5_ma57', number_of_frames=100, movie_time=5, axis=False)
+# trajectories2 = simulator.run_once()
+problem.save_movie('scene', format='gif', name='smooth_trajectory', number_of_frames=100, movie_time=5, axis=False)
 
 # pos_traj2 = trajectories2['vehicle0']['state'][:, :]
 # vel_traj2 = trajectories2['vehicle0']['input'][:, :]
@@ -63,23 +64,26 @@ problem.save_movie('scene', format='gif', name='lead_off_rechtdoor5_ma57', numbe
 # #theta_traj = np.r_[theta_traj1, theta_traj2]
 #
 #
-# pos_traj = np.c_[np.c_[pos_traj[:, 0]]*np.ones(500), pos_traj]
-# vel_traj = np.c_[np.c_[vel_traj[:, 0]]*np.ones(500), vel_traj]
+
+pos_veh = np.c_[np.c_[pos_veh[:, 0]]*np.ones(500), pos_veh]
+vel_veh = np.c_[np.c_[vel_veh[:, 0]]*np.ones(500), vel_veh]
+theta_tr=np.r_[theta_tr[0]*np.ones(500), theta_tr]
+
 # #theta_traj = np.r_[theta_traj[0]*np.ones(500), theta_traj]
 #
-# n = pos_traj.shape[1]
+n = pos_veh.shape[1]
 #
 # # save trajectory in csv-format
 # # data = np.c_[pos_traj.T, np.zeros(n), vel_traj.T, np.zeros(n)]
-# #data = np.c_[pos_traj.T, theta_traj.T, vel_traj.T, np.zeros(n)]
-# data = np.c_[pos_traj.T, vel_traj.T, np.zeros(n)]
+data = np.c_[pos_veh.T, theta_tr.T, vel_veh.T, np.zeros(n)]
+#data = np.c_[pos_veh.T, vel_veh.T, np.zeros(n).T]
 #
 # # data = np.c_[pos_traj, trajectories1['vehicle0']['state'][0, 1]*np.ones(n), np.zeros(n), vel_traj, np.zeros(n), np.zeros(n)]
 # # data = np.c_[np.zeros(n), pos_traj, np.zeros(n), np.zeros(n), vel_traj, np.zeros(n)]
 # # data = np.c_[pos_traj, pos_traj, np.zeros(n), vel_traj, vel_traj, np.zeros(n)]
 # # data = np.c_[np.zeros(n), np.zeros(n), pos_traj, np.zeros(n), np.zeros(n), vel_traj]
 # # np.savetxt('trajectories_xy.csv', data, delimiter=',')
-# np.savetxt('trajectories_xyt.csv', data, delimiter=',')
+np.savetxt('trajectories_xyt.csv', data, delimiter=',')
 #
 # plt.figure()
 # plt.hold(True)
