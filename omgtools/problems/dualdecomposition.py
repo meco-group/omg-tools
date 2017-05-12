@@ -80,7 +80,7 @@ class DDUpdater(DualUpdater):
         x_i = self._get_x_variables(symbolic=True)
         # construct local copies of parameters
         par = {}
-        for name, s in self.par_i.items():
+        for name, s in self.par_global.items():
             par[name] = self.define_parameter(name, s.shape[0], s.shape[1])
         if problem is None:
             # get time info
@@ -108,7 +108,7 @@ class DDUpdater(DualUpdater):
                         obj -= mtimes(l.T, z)
             self.define_objective(obj)
         # construct constraints
-        for con in self.constraints:
+        for con in self.global_constraints:
             c = con[0]
             for sym in symvar(c):
                 for label, child in self.group.items():
@@ -132,7 +132,7 @@ class DDUpdater(DualUpdater):
                             sym2 = reshape(sym2, sym.shape)
                             c = substitute(c, sym, sym2)
                             break
-                for name, s in self.par_i.items():
+                for name, s in self.par_global.items():
                     if s.name() == sym.name():
                         c = substitute(c, sym, par[name])
             lb, ub = con[1], con[2]
