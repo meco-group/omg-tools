@@ -134,8 +134,8 @@ class Dubins(Vehicle):
         else:
             dx = v_til*(1-tg_ha**2)
             dy = v_til*(2*tg_ha)
-            x = self.integrate_once(dx, pos0[0], self.t, self.T)
-            y = self.integrate_once(dy, pos0[1], self.t, self.T)
+            x = self.integrate_once(dx, pos0[0], t, T)
+            y = self.integrate_once(dy, pos0[1], t, T)
         eps = 1.e-2
         center = self.define_spline_variable('formation_center', self.n_dim)
         self.define_constraint((x-center[0])*(1+tg_ha**2) + rel_pos[0]*2*tg_ha + rel_pos[1]*(1-tg_ha**2), -eps, eps)
