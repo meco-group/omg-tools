@@ -107,10 +107,10 @@ class Quadrotor(Vehicle):
 
     def set_parameters(self, current_time):
         parameters = Vehicle.set_parameters(self, current_time)
-        parameters['spl0'] = self.prediction['state'][:2]
-        parameters['dspl0'] = self.prediction['dspl']
-        parameters['ddspl0'] = self.prediction['ddspl']
-        parameters['positionT'] = self.positionT
+        parameters[self]['spl0'] = self.prediction['state'][:2]
+        parameters[self]['dspl0'] = self.prediction['dspl']
+        parameters[self]['ddspl0'] = self.prediction['ddspl']
+        parameters[self]['positionT'] = self.positionT
         return parameters
 
     def define_collision_constraints(self, hyperplanes, environment, splines):

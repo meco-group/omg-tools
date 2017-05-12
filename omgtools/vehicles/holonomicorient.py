@@ -143,12 +143,12 @@ class HolonomicOrient(Vehicle):
         # for the optimization problem
         # convert theta to tg_ha here
         parameters = Vehicle.set_parameters(self, current_time)
-        parameters['pos0'] = self.prediction['state'][:2]  # x, y
-        parameters['tg_ha0'] = np.tan(self.prediction['state'][2]/2)
-        parameters['vel0'] = self.prediction['input'][:2]  # dx, dy
-        parameters['dtg_ha0'] = 0.5*self.prediction['input'][2]*(1+parameters['tg_ha0']**2)
-        parameters['posT'] = self.poseT[:2]  # x, y
-        parameters['tg_haT'] = np.tan(self.poseT[2]/2)
+        parameters[self]['pos0'] = self.prediction['state'][:2]  # x, y
+        parameters[self]['tg_ha0'] = np.tan(self.prediction['state'][2]/2)
+        parameters[self]['vel0'] = self.prediction['input'][:2]  # dx, dy
+        parameters[self]['dtg_ha0'] = 0.5*self.prediction['input'][2]*(1+parameters[self]['tg_ha0']**2)
+        parameters[self]['posT'] = self.poseT[:2]  # x, y
+        parameters[self]['tg_haT'] = np.tan(self.poseT[2]/2)
         return parameters
 
     def define_collision_constraints(self, hyperplanes, environment, splines):

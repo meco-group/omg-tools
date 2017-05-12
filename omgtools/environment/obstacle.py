@@ -89,13 +89,13 @@ class ObstaclexD(OptiChild):
         raise ValueError('Please implement this method.')
 
     def set_parameters(self, current_time):
-        parameters = {}
-        parameters['x'] = self.signals['position'][:, -1]
-        parameters['v'] = self.signals['velocity'][:, -1]
-        parameters['a'] = self.signals['acceleration'][:, -1]
+        parameters = {self: {}}
+        parameters[self]['x'] = self.signals['position'][:, -1]
+        parameters[self]['v'] = self.signals['velocity'][:, -1]
+        parameters[self]['a'] = self.signals['acceleration'][:, -1]
         checkpoints, rad = self.shape.get_checkpoints()
-        parameters['checkpoints'] = np.reshape(checkpoints, (len(checkpoints)*self.n_dim, ))
-        parameters['rad'] = rad
+        parameters[self]['checkpoints'] = np.reshape(checkpoints, (len(checkpoints)*self.n_dim, ))
+        parameters[self]['rad'] = rad
         return parameters
 
     # ========================================================================
@@ -285,7 +285,7 @@ class Obstacle2D(ObstaclexD):
 
     def set_parameters(self, current_time):
         parameters = ObstaclexD.set_parameters(self, current_time)
-        parameters['theta'] = self.signals['orientation'][:, -1]
+        parameters[self]['theta'] = self.signals['orientation'][:, -1]
         return parameters
 
     # ========================================================================

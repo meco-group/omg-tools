@@ -30,8 +30,8 @@ class Holonomic(Vehicle):
         bounds = bounds or {}
         Vehicle.__init__(
             self, n_spl=2, degree=3, shapes=shapes, options=options)
-        
-        if ((not 'syslimit' in self.options) or  # default choose norm_inf 
+
+        if ((not 'syslimit' in self.options) or  # default choose norm_inf
                 (self.options['syslimit'] is 'norm_inf')):
             # user specified a single velocity for x and y
             self.vxmin = self.vymin = bounds['vmin'] if 'vmin' in bounds else None
@@ -131,9 +131,9 @@ class Holonomic(Vehicle):
 
     def set_parameters(self, current_time):
         parameters = Vehicle.set_parameters(self, current_time)
-        parameters['state0'] = self.prediction['state']
-        parameters['input0'] = self.prediction['input']
-        parameters['positionT'] = self.positionT
+        parameters[self]['state0'] = self.prediction['state']
+        parameters[self]['input0'] = self.prediction['input']
+        parameters[self]['positionT'] = self.positionT
         return parameters
 
     def define_collision_constraints(self, hyperplanes, environment, splines):

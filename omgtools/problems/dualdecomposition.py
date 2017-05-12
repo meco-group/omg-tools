@@ -177,12 +177,14 @@ class DDUpdater(DualUpdater):
                 self.var_dd['x_i'][child.label, name] = var
 
     def set_parameters(self, current_time):
-        parameters = {}
+        parameters = DualUpdater.set_parameters(self, current_time)
+        if self not in parameters:
+            parameters[self] = {}
         global_par = self.distr_problem.set_parameters(current_time)
-        for name in self.par_i:
-            parameters[name] = global_par[name]
-        parameters['l_ij'] = self.var_dd['l_ij'].cat
-        parameters['l_ji'] = self.var_dd['l_ji'].cat
+        for name in self.par_global:
+            parameters[self][name] = global_par[name]
+        parameters[self]['l_ij'] = self.var_dd['l_ij'].cat
+        parameters[self]['l_ji'] = self.var_dd['l_ji'].cat
         return parameters
 
     def update_xz(self, current_time):

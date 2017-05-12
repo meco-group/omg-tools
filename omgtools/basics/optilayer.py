@@ -410,11 +410,20 @@ class OptiFather(object):
 
     def set_parameters(self, time):
         self._par_result = self._par_struct(0.)
+        parameters = {}
         for label, child in self.children.items():
             par = child.set_parameters(time)
+            for chld, dic in par.items():
+                for key in dic.keys():
+                    if chld not in parameters:
+                        parameters[chld] = {}
+                    if key in parameters[chld]:
+                        raise ValueError('Same parameter set multiple times!')
+                parameters[chld].update(par[chld])
+        for label, child in self.children.items():
             for name in child._parameters.keys():
-                if name in par:
-                    self._par_result[label, name] = par[name]
+                if child in parameters and name in parameters[child]:
+                    self._par_result[label, name] = parameters[child][name]
                 else:
                     self._par_result[label, name] = child._values[name]
         return self._par_result

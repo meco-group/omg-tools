@@ -370,12 +370,14 @@ class ADMM(DualUpdater):
                 self.var_admm['z_i'][child.label, name] = var
 
     def set_parameters(self, current_time):
-        parameters = {}
-        parameters['z_i'] = self.var_admm['z_i'].cat
-        parameters['z_ji'] = self.var_admm['z_ji'].cat
-        parameters['l_i'] = self.var_admm['l_i'].cat
-        parameters['l_ji'] = self.var_admm['l_ji'].cat
-        parameters['rho'] = self.options['rho']
+        parameters = DualUpdater.set_parameters(self, current_time)
+        if self not in parameters:
+            parameters[self] = {}
+        parameters[self]['z_i'] = self.var_admm['z_i'].cat
+        parameters[self]['z_ji'] = self.var_admm['z_ji'].cat
+        parameters[self]['l_i'] = self.var_admm['l_i'].cat
+        parameters[self]['l_ji'] = self.var_admm['l_ji'].cat
+        parameters[self]['rho'] = self.options['rho']
         return parameters
 
     def update_x(self, current_time):

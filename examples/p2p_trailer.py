@@ -45,7 +45,8 @@ problem.vehicles.append(vehicle)
 vehicle.to_simulate = False
 # extra solver settings which may improve performance
 problem.set_options({'solver_options':
-    {'ipopt': {'ipopt.hessian_approximation': 'limited-memory'}}})
+    {'ipopt': {'ipopt.hessian_approximation': 'limited-memory',
+               'ipopt.linear_solver': 'ma57'}}})
 problem.init()
 
 # problem.set_options({'hard_term_con': True, 'horizon_time': 12})
