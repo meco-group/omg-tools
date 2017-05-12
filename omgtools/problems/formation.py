@@ -19,7 +19,9 @@
 
 from admm import ADMMProblem
 from point2point import Point2point
+from ..basics.spline import BSplineBasis
 from ..export.export_formation import ExportFormation
+from casadi import inf
 import numpy as np
 
 
@@ -55,6 +57,23 @@ class FormationPoint2point(ADMMProblem):
                     pos_c_nghb = centra[nghb]
                     for ind_v, ind_n in zip(ind_veh, ind_nghb):
                         self.define_constraint(pos_c_veh[ind_v] - pos_c_nghb[ind_n], 0., 0.)
+        # inter-vehicle collision avoidance
+        for veh in self.vehicles:
+            for nghb in self.fleet.get_neighbors(veh):
+                spl_veh = veh.define_spline_parameter('spline_'+veh.label, veh.n_spl, basis=veh.basis)
+                spl_nghb = veh.define_spline_parameter('spline_'+nghb.label, nghb.n_spl, basis=nghb.basis)
+                a = [spl_nghb[k]-spl_veh[k] for k in range(veh.n_dim)]
+                b = sum([a[k]*0.5*(spl_nghb[k]+spl_veh[k]) for k in range(veh.n_dim)])
+                t = veh.define_spline_variable('t_'+veh.label+'_'+nghb.label, 1, basis=a[0].basis)[0]
+                veh.define_constraint(sum([a[k]*a[k] for k in range(veh.n_dim)]) - t**2, -inf, 0)
+                veh.define_constraint(-t, -inf, 0)
+                hyp = {sh: {} for sh in veh.shapes}
+                for kk, shape1 in enumerate(veh.shapes):
+                    hyp[shape1] = [{'a': a, 'b': b, 'slack': t}]
+                veh.define_collision_constraints(hyp, self.environment, splines[veh])
+
+        ADMMProblem.construct(self)
+
         # terminal constraints (stability issue)
         for veh in self.vehicles:
             for spline in centra[veh]:
@@ -65,10 +84,27 @@ class FormationPoint2point(ADMMProblem):
                     self.define_constraint(spline.derivative(d)(1.), 0., 0.)
         ADMMProblem.construct(self)
 
+    def update_hook(self):
+        self.spl_prv = {veh: None for veh in self.vehicles}
+        for probl in self.problems:
+            veh = probl.vehicles[0]
+            self.spl_prv[veh] = probl.father.get_variables(veh, 'splines0', symbolic=False, spline=False)
+        ADMMProblem.update_hook(self)
+
     def set_parameters(self, current_time):
         parameters = {}
+        if self.iteration == 0:
+            spl_prv = {veh: None for veh in self.vehicles}
+            for probl in self.problems:
+                veh = probl.vehicles[0]
+                spl_prv[veh] = veh.get_init_spline_value()[0, :]*np.ones((len(veh.basis), 1))
+        else:
+            spl_prv = self.spl_prv
         for veh in self.vehicles:
             parameters[veh] = {'rel_pos_c': veh.rel_pos_c}
+            parameters[veh].update({'spline_'+veh.label: spl_prv[veh]})
+            for nghb in self.fleet.get_neighbors(veh):
+                parameters[veh].update({'spline_'+nghb.label: spl_prv[nghb]})
         return parameters
 
     def get_interaction_error(self):

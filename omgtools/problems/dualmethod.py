@@ -220,6 +220,7 @@ class DualProblem(DistributedProblem):
         it0 = self.iteration
         while (self.iteration - it0) < self.options['max_iter_per_update']:
             self.dual_update(current_time, update_time)
+            self.update_hook()
             self._objectives.append(self.compute_objective())
             self._stacked_x.append(self.get_stacked_x_var_it())
 
@@ -244,3 +245,6 @@ class DualProblem(DistributedProblem):
 
     def final(self):
         DistributedProblem.final(self)
+
+    def update_hook(self):
+        pass
