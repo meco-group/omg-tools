@@ -230,8 +230,6 @@ class Vehicle(OptiChild, PlotLayer):
 
     def set_parameters(self, current_time):
         parameters = {self: {}}
-        if hasattr(self, 'rel_pos_c'):
-            parameters[self]['rel_pos_c'] = self.rel_pos_c
         return parameters
 
     # ========================================================================

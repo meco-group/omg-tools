@@ -414,9 +414,9 @@ class OptiFather(object):
         for label, child in self.children.items():
             par = child.set_parameters(time)
             for chld, dic in par.items():
+                if chld not in parameters:
+                    parameters[chld] = {}
                 for key in dic.keys():
-                    if chld not in parameters:
-                        parameters[chld] = {}
                     if key in parameters[chld]:
                         raise ValueError('Same parameter set multiple times!')
                 parameters[chld].update(par[chld])

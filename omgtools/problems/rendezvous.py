@@ -39,12 +39,11 @@ class RendezVous(ADMMProblem):
         for veh in self.vehicles:
             ind_veh = sorted(config[veh].keys())
             rel_pos_c[veh] = veh.define_parameter('rel_pos_c', len(ind_veh))
-        ADMMProblem.construct(self)
         problems_dic = {veh: self.problems[l] for l, veh in enumerate(self.fleet.vehicles)}
         # get fleet center as seen by vehicles
         centra = {}
         for veh in self.vehicles:
-            conT = self.father.get_variables(problems_dic[veh], 'conT0', symbolic=True)
+            conT = problems_dic[veh].define_symbol('conT0', len(problems_dic[veh].free_ind[veh]))
             centra[veh] = veh.get_fleet_center([conT], [rel_pos_c[veh]])[0]
         # rendez-vous constraints
         couples = {veh: [] for veh in self.vehicles}
@@ -58,6 +57,13 @@ class RendezVous(ADMMProblem):
                     pos_c_nghb = centra[nghb]
                     for ind_v, ind_n in zip(ind_veh, ind_nghb):
                         self.define_constraint(pos_c_veh[ind_v] - pos_c_nghb[ind_n], 0., 0.)
+        ADMMProblem.construct(self)
+
+    def set_parameters(self, current_time):
+        parameters = {}
+        for veh in self.vehicles:
+            parameters[veh] = {'rel_pos_c': veh.rel_pos_c}
+        return parameters
 
     def stop_criterium(self, current_time, update_time):
         res = 0.

@@ -42,10 +42,11 @@ class FormationPoint2pointCentral(FixedTPoint2point):
         FixedTPoint2point.construct(self)
         # get formation center as seen by vehicles
         centra = {}
+        splines = {}
         for veh in self.vehicles:
-            splines = self.father.get_variables(veh, 'splines0', symbolic=True)
+            splines[veh] = self.father.get_variables(veh, 'splines0', symbolic=True)
             ind_veh = sorted(config[veh].keys())
-            centra[veh] = veh.get_fleet_center(splines, rel_pos_c[veh], substitute=False)
+            centra[veh] = veh.get_fleet_center(splines[veh], rel_pos_c[veh], substitute=False)
         # formation constraints
         couples = {veh: [] for veh in self.vehicles}
         for veh in self.vehicles:
@@ -55,7 +56,6 @@ class FormationPoint2pointCentral(FixedTPoint2point):
         if self.fleet.interconnection == 'circular':
             couples.pop(self.vehicles[-1], None)
             couples.pop(self.vehicles[-2], None)
-
 
         t = self.define_symbol('t')
         T = self.define_symbol('T')
@@ -83,3 +83,11 @@ class FormationPoint2pointCentral(FixedTPoint2point):
     def update(self, current_time, update_time, sample_time):
         FixedTPoint2point.update(self, current_time, update_time, sample_time)
         self.fleet.update_plots()
+
+    def set_parameters(self, current_time):
+        parameters = FixedTPoint2point.set_parameters(self, current_time)
+        for veh in self.vehicles:
+            if veh not in parameters:
+                parameters[veh] = {}
+            parameters[veh].update({'rel_pos_c': veh.rel_pos_c})
+        return parameters

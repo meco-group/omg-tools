@@ -35,13 +35,13 @@ class FormationPoint2pointDualDecomposition(DDProblem):
         for veh in self.vehicles:
             ind_veh = sorted(config[veh].keys())
             rel_pos_c[veh] = veh.define_parameter('rel_pos_c', len(ind_veh))
-        DDProblem.construct(self)
         # get formation center as seen by vehicles
         centra = {}
+        splines = {}
         for veh in self.vehicles:
-            splines = self.father.get_variables(veh, 'splines0', symbolic=True)
+            splines[veh] = veh.define_spline_symbol('splines0', veh.n_spl)
             ind_veh = sorted(config[veh].keys())
-            centra[veh] = veh.get_fleet_center(splines, rel_pos_c[veh])
+            centra[veh] = veh.get_fleet_center(splines[veh], rel_pos_c[veh])
         # formation constraints
         couples = {veh: [] for veh in self.vehicles}
         for veh in self.vehicles:
@@ -62,6 +62,13 @@ class FormationPoint2pointDualDecomposition(DDProblem):
                     # invoked on the z-variables (because it is interpreted as
                     # 'interconnection constraint')
                     self.define_constraint(spline.derivative(d)(1.), 0., 0.)
+        DDProblem.construct(self)
+
+    def set_parameters(self, current_time):
+        parameters = {}
+        for veh in self.vehicles:
+            parameters[veh] = {'rel_pos_c': veh.rel_pos_c}
+        return parameters
 
     def get_interaction_error(self):
         # compute average deviation of an agent's fleet center wrt to the real center
