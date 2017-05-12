@@ -105,14 +105,14 @@ class DistributedProblem(Problem):
     def interprete_constraints(self, updaters):
         for upd in updaters:
             upd.q_i, upd.q_ij, upd.q_ji = col.OrderedDict(), col.OrderedDict(), col.OrderedDict()
-            upd.constraints = []
-            upd.par_i = col.OrderedDict()
+            upd.global_constraints = []
+            upd.par_global = col.OrderedDict()
 
         symbol_dict = self._compose_dictionary()
 
-        for constraint in self._constraints.values():
+        for con_key, constraint in self._constraints.items():
             dep = col.OrderedDict()
-            par = col.OrderedDict()
+            par_global = col.OrderedDict()
             for sym, indices in get_dependency(constraint[0]).items():
                 symname = sym.name()
                 if symname in symbol_dict:
@@ -123,15 +123,15 @@ class DistributedProblem(Problem):
                 elif symname in self.symbol_dict:
                     name = self.symbol_dict[symname][1]
                     if name in self._parameters:
-                        par[name] = sym
+                        par_global[name] = sym
 
             for child, dic in dep.items():
-                # q_i: structure of local variables i
                 upd = updaters[child._index]
-                upd.constraints.append(constraint)
-                for name, sym in par.items():
-                    if name not in upd.par_i:
-                        upd.par_i[name] = sym
+                upd.global_constraints.append(constraint)
+                for name, sym in par_global.items():
+                    if name not in upd.par_global:
+                        upd.par_global[name] = sym
+                # q_i: structure of local variables i
                 if child not in upd.q_i:
                     upd.q_i[child] = col.OrderedDict()
                 for name, indices in dic.items():
@@ -192,7 +192,6 @@ class DistributedProblem(Problem):
     def store(self, current_time, update_time, sample_time):
         for problem in self.problems:
             problem.store(current_time, update_time, sample_time)
-
 
     def predict(self, current_time, predict_time, sample_time, states=None, delay=0):
         if states is None:

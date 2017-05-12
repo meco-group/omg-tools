@@ -255,7 +255,7 @@ class Problem(OptiChild, PlotLayer):
         return None
 
     def set_parameters(self, time):
-        return {}
+        return {self: {}}
 
     # ========================================================================
     # Methods required to override

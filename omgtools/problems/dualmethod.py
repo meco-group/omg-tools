@@ -70,7 +70,11 @@ class DualUpdater(Problem):
         self.q_i_struct = _create_struct_from_dict(self.q_i)
         self.q_ij_struct = _create_struct_from_dict(self.q_ij)
         self.q_ji_struct = _create_struct_from_dict(self.q_ji)
-        self.par_struct = _create_struct_from_dict(self.par_i)
+        self.par_global_struct = _create_struct_from_dict(self.par_global)
+
+    def set_parameters(self, current_time):
+        parameters = self.distr_problem.set_parameters(current_time)
+        return parameters
 
     # ========================================================================
     # Auxiliary methods

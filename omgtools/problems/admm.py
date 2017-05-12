@@ -131,7 +131,7 @@ class ADMM(DualUpdater):
         t = MX.sym('t')
         T = MX.sym('T')
         rho = MX.sym('rho')
-        par = struct_symMX(self.par_struct)
+        par = struct_symMX(self.par_global_struct)
         inp = [x_i.cat, l_i.cat, l_ij.cat, x_j.cat, t, T, rho, par.cat]
         t0 = t/T
         # put symbols in MX structs (necessary for transformation)
@@ -312,7 +312,7 @@ class ADMM(DualUpdater):
 
     def _check_for_lineq(self):
         g = []
-        for con in self.constraints:
+        for con in self.global_constraints:
             lb, ub = con[1], con[2]
             g = vertcat(g, con[0] - lb)
             if not isinstance(lb, np.ndarray):
@@ -335,16 +335,16 @@ class ADMM(DualUpdater):
                     jac = horzcat(jac, jj[:, ind])
                     sym.append(var)
         for sym in symvar(jac):
-            if sym not in self.par_i.values():
+            if sym not in self.par_global.values():
                 return False, None, None
-        par = struct_symMX(self.par_struct)
+        par = struct_symMX(self.par_global_struct)
         A, b = jac, -g
         for s in sym:
             A = substitute(A, s, np.zeros(s.shape))
             b = substitute(b, s, np.zeros(s.shape))
         dep_b = [s.name() for s in symvar(b)]
         dep_A = [s.name() for s in symvar(b)]
-        for name, sym in self.par_i.items():
+        for name, sym in self.par_global.items():
             if sym.name() in dep_b:
                 b = substitute(b, sym, par[name])
             if sym.name() in dep_A:
@@ -370,12 +370,14 @@ class ADMM(DualUpdater):
                 self.var_admm['z_i'][child.label, name] = var
 
     def set_parameters(self, current_time):
-        parameters = {}
-        parameters['z_i'] = self.var_admm['z_i'].cat
-        parameters['z_ji'] = self.var_admm['z_ji'].cat
-        parameters['l_i'] = self.var_admm['l_i'].cat
-        parameters['l_ji'] = self.var_admm['l_ji'].cat
-        parameters['rho'] = self.options['rho']
+        parameters = DualUpdater.set_parameters(self, current_time)
+        if self not in parameters:
+            parameters[self] = {}
+        parameters[self]['z_i'] = self.var_admm['z_i'].cat
+        parameters[self]['z_ji'] = self.var_admm['z_ji'].cat
+        parameters[self]['l_i'] = self.var_admm['l_i'].cat
+        parameters[self]['l_ji'] = self.var_admm['l_ji'].cat
+        parameters[self]['rho'] = self.options['rho']
         return parameters
 
     def update_x(self, current_time):
@@ -396,9 +398,9 @@ class ADMM(DualUpdater):
         return t_upd
 
     def set_parameters_upd_z(self, current_time):
-        parameters = self.par_struct(0)
+        parameters = self.par_global_struct(0)
         global_par = self.distr_problem.set_parameters(current_time)
-        for name in self.par_i:
+        for name in self.par_global:
             parameters[name] = global_par[name]
         return parameters
 

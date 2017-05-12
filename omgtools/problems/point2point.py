@@ -171,10 +171,10 @@ class FixedTPoint2point(Point2pointProblem):
     def set_parameters(self, current_time):
         parameters = Point2pointProblem.set_parameters(self, current_time)
         if self.init_time is None:
-            parameters['t'] = np.round(current_time, 6) % self.knot_time
+            parameters[self]['t'] = np.round(current_time, 6) % self.knot_time
         else:
-            parameters['t'] = self.init_time
-        parameters['T'] = self.options['horizon_time']
+            parameters[self]['t'] = self.init_time
+        parameters[self]['T'] = self.options['horizon_time']
         return parameters
 
     # ========================================================================
@@ -294,9 +294,9 @@ class FreeTPoint2point(Point2pointProblem):
         parameters = Point2pointProblem.set_parameters(self, current_time)
         # current time is always 0 for FreeT problem, time axis always resets
         if self.init_time is None:
-            parameters['t'] = 0
+            parameters[self]['t'] = 0
         else:
-            parameters['t'] = self.init_time
+            parameters[self]['t'] = self.init_time
         return parameters
 
     # ========================================================================

@@ -88,9 +88,9 @@ class Holonomic1D(Vehicle):
 
     def set_parameters(self, current_time):
         parameters = Vehicle.set_parameters(self, current_time)
-        parameters['state0'] = self.prediction['state']
-        parameters['input0'] = self.prediction['input']
-        parameters['positionT'] = self.positionT
+        parameters[self]['state0'] = self.prediction['state']
+        parameters[self]['input0'] = self.prediction['input']
+        parameters[self]['positionT'] = self.positionT
         return parameters
 
     def define_collision_constraints(self, hyperplanes, environment, splines):

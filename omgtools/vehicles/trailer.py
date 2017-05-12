@@ -152,8 +152,8 @@ class Trailer(Vehicle):
         if hasattr(self, 'theta_trT'):
             parameters_tr['tg_ha_trT'] = np.tan(self.theta_trT/2.)
         parameters_veh = self.lead_veh.set_parameters(current_time)
-        parameters.update(parameters_tr)
-        parameters.update(parameters_veh)
+        parameters[self].update(parameters_tr)
+        parameters[self].update(parameters_veh[self.lead_veh])
         return parameters
 
     def define_collision_constraints(self, hyperplanes, environment, splines):

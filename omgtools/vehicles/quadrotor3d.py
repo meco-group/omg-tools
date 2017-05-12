@@ -200,16 +200,16 @@ class Quadrotor3D(Vehicle):
 
     def set_parameters(self, current_time):
         parameters = Vehicle.set_parameters(self, current_time)
-        parameters['q_phi0'] = np.tan(self.prediction['state'][6]/2.)
-        parameters['q_theta0'] = np.tan(self.prediction['state'][7]/2.)
-        parameters['f_til0'] = self.prediction['input'][0]/((1+parameters['q_phi0']**2)*(1+parameters['q_theta0']**2))
-        parameters['dq_phi0'] = 0.5*self.prediction['input'][1]*(1+parameters['q_phi0']**2)
-        parameters['dq_theta0'] = 0.5*self.prediction['input'][2]*(1+parameters['q_theta0']**2)
-        parameters['pos0'] = self.prediction['state'][:3]
-        parameters['dpos0'] = self.prediction['state'][3:6]
-        parameters['posT'] = self.poseT[:3]
-        parameters['q_phiT'] = np.tan(self.poseT[3]/2.)
-        parameters['q_thetaT'] = np.tan(self.poseT[4]/2.)
+        parameters[self]['q_phi0'] = np.tan(self.prediction['state'][6]/2.)
+        parameters[self]['q_theta0'] = np.tan(self.prediction['state'][7]/2.)
+        parameters[self]['f_til0'] = self.prediction['input'][0]/((1+parameters[self]['q_phi0']**2)*(1+parameters[self]['q_theta0']**2))
+        parameters[self]['dq_phi0'] = 0.5*self.prediction['input'][1]*(1+parameters[self]['q_phi0']**2)
+        parameters[self]['dq_theta0'] = 0.5*self.prediction['input'][2]*(1+parameters[self]['q_theta0']**2)
+        parameters[self]['pos0'] = self.prediction['state'][:3]
+        parameters[self]['dpos0'] = self.prediction['state'][3:6]
+        parameters[self]['posT'] = self.poseT[:3]
+        parameters[self]['q_phiT'] = np.tan(self.poseT[3]/2.)
+        parameters[self]['q_thetaT'] = np.tan(self.poseT[4]/2.)
         return parameters
 
     def define_collision_constraints(self, hyperplanes, environment, splines):

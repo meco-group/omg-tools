@@ -195,25 +195,25 @@ class AGV(Vehicle):
     def set_parameters(self, current_time):
         # for the optimization problem
         parameters = Vehicle.set_parameters(self, current_time)
-        parameters['tg_ha0'] = np.tan(self.prediction['state'][2]/2.)
-        parameters['v_til0'] = self.prediction['input'][0]/(1+parameters['tg_ha0']**2)
-        parameters['pos0'] = self.prediction['state'][:2]
-        parameters['posT'] = self.poseT[:2]  # x, y
-        parameters['v_tilT'] = 0.
-        parameters['dv_tilT'] = 0.
-        parameters['tg_haT'] = np.tan(self.poseT[2]/2.)
-        parameters['dtg_haT'] = 0.
-        parameters['ddtg_haT'] = 0.
+        parameters[self]['tg_ha0'] = np.tan(self.prediction['state'][2]/2.)
+        parameters[self]['v_til0'] = self.prediction['input'][0]/(1+parameters[self]['tg_ha0']**2)
+        parameters[self]['pos0'] = self.prediction['state'][:2]
+        parameters[self]['posT'] = self.poseT[:2]  # x, y
+        parameters[self]['v_tilT'] = 0.
+        parameters[self]['dv_tilT'] = 0.
+        parameters[self]['tg_haT'] = np.tan(self.poseT[2]/2.)
+        parameters[self]['dtg_haT'] = 0.
+        parameters[self]['ddtg_haT'] = 0.
         # parameters['tdeltaT'] = np.tan(self.poseT[3])
-        if (parameters['v_til0'] <= 1e-4):  # use l'Hopital's rule
-            parameters['hop0'] = 1.
-            parameters['v_til0'] = 0.  # put exactly = 0.
-            parameters['dtg_ha0'] = 0.  # otherwise you don't get 0./0.
-            parameters['tdelta0'] = np.tan(self.prediction['state'][3])
+        if (parameters[self]['v_til0'] <= 1e-4):  # use l'Hopital's rule
+            parameters[self]['hop0'] = 1.
+            parameters[self]['v_til0'] = 0.  # put exactly = 0.
+            parameters[self]['dtg_ha0'] = 0.  # otherwise you don't get 0./0.
+            parameters[self]['tdelta0'] = np.tan(self.prediction['state'][3])
         else:  # no need for l'Hopital's rule
-            parameters['hop0'] = 0.
-            parameters['dtg_ha0'] = -np.tan(self.prediction['state'][3])*parameters['v_til0']* \
-                                           (1+parameters['tg_ha0']**2)**2/(2.*self.length)
+            parameters[self]['hop0'] = 0.
+            parameters[self]['dtg_ha0'] = -np.tan(self.prediction['state'][3])*parameters[self]['v_til0']* \
+                                           (1+parameters[self]['tg_ha0']**2)**2/(2.*self.length)
             # tdelta0 is only used when hop0 = 1, so no need to assign here
         return parameters
 

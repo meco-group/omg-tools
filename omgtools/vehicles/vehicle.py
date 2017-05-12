@@ -127,6 +127,7 @@ class Vehicle(OptiChild, PlotLayer):
             if shape in hyperplanes:
                 for k, hyperplane in enumerate(hyperplanes[shape]):
                     a, b = hyperplane['a'], hyperplane['b']
+                    sl = 1 if 'slack' not in hyperplane else hyperplane['slack']
                     if safety_distance > 0.:
                         eps = self.define_spline_variable(
                             'eps_'+str(s)+str(k))[0]
@@ -146,7 +147,7 @@ class Vehicle(OptiChild, PlotLayer):
                         pos[0] = position[0]*(1+tg_ha**2) + offset*(1-tg_ha**2)
                         pos[1] = position[1]*(1+tg_ha**2) + offset*(2*tg_ha)
                         con += (a[0]*pos[0] + a[1]*pos[1])
-                        con += (-b+rad[l]+safety_distance-eps)*(1+tg_ha**2)
+                        con += (-b+sl*rad[l]+safety_distance-eps)*(1+tg_ha**2)
                         self.define_constraint(con, -inf, 0)
             # room constraints
             # check room shape and orientation,
@@ -228,9 +229,9 @@ class Vehicle(OptiChild, PlotLayer):
             return [s+rp for s, rp in zip(splines, rel_pos)]
 
     def set_parameters(self, current_time):
-        parameters = {}
+        parameters = {self: {}}
         if hasattr(self, 'rel_pos_c'):
-            parameters['rel_pos_c'] = self.rel_pos_c
+            parameters[self]['rel_pos_c'] = self.rel_pos_c
         return parameters
 
     # ========================================================================
