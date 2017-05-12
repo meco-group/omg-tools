@@ -30,16 +30,15 @@ vehicle.set_initial_conditions([2., 5.])  # input orientation in deg
 vehicle.set_terminal_conditions([8., 5.])
 
 # create trailer
-trailer = TrailerHolonomic(lead_veh=vehicle,  shapes=Square(0.3), l_hitch = 0.6,
-                  bounds={'tmax': 45., 'tmin': -45.})  # ldie limiet boeit niet, wordt niet in rekening gebracht.
+trailer = TrailerHolonomic(lead_veh=vehicle,  shapes=Square(0.3), l_hitch = 0.6)  # ldie limiet boeit niet, wordt niet in rekening gebracht.
 # Note: the knot intervals of lead_veh and trailer should be the same
 trailer.define_knots(knot_intervals=number_knot_intervals)  # adapt amount of knot intervals
-trailer.set_initial_conditions([-5.])  # input orientation in deg
-#trailer.set_terminal_conditions([0.])  # this depends on the application e.g. driving vs parking
+trailer.set_initial_conditions(0.)  # input orientation in deg
+trailer.set_terminal_conditions(0.)  # this depends on the application e.g. driving vs parking
 
 # create environment
 environment = Environment(room={'shape': Square(10.), 'position': [5.,5.]})
-rectangle = Rectangle(width=.2, height=4.)
+rectangle = Rectangle(width=.2, height=3.8)
 
 environment.add_obstacle(Obstacle({'position': [3., 3.]}, shape=rectangle))
 environment.add_obstacle(Obstacle({'position': [6., 7.]}, shape=rectangle))
@@ -57,12 +56,12 @@ problem.init()
 #problem.export()
 
 # create simulator
-simulator = Simulator(problem)
+simulator = Simulator(problem, update_time = 0.5)
 problem.plot('scene')
 trailer.plot('input', knots=True, labels=['v_x (m/s)','v_y (m/s)'])
 trailer.plot('state', knots=True, labels=['x_tr (m)', 'y_tr (m)', 'theta_tr (rad)', 'x_veh (m)', 'y_veh (m)', 'theta_veh (rad)'])
 
 # run it!
-simulator.run_once()
+simulator.run()
 problem.save_movie('scene', format='gif', name='lead_off_rechtdoor5_ma57', number_of_frames=100, movie_time=5, axis=False)
 

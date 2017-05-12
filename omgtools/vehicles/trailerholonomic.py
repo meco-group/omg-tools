@@ -38,8 +38,8 @@ class TrailerHolonomic(Vehicle):
         # being: tg_ha_trailer, v_til_veh, tg_ha_veh
         self.lead_veh = Holonomic() if (lead_veh is None) else lead_veh  # vehicle which pulls the trailer
         self.l_hitch = l_hitch  # distance between rear axle of trailer and connection point on the car
-        self.tmax = bounds['tmax'] if 'tmax' in bounds else 45.  # limit angle between trailer and vehicle
-        self.tmin = bounds['tmin'] if 'tmin' in bounds else -45.
+        self.tmax = bounds['tmax'] if 'tmax' in bounds else np.pi/4.  # limit angle between trailer and vehicle
+        self.tmin = bounds['tmin'] if 'tmin' in bounds else -np.pi/4.
 
     def set_default_options(self):
         Vehicle.set_default_options(self)
@@ -75,7 +75,7 @@ class TrailerHolonomic(Vehicle):
         dtg_ha_tr0 = self.define_parameter('dtg_ha_tr0', 1)
         tg_ha_tr = splines[0]
         dtg_ha_tr = tg_ha_tr.derivative()
-        con_tr = [(tg_ha_tr, tg_ha_tr0, dtg_ha_tr, T*dtg_ha_tr0)]
+        con_tr = [(tg_ha_tr, tg_ha_tr0), (dtg_ha_tr, T*dtg_ha_tr0)]
         con_veh = self.lead_veh.get_initial_constraints(splines[1: ]) #splines[1: ] = (x,y)
         return con_tr + con_veh  # put in one list
 
@@ -95,12 +95,15 @@ class TrailerHolonomic(Vehicle):
         term_con_der = term_con_der_tr + term_con_der_veh
         return [term_con, term_con_der]
 
-    def set_initial_conditions(self, theta, input=np.zeros(2)):
+    def set_initial_conditions(self, state, input=None):
+        if input is None:
+            input = np.zeros(2)
+        theta = state
         # add complete state(5elements) and input(2 elements)
         # state=[x_tr, y_tr, theta_tr, x_veh, y_veh]
         #input = [dx, dy]
         state = np.zeros(5)
-        state[2] = np.radians(theta[0])  # theta, imposed on trailer by the user
+        state[2] = theta  # theta, imposed on trailer by the user
         # Build up prediction of complete system.
         # Note that this requires initializing the vehicle before the trailer
         state[3:] = self.lead_veh.prediction['state']
@@ -110,7 +113,7 @@ class TrailerHolonomic(Vehicle):
 
     def set_terminal_conditions(self, theta):
         # Optional, e.g. only for parking a trailer
-        self.theta_trT = np.radians(theta[0])
+        self.theta_trT = theta
 
     def get_init_spline_value(self):
         init_value_tr = np.zeros((len(self.basis), 1))
@@ -140,6 +143,11 @@ class TrailerHolonomic(Vehicle):
         return result
 
     def set_parameters(self, current_time):
+        pred_veh = {}
+        pred_veh['input'] = self.prediction['input']
+        pred_veh['state'] = self.prediction['state'][3:, ]
+        self.lead_veh.update_prediction(pred_veh)
+
         parameters = Vehicle.set_parameters(self, current_time)
         parameters_tr = {}
         parameters_tr['tg_ha_tr0'] = np.tan(self.prediction['state'][2]/2.)
@@ -234,9 +242,5 @@ class TrailerHolonomic(Vehicle):
         # print 'input', self.signals['input']
         # print 'state', self.signals['state']
         self.lead_veh.update_signals(signals_veh)
-        pred_veh = {}
-        pred_veh['input'] = self.prediction['input']
-        pred_veh['state'] = self.prediction['state'][3:, ]
-        self.lead_veh.update_prediction(pred_veh)
         ret += self.lead_veh.draw(t)
         return ret

@@ -71,7 +71,7 @@ class Trailer(Vehicle):
         dtg_ha_tr0 = self.define_parameter('dtg_ha_tr0', 1)
         tg_ha_tr = splines[0]
         dtg_ha_tr = tg_ha_tr.derivative()
-        con_tr = [(tg_ha_tr, tg_ha_tr0, dtg_ha_tr, T*dtg_ha_tr0)]
+        con_tr = [(tg_ha_tr, tg_ha_tr0), (dtg_ha_tr, T*dtg_ha_tr0)]
         con_veh = self.lead_veh.get_initial_constraints(splines[1:])
         return con_tr + con_veh  # put in one list
 
