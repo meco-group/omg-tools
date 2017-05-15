@@ -165,7 +165,7 @@ class Vehicle(OptiChild, PlotLayer):
                         for chck in checkpoints:
                             for k in range(2):
                                 self.define_constraint(-(chck[k]+position[k]) + room_limits[k][0] + rad[0], -inf, 0., name='room_constraint_upper'+str(k))
-                                self.define_constraint((chck[k]+position[k]) - room_limits[k][1] + rad[0], -inf, 0., , name='room_constraint_lower'+str(k))
+                                self.define_constraint((chck[k]+position[k]) - room_limits[k][1] + rad[0], -inf, 0., name='room_constraint_lower'+str(k))
                     else:
                         hyp_room = environment.room['shape'].get_hyperplanes(position = environment.room['position'])
                         for l, chck in enumerate(checkpoints):
