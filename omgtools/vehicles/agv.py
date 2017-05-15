@@ -77,9 +77,9 @@ class AGV(Vehicle):
         dv_til, dtg_ha = v_til.derivative(), tg_ha.derivative()
         ddtg_ha = tg_ha.derivative(2)
         self.define_constraint(
-            v_til*(1+tg_ha**2) - self.vmax, -inf, 0.)
+            v_til*(1+tg_ha**2) - self.vmax, -inf, 0., name='vmax')
         self.define_constraint(
-            dv_til*(1+tg_ha**2) + 2*v_til*tg_ha*dtg_ha - self.T*self.amax, -inf, 0.)
+            dv_til*(1+tg_ha**2) + 2*v_til*tg_ha*dtg_ha - self.T*self.amax, -inf, 0., name='amax')
         # Alternative:
         # dx = v_til*(1-tg_ha**2)
         # dy = v_til*(2*tg_ha)
@@ -91,21 +91,21 @@ class AGV(Vehicle):
 
         # limit steering angle
         self.define_constraint(
-             -2*dtg_ha*self.length - v_til*(1+tg_ha**2)**2*np.tan(self.dmax)*self.T, -inf, 0.)
+             -2*dtg_ha*self.length - v_til*(1+tg_ha**2)**2*np.tan(self.dmax)*self.T, -inf, 0., name='dmax')
         self.define_constraint(
-             +2*dtg_ha*self.length + v_til*(1+tg_ha**2)**2*np.tan(self.dmin)*self.T, -inf, 0.)
+             +2*dtg_ha*self.length + v_til*(1+tg_ha**2)**2*np.tan(self.dmin)*self.T, -inf, 0., name='dmin')
         # limit rate of change of steering angle
         self.define_constraint(
              -2*self.length*ddtg_ha*(v_til*(1+tg_ha**2)**2)
              +2*self.length*dtg_ha*(dv_til*(1+tg_ha**2)**2
              +v_til*(4*tg_ha+4*tg_ha**3)*dtg_ha) - ((self.T**2)*v_til**2*(1+tg_ha**2)**4
-             +(2*self.length*dtg_ha)**2)*self.ddmax, -inf, 0.)
+             +(2*self.length*dtg_ha)**2)*self.ddmax, -inf, 0., name='ddmax')
         self.define_constraint(
              2*self.length*ddtg_ha*(v_til*(1+tg_ha**2)**2)
              -2*self.length*dtg_ha*(dv_til*(1+tg_ha**2)**2
              +v_til*(4*tg_ha+4*tg_ha**3)*dtg_ha) + ((self.T**2)*v_til**2*(1+tg_ha**2)**4
-             +(2*self.length*dtg_ha)**2)*self.ddmin, -inf, 0.)
-        self.define_constraint(-v_til, -inf, 0)  # model requires positive V, so positive v_tilde
+             +(2*self.length*dtg_ha)**2)*self.ddmin, -inf, 0., name='ddmin')
+        self.define_constraint(-v_til, -inf, 0, name='pos_vtil')  # model requires positive V, so positive v_tilde
 
     def get_initial_constraints(self, splines):
         # these make sure you get continuity along different iterations
@@ -120,7 +120,7 @@ class AGV(Vehicle):
         hop0 = self.define_parameter('hop0', 1)
         tdelta0 = self.define_parameter('tdelta0', 1)  # tan(delta)
         self.define_constraint(hop0*(-2.*evalspline(ddtg_ha, self.t/self.T)*self.length
-                               -tdelta0*(evalspline(dv_til, self.t/self.T)*(1.+tg_ha0**2)**2)*self.T), 0., 0.)
+                               -tdelta0*(evalspline(dv_til, self.t/self.T)*(1.+tg_ha0**2)**2)*self.T), 0., 0., name='init_delta')
         # This constraint is obtained by using l'Hopital's rule on the expression of
         # tan(delta) = 2*dtg_ha*self.length / (v_til*(1+tg_ha**2)**2)
         # this constraint is used to impose a specific steering angle when v_til = 0, e.g. when
@@ -257,6 +257,8 @@ class AGV(Vehicle):
         if (v_til[0, 0] <= 1e-4 and dtg_ha[0, 0] <= 1e-4):
             delta[0, 0] = np.arctan2(-2*ddtg_ha[0, 0]*self.length , (dv_til[0, 0]*(1+tg_ha[0, 0]**2)**2))
             ddelta[0, 0] = ddelta[0, 1]  # choose next input
+        # else:
+        #     ddelta[0, 0] = ddelta[0, 1]  # choose next input
         # middle
         for k in range(1,len(time)-1):
             if (v_til[0, k] <= 1e-3 and dtg_ha[0, k] <= 1e-3):
