@@ -61,7 +61,7 @@ class Point2pointProblem(Problem):
             for con in init_con:
                 spline, condition = con[0], con[1]
                 self.define_constraint(
-                    evalspline(spline, self.t0) - condition, 0., 0.)
+                    evalspline(spline, self.t0) - condition, 0., 0., name='veh_init_cons')
 
     # ========================================================================
     # Deploying related functions
@@ -273,7 +273,7 @@ class FreeTPoint2point(Point2pointProblem):
         self.t0 = t/T
         self.define_objective(T)
         # positivity contraint on motion time
-        self.define_constraint(-T, -inf, 0.)
+        self.define_constraint(-T, -inf, 0., name= 'positive_T')
         self.define_init_constraints()
         self.define_terminal_constraints()
 
@@ -283,7 +283,7 @@ class FreeTPoint2point(Point2pointProblem):
                 vehicle.splines[0])
             for con in (term_con + term_con_der):
                 spline, condition = con[0], con[1]
-                self.define_constraint(spline(1.) - condition, 0., 0.)
+                self.define_constraint(spline(1.) - condition, 0., 0., name='veh_term_con')
 
     def set_parameters(self, current_time):
         parameters = Point2pointProblem.set_parameters(self, current_time)
