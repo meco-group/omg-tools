@@ -58,10 +58,10 @@ class Point2pointProblem(Problem):
     def define_init_constraints(self):
         for vehicle in self.vehicles:
             init_con = vehicle.get_initial_constraints(vehicle.splines[0])
-            for con in init_con:
+            for idx, con in enumerate(init_con):
                 spline, condition = con[0], con[1]
                 self.define_constraint(
-                    evalspline(spline, self.t0) - condition, 0., 0., name='veh_init_cons')
+                    evalspline(spline, self.t0) - condition, 0., 0., name='veh_init_cons_p2p'+str(idx))
 
     # ========================================================================
     # Deploying related functions
@@ -281,9 +281,9 @@ class FreeTPoint2point(Point2pointProblem):
         for vehicle in self.vehicles:
             term_con, term_con_der = vehicle.get_terminal_constraints(
                 vehicle.splines[0])
-            for con in (term_con + term_con_der):
+            for idx, con in enumerate((term_con + term_con_der)):
                 spline, condition = con[0], con[1]
-                self.define_constraint(spline(1.) - condition, 0., 0., name='veh_term_con')
+                self.define_constraint(spline(1.) - condition, 0., 0., name='veh_term_con_p2p'+str(idx))
 
     def set_parameters(self, current_time):
         parameters = Point2pointProblem.set_parameters(self, current_time)
