@@ -132,8 +132,8 @@ class Vehicle(OptiChild, PlotLayer):
                             'eps_'+str(s)+str(k))[0]
                         obj = safety_weight*definite_integral(eps, t/T, 1.)
                         self.define_objective(obj)
-                        self.define_constraint(eps - safety_distance, -inf, 0.)
-                        self.define_constraint(-eps, -inf, 0.)
+                        self.define_constraint(eps - safety_distance, -inf, 0., name='collision_veh_safetydist'+str(k))
+                        self.define_constraint(-eps, -inf, 0., name='coll_con_veh'+str(k))
                     else:
                         eps = 0.
                     for l, chck in enumerate(checkpoints):
@@ -147,7 +147,7 @@ class Vehicle(OptiChild, PlotLayer):
                         pos[1] = position[1]*(1+tg_ha**2) + offset*(2*tg_ha)
                         con += (a[0]*pos[0] + a[1]*pos[1])
                         con += (-b+rad[l]+safety_distance-eps)*(1+tg_ha**2)
-                        self.define_constraint(con, -inf, 0)
+                        self.define_constraint(con, -inf, 0, name='collision_veh_checkpoint'+str(l)+'_'+str(k))
             # room constraints
             # check room shape and orientation,
             # check vehicle shape and orientation
@@ -164,8 +164,8 @@ class Vehicle(OptiChild, PlotLayer):
                         room_limits = environment.get_canvas_limits()
                         for chck in checkpoints:
                             for k in range(2):
-                                self.define_constraint(-(chck[k]+position[k]) + room_limits[k][0] + rad[0], -inf, 0.)
-                                self.define_constraint((chck[k]+position[k]) - room_limits[k][1] + rad[0], -inf, 0.)
+                                self.define_constraint(-(chck[k]+position[k]) + room_limits[k][0] + rad[0], -inf, 0., name='room_constraint_upper'+str(k))
+                                self.define_constraint((chck[k]+position[k]) - room_limits[k][1] + rad[0], -inf, 0., , name='room_constraint_lower'+str(k))
                     else:
                         hyp_room = environment.room['shape'].get_hyperplanes(position = environment.room['position'])
                         for l, chck in enumerate(checkpoints):
@@ -178,7 +178,7 @@ class Vehicle(OptiChild, PlotLayer):
                                 pos[1] = position[1]*(1+tg_ha**2) + offset*(2*tg_ha)  # = real_pos*(1+tg_ha**2)
                                 con += (hpp['a'][0]*pos[0] + hpp['a'][1]*pos[1])
                                 con += (-hpp['b']+rad[l])*(1+tg_ha**2)
-                                self.define_constraint(con, -inf, 0)
+                                self.define_constraint(con, -inf, 0, name='room_constraint_checkpoint'+str(l))
 
     def define_collision_constraints_3d(self, hyperplanes, environment, positions):
         # orientation for 3d not yet implemented!
@@ -352,7 +352,7 @@ class Vehicle(OptiChild, PlotLayer):
                 self.signals['state'] = np.c_[
                     self.signals['state'], state[:, 1:n_samp+1]]
                 self.signals['pose'] = np.c_[
-                self.signals['pose'], self._state2pose(state[:, 1:n_samp+1])]
+                    self.signals['pose'], self._state2pose(state[:, 1:n_samp+1])]
         # store trajectories
         if not hasattr(self, 'traj_storage'):
             self.traj_storage = {}
