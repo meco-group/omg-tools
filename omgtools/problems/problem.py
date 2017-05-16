@@ -110,8 +110,71 @@ class Problem(OptiChild, PlotLayer):
         # solve!
         t0 = time.time()
         result = self.problem(x0=var, p=par, lam_g0=dual_var, lbg=lb, ubg=ub)
+        
+        # check LICQ violations
+        
+        import casadi as C
+
+        try:
+          A = self.problem.get_function('nlp_gf_jg')(x=result["x"],p=par)["jac_g_x"]
+        except:
+          A = self.problem.get_function('nlp_jac_g')(x=result["x"],p=par)["jac_g_x"]
+        
+        # active set
+        i = np.where(np.fabs(np.array(result["lam_g"]))>1e-8)[0]
+        
+        As = A[i,:]
+     
+        r1 = np.linalg.matrix_rank(As)
+        r2 = np.linalg.matrix_rank(C.sparsify(As,1e-10))
+        
+        if r1 < min(As.shape) or r2<min(As.shape):
+          print "LICQ violations detected"
+                
+          print "Sparsity of the active set", As.dim()
+          
+          labels = [self.father._con_struct.getLabel(j) for j in i]
+          label_max = max([len(str(j)) for j in labels])
+          
+          from cStringIO import StringIO
+          import sys
+
+          class Capturing(list):
+              def __enter__(self):
+                  self._stdout = sys.stdout
+                  sys.stdout = self._stringio = StringIO()
+                  return self
+              def __exit__(self, *args):
+                  self.extend(self._stringio.getvalue().splitlines())
+                  del self._stringio    # free up some memory
+                  sys.stdout = self._stdout
+
+          print "  rank: ", r1
+          with Capturing() as out:
+            As.sparsity().spy()
+            
+          for mylabel, S in zip(labels,out):
+            print "  ", mylabel, " " * (label_max-len(str(mylabel))), S
+          
+          print "Sparsity of the active set after promoting numerical zeros", C.sparsify(As,1e-10).dim()
+
+          print "  rank: ", r2
+          with Capturing() as out:
+            C.sparsify(As,1e-10).sparsity().spy()
+
+          for mylabel, S in zip(labels,out):
+            print "  ", mylabel, " " * (label_max-len(str(mylabel))), S
+          
+
+          print "Variables:"
+          for j in self.father._var_struct.entries:
+            print "  ", j
+
+          import ipdb;ipdb.set_trace()
         t1 = time.time()
         t_upd = t1-t0
+        
+        
         self.father.set_variables(result['x'])
 
         self.father._dual_var_result = self.father._con_struct(result['lam_g'])
