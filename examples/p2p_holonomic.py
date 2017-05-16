@@ -32,20 +32,20 @@ vehicle.set_terminal_conditions([2., 2.])
 environment = Environment(room={'shape': Square(5.)})
 rectangle = Rectangle(width=3., height=0.2)
 
-environment.add_obstacle(Obstacle({'position': [-2.1, -0.5]}, shape=rectangle))
-environment.add_obstacle(Obstacle({'position': [1.7, -0.5]}, shape=rectangle))
-trajectories = {'velocity': {'time': [3., 4.],
-                             'values': [[-0.15, 0.0], [0., 0.15]]}}
-environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
-                                  simulation={'trajectories': trajectories}))
+environment.add_obstacle(Obstacle({'position': [-100.1, -0.5]}, shape=rectangle))
+# environment.add_obstacle(Obstacle({'position': [1.7, -0.5]}, shape=rectangle))
+# trajectories = {'velocity': {'time': [3., 4.],
+#                              'values': [[-0.15, 0.0], [0., 0.15]]}}
+# environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
+#                                   simulation={'trajectories': trajectories}))
 
 # create a point-to-point problem
-problem = Point2point(vehicle, environment, freeT=False)
-problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
-problem.init()
+problem = Point2point(vehicle, environment, freeT=True)
+problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57','ipopt.print_level': 4, 'ipopt.tol': 1e-12,"ipopt.fixed_variable_treatment":"make_constraint"}}}) #for gridding comparison: ,'ipopt.tol': 1e-12
+# problem.init()
 
 # create simulator
-simulator = Simulator(problem, sample_time=0.2, update_time=0.1)
+simulator = Simulator(problem, sample_time=0.01, update_time=0.1, options={'debugging': False})
 problem.plot('scene')
 vehicle.plot('input', knots=True, prediction=True, labels=['v_x (m/s)', 'v_y (m/s)'])
 
