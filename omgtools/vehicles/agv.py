@@ -56,6 +56,7 @@ class AGV(Vehicle):
             self, n_spl=2, degree=2, shapes=Rectangle(width=0.8, height=0.2), options=options)
         self.vmax = bounds['vmax'] if 'vmax' in bounds else 0.5
         self.amax = bounds['amax'] if 'amax' in bounds else 1.
+        self.amin = bounds['amin'] if 'amin' in bounds else -1.
         self.dmin = bounds['dmin'] if 'dmin' in bounds else -np.pi/6.  # steering angle [rad]
         self.dmax = bounds['dmax'] if 'dmax' in bounds else np.pi/6.
         self.ddmin = bounds['ddmin'] if 'ddmin' in bounds else -np.pi/4.  # dsteering angle [rad/s]
@@ -80,6 +81,8 @@ class AGV(Vehicle):
             v_til*(1+tg_ha**2) - self.vmax, -inf, 0., name='vmax')
         self.define_constraint(
             dv_til*(1+tg_ha**2) + 2*v_til*tg_ha*dtg_ha - self.T*self.amax, -inf, 0., name='amax')
+        self.define_constraint(
+            - dv_til*(1+tg_ha**2) - 2*v_til*tg_ha*dtg_ha + self.T*self.amin, -inf, 0., name='amin')
         # Alternative:
         # dx = v_til*(1-tg_ha**2)
         # dy = v_til*(2*tg_ha)
@@ -120,7 +123,8 @@ class AGV(Vehicle):
         hop0 = self.define_parameter('hop0', 1)
         tdelta0 = self.define_parameter('tdelta0', 1)  # tan(delta)
         self.define_constraint(hop0*(-2.*evalspline(ddtg_ha, self.t/self.T)*self.length
-                               -tdelta0*(evalspline(dv_til, self.t/self.T)*(1.+tg_ha0**2)**2)*self.T), 0., 0., name='init_delta')
+                               -tdelta0*(evalspline(dv_til, self.t/self.T)*(1.+tg_ha0**2)**2)*self.T), 0., 0., name='init_delta') #+(1-hop0)*(tdelta0*(1.+tg_ha0**2)**2*v_til0-2*dtg_ha0*self.length)
+        
         # This constraint is obtained by using l'Hopital's rule on the expression of
         # tan(delta) = 2*dtg_ha*self.length / (v_til*(1+tg_ha**2)**2)
         # this constraint is used to impose a specific steering angle when v_til = 0, e.g. when
@@ -278,6 +282,8 @@ class AGV(Vehicle):
         signals['input'] = input
         signals['pose'] = signals['state'][:3]
         signals['delta'] = delta
+        acc = dv_til*(1+tg_ha**2) + 2*v_til*tg_ha*dtg_ha
+        signals['acc'] = acc
         return signals
 
     def ode(self, state, input):
