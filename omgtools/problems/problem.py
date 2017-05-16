@@ -112,7 +112,7 @@ class Problem(OptiChild, PlotLayer):
         result = self.problem(x0=var, p=par, lam_g0=dual_var, lbg=lb, ubg=ub)
         
         # check LICQ violations
-        
+
         import casadi as C
 
         try:
@@ -121,19 +121,41 @@ class Problem(OptiChild, PlotLayer):
           A = self.problem.get_function('nlp_jac_g')(x=result["x"],p=par)["jac_g_x"]
         
         # active set
-        i = np.where(np.fabs(np.array(result["lam_g"]))>1e-8)[0]
+        i_active = np.where(np.fabs(np.array(result["lam_g"]))>1e-8)[0]
         
-        As = A[i,:]
+        As = A[i_active,:]
      
         r1 = np.linalg.matrix_rank(As)
         r2 = np.linalg.matrix_rank(C.sparsify(As,1e-10))
         
         if r1 < min(As.shape) or r2<min(As.shape):
+        
+          [U,S,V] = np.linalg.svd(As)
+          
+          Ss = np.where(np.abs(S)<1e-10)[0][0]
+          
+          rows_innocent = np.sum(np.abs(U[:,Ss:]),axis=1)<1e-10
+          
+          assert np.linalg.matrix_rank(As)-np.sum(rows_innocent)==np.linalg.matrix_rank(np.array(As)[-rows_innocent,:])
+          
+          i_licq = i_active[-rows_innocent]
+          
+          Ass = A[i_licq,:]
+       
+          r1 = np.linalg.matrix_rank(Ass)
+          r2 = np.linalg.matrix_rank(C.sparsify(Ass,1e-10))
+          
+        
           print "LICQ violations detected"
                 
-          print "Sparsity of the active set", As.dim()
+          print "Sparsity of LICQ-violating part of active set", Ass.dim()
           
-          labels = [self.father._con_struct.getLabel(j) for j in i]
+          labels = [self.father._con_struct.getLabel(j) for j in i_licq]
+          
+          for i in range(len(labels)):
+            [k,ii] = labels[i][1:-1].split(",")
+            im = self.father._con_struct.entries[self.father._con_struct.keys().index(k)].sparsity.nnz()
+            labels[i] = "%s  %d/%d" % (k, int(ii), im)
           label_max = max([len(str(j)) for j in labels])
           
           from cStringIO import StringIO
@@ -149,23 +171,21 @@ class Problem(OptiChild, PlotLayer):
                   del self._stringio    # free up some memory
                   sys.stdout = self._stdout
 
-          print "  rank: ", r1
-          with Capturing() as out:
-            As.sparsity().spy()
+          print "  rank: ", r1, "deficient directions: ", Ass.shape[0]-r1
+          with Capturing() as out1:
+            Ass.sparsity().spy()
+          with Capturing() as out2:
+            C.sparsify(Ass,1e-10).sparsity().spy()
+          
+          for mylabel, s1,s2, g, lbg, ubg, lam_g in zip(labels,out1,out2,np.array(result["g"][i_licq]),np.array(lb.cat[i_licq]),np.array(ub.cat[i_licq]),np.array(result["lam_g"][i_licq])):
             
-          for mylabel, S in zip(labels,out):
-            print "  ", mylabel, " " * (label_max-len(str(mylabel))), S
+            out1 = np.array([ord(i) for i in s1])
+            out2 = np.array([ord(i) for i in s2])
+            out = out1
+            out[out1!=out2] = ord("0")
+            out = "".join([chr(i) for i in out])
+            print "  ", mylabel, " " * (label_max-len(str(mylabel))), out, "%.3e <= %.3e <= %.3e: %.3e" % (float(lbg), float(g), float(ubg), float(lam_g))
           
-          print "Sparsity of the active set after promoting numerical zeros", C.sparsify(As,1e-10).dim()
-
-          print "  rank: ", r2
-          with Capturing() as out:
-            C.sparsify(As,1e-10).sparsity().spy()
-
-          for mylabel, S in zip(labels,out):
-            print "  ", mylabel, " " * (label_max-len(str(mylabel))), S
-          
-
           print "Variables:"
           for j in self.father._var_struct.entries:
             print "  ", j
