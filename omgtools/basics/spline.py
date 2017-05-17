@@ -403,11 +403,19 @@ class BSpline(Spline):
                 coeffs_product = (self.coeffs[pairs[0].tolist()] *
                                   other.coeffs[pairs[1].tolist()])
             except:  # cvxopt, cvxpy, assuming other.coeffs is not a variable
-                S = np.zeros((len(pairs[0]), len(self)))
-                S[[range(len(pairs[0])), pairs[0]]] = 1.
-                S = cvxopt.matrix(S)
-                coeffs_product = cvxopt.spdiag(other.coeffs[pairs[1].tolist()]) * S * self.coeffs
-                # coeffs_product = cp.vstack(*[self.coeffs[p0] * other.coeffs[p1] for (p0, p1) in zip(*pairs)])
+                # to be able to multiply normal vector a with constant obstacle position spline of degree 0 (self.pos_spline) in obstacle.py --> define_collision_constraints()
+                # This is only applicable for obstacles which won't ever move, but keep standing still. 
+                # When we keep the default self.pos_spline, the same constraints are added 3 times, because the multiplication of a with self.pos_spline gives extra knots
+                bla = self.coeffs[pairs[0].tolist()]
+                bla2 = other.coeffs[pairs[1].tolist()]  
+                if bla.is_vector() and bla2.is_vector() and bla.numel()==bla2.numel():
+                    coeffs_product = cas.vec(bla)*cas.vec(bla2)
+                else:
+                    S = np.zeros((len(pairs[0]), len(self)))
+                    S[[range(len(pairs[0])), pairs[0]]] = 1.
+                    S = cvxopt.matrix(S)
+                    coeffs_product = cvxopt.spdiag(other.coeffs[pairs[1].tolist()]) * S * self.coeffs
+                    # coeffs_product = cp.vstack(*[self.coeffs[p0] * other.coeffs[p1] for (p0, p1) in zip(*pairs)])
             return self.__class__(basis, T.dot(coeffs_product))
         else:
             try:

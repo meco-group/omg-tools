@@ -48,6 +48,7 @@ class ObstaclexD(OptiChild):
         self.shape = shape
         self.n_dim = shape.n_dim
         self.basis = BSplineBasis([0, 0, 0, 1, 1, 1], 2)
+        self.basis2 = BSplineBasis([0, 1 ], 0)
         self.initial = initial
         self.prepare_simulation(initial, simulation)
         self.A = np.array([[0., 1., 0.], [0., 0., 1.], [0., 0., 0.]])
@@ -80,6 +81,8 @@ class ObstaclexD(OptiChild):
         # pos spline over time horizon
         self.pos_spline = [BSpline(self.basis, vertcat(x0[k], 0.5*v0[k]*self.T + x0[k], x0[k] + v0[k]*self.T + 0.5*a0[k]*(self.T**2)))
                            for k in range(self.n_dim)]
+        raise ValueError('Using simplified pos_spline, using spline of degree 0')
+        self.pos_spline = [BSpline(self.basis2, x0[k]) for k in range(self.n_dim)]  # pos_spline of order zero, for obstacles which only stand still
         # checkpoints + radii
         checkpoints, _ = self.shape.get_checkpoints()
         self.checkpoints = self.define_parameter('checkpoints', len(checkpoints)*self.n_dim)
