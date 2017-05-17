@@ -23,7 +23,7 @@ from omgtools import *
 # create vehicle
 vehicle = AGV(length=0.8, options={'plot_type': 'agv'})
 # vehicle.set_options({'safety_distance': 0.3})
-vehicle.define_knots(knot_intervals=5)  # choose lower amount of knot intervals
+vehicle.define_knots(knot_intervals=10)  # choose lower amount of knot intervals
 
 vehicle.set_initial_conditions([0.8, -0.05, 0., 0.])  # x, y, theta, delta
 vehicle.set_terminal_conditions([2.45, -0.35, 0.])  # x, y, theta
@@ -35,10 +35,13 @@ environment.add_obstacle(Obstacle({'position': [1., -0.35]}, shape=rectangle))
 environment.add_obstacle(Obstacle({'position': [3.4, -0.35]}, shape=rectangle))
 
 # create a point-to-point problem
-problem0 = Point2point(vehicle, environment, freeT=True)
+horizon_time = 12
+options={}
+# options={'horizon_time': horizon_time, 'hard_term_con': True}
+problem0 = Point2point(vehicle, environment, options, freeT=True)
 # extra solver settings which may improve performance
 problem0.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57',
-    'ipopt.hessian_approximation': 'limited-memory','ipopt.print_level': 4, 'ipopt.tol': 1e-12,"ipopt.fixed_variable_treatment":"make_constraint"}}}) #for gridding comparison: ,'ipopt.tol': 1e-12
+    'ipopt.hessian_approximation': 'limited-memory','ipopt.print_level': 4, 'ipopt.tol': 1e-6,"ipopt.fixed_variable_treatment":"make_constraint"}}}) #for gridding comparison: ,'ipopt.tol': 1e-12
 problem0.init()
 
 #####ipopt
@@ -59,10 +62,12 @@ simulator = Simulator(problem0, sample_time=0.01, update_time=0.1)
 simulator.run_once(simulate=False)
 
 options={}
+# options={'horizon_time': horizon_time, 'hard_term_con': True}
 # options['codegen'] = {'build': 'shared', 'flags': '-O2'} # just-in-time compilation
 problem = Point2point(vehicle, environment, options, freeT=True)
 problem.set_options({'solver': 'blocksqp', 'solver_options': {'blocksqp': 
-	{'verbose':True, 'warmstart': True, 'qp_init' : False, 'print_header': True,
+	{'verbose':True, 'warmstart': True, 'qp_init' : False, 'print_header': True, 'opttol':1e-3, 'max_iter':100,
+	 # }}})
 	 'block_hess':1, 'hess_update':2, 'hess_lim_mem':0}}})  #1
 	 # 'block_hess':1, 'hess_update':2, 'hess_lim_mem':1 }}}) #2
 	 # 'block_hess':1, 'hess_update':1, 'fallback_update':2, 'hess_lim_mem':0 }}}) #3
@@ -74,12 +79,14 @@ problem.set_options({'solver': 'blocksqp', 'solver_options': {'blocksqp':
 
 # problem.set_options({'hard_term_con': True, 'horizon_time': 12})
 vehicle.problem = problem
-problem.init()
+# problem.init()
+simulator = Simulator(problem, sample_time=0.01, update_time=0.1, options={'debugging':False})
 problem.father._var_result = problem0.father._var_result
 problem.father._dual_var_result = problem0.father._dual_var_result
-simulator = Simulator(problem, sample_time=0.01, update_time=0.1)
 
 vehicle.plot('input', knots=True)
+vehicle.plot('state', knots=True, labels=[
+             'x (m)', 'y (m)', 'theta (rad)', 'delta (rad)'])
 problem.plot('scene', view=[20, -80])
 
 # run it!

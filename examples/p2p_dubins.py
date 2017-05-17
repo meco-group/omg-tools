@@ -16,7 +16,8 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
-
+import os, sys
+sys.path.insert(0, os.getcwd()+'/..')
 from omgtools import *
 
 # create vehicle
@@ -45,7 +46,8 @@ if solver is 'ipopt':
     options = {'solver': solver}
     problem = Point2point(vehicle, environment, options, freeT=True)
     problem.set_options(
-        {'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57', 'ipopt.hessian_approximation': 'limited-memory'
+        {'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57', 'ipopt.hessian_approximation': 'limited-memory',
+        'ipopt.print_level': 4, 'ipopt.tol': 1e-12,"ipopt.fixed_variable_treatment":"make_constraint"
                                       }}}) #'ipopt.hessian_approximation': 'limited-memory'
 if solver is 'knitro':
     options = {'solver': solver}

@@ -63,15 +63,15 @@ simulator.run_once(simulate=False)
 options={}
 # options['codegen'] = {'build': 'shared', 'flags': '-O2'} # just-in-time compilation
 problem = Point2point(vehicle, environment, options, freeT=True)
-problem.set_options({'solver': 'blocksqp', 'solver_options': {'blocksqp': {'verbose':True, 'warmstart': True, 'qp_init' : False, 'hess_lim_mem': 0, 'print_header': False}}})
+problem.set_options({'solver': 'blocksqp', 'solver_options': {'blocksqp': {'verbose':True, 'warmstart': True, 'qp_init' : False, 'hess_lim_mem': 0, 'print_header': False, 'opttol':1e-3}}})
 # options['codegen'] = {'build': 'jit', 'flags': '-O2'} # just-in-time compilation
 
 # problem.set_options({'hard_term_con': True, 'horizon_time': 12})
 vehicle.problem = problem
-problem.init()
+# problem.init()
+simulator = Simulator(problem, sample_time=0.01, update_time=0.1, options={'debugging':True})
 problem.father._var_result = problem0.father._var_result
 problem.father._dual_var_result = problem0.father._dual_var_result
-simulator = Simulator(problem, sample_time=0.01, update_time=0.1)
 
 vehicle.plot('input', knots=True)
 problem.plot('scene', view=[20, -80])

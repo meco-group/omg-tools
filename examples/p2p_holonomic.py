@@ -21,18 +21,18 @@ sys.path.insert(0,os.getcwd()+'/..')
 from omgtools import *
 
 # create vehicle
-vehicle = Holonomic()
-vehicle.set_options({'safety_distance': 0.1})
-vehicle.set_options({'ideal_prediction': False})
+options={}
+options['syslimit'] = 'norm_2'
+vehicle = Holonomic(options=options)
 
-vehicle.set_initial_conditions([-1.5, -1.5])
-vehicle.set_terminal_conditions([2., 2.])
+vehicle.set_initial_conditions([-2, 0])
+vehicle.set_terminal_conditions([2., 0])
+vehicle.define_knots(knot_intervals=10)
 
 # create environment
 environment = Environment(room={'shape': Square(5.)})
-rectangle = Rectangle(width=3., height=0.2)
 
-environment.add_obstacle(Obstacle({'position': [-100.1, -0.5]}, shape=rectangle))
+environment.add_obstacle(Obstacle({'position': [0., 0.5]}, shape=Circle(1)))
 # environment.add_obstacle(Obstacle({'position': [1.7, -0.5]}, shape=rectangle))
 # trajectories = {'velocity': {'time': [3., 4.],
 #                              'values': [[-0.15, 0.0], [0., 0.15]]}}

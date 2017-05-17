@@ -38,7 +38,7 @@ rectangle = Rectangle(width=0.8, height=0.2)
 problem0 = Point2point(vehicle, environment, freeT=True)
 # extra solver settings which may improve performance
 problem0.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57',
-    'ipopt.hessian_approximation': 'limited-memory'}}}) #for gridding comparison: ,'ipopt.tol': 1e-12
+	'ipopt.hessian_approximation': 'limited-memory','ipopt.print_level': 4, 'ipopt.tol': 1e-12,"ipopt.fixed_variable_treatment":"make_constraint"}}}) #for gridding comparison: ,'ipopt.tol': 1e-12
 problem0.init()
 
 #####ipopt

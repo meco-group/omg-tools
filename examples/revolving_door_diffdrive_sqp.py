@@ -89,16 +89,16 @@ problem.set_options({'solver': 'blocksqp', 'solver_options': {'blocksqp':
      # 'block_hess':1, 'hess_update':2, 'hess_lim_mem':0}}})  #1
      # 'block_hess':1, 'hess_update':2, 'hess_lim_mem':1 }}}) #2
      # 'block_hess':1, 'hess_update':1, 'fallback_update':2, 'hess_lim_mem':0 }}}) #3
-     # 'block_hess':1, 'hess_update':1, 'fallback_update':2, 'hess_lim_mem':1 }}}) #4
+     'block_hess':1, 'hess_update':1, 'fallback_update':2, 'hess_lim_mem':1 }}}) #4
      # 'block_hess':0, 'hess_update':2, 'hess_lim_mem':0 }}}) #5
-     'block_hess':0, 'hess_update':1, 'fallback_update':2, 'hess_lim_mem':0 }}}) #6
+     # 'block_hess':0, 'hess_update':1, 'fallback_update':2, 'hess_lim_mem':0 }}}) #6
 # options['codegen'] = {'build': 'jit', 'flags': '-O2'} # just-in-time compilation
 
 vehicle.problem = problem
-problem.init()
+# problem.init()
+simulator = Simulator(problem, sample_time=0.01, update_time=0.1, options={'debugging': False})
 problem.father._var_result = problem0.father._var_result
 problem.father._dual_var_result = problem0.father._dual_var_result
-simulator = Simulator(problem, sample_time=0.01, update_time=0.1)
 
 vehicle.plot('input', knots=True)
 problem.plot('scene', view=[20, -80])

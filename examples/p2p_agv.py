@@ -16,13 +16,14 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
-
+import os, sys
+sys.path.insert(0,os.getcwd()+'/..')
 from omgtools import *
 
 # create vehicle
 vehicle = AGV(length=0.8, options={'plot_type': 'agv'})
 # vehicle.set_options({'safety_distance': 0.3})
-vehicle.define_knots(knot_intervals=5)  # choose lower amount of knot intervals
+vehicle.define_knots(knot_intervals=10)  # choose lower amount of knot intervals
 
 vehicle.set_initial_conditions([0.8, -0.05, 0., 0.])  # x, y, theta, delta
 vehicle.set_terminal_conditions([2.45, -0.35, 0.])  # x, y, theta
@@ -43,6 +44,8 @@ problem.init()
 # create simulator
 simulator = Simulator(problem)
 problem.plot('scene')
+vehicle.plot('acc', knots=True)
+
 vehicle.plot('input', knots=True, labels=['v (m/s)', 'ddelta (rad/s)'])
 vehicle.plot('state', knots=True, labels=[
              'x (m)', 'y (m)', 'theta (rad)', 'delta (rad)'])
