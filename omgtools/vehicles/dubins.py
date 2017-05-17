@@ -60,7 +60,7 @@ class Dubins(Vehicle):
 
     def set_default_options(self):
         Vehicle.set_default_options(self)
-        self.options['stop_tol'] = 1.e-2
+        self.options['stop_tol'] = 5.e-2
         self.options['substitution'] = False
         self.options['exact_substitution'] = False
 
