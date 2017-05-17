@@ -20,17 +20,44 @@
 import numpy as np
 from deployer import Deployer
 from plotlayer import PlotLayer
+from ..basics import GraphicalDebugger
 
 
 class Simulator:
 
-    def __init__(self, problem, sample_time=0.01, update_time=0.1):
-        self.deployer = Deployer(problem, sample_time, update_time)
-        self.update_time = update_time
-        self.sample_time = sample_time
+    def __init__(self, problem, sample_time=0.01, update_time=0.1, options=None):
+        options = options or {}
+        self.set_default_options()
+        self.set_options(options)
         self.problem = problem
         PlotLayer.simulator = self
+        
+        if self.options['debugging']:
+            # pass on debugging option to problem
+            self.problem.options['debugging'] = True
+
+            # gather number of variables, constraints, parameters
+            # Todo: gather automatically
+            nx = 35 #problem.problem.size_in('x0')[0]
+            ng = 514 #problem.problem.size_in('ubg')[0]
+            np = 19 #problem.problem.size_in('p')[0]
+
+            # make graphical debugger and pass to problem
+            graph_debugger = GraphicalDebugger('debugger', self, nx, ng, np)
+            self.problem.graphical_debugger = graph_debugger
+ 
+        self.deployer = Deployer(self.problem, sample_time, update_time)
+        self.update_time = update_time
+        self.sample_time = sample_time
+
         self.reset_timing()
+
+    def set_default_options(self):
+        self.options = {'debugging': False}
+
+    def set_options(self, options):
+        if 'debugging' in options:
+            self.options['debugging'] = options['debugging']
 
     def set_problem(self, problem):
         self.deployer.set_problem(problem)
@@ -40,7 +67,7 @@ class Simulator:
         if init_reset:
             self.deployer.reset()
         stop = False
-        while not stop:
+        while not stop:            
             stop = self.update()
             if stop:
                 update_time = float(self.problem.vehicles[0].signals['time'][:, -1] - self.current_time)

@@ -31,6 +31,8 @@ class Deployer:
         self.iteration0 = True
 
     def set_problem(self, problem):
+        if not problem.initialized:
+            problem.init()
         self.problem = problem
 
     def reset(self):
