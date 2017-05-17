@@ -37,6 +37,7 @@ class Problem(OptiChild, PlotLayer):
         self.set_options(options)
         self.iteration = 0
         self.update_times = []
+        self.initialized = False
 
         # first add children and construct father, this allows making a
         # difference between the simulated and the processed vehicles,
@@ -87,6 +88,7 @@ class Problem(OptiChild, PlotLayer):
         self.problem, buildtime = self.father.construct_problem(self.options)
         self.father.init_transformations(self.init_primal_transform,
                                          self.init_dual_transform)
+        self.initialized = True
         return buildtime
 
     # ========================================================================
@@ -119,9 +121,18 @@ class Problem(OptiChild, PlotLayer):
           A = self.problem.get_function('nlp_gf_jg')(x=result["x"],p=par)["jac_g_x"]
         except:
           A = self.problem.get_function('nlp_jac_g')(x=result["x"],p=par)["jac_g_x"]
-        
+
+        import casadi.tools as CT
+        xs = CT.struct_symSX(self.father._var_struct)
+        pars = CT.struct_symSX(self.father._par_struct)
+          
+        self.problem.get_function('nlp_g')(x=xs,p=pars)["g"]
+        xs = C.SX.sym("x", result["x"].shape[0])
+        As = self.problem.get_function('nlp_jac_g')(x=xs,p=pars)["jac_g_x"]
+        gs = self.problem.get_function('nlp_g')(x=xs,p=pars)["g"]
+
         # active set
-        i_active = np.where(np.fabs(np.array(result["lam_g"]))>1e-8)[0]
+        i_active = np.where(np.fabs(np.array(result["lam_g"]))>1e-5)[0]
         
         As = A[i_active,:]
      
@@ -190,7 +201,7 @@ class Problem(OptiChild, PlotLayer):
           for j in self.father._var_struct.entries:
             print "  ", j
 
-          import ipdb;ipdb.set_trace()
+        import ipdb;ipdb.set_trace()
         t1 = time.time()
         t_upd = t1-t0
         
