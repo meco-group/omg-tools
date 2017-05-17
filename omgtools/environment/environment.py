@@ -100,7 +100,7 @@ class Environment(OptiChild, PlotLayer):
                     b = self.define_spline_variable(
                         'b'+'_'+vehicle.label+'_'+str(k)+str(l), 1, basis=basis)[0]
                     self.define_constraint(
-                        sum([a[p]*a[p] for p in range(self.n_dim)])-1, -inf, 0.)
+                        sum([a[p]*a[p] for p in range(self.n_dim)])-1, -inf, 0., name='collision_a_norm')
                     hyp_veh[shape].append({'a': a, 'b': b})
                     hyp_obs[obstacle].append({'a': a, 'b': b})
         for obstacle in self.obstacles:

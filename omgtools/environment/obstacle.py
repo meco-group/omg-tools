@@ -281,7 +281,7 @@ class Obstacle2D(ObstaclexD):
                 ypos = self.pos_spline[
                     1]*self.gon_weight + self.checkpoints[l*self.n_dim+0]*self.sin + self.checkpoints[l*self.n_dim+1]*self.cos
                 self.define_constraint(-(a[0]*xpos + a[1] *
-                                         ypos) + self.gon_weight*(b+self.rad[l]), -inf, 0.)
+                                         ypos) + self.gon_weight*(b+self.rad[l]), -inf, 0., name='collision_obstacle'+str(l))
 
     def set_parameters(self, current_time):
         parameters = ObstaclexD.set_parameters(self, current_time)

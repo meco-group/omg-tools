@@ -49,19 +49,19 @@ class Holonomic(Vehicle):
         ddx, ddy = x.derivative(2), y.derivative(2)
         if self.options['syslimit'] is 'norm_2':
             self.define_constraint(
-                (dx**2+dy**2) - (self.T**2)*self.vmax**2, -inf, 0.)
+                (dx**2+dy**2) - (self.T**2)*self.vmax**2, -inf, 0., name='holonomic_vmax_norm2')
             self.define_constraint(
-                (ddx**2+ddy**2) - (self.T**4)*self.amax**2, -inf, 0.)
+                (ddx**2+ddy**2) - (self.T**4)*self.amax**2, -inf, 0., name='holonomic_amax_norm2')
         elif self.options['syslimit'] is 'norm_inf':
-            self.define_constraint(-dx + self.T*self.vmin, -inf, 0.)
-            self.define_constraint(-dy + self.T*self.vmin, -inf, 0.)
-            self.define_constraint(dx - self.T*self.vmax, -inf, 0.)
-            self.define_constraint(dy - self.T*self.vmax, -inf, 0.)
+            self.define_constraint(-dx + self.T*self.vmin, -inf, 0., name='holonomic_vmin_norminf')
+            self.define_constraint(-dy + self.T*self.vmin, -inf, 0., name='holonomic_vmin_norminf')
+            self.define_constraint(dx - self.T*self.vmax, -inf, 0., name='holonomic_vmax_norminf')
+            self.define_constraint(dy - self.T*self.vmax, -inf, 0., name='holonomic_vmax_norminf')
 
-            self.define_constraint(-ddx + (self.T**2)*self.amin, -inf, 0.)
-            self.define_constraint(-ddy + (self.T**2)*self.amin, -inf, 0.)
-            self.define_constraint(ddx - (self.T**2)*self.amax, -inf, 0.)
-            self.define_constraint(ddy - (self.T**2)*self.amax, -inf, 0.)
+            self.define_constraint(-ddx + (self.T**2)*self.amin, -inf, 0., name='holonomic_amax_norminf')
+            self.define_constraint(-ddy + (self.T**2)*self.amin, -inf, 0., name='holonomic_amax_norminf')
+            self.define_constraint(ddx - (self.T**2)*self.amax, -inf, 0., name='holonomic_amax_norminf')
+            self.define_constraint(ddy - (self.T**2)*self.amax, -inf, 0., name='holonomic_amax_norminf')
         else:
             raise ValueError(
                 'Only norm_2 and norm_inf are defined as system limit.')
