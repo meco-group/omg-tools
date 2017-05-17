@@ -604,7 +604,7 @@ class OptiChild(object):
     def set_value(self, name, value):
         self._values[name] = value
 
-    def define_constraint(self, expr, lb, ub, shutdown=False, name=None):
+    def define_constraint(self, expr, lb, ub, shutdown=False, name=None, skip=[]):
         if isinstance(expr, (float, int)):
             return
         if name is None:
@@ -613,10 +613,19 @@ class OptiChild(object):
             name = name + '_' + str(self._constraint_cnt)
         self._constraint_cnt += 1
         if isinstance(expr, BSpline):
-            self._constraints[name] = (
-                expr.coeffs, lb*np.ones(expr.coeffs.shape[0]),
-                ub*np.ones(expr.coeffs.shape[0]), shutdown)
-            self._splines_dual[name] = {'basis': expr.basis}
+            if not skip:  # don't skip coeffs
+                self._constraints[name] = (
+                    expr.coeffs, lb*np.ones(expr.coeffs.shape[0]),
+                    ub*np.ones(expr.coeffs.shape[0]), shutdown)
+                self._splines_dual[name] = {'basis': expr.basis}
+            else:
+                new_coeffs = expr.coeffs
+                new_coeffs = new_coeffs[skip[0]:-skip[1]]
+                self._constraints[name] = (
+                    new_coeffs, lb*np.ones(new_coeffs.shape[0]),
+                    ub*np.ones(new_coeffs.shape[0]), shutdown)
+                self._splines_dual[name] = {'basis': expr.basis}
+
         else:
             self._constraints[name] = (expr, lb, ub, shutdown)
         plus = self._constraints[name][0].size()[0]
