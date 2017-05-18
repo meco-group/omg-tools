@@ -17,9 +17,6 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 import sys, os
-
-from omgtools.vehicles.trailertest import TrailerTest
-
 sys.path.insert(0, os.getcwd()+"/..")
 from omgtools import *
 
@@ -73,23 +70,20 @@ options['safety_distance'] = 0.1
 vehicle = HolonomicOrient(options=options)
 
 # We provide our vehicle with a desired initial and terminal position:
-vehicle.set_initial_conditions([-1.5, -1.5,0.])
-vehicle.set_terminal_conditions([2, -1.5,0.])
+vehicle.set_initial_conditions([2., 5., 0.])  # input orientation in deg
+#vehicle.set_terminal_conditions([3., 3., 90.])
+vehicle.set_terminal_conditions([8., 5., 0.]) #eerste waarde naar rechts en tweede omhoog
 
-# Now, we create an environment
-# An environment is determined by a room with certain shape
-environment = Environment(room={'shape': Square(5.)})
-# Also we can add some obstacles
-# Let's first define a rectangular shape
-rectangle = Rectangle(width=0.2, height=2.)
-# We create 2 obstacles with this shape and with certain initial position
-# (we could also provide an initial velocity or acceleration)
-environment.add_obstacle(Obstacle({'position': [-2.1, -0.5]}, shape=rectangle))
-environment.add_obstacle(Obstacle({'position': [1.7, -0.5]}, shape=rectangle))
+
+environment = Environment(room={'shape': Square(10.), 'position': [5.,5.]})
+rectangle = Rectangle(width=.2, height=4.2)
+
+environment.add_obstacle(Obstacle({'position': [3., 3.]}, shape=rectangle))
+environment.add_obstacle(Obstacle({'position': [6., 7.]}, shape=rectangle))
 # Let's also add a circular obstacle which will suddenly start to move.
 # Therefore we define a trajectory in velocity:
-trajectory = {'velocity': {'time': [3., 4.],
-                           'values': [[-0.15, 0.0], [0., 0.15]]}}
+trajectory = {'position': {'time': [3.],
+                           'values': [[2.0, 2.0]]}}
 # Here we defined the time-axis and the corresponding values for velocity.
 # Note that these values should be interpreted relatively: eg. at time 3, we
 # _add_ an extra velocity of [-0.15, 0.0].
