@@ -25,9 +25,9 @@ from omgtools import *
 vehicle = Holonomic(shapes=Circle(0.2))
 number_knot_intervals = 9.
 vehicle.define_knots(knot_intervals=number_knot_intervals)  # adapt amount of knot intervals
-vehicle.set_initial_conditions([3., 3.])  # input orientation in deg
+vehicle.set_initial_conditions([2., 5.])  # input orientation in deg
 #vehicle.set_terminal_conditions([3., 3., 90.])
-vehicle.set_terminal_conditions([7., 7.]) #eerste waarde naar rechts en tweede omhoog
+vehicle.set_terminal_conditions([8., 5.]) #eerste waarde naar rechts en tweede omhoog
 # create trailer
 trailer = TrailerHolonomic(lead_veh=vehicle,  shapes=Rectangle(0.3,0.2), l_hitch = 0.6)  # ldie limiet boeit niet, wordt niet in rekening gebracht.
 # Note: the knot intervals of lead_veh and trailer should be the same
@@ -40,37 +40,37 @@ environment = Environment(room={'shape': Square(10.), 'position': [5.,5.]})
 rectangle = Rectangle(width=.2, height=4.)
 
 environment.add_obstacle(Obstacle({'position': [3., 3.]}, shape=rectangle))
-environment.add_obstacle(Obstacle({'position': [6., 7.]}, shape=rectangle))
-# trajectory = {'position': {'time': [3.],
-#                            'values': [[-0.0 , -1.5]]}}
-# # Here we defined the time-axis and the corresponding values for velocity.
-# # Note that these values should be interpreted relatively: eg. at time 3, we
-# # _add_ an extra velocity of [-0.15, 0.0].
-# # You could also change position and acceleration in a similar way.
+#environment.add_obstacle(Obstacle({'position': [6., 7.]}, shape=rectangle))
+trajectory = {'position': {'time': [3.],
+                           'values': [[-0.0 , -1.]]}}
+# Here we defined the time-axis and the corresponding values for velocity.
+# Note that these values should be interpreted relatively: eg. at time 3, we
+# _add_ an extra velocity of [-0.15, 0.0].
+# You could also change position and acceleration in a similar way.
 
-# # trajectories are put in a simulation dictionary
-# simulation = {'trajectories': trajectory}
-# # here we can give a different simulation model, by providing an A and B matrix
-# # simulation['model'] = {'A': A, 'B': B}
-# # The behaviour of an obstacle is expressed by x_dot = A*x + B*u
-# # The state x is composed of [position, velocity, acceleration]
-# # The input can be provided via a trajectory (is by default 0)
-# # simulation['trajectories']['input'] = {'time': time, 'values': values}
-# # simulation['trajectories']['input'] = {'time': time, 'values': values}
-# # Here the values should be interpreted as absolute.
+# trajectories are put in a simulation dictionary
+simulation = {'trajectories': trajectory}
+# here we can give a different simulation model, by providing an A and B matrix
+# simulation['model'] = {'A': A, 'B': B}
+# The behaviour of an obstacle is expressed by x_dot = A*x + B*u
+# The state x is composed of [position, velocity, acceleration]
+# The input can be provided via a trajectory (is by default 0)
+# simulation['trajectories']['input'] = {'time': time, 'values': values}
+# simulation['trajectories']['input'] = {'time': time, 'values': values}
+# Here the values should be interpreted as absolute.
 
-# environment.add_obstacle(Obstacle({'position': [6., 8.]}, shape=rectangle,
-#                                   simulation=simulation))
+environment.add_obstacle(Obstacle({'position': [6., 8.]}, shape=rectangle,
+                                  simulation=simulation))
 
 
 # environment.add_obstacle(Obstacle({'position': [2., 1.5]}, shape=rectangle))
 # create a point-to-point problem
-problem = Point2point(trailer, environment, freeT=False)  # pass trailer to problem
+problem = Point2point(trailer, environment, freeT=True)  # pass trailer to problem
 # todo: isn't there are a cleaner way?
 problem.father.add(vehicle)  # add vehicle to optifather, such that it knows the trailer variables
 # extra solver settings which may improve performance https://www.coin-or.org/Ipopt/documentation/node53.html#SECTION0001113010000000000000
 #problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57','ipopt.print_level': 4}}})
-#problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
+problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 #problem.set_options({'solver_options': {'ipopt': {'ipopt.print_level': 4}}})
 #problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 problem.init()

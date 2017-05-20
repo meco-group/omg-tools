@@ -29,14 +29,14 @@ from omgtools import *
 
 knots= 9
 # create vehicle
-vehicle = Dubins(shapes=Square(0.4), bounds={'vmax': 0.8, 'wmax': 100., 'wmin': -100.})  # in deg
+vehicle = Dubins(shapes=Circle(0.2), bounds={'vmax': 0.8, 'wmax': 60., 'wmin': -60.})  # in deg
 vehicle.define_knots(knot_intervals = knots)  # adapt amount of knot intervals was eerst 9
 vehicle.set_initial_conditions([2., 5., 0.])  # input orientation in deg
 #vehicle.set_terminal_conditions([3., 3., 90.])
 vehicle.set_terminal_conditions([8., 5., 0.]) #eerste waarde naar rechts en tweede omhoog
 
 # create trailer
-trailer = TrailerJoland(lead_veh=vehicle,  shapes=Square(0.4), l_hitch = 0.3, l_hitch1 = 0.4,bounds={'tmax': 89., 'tmin': -89.})  # limit angle between vehicle and trailer
+trailer = TrailerJoland(lead_veh=vehicle,  shapes=Rectangle(0.3,0.2), l_hitch = 0.215, l_hitch1 = 0.2075,bounds={'tmax': 90., 'tmin': -90.})  # limit angle between vehicle and trailer
 # Note: the knot intervals of lead_veh and trailer should be the same
 trailer.define_knots(knot_intervals=knots)  # adapt amount of knot intervals was eerst 9
 trailer.set_initial_conditions([-10.])  # input orientation in deg
@@ -44,7 +44,7 @@ trailer.set_initial_conditions([-10.])  # input orientation in deg
 
  # create environment
 environment = Environment(room={'shape': Square(10.), 'position': [5.,5.]})
-rectangle = Rectangle(width=.2, height=4.)
+rectangle = Rectangle(width=.2, height=3.8)
 
 environment.add_obstacle(Obstacle({'position': [3., 3.]}, shape=rectangle))
 environment.add_obstacle(Obstacle({'position': [6., 7.]}, shape=rectangle))
@@ -55,7 +55,9 @@ problem = Point2point(trailer, environment, freeT=True)  # pass trailer to probl
 # todo: isn't there are a cleaner way?
 problem.father.add(vehicle)  # add vehicle to optifather, such that it knows the trailer variables
 # extra solver settings which may improve performance https://www.coin-or.org/Ipopt/documentation/node53.html#SECTION0001113010000000000000
-problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57',    'ipopt.hessian_approximation': 'limited-memory'}}})
+#problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
+problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57','ipopt.hessian_approximation': 'limited-memory'}}})
+
 #problem.set_options({'solver_options': {'ipopt': {'ipopt.hessian_approximation': 'limited-memory'}}})
 
 problem.init()
@@ -67,5 +69,5 @@ trailer.plot('input', knots=True, labels=['v (m/s)', 'ddelta (rad/s)'])
 trailer.plot('state', knots=True, labels=['x_tr (m)', 'y_tr (m)', 'theta_tr (rad)', 'x_veh (m)', 'y_veh (m)', 'theta_veh (rad)'])
 
 # run it!
-simulator.run_once()
-problem.save_movie('scene', format='gif', name='trailer_joland_nieuwe_ode_recht_obstakel2', number_of_frames=100, movie_time=5, axis=False)
+simulator.run()
+problem.save_movie('scene', format='gif', name='trailer_nh_joland_ma57', number_of_frames=100, movie_time=5, axis=False)

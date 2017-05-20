@@ -90,6 +90,8 @@ class Point2pointProblem(Problem):
             print '%-18s %6g ms' % ('Av update time:',
                                     (sum(self.update_times)*1000. /
                                      len(self.update_times)))
+            print '%-18s %6g ms' % ('median update time:',
+                                    (np.median(self.update_times)*1000.))
 
     def compute_objective(self):
         raise NotImplementedError('Please implement this method!')

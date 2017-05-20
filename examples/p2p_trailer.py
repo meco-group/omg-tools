@@ -21,34 +21,38 @@ sys.path.insert(0, os.getcwd()+"/..")
 from omgtools import *
 
 # create vehicle
+
 vehicle = Dubins(shapes=Circle(0.2), bounds={'vmax': 0.8, 'wmax': 60., 'wmin': -60.})  # in deg
-vehicle.define_knots(knot_intervals=9)  # adapt amount of knot intervals
-vehicle.set_initial_conditions([0., 0., 0.])  # input orientation in deg
+vehicle.define_knots(knot_intervals=15)  # adapt amount of knot intervals
+vehicle.set_initial_conditions([2., 5., 0.])  # input orientation in deg
 #vehicle.set_terminal_conditions([3., 3., 90.])
-vehicle.set_terminal_conditions([3., 3., 0.])
+vehicle.set_terminal_conditions([8., 5., 0.]) #eerste waarde naar rechts en tweede omhoog
 
 # create trailer
-trailer = Trailer(lead_veh=vehicle,  shapes=Rectangle(0.2, 0.2), l_hitch = 0.6,
-                  bounds={'tmax': 45., 'tmin': -45.})  # limit angle between vehicle and trailer
+trailer = Trailer(lead_veh=vehicle,  shapes=Rectangle(0.3, 0.2), l_hitch = 0.6,
+                  bounds={'tmax': 89., 'tmin': -89.})  # limit angle between vehicle and trailer
 # Note: the knot intervals of lead_veh and trailer should be the same
-trailer.define_knots(knot_intervals=9)  # adapt amount of knot intervals
+trailer.define_knots(knot_intervals=15)  # adapt amount of knot intervals
 trailer.set_initial_conditions([0.])  # input orientation in deg
-trailer.set_terminal_conditions([0.])  # this depends on the application e.g. driving vs parking
+#trailer.set_terminal_conditions([0.])  # this depends on the application e.g. driving vs parking
 
 # create environment
-environment = Environment(room={'shape': Square(7.), 'position': [1.5, 1.5]})
-rectangle = Rectangle(width=.2, height=3)
+environment = Environment(room={'shape': Square(10.), 'position': [5.,5.]})
+rectangle = Rectangle(width=.2, height=4.)
 
-environment.add_obstacle(Obstacle({'position': [1.5, 5.]}, shape=rectangle))
+environment.add_obstacle(Obstacle({'position': [3., 3.]}, shape=rectangle))
+environment.add_obstacle(Obstacle({'position': [6., 7.]}, shape=rectangle))
 
 
 # create a point-to-point problem
 problem = Point2point(trailer, environment, freeT=True)  # pass trailer to problem
 # todo: isn't there are a cleaner way?
-problem.father.add(vehicle)  # add vehicle to optifather, such that it knows the trailer variables
+problem.father.add(vehicle)  # add vehicle to optifather, such that it knows the trailer variablesttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt
 # extra solver settings which may improve performance https://www.coin-or.org/Ipopt/documentation/node53.html#SECTION0001113010000000000000
 #problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57','ipopt.print_level': 4}}})
-problem.set_options({'solver_options': {'ipopt': {'ipopt.hessian_approximation': 'limited-memory'}}})
+#problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57','ipopt.hessian_approximation': 'limited-memory'}}})
+problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
+
 problem.init()
 
 # create simulator
