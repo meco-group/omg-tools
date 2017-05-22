@@ -37,7 +37,7 @@ environment.add_obstacle(Obstacle({'position': [3., 3.]}, shape=Circle(0.5),
 # create a point-to-point problem
 problem0 = Point2point(vehicle, environment, freeT=True)
 # extra solver settings which may improve performance
-problem0.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
+problem0.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57', 'ipopt.fixed_variable_treatment':'make_constraint'}}})
 
 problem0.init()
 
@@ -63,7 +63,15 @@ simulator.run_once(simulate=False)
 options={}
 # options['codegen'] = {'build': 'shared', 'flags': '-O2'} # just-in-time compilation
 problem = Point2point(vehicle, environment, options, freeT=True)
-problem.set_options({'solver': 'blocksqp', 'solver_options': {'blocksqp': {'verbose':True, 'warmstart': True, 'qp_init' : False, 'hess_lim_mem': 0, 'print_header': False, 'opttol':1e-3}}})
+problem.set_options({'solver': 'blocksqp', 'solver_options': {'blocksqp': {'verbose':True, 'warmstart': True, 'qp_init' : False,
+                     'print_header': False, 'opttol':1e-3, 'max_iter':20,
+                     'block_hess':1, 'hess_update':2, 'hess_lim_mem':0}}})  #1
+                     # 'block_hess':1, 'hess_update':2, 'hess_lim_mem':1 }}}) #2
+                     # 'block_hess':1, 'hess_update':1, 'fallback_update':2, 'hess_lim_mem':0 }}}) #3
+                     # 'block_hess':1, 'hess_update':1, 'fallback_update':2, 'hess_lim_mem':1 }}}) #4
+                     # 'block_hess':0, 'hess_update':2, 'hess_lim_mem':0 }}}) #5
+                     # 'block_hess':0, 'hess_update':1, 'fallback_update':2, 'hess_lim_mem':0 }}}) #6
+
 # options['codegen'] = {'build': 'jit', 'flags': '-O2'} # just-in-time compilation
 
 # problem.set_options({'hard_term_con': True, 'horizon_time': 12})
