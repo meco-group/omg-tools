@@ -130,6 +130,16 @@ OMG-tools implemented on real-life motion systems. Click on a picture to watch t
 </td>
 </tr>
 
+<tr>
+<td align="center" valign="center" style="background-color:rgba(0, 0, 0, 0);">
+<a href="https://www.youtube.com/watch?v=dWAzfLd_wec">
+<img src="https://img.youtube.com/vi/dWAzfLd_wec/0.jpg" alt="Spline-based motion planning in a vast environment"/>
+</a>
+</td>
+<td align="center" valign="center" bgcolor="#FFFFFF">
+</td>
+</tr>
+
 </table>
 
 
