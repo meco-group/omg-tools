@@ -66,7 +66,8 @@ class Fleet(PlotLayer):
                              'for each vehicle.')
         cth, sth = np.cos(-orientation), np.sin(-orientation)
         for l, config in enumerate(configuration):
-            config = [config[0]*cth-config[1]*sth, config[0]*sth+config[1]*cth]
+            if len(config) == 2:
+                config = [config[0]*cth-config[1]*sth, config[0]*sth+config[1]*cth]
             if isinstance(config, dict):
                 self.configuration[self.vehicles[l]] = config
             if isinstance(config, list):
