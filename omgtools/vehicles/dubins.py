@@ -138,8 +138,10 @@ class Dubins(Vehicle):
             y = self.integrate_once(dy, pos0[1], t, T)
         eps = 1.e-2
         center = self.define_spline_variable('formation_center', self.n_dim)
-        self.define_constraint((x-center[0])*(1+tg_ha**2) + rel_pos[0]*2*tg_ha + rel_pos[1]*(1-tg_ha**2), -eps, eps)
-        self.define_constraint((y-center[1])*(1+tg_ha**2) + rel_pos[1]*2*tg_ha - rel_pos[0]*(1-tg_ha**2), -eps, eps)
+        # self.define_constraint((x-center[0])*(1+tg_ha**2) + rel_pos[0]*2*tg_ha + rel_pos[1]*(1-tg_ha**2), -eps, eps)
+        # self.define_constraint((y-center[1])*(1+tg_ha**2) + rel_pos[1]*2*tg_ha - rel_pos[0]*(1-tg_ha**2), -eps, eps)
+        self.define_constraint((x-center[0])*(1+tg_ha**2) - rel_pos[1]*2*tg_ha + rel_pos[0]*(1-tg_ha**2), -eps, eps)
+        self.define_constraint((y-center[1])*(1+tg_ha**2) + rel_pos[0]*2*tg_ha + rel_pos[1]*(1-tg_ha**2), -eps, eps)
         for d in range(1, self.degree+1):
             for c in center:
                 self.define_constraint(c.derivative(d)(1.), 0., 0.)

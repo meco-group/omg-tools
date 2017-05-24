@@ -19,6 +19,7 @@
 
 from vehicle import Vehicle
 from ..execution.plotlayer import PlotLayer
+import numpy as np
 
 
 def get_fleet_vehicles(var):
@@ -58,12 +59,14 @@ class Fleet(PlotLayer):
                                  ' not understood.')
             self.nghb_list[vehicle] = [self.vehicles[ind] for ind in nghb_ind]
 
-    def set_configuration(self, configuration):
+    def set_configuration(self, configuration, orientation=0.):
         self.configuration = {}
         if len(configuration) != self.N:
             raise ValueError('You should provide configuration info ' +
                              'for each vehicle.')
+        cth, sth = np.cos(-orientation), np.sin(-orientation)
         for l, config in enumerate(configuration):
+            config = [config[0]*cth-config[1]*sth, config[0]*sth+config[1]*cth]
             if isinstance(config, dict):
                 self.configuration[self.vehicles[l]] = config
             if isinstance(config, list):

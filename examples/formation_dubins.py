@@ -34,7 +34,7 @@ terminal_positions = [0.5, 1.5] + configuration
 init_pose = np.c_[init_positions, (np.pi/2.)*np.ones(N)]
 terminal_pose = np.c_[terminal_positions, (np.pi/2.)*np.ones(N)]
 
-fleet.set_configuration(configuration.tolist())
+fleet.set_configuration(configuration.tolist(), orientation=np.pi/2.)
 fleet.set_initial_conditions(init_pose.tolist())
 fleet.set_terminal_conditions(terminal_pose.tolist())
 
