@@ -1,0 +1,1 @@
+p3dx_motionplanner/P3DXTrajectory[] trajectories

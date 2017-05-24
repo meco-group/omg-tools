@@ -1,0 +1,9 @@
+<launch>
+    <arg name="robot_name"/>
+    <arg name="init_pose"/>
+    <param name="robot_description"
+        command="$(find xacro)/xacro.py '$(find p3dx_description)/urdf/pioneer3dx.xacro'" />
+    <node name="spawn_robot" pkg="gazebo_ros" type="spawn_model"
+        args="$(arg init_pose) -urdf -param robot_description -model $(arg robot_name)"
+        respawn="false" output="screen" />
+</launch>

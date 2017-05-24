@@ -1,0 +1,262 @@
+<?xml version="1.0"?>
+
+<!--
+This is the xacro description of a Pioneer 3DX, to be used in rviz and gazebo.
+Copyright (C) 2013 Rafael Berkvens rafael.berkvens@uantwerpen.be
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+This project is based on work by Tracy Davies, where it was in turn based on
+work original in ucs-ros-pkg.
+ -->
+
+<robot name="pioneer3dx" xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <!-- import all gazebo-customization elements, including gazebo colors -->
+  <xacro:include filename="$(find p3dx_description)/urdf/pioneer3dx.gazebo"/>
+  <!-- import the pioneer 3dx's wheels -->
+  <xacro:include filename="$(find p3dx_description)/urdf/pioneer3dx_wheel.xacro" />
+
+  <!-- chassis -->
+	<link name="base_link">
+		<inertial>
+			<mass value="3.5" />
+			<!--<origin xyz="-0.025 0 -0.223"/> -->
+			<origin xyz="-0.05 0 0" />
+			<inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1" />
+		</inertial>
+
+		<visual name="base_visual">
+			<origin xyz="-0.045 0 0.148" rpy="0 0 0" />
+			<geometry name="pioneer_geom">
+				<mesh filename="package://p3dx_description/meshes/chassis.stl" />
+			</geometry>
+			<material name="ChassisRed">
+				<color rgba="0.851 0.0 0.0 1.0" />
+			</material>
+		</visual>
+
+		<collision>
+			<origin xyz="-0.045 0 0.145" rpy="0 0 0" />
+			<geometry>
+				<box size="0.35 0.25 0.14" />
+			</geometry>
+		</collision>
+	</link>
+
+  <!-- top_plate -->
+	<link name="top_plate">
+		<inertial>
+			<mass value="0.01" />
+			<origin xyz="0 0 0" />
+			<inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1" />
+		</inertial>
+
+		<visual name="base_visual">
+			<origin xyz="0 0 0" rpy="0 0 0" />
+			<geometry name="top_geom">
+				<mesh filename="package://p3dx_description/meshes/top.stl" />
+			</geometry>
+
+			<material name="TopBlack">
+				<color rgba="0.038 0.038 0.038 1.0" />
+			</material>
+		</visual>
+
+		<collision>
+			<origin xyz="0.0 0 0" rpy="0 0 0" />
+			<geometry name="pioneer_geom">
+				<box size="0.45 0.38 0.01" />
+			</geometry>
+		</collision>
+	</link>
+
+	<joint name="base_top_joint" type="fixed">
+		<origin xyz="-0.045 0 0.234" rpy="0 0 0" />
+		<parent link="base_link" />
+		<child link="top_plate" />
+	</joint>
+
+  <!-- swivel -->
+	<link name="swivel">
+		<inertial>
+			<mass value="0.1" />
+			<origin xyz="0 0 0" />
+			<inertia ixx="0.01" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.01" />
+		</inertial>
+
+		<visual name="base_visual">
+			<origin xyz="0 0 0" rpy="0 0 0" />
+			<geometry name="pioneer_geom">
+				<mesh filename="package://p3dx_description/meshes/swivel.stl" />
+			</geometry>
+			<material name="swivel">
+				<color rgba="0.5 0.5 0.5 1" />
+			</material>
+		</visual>
+
+		<collision>
+			<origin xyz="0 0 0" rpy="0 0 0" />
+			<geometry>
+				<box size="0 0 0" />
+			</geometry>
+		</collision>
+	</link>
+
+	<joint name="base_swivel_joint" type="continuous">
+		<origin xyz="-0.185 0 0.055" rpy="0 0 0" />
+		<axis xyz="0 0 1" />
+		<anchor xyz="0 0 0" />
+		<limit effort="100" velocity="100" k_velocity="0" />
+		<joint_properties damping="0.0" friction="0.0" />
+		<parent link="base_link" />
+		<child link="swivel" />
+	</joint>
+
+  <!-- center_hubcap -->
+	<link name="center_hubcap">
+		<inertial>
+			<mass value="0.01" />
+			<origin xyz="0 0 0" />
+			<inertia ixx="0.012411765597" ixy="-0.000711733678" ixz="0.00050272983"
+				iyy="0.015218160428" iyz="-0.000004273467" izz="0.011763977943" />
+		</inertial>
+
+		<visual name="base_visual">
+			<origin xyz="0 0 0" rpy="0 0 0" />
+			<geometry name="pioneer_geom">
+				<mesh filename="package://p3dx_description/meshes/center_hubcap.stl" />
+			</geometry>
+			<material name="swivel">
+				<color rgba="0.5 0.5 0.5 1" />
+			</material>
+		</visual>
+
+		<collision>
+			<origin xyz="0 0 0" rpy="0 0 0" />
+			<geometry>
+				<box size="0 0 0" />
+			</geometry>
+		</collision>
+	</link>
+
+	<joint name="swivel_hubcap_joint" type="continuous">
+		<origin xyz="-0.026 0 -0.016" rpy="0 0 0" />
+		<axis xyz="0 1 0" />
+		<anchor xyz="0 0 0" />
+		<limit effort="100" velocity="100" k_velocity="0" />
+		<joint_properties damping="0.0" friction="0.0" />
+		<parent link="swivel" />
+		<child link="center_wheel" />
+	</joint>
+
+  <!-- center_wheel -->
+	<link name="center_wheel">
+		<inertial>
+			<mass value="0.1" />
+			<origin xyz="0 0 0" />
+			<inertia ixx="0.012411765597" ixy="-0.000711733678" ixz="0.00050272983"
+				iyy="0.015218160428" iyz="-0.000004273467" izz="0.011763977943" />
+		</inertial>
+
+		<visual name="base_visual">
+			<origin xyz="0 0 0" rpy="0 0 0" />
+			<geometry name="pioneer_geom">
+				<mesh filename="package://p3dx_description/meshes/center_wheel.stl" />
+			</geometry>
+			<material name="WheelBlack">
+				<color rgba="0.117 0.117 0.117 1" />
+			</material>
+		</visual>
+
+		<collision>
+			<origin xyz="0 0 0" rpy="${-3.1415927/2.0} 0 0" />
+			<geometry>
+				<cylinder radius="0.0375" length="0.01" />
+			</geometry>
+		</collision>
+	</link>
+
+	<joint name="center_wheel_joint" type="fixed">
+		<origin xyz="-0.0035 0 -0.001" rpy="0 0 0"/>
+		<parent link="center_wheel"/>
+		<child link="center_hubcap"/>
+	</joint>
+
+	<xacro:p3dx_wheel suffix="left" parent="base_link" reflect="1"/>
+	<xacro:p3dx_wheel suffix="right" parent="base_link" reflect="-1"/>
+
+  <!-- front_sonar -->
+	<link name="front_sonar">
+		<inertial>
+			<mass value="0.0001" />
+			<origin xyz="0 0 0" />
+			<inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1" />
+		</inertial>
+
+		<visual name="front_sonar_vis">
+			<origin rpy="0 0 0" xyz="0 0 0" />
+			<geometry name="pioneer_geom">
+				<mesh filename="package://p3dx_description/meshes/front_sonar.stl" />
+			</geometry>
+			<material name="SonarYellow">
+				<color rgba="0.715 0.583 0.210 1.0" />
+			</material>
+		</visual>
+
+		<collision>
+			<origin rpy="0 0 0" xyz="0 0 0" />
+			<geometry>
+				<box size="0 0 0" />
+			</geometry>
+		</collision>
+	</link>
+
+	<joint name="base_front_joint" type="fixed">
+		<origin rpy="0 0 0" xyz="0.109 0 0.209" />
+		<parent link="base_link" />
+		<child link="front_sonar" />
+	</joint>
+
+	<!-- lms100 laser -->
+	<link name="lms100">
+		<inertial>
+			<mass value="1e-5" />
+			<origin xyz="0 0 0" rpy="0 0 0" />
+			<inertia ixx="1e-6" ixy="0" ixz="0" iyy="1e-6" iyz="0" izz="1e-6" />
+		</inertial>
+
+		<visual>
+			<origin xyz="0 0 0" rpy="0 0 0" />
+			<geometry>
+				<mesh filename="package://p3dx_description/meshes/lms100.dae" />
+			</geometry>
+		</visual>
+
+		<collision>
+			<origin xyz="0 0 0" rpy="0 0 0" />
+			<geometry>
+				<box size="0.1 0.1 0.1" />
+			</geometry>
+		</collision>
+	</link>
+
+	<joint name="lms100_joint" type="fixed">
+		<axis xyz="0 1 0" />
+		<origin xyz="0.16 0 0.15" rpy="0 0 0" />
+		<parent link="base_link" />
+		<child link="lms100" />
+	</joint>
+
+</robot>

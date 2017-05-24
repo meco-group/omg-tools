@@ -1,0 +1,50 @@
+<?xml version="1.0"?>
+
+<!-- 
+These are some material descriptions of the Pioneer 3DX.
+Copyright (C) 2013 Rafael Berkvens rafael.berkvens@uantwerpen.be
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+This project is based on work by Tracy Davies, where it was in turn based on
+work original in ucs-ros-pkg.
+ -->
+ 
+<robot>
+
+	<material name="ChassisRed">
+		<color rgba="0.851 0.0 0.0 1.0"/>
+	</material>
+
+	<material name="SonarYellow">
+		<color rgba="0.715 0.583 0.210 1.0"/>
+	</material>
+
+	<material name="WheelBlack">
+		<color rgba="0.117 0.117 0.117 1.0"/>
+	</material>
+
+	<material name="HubcapYellow">
+		<color rgba="1.0 0.811 0.151 1.0"/>
+	</material>
+
+	<material name="ChassisRed">
+		<color rgba="0.8 0.0 0.0 1.0"/>
+	</material>
+
+	<material name="TopBlack">
+		<color rgba="0.038 0.038 0.038 1.0"/>
+	</material>
+
+</robot>

@@ -4,6 +4,8 @@ examples/movies/*
 examples/images/*
 examples/export*
 examples/data/*
+examples/ros_example/build/*
+examples/ros_example/devel/*
 movies/*
 images/*
 export*

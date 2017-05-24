@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<package>
+  <name>p3dx_gazebo</name>
+  <version>0.1.0</version>
+  <description>
+    The p3dx_gazebo package. This is a first working version.
+  </description>
+
+  <maintainer email="rafael.berkvens@uantwerpen.be">Rafael Berkvens</maintainer>
+  <license>GPLv3</license>
+  <url>https://github.com/RafBerkvens/ua_ros_p3dx</url>
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>gazebo_ros</build_depend>
+  <build_depend>p3dx_description</build_depend>
+  <run_depend>gazebo_ros</run_depend>
+  <run_depend>p3dx_description</run_depend>
+</package>

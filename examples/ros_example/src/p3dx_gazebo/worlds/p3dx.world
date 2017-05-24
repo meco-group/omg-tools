@@ -1,0 +1,203 @@
+<?xml version="1.0" ?>
+<sdf version="1.4">
+  <world name="default">
+    <include>
+      <uri>model://sun</uri>
+    </include>
+
+    <physics type='ode'>
+      <max_step_size>0.0002</max_step_size> <!-- time it takes per simulation step -->
+      <real_time_factor>1</real_time_factor>
+      <real_time_update_rate>1000</real_time_update_rate>
+      <gravity>0 0 -9.8</gravity>
+    </physics>
+
+    <scene>
+      <grid>false</grid>
+    </scene>
+
+    <model name='ground_plane'>
+      <static>1</static>
+      <link name='link'>
+        <pose>-0.5 0 0 0 0 0</pose>
+        <collision name='collision'>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>10 5</size>
+            </plane>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>100</mu>
+                <mu2>50</mu2>
+              </ode>
+            </friction>
+            <bounce/>
+            <contact>
+              <ode/>
+            </contact>
+          </surface>
+          <max_contacts>10</max_contacts>
+        </collision>
+        <visual name='visual'>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>9 5</size>
+            </plane>
+          </geometry>
+          <material>
+            <script>
+              <uri>file://media/materials/scripts/gazebo.material</uri>
+              <name>Gazebo/Grey</name>
+            </script>
+          </material>
+        </visual>
+        <velocity_decay>
+          <linear>0</linear>
+          <angular>0</angular>
+        </velocity_decay>
+        <self_collide>0</self_collide>
+        <kinematic>0</kinematic>
+        <gravity>1</gravity>
+      </link>
+    </model>
+
+
+    <model name='walls'>
+      <pose>0 0 0 0 0 0</pose>
+      <link name='wall0'>
+        <pose>-5 0 0.25 0 0 0</pose>
+        <visual name='visual'>
+          <geometry>
+            <box>
+              <size>0.1 5 0.5</size>
+            </box>
+          </geometry>
+          <material>
+            <script>
+              <uri>file://media/materials/scripts/gazebo.material</uri>
+              <name>Gazebo/Skull</name>
+            </script>
+          </material>
+        </visual>
+      </link>
+      <link name='wall1a'>
+        <pose>4 2.1 0.25 0 0 0</pose>
+        <visual name='visual'>
+          <geometry>
+            <box>
+              <size>0.1 0.8 0.5</size>
+            </box>
+          </geometry>
+          <material>
+            <script>
+              <uri>file://media/materials/scripts/gazebo.material</uri>
+              <name>Gazebo/Skull</name>
+            </script>
+          </material>
+        </visual>
+      </link>
+      <link name='wall1b'>
+        <pose>4 -1.1 0.25 0 0 0</pose>
+        <visual name='visual'>
+          <geometry>
+            <box>
+              <size>0.1 2.8 0.5</size>
+            </box>
+          </geometry>
+          <material>
+            <script>
+              <uri>file://media/materials/scripts/gazebo.material</uri>
+              <name>Gazebo/Skull</name>
+            </script>
+          </material>
+        </visual>
+      </link>
+      <link name='wall2a'>
+        <pose>-2.5 2.55 0.25 0 0 1.57075</pose>
+        <visual name='visual'>
+          <geometry>
+            <box>
+              <size>0.1 5.1 0.5</size>
+            </box>
+          </geometry>
+          <material>
+            <script>
+              <uri>file://media/materials/scripts/gazebo.material</uri>
+              <name>Gazebo/Skull</name>
+            </script>
+          </material>
+        </visual>
+      </link>
+      <link name='wall2b'>
+        <pose>2.4 2.55 0.25 0 0 1.57075</pose>
+        <visual name='visual'>
+          <geometry>
+            <box>
+              <size>0.1 3.3 0.5</size>
+            </box>
+          </geometry>
+          <material>
+            <script>
+              <uri>file://media/materials/scripts/gazebo.material</uri>
+              <name>Gazebo/Skull</name>
+            </script>
+          </material>
+        </visual>
+      </link>
+      <link name='wall3'>
+        <pose>-0.5 -2.55 0.25 0 0 1.57075</pose>
+        <visual name='visual'>
+          <geometry>
+            <box>
+              <size>0.1 9.1 0.5</size>
+            </box>
+          </geometry>
+          <material>
+            <script>
+              <uri>file://media/materials/scripts/gazebo.material</uri>
+              <name>Gazebo/Skull</name>
+            </script>
+          </material>
+        </visual>
+      </link>
+      <link name='wall4a'>
+        <pose>-2. -1.1 0.25 0 0 0</pose>
+        <visual name='visual'>
+          <geometry>
+            <box>
+              <size>0.1 2.8 0.5</size>
+            </box>
+          </geometry>
+          <material>
+            <script>
+              <uri>file://media/materials/scripts/gazebo.material</uri>
+              <name>Gazebo/Skull</name>
+            </script>
+          </material>
+        </visual>
+      </link>
+      <link name='wall4b'>
+        <pose>-2. 2.3 0.25 0 0 0</pose>
+        <visual name='visual'>
+          <geometry>
+            <box>
+              <size>0.1 0.4 0.5</size>
+            </box>
+          </geometry>
+          <material>
+            <script>
+              <uri>file://media/materials/scripts/gazebo.material</uri>
+              <name>Gazebo/Skull</name>
+            </script>
+          </material>
+        </visual>
+      </link>
+    <static>1</static>
+  </model>
+  </world>
+</sdf>
