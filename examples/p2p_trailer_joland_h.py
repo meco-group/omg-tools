@@ -40,10 +40,10 @@ trailer.set_initial_conditions([0])  # input orientation in deg
 
 # create environment
 environment = Environment(room={'shape': Square(10.), 'position': [5.,5.]})
-# rectangle = Rectangle(width=.2, height=4.)
-#
-# environment.add_obstacle(Obstacle({'position': [3., 3.]}, shape=rectangle))
-# environment.add_obstacle(Obstacle({'position': [6., 7.]}, shape=rectangle))
+rectangle = Rectangle(width=.2, height=4.)
+
+environment.add_obstacle(Obstacle({'position': [3., 3.]}, shape=rectangle))
+environment.add_obstacle(Obstacle({'position': [6., 7.]}, shape=rectangle))
 
 
 # create a point-to-point problem
@@ -52,8 +52,8 @@ problem = Point2point(trailer, environment, freeT=True)  # pass trailer to probl
 problem.father.add(vehicle)  # add vehicle to optifather, such that it knows the trailer variables
 # extra solver settings which may improve performance https://www.coin-or.org/Ipopt/documentation/node53.html#SECTION0001113010000000000000
 #problem.set_options({'solver_options': {'ipopt': {'ipopt.hessian_approximation': 'limited-memory'}}})
-#problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57','ipopt.print_level': 4',ipopt.hessian_approximation': 'limited-memory'}}})
-problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57','ipopt.hessian_approximation': 'limited-memory'}}})
+problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57','ipopt.max_iter':50}}})
+#problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57','ipopt.hessian_approximation': 'limited-memory'}}})
 
 problem.init()
 

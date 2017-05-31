@@ -17,8 +17,10 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-from omgtools import *
 
+import sys, os
+sys.path.insert(0, os.getcwd()+"/..")
+from omgtools import *
 # create vehicle
 vehicle = Holonomic(options={'syslimit': 'norm_2'})
 
@@ -46,8 +48,7 @@ environment.add_obstacle(Obstacle({'position': [2., 1.]}, shape=Circle(0.5),
 
 # create a point-to-point problem
 problem = Point2point(vehicle, environment, freeT=True)
-problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57',
-    'ipopt.hessian_approximation': 'limited-memory'}}})
+problem.set_options({'solver_options': {'ipopt': {'ipopt.hessian_approximation': 'limited-memory'}}})
 problem.init()
 
 # create simulator

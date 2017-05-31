@@ -10,10 +10,10 @@ import numpy as np
 options = {}
 options['safety_distance'] = 0.3;
 vehicle = HolonomicOrient(shapes=Rectangle(0.4, 0.32), options=options, bounds={'vmax': 0.1,'vmin':-0.1, 'wmax': 60., 'wmin': -60.})  # in deg
-number_knot_intervals = 9.
+number_knot_intervals = 3.
 vehicle.define_knots(knot_intervals=number_knot_intervals)  # adapt amount of knot intervals
-vehicle.set_initial_conditions([.5, .5, 0.])
-vehicle.set_terminal_conditions([3.1, 2.5, 0.])
+vehicle.set_initial_conditions([3.1, .5, 0.])
+vehicle.set_terminal_conditions([1., 0.5, 0.])
 
 # create trailer
 trailer = TrailerJolandHolonomic(lead_veh=vehicle,  shapes=Rectangle(0.3,0.2), l_hitch = 0.215, l_hitch1 = 0.2075,
@@ -21,9 +21,12 @@ trailer = TrailerJolandHolonomic(lead_veh=vehicle,  shapes=Rectangle(0.3,0.2), l
 # Note: the knot intervals of lead_veh and trailer should be the same
 trailer.define_knots(knot_intervals=number_knot_intervals)  # adapt amount of knot intervals
 trailer.set_initial_conditions([0.])  # input orientation in deg
-trailer.set_terminal_conditions([0.])  # this depends on the application e.g. driving vs parking
+#trailer.set_terminal_conditions([0.])  # this depends on the application e.g. driving vs parking
 # set up environment
-environment = Environment(room={'shape': Rectangle(5., 3.), 'position': [2.5, 1.5]})
+environment = Environment(room={'shape': Rectangle(10., 6.), 'position': [2.5, 1.5]})
+# rectangle = Rectangle(width=.2, height=3.)
+
+# environment.add_obstacle(Obstacle({'position': [2., 0.]}, shape=rectangle))
 
 # set up problem
 problem = Point2point(trailer, environment, freeT=True)
@@ -83,7 +86,7 @@ data = np.c_[pos_veh.T, theta_tr.T, vel_veh.T, np.zeros(n)]
 # # data = np.c_[pos_traj, pos_traj, np.zeros(n), vel_traj, vel_traj, np.zeros(n)]
 # # data = np.c_[np.zeros(n), np.zeros(n), pos_traj, np.zeros(n), np.zeros(n), vel_traj]
 # # np.savetxt('trajectories_xy.csv', data, delimiter=',')
-np.savetxt('trajectories_trailer.csv', data, delimiter=',')
+np.savetxt('trajectories_trailer_obstakel.csv', data, delimiter=',')
 #
 # plt.figure()
 # plt.hold(True)

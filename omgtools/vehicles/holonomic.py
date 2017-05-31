@@ -26,7 +26,7 @@ import numpy as np
 #Rectangle(0.2,0.2)Circle(0.2)
 class Holonomic(Vehicle):
 
-    def __init__(self, shapes=Rectangle(0.4, 0.4), options=None, bounds=None):
+    def __init__(self, shapes=Circle(0.1), options=None, bounds=None):
         bounds = bounds or {}
         Vehicle.__init__(
             self, n_spl=2, degree=3, shapes=shapes, options=options)
