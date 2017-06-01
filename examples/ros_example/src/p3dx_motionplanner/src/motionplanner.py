@@ -54,7 +54,7 @@ class MotionPlanner(object):
         else:
             init_pose = [[0., 0., 0.] for k in range(self._n_robots)]
             terminal_pose = [[0., 0., 0.] for k in range(self._n_robots)]
-            self._fleet.set_configuration([c.pose for c in st.fleet_config], orientation=st.init_pose[0].pose[2])
+            self._fleet.set_configuration([[c.pose[0], c.pose[1]] for c in st.fleet_config], orientation=st.init_pose[0].pose[2])
             self._fleet.set_initial_conditions(init_pose)
             self._fleet.set_terminal_conditions(terminal_pose)
         # environment
