@@ -66,6 +66,7 @@ class AGV(Vehicle):
 
     def set_default_options(self):
         Vehicle.set_default_options(self)
+        self.options['stop_tol'] = 1.e-2
         self.options.update({'plot_type': 'agv'})  # by default plot a bicycle-shape
 
     def init(self):
