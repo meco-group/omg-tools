@@ -18,7 +18,6 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from ..basics.shape import Rectangle, Square, Circle
-from ..basics.geometry import distance_between_points
 
 import time
 
@@ -438,7 +437,10 @@ class Grid:
             points_to_check = filter(self.free, points_to_check)
             # select closest point which is not occupied
             if points_to_check is not None:
-                d_min = max(self.cell_height, self.cell_width)
+                # worst case: only a diagonally placed cell is available 
+                # --> distance to it is sqrt(cell_width**2+cell_height**2)
+                # use an upper bound on this to avoid taking sqrt a lot
+                d_min = 2*max(self.cell_height, self.cell_width)
                 for p in points_to_check:
                     distance = self.distance_between_cells(p, moved_point)
                     if distance < d_min:
