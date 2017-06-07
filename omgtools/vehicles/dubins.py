@@ -117,7 +117,7 @@ class Dubins(Vehicle):
         self.define_constraint(2*dtg_ha - (1+tg_ha**2)*self.T*self.wmax, -inf, 0., name='dubins_wmax')
         self.define_constraint(-2*dtg_ha + (1+tg_ha**2)*self.T*self.wmin, -inf, 0., name='dubins_wmin')
 
-        self.define_constraint(-v_til, -inf, 0, name='dubins_pos_vtil', skip=[1,1])  # only forward driving, positive v_tilde
+        self.define_constraint(-v_til, -inf, 0, name='dubins_pos_vtil') #skip=[1,1]  # only forward driving, positive v_tilde
 
 
     def get_fleet_center(self, splines, rel_pos, substitute=True):
