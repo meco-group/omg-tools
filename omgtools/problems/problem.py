@@ -56,7 +56,8 @@ class Problem(OptiChild, PlotLayer):
         self.options['solver'] = 'ipopt'
         ipopt_options = {'ipopt.tol': 1e-3,
                          'ipopt.warm_start_init_point': 'yes',
-                         'ipopt.print_level': 0, 'print_time': 0}
+                         'ipopt.print_level': 0, 'print_time': 0,
+                         'ipopt.fixed_variable_treatment':'make_constraint'}
         self.options['solver_options'] = {'ipopt': ipopt_options}
         self.options['codegen'] = {'build': None, 'flags': '-O0'}
 

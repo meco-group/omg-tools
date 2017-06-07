@@ -199,7 +199,7 @@ OMG-tools itself is downloaded from the [PyPI repository](https://pypi.python.or
 `sudo pip install omg-tools`
 
 ### Advanced installation
-If you want to save simulation results in gif-format, you need [imagemagick](www.imagemagick.org):
+If you want to save simulation results in gif-format, you need [imagemagick](www.imagemagick.org). For Linux Debian users:
 
 `sudo add-apt-repository main && apt-get update && install imagemagick `
 
