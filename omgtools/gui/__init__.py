@@ -1,2 +1,2 @@
-from gui import EnvironmentGUI
+from gui import *
 from svg_reader import SVGReader
