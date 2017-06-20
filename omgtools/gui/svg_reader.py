@@ -1,17 +1,11 @@
-#!/usr/bin/python
-
-from ..environment import Environment
-from ..basics.shape import Circle, Rectangle
-
 import numpy as np
 from xml.etree.ElementTree import ElementTree
 import re
-import sys, os
 from matplotlib import pyplot as plt
 
 class SVGReader(object):
     def __init__(self):
-        # Load xml-tree
+        # load XML-tree
         self.ns = 'http://www.w3.org/2000/svg' # XML namespace
         self.et = ElementTree()
         self.svgpath = None
@@ -26,7 +20,7 @@ class SVGReader(object):
                 self.width_px = float(xmax) - float(xmin)
                 self.height_px = float(ymax) - float(ymin)
                 self.meter_to_pixel = self.width_px/float(self.tree.get('width')[:-2])
-            else: # units px
+            else: # [px]
                 self.width_px = float(xmax) - float(xmin)
                 self.height_px = float(ymax) - float(ymin)
         else:
@@ -34,19 +28,23 @@ class SVGReader(object):
             self.width_px = float(self.tree.get('width'))  # get width from svg
             self.height_px = float(self.tree.get('height'))  # get height from svg
 
-        self.position = [0, 0]  # default
-
+        self.position = [0, 0]  # default, [px]
         self.obstacles = []
 
     def convert_path_to_points(self):
         
-        # Find svg-paths, describing the shapes
+        # find svg-paths, describing the shapes e.g. using Bezier curves
+        # for rectangle check on straight lines --> is control point on line
+        # between start and end?
         try:
-            self.svgpath = self.tree.findall("{%s}path" %self.ns)  # Search for the word path in the outer branch of the SVG-file.
+            # search for the word path in the outer branch of the SVG-file
+            self.svgpath = self.tree.findall("{%s}path" %self.ns)
             if not self.svgpath:
-                self.svgpath = self.tree.find("{%s}g" %self.ns).findall("{%s}path" %self.ns)  # If not yet found, search for the word path in the next branch
+                # if not yet found, search for the word path in the next branch
+                self.svgpath = self.tree.find("{%s}g" %self.ns).findall("{%s}path" %self.ns)
             if not self.svgpath:
-                self.svgpath = self.tree.find("{%s}g" %self.ns).find("{%s}g" %self.ns).findall("{%s}path" %self.ns)  # If not yet found, search for the word path in the next branch
+                # if not yet found, search for the word path in the next branch                
+                self.svgpath = self.tree.find("{%s}g" %self.ns).find("{%s}g" %self.ns).findall("{%s}path" %self.ns)
         except:  # error occured, e.g. no <g/> found, this is possible when you only have basic shapes
             print 'No shapes found which are described by a path, probably you only have basic shapes'
             return
@@ -56,11 +54,12 @@ class SVGReader(object):
 
         self.n_paths = len(self.svgpath)  # number of paths which build up the figure
 
-        #Initialize output file
+        # initialize output file
         counter = 0
-        # Loop over paths
+        # loop over paths
         while counter < self.n_paths:
-            lines = re.findall('[MCmc][\s.,0-9-]+', self.svgpath[counter].get('d')) # look for all MCmc with a number behind it, line runs until a space or minus sign is found
+            # look for all MCmc with a number behind it, line runs until a space or minus sign is found
+            lines = re.findall('[MCmc][\s.,0-9-]+', self.svgpath[counter].get('d'))
             points = []
             for line in lines:
                 if line:
@@ -68,43 +67,49 @@ class SVGReader(object):
                     test1=line[1:].replace(","," ")  # replace comma by: space 
                     test2 = test1.replace("-"," -")  # replace minus sign by: space minus 
                     test3 = test2.replace("c"," c ")  # replace c by: space c space
-                    newpoints = np.array(map(eval, test3.strip().split(' ')))  # splits the line at each space, to create separate points
+                    # splits the line at each space, to create separate points
+                    newpoints = np.array(map(eval, test3.strip().split(' ')))
                     if line[0] == 'c':  # lower case c means relative coordinates, upper case C is absolute coordinates
                         newpoints[0:6:2] = newpoints[0:6:2] + points[-2]  # relative to absolute coordinates for x
                         newpoints[1:6:2] = newpoints[1:6:2] + points[-1]  # relative to absolute coordinates for y
-                    # for the first line (Mx,y) there is no 'c', so the starting point (x,y) is added to points in the first iteration
+                    # for the first line (Mx,y) there is no 'c', so the starting point (x,y)
+                    # is added to points in the first iteration
                     points.extend(newpoints)  # add newpoints to points
             counter += 1
-            # Save points to file
+            # save points to file
             f = open("environment.txt", "a")
             f.write( "path_"+ str(counter) + "="+ str(np.array(points)) + "\n" )
             f.close() 
 
-    def convert_basic_shapes(self):
-        
-        # Code for basic shapes <circle> and <rect>
+    def convert_basic_shapes(self):        
+        # code for basic shapes <circle> and <rect>
 
-        # Find svg-paths, describing the shapes
+        # find svg-paths, describing the rectangles
         try:
-            self.rectangles = self.tree.findall("{%s}rect" %self.ns)  # Search for the word rect in the outer branch of the SVG-file.
+            # search for the word rect in the outer branch of the SVG-file
+            self.rectangles = self.tree.findall("{%s}rect" %self.ns)
             if not self.rectangles:
-                self.rectangles = self.tree.find("{%s}g" %self.ns).findall("{%s}rect" %self.ns)  # If not yet found, search for the word rect in the next branch
+                # if not yet found, search for the word rect in the next branch
+                self.rectangles = self.tree.find("{%s}g" %self.ns).findall("{%s}rect" %self.ns)
             if not self.rectangles:
-                self.rectangles = self.tree.find("{%s}g" %self.ns).find("{%s}g" %self.ns).findall("{%s}rect" %self.ns)  # If not yet found, search for the word rect in the next branch
+                # if not yet found, search for the word rect in the next branch
+                self.rectangles = self.tree.find("{%s}g" %self.ns).find("{%s}g" %self.ns).findall("{%s}rect" %self.ns)
             self.n_rect = len(self.rectangles)  # number of paths which build up the figure
             if self.n_rect == 0:
                 print 'No rectangles found'
         except:
             print 'No shapes found which are described by a rect'
 
-
-        # Find svg-paths, describing the shapes
+        # find svg-paths, describing the circles
         try:
-            self.circles = self.tree.findall("{%s}circle" %self.ns)  # Search for the word circ in the outer branch of the SVG-file.
+            # search for the word circ in the outer branch of the SVG-file
+            self.circles = self.tree.findall("{%s}circle" %self.ns)
             if not self.circles:
-                self.circles = self.tree.find("{%s}g" %self.ns).findall("{%s}circle" %self.ns)  # If not yet found, search for the word circ in the next branch
+                # if not yet found, search for the word circ in the next branch
+                self.circles = self.tree.find("{%s}g" %self.ns).findall("{%s}circle" %self.ns)
             if not self.circles:
-                self.circles = self.tree.find("{%s}g" %self.ns).find("{%s}g" %self.ns).findall("{%s}circle" %self.ns)  # If not yet found, search for the word circ in the next branch
+                # if not yet found, search for the word circ in the next branch
+                self.circles = self.tree.find("{%s}g" %self.ns).find("{%s}g" %self.ns).findall("{%s}circle" %self.ns)
             self.n_circ = len(self.circles)  # number of paths which build up the figure
             if self.n_circ == 0:
                 print 'No circles found'
@@ -132,35 +137,37 @@ class SVGReader(object):
             obstacle['bounce'] = False
             self.obstacles.append(obstacle)
 
-        # Code for Bezier expression
-        # how represent a circle in bezier?
-        # for rectangle check on straight lines --> is control point on line between start and end?
-
     def convert_lines(self):
-        # Code for basic shapes <line> and <polyline>
+        # code for basic shapes <line> and <polyline>
 
-        # Find svg-polylines
+        # find svg-polylines
         # example: <polyline fill="none" stroke="#333333" stroke-width="10" points="25.41,40.983 25.41,258.197 414.754,258.197 "/>
         try: 
-            self.polylines = self.tree.findall("{%s}polyline" %self.ns)  # Search for the word circ in the outer branch of the SVG-file.
+            # search for the word polyline in the outer branch of the SVG-file
+            self.polylines = self.tree.findall("{%s}polyline" %self.ns)
             if not self.polylines:
-                self.polylines = self.tree.find("{%s}g" %self.ns).findall("{%s}polyline" %self.ns)  # If not yet found, search for the word circ in the next branch
+                # if not yet found, search for the word polyline in the next branch                
+                self.polylines = self.tree.find("{%s}g" %self.ns).findall("{%s}polyline" %self.ns)
             if not self.polylines:
-                self.polylines = self.tree.find("{%s}g" %self.ns).find("{%s}g" %self.ns).findall("{%s}polyline" %self.ns)  # If not yet found, search for the word circ in the next branch
+                # if not yet found, search for the word polyline in the next branch
+                self.polylines = self.tree.find("{%s}g" %self.ns).find("{%s}g" %self.ns).findall("{%s}polyline" %self.ns)
             self.n_polylines = len(self.polylines)  # number of paths which build up the figure
             if self.n_polylines == 0:
                 print 'No polylines found'
         except:
             print 'No shapes found which are described by a polyline'
 
-        # Find svg-lines
+        # find svg-lines
         # example: <line fill="none" stroke="#333333" stroke-width="10" x1="25.41" y1="174.59" x2="69.672" y2="174.59"/>
         try: 
-            self.lines = self.tree.findall("{%s}line" %self.ns)  # Search for the word line in the outer branch of the SVG-file.
+            # search for the word line in the outer branch of the SVG-file
+            self.lines = self.tree.findall("{%s}line" %self.ns)
             if not self.lines:
-                self.lines = self.tree.find("{%s}g" %self.ns).findall("{%s}line" %self.ns)  # If not yet found, search for the word line in the next branch
+                # if not yet found, search for the word line in the next branch
+                self.lines = self.tree.find("{%s}g" %self.ns).findall("{%s}line" %self.ns)
             if not self.lines:
-                self.lines = self.tree.find("{%s}g" %self.ns).find("{%s}g" %self.ns).findall("{%s}line" %self.ns)  # If not yet found, search for the word line in the next branch
+                # if not yet found, search for the word line in the next branch                
+                self.lines = self.tree.find("{%s}g" %self.ns).find("{%s}g" %self.ns).findall("{%s}line" %self.ns)
             self.n_lines = len(self.lines)  # number of paths which build up the figure
             if self.n_lines == 0:
                 print 'No lines found'
@@ -249,14 +256,14 @@ class SVGReader(object):
         # Note: only works for translation for the moment
         # check if figure is transformed, e.g. a translation
         try:
-            trans1 = self.tree.find("{%s}g" %self.ns).get('transform')  # If not yet found, search for the word transform in the next branch
+            trans1 = self.tree.find("{%s}g" %self.ns).get('transform')
             trans1 = trans1.split('translate')
             trans1.remove('')
             self.transform1 = np.array(map(eval, trans1)[0])
         except:
             print 'No transform1 found'
         try:
-            trans2 = self.tree.find("{%s}g" %self.ns).find("{%s}g" %self.ns).get('transform')  # If not yet found, search for the word transform in the next branch
+            trans2 = self.tree.find("{%s}g" %self.ns).find("{%s}g" %self.ns).get('transform')
             trans2 = trans2.split('translate')
             trans2.remove('')
             self.transform2 = np.array(map(eval, trans2)[0])
@@ -272,6 +279,7 @@ class SVGReader(object):
             self.transform = [0, 0]  # no transforms found
 
     def reconstruct(self, file):
+        # help function, re-draws the loaded figure, allowing to check if it has the desired shapes
         points = []
         with open(file, "r") as f:
             for line in f:
@@ -300,26 +308,12 @@ class SVGReader(object):
 
         # Todo: write code here to check which elements are in the svg:
         # path, rectangle, circ, line, polyline,...
-        # and call the appropriate functions
+        # and call the appropriate functions, instead of calling them all
 
-        self.compute_transform()  # fills in self.transform
+        self.compute_transform()  # assigns values to self.transform
 
         self.convert_basic_shapes()  # looks for rect and circle shapes
         self.convert_path_to_points()  # looks for shapes defined by a Bezier path
         self.convert_lines()  # looks for shapes defined by polyline and line
-        # if you found some paths, call function to transform them to an obstacle
-        # e.g. rectangle or circle and place add it to self.obstacles
-
-        # now self.obstacles is filled
-
-# if __name__ == '__main__':
-
-#     args = sys.argv
-#     args[0] = args[0].replace("/",os.sep)
-#     data = args[1]
-
-#     reader = SVGReader()
-#     reader.init(data)
-#     # reader.reconstruct(data)
-#     # reader.convert_path_to_points(data)
-#     reader.build_environment()
+        # if you found some paths, they are transformed to an obstacle and
+        # added to self.obstacles

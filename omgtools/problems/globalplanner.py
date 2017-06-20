@@ -20,10 +20,8 @@
 from ..basics.shape import Rectangle, Square, Circle
 
 import time
-
 from matplotlib import pyplot as plt
 import numpy as np
-import math
 
 class GlobalPlanner:
     def __init__(self, environment):
@@ -33,23 +31,23 @@ class GlobalPlanner:
         # Implement this in the child classes
         pass
 
-    def movePoint2Grid(x,y):
+    def move_point_to_grid(x,y):
         # move a point in world coordinates to the closest grid point
         pass
 
 class QuadmapPlanner(GlobalPlanner):
-
+    # global planner using a quadmap
     def __init__(self,environment):
         GlobalPlanner.__init__(self, environment)
-        self.environment = environment
+        raise NotImplementedError('Please implement this method!')
     
     def get_path(self, environment, curr_state, goal_state):
-        pass
+        raise NotImplementedError('Please implement this method!')
 
 class AStarPlanner(GlobalPlanner):
+    # global planner using the A*-algorithm
     def __init__(self, environment, n_cells, start, goal, options={}):
-
-        if isinstance(environment.room['shape'], (Rectangle,Square)):
+        if isinstance(environment.room['shape'], (Rectangle, Square)):
             grid_width = environment.room['shape'].width
             grid_height = environment.room['shape'].height
             if 'position' in environment.room:
@@ -59,7 +57,7 @@ class AStarPlanner(GlobalPlanner):
         else:
             raise RuntimeError('Environment has invalid room shape, only Rectangle or Square is supported')
 
-        # check if vehicle size needs to be taken into account
+        # check if vehicle size needs to be taken into account while searching a global path
         self.veh_size = options['veh_size'] if 'veh_size' in options else [0.,0.]
 
         # make grid        
@@ -72,16 +70,11 @@ class AStarPlanner(GlobalPlanner):
         blocked = self.grid.get_occupied_cells(environment)
         self.grid.block(blocked)
 
-        # only grid points are reachable
+        # only grid points are reachable so move start and goal for global planner
         self.start = self.grid.move_to_gridpoint(start)
         self.goal = self.grid.move_to_gridpoint(goal)
 
-        # initialize A*-algorithm
-        self.current_node = self.create_node(self.start)
-        self.open_list = []
-        self.closed_list = [self.current_node]
-
-        # diagonal moving cost for grid
+        # calculate diagonal moving cost for grid
         theta = np.arctan(float(self.grid.cell_height)/self.grid.cell_width)
         self.diag_cost = self.grid.cell_width / np.cos(theta)
 
@@ -116,20 +109,19 @@ class AStarPlanner(GlobalPlanner):
         h_cost_x = abs(self.goal[0] - node.pos[0])*self.grid.cell_width
         h_cost_y = abs(self.goal[1] - node.pos[1])*self.grid.cell_height
         h_cost = h_cost_x + h_cost_y
-
         return h_cost
 
     def calculate_f_cost(self, node):
         return node.g_cost + node.h_cost
 
     def get_lowest_f_cost_node(self):
+        # find the cheapest node to go to
         cost = np.inf
         cheapest_node = None
         for node in self.open_list:
             if node.f_cost < cost:
                 cost = node.f_cost
                 cheapest_node = node
-
         return cheapest_node
 
     def remove_from_open_list(self, node):
@@ -143,6 +135,7 @@ class AStarPlanner(GlobalPlanner):
         return Node(point, parent)
 
     def get_path(self, start=None, goal=None):
+        # main function of the A* algorithm
         t1 = time.time()
         if start is not None:
             # only grid points are reachable
@@ -206,17 +199,20 @@ class AStarPlanner(GlobalPlanner):
         t2 = time.time()
         print 'Elapsed time to find a global path: ', t2-t1
 
+        # convert a set of nodes to a set of positions
         path = self.closed_list_to_path()
         nodes_pos = []
         for node in path:
             nodes_pos.append(node.pos)
         nodes_pos.reverse()
 
+        # convert node positions (indices) to waypoint positions (physical values)
         path = self.convert_node_to_waypoint(nodes_pos)
 
         return path
 
     def closed_list_to_path(self):
+        # convert closed list to a list of nodes, by moving over the parent of each node
         current_node = self.closed_list[-1]
         path = [current_node]
         while current_node != self.closed_list[0]:
@@ -226,6 +222,7 @@ class AStarPlanner(GlobalPlanner):
         return path
 
     def convert_node_to_waypoint(self, nodes):
+        # convert position of node (i.e. an index in a grid) to a physical position [m]
         waypoints = []
         if not isinstance (nodes[0], list):  # make something like [[0,1]]
             nodes = [nodes]
@@ -237,6 +234,7 @@ class AStarPlanner(GlobalPlanner):
         return waypoints
 
     def plot_path(self, path):
+        # plot the computed path
         posx = []
         posy = []
         for waypoint in path:
@@ -245,17 +243,10 @@ class AStarPlanner(GlobalPlanner):
         plt.plot(posx,posy)
         plt.show()
 
-    # def is_close(self, list1, list2, rel_tol=1e-06, abs_tol=0.0):
-    #     # for floating point comparison
-    #     result = 1
-    #     for i in range(len(list1)):
-    #         result *= abs(list1[i]-list2[i]) <= max(rel_tol * max(abs(list1[i]), abs(list2[i])), abs_tol)
-    #     return result
-
 class Node:
     def __init__(self, position, parent=None):
-        self.pos = position
-        self.parent = parent
+        self.pos = position  # index of the point in the grid
+        self.parent = parent  # how did you end up in this node
         self.f_cost = 0
         self.g_cost = 0
         self.h_cost = 0
@@ -288,24 +279,10 @@ class Grid:
 
         self.offset = offset  # blows up obstacles, e.g. to take the vehicle size into account in the grid
 
-        # # todo: dirty trick to avoid float division, alternative?
-        # if (width*1e5) % (cell_width*1e5) != 0:
-        #     self.width = self.round_nearest(width, cell_width)
-        #     print 'Selected width was not a multiple of square size, adapted width'
-        # elif (height*1e5) % (cell_height*1e5) != 0:
-        #     self.height = self.round_nearest(height, cell_height)
-        #     print 'Selected height must be a multiple of square size, adapted height'
-        # self.cell_width = cell_width  # width of a cell
-        # self.cell_height = cell_height  # height of a cell
-    
-    # def round_nearest(self, value, a):
-    #     return round(value / a) * a
-
     def in_bounds(self, point):
         x, y = point
         # cell number starts counting at 0, until n_cells-1
         return 0 <= x < self.n_cells[0] and 0 <= y < self.n_cells[1] 
-        # return self.position[0] - 0.5*self.width <= x < self.position[0] + 0.5*self.width and self.position[1] - 0.5*self.height <= y < self.position[1] + 0.5*self.height
     
     def block(self, points):
         # block cells given by indices/position in grid
@@ -317,9 +294,8 @@ class Grid:
                 self.occupied.append(point)                
 
     def free(self, point):
-        # check if a point is free
+        # check if a gridpoint is free
         # i.e.: not occupied and in bounds
-
         free = False
         if ((not point in self.occupied) and (self.in_bounds(point))):
            free = True
@@ -359,68 +335,22 @@ class Grid:
                     accessible = True
 
         return accessible
-    
-    # def move_to_gridpoint(self, point):
-
-    #     # determine distance of point to all surrounding grid points
-
-    #     # find the amount of cell widths/heights which fits in the point
-    #     # this is the closest gridpoint
-    #     moved_point = [0, 0]
-    #     # remove offset, i.e. substract the bottom left gridpoint
-    #     moved_point[0] = point[0] - (self.position[0] - 0.5*self.width + 0.5*self.cell_width)
-    #     moved_point[1] = point[1] - (self.position[1] - 0.5*self.height + 0.5*self.cell_height)
-    #     # determine how many times point fits in cell dimensions
-    #     moved_point[0] = self.cell_width * (round(float(moved_point[0])/self.cell_width))
-    #     moved_point[1] = self.cell_height * (round(float(moved_point[1])/self.cell_height))
-    #     # add offset, i.e. add bottom left gridpoint
-    #     moved_point[0] = moved_point[0] + (self.position[0] - 0.5*self.width + 0.5*self.cell_width)
-    #     moved_point[1] = moved_point[1] + (self.position[1] - 0.5*self.height + 0.5*self.cell_height)
-
-    #     if moved_point in self.occupied:
-    #         # closest grid point is occupied, check all neighbours of this point
-    #         points_to_check = [[moved_point[0]+self.cell_width, moved_point[1]],
-    #                            [moved_point[0]-self.cell_width, moved_point[1]],
-    #                            [moved_point[0], moved_point[1]+self.cell_height],
-    #                            [moved_point[0], moved_point[1]-self.cell_height],
-    #                            [moved_point[0]+self.cell_width, moved_point[1]+self.cell_height],
-    #                            [moved_point[0]+self.cell_width, moved_point[1]-self.cell_height],
-    #                            [moved_point[0]-self.cell_width, moved_point[1]+self.cell_height],
-    #                            [moved_point[0]-self.cell_width, moved_point[1]-self.cell_height]]
-    #         # remove inaccessible points from points_to_check
-    #         points_to_check = filter(self.in_bounds, points_to_check)
-    #         points_to_check = filter(self.free, points_to_check)
-    #         # select closest point which is not occupied
-    #         if points_to_check is not None:
-    #             d_min = max(self.cell_height, self.cell_width)
-    #             for p in points_to_check:
-    #                 distance = distance_between_points(p, point)
-    #                 if distance < d_min:
-    #                     d_min = distance
-    #                     moved_point = p
-
-    #     # convert position of moved_point to indices 
-    #     return moved_point
 
     def move_to_gridpoint(self, point):
+        # snap a certain point to the nearest unoccupied grid point
+        # i.e. you go from [m] to a certain index in the grid
 
         # determine distance of point to all surrounding grid points
-
         # find the amount of cell widths/heights which fits in the point
         # this is the closest gridpoint
         moved_point = [0, 0]
 
-        # Todo: is this still necessary?
         # remove offset, i.e. substract the bottom left gridpoint
         moved_point[0] = point[0] - (self.position[0] - 0.5*self.width + 0.5*self.cell_width)
         moved_point[1] = point[1] - (self.position[1] - 0.5*self.height + 0.5*self.cell_height)
-        # determine how many times point fits in cell dimensions
+        # determine how many times point fits in cell dimensions, this gives the indices in the grid
         moved_point[0] = int(round(float(moved_point[0])/self.cell_width))
         moved_point[1] = int(round(float(moved_point[1])/self.cell_height))
-        
-        # # add offset, i.e. add bottom left gridpoint
-        # moved_point[0] = moved_point[0] + (self.position[0] - 0.5*self.width + 0.5*self.cell_width)
-        # moved_point[1] = moved_point[1] + (self.position[1] - 0.5*self.height + 0.5*self.cell_height)
 
         if moved_point in self.occupied:
             # closest grid point is occupied, check all neighbours of this point
@@ -439,7 +369,8 @@ class Grid:
             if points_to_check is not None:
                 # worst case: only a diagonally placed cell is available 
                 # --> distance to it is sqrt(cell_width**2+cell_height**2)
-                # use an upper bound on this to avoid taking sqrt a lot
+                # use an upper bound on this to avoid taking sqrt a lot to
+                # initialize d_min
                 d_min = 2*max(self.cell_height, self.cell_width)
                 for p in points_to_check:
                     distance = self.distance_between_cells(p, moved_point)
@@ -461,6 +392,7 @@ class Grid:
             return np.sqrt(self.cell_width**2 + self.cell_height**2)
 
     def get_neighbors(self, point):
+        # get all the accessible neighbouring cells of a certain point
         x, y = point
         results = [[x+1, y], [x-1, y],
                    [x, y+1],[x, y-1],
@@ -469,15 +401,16 @@ class Grid:
         results = filter(self.in_bounds, results)
         results = filter(self.free, results)
         results = filter(lambda x: self.is_accessible(point, x), results)
-        # results = filter(self.is_accessible, results, point)
-
         return results
 
     def get_occupied_cells(self, environment):
+        # blank out the grid points which are occupied by a certain obstacle
         occupied_cells = []
         cells = []
-        centers_x = np.arange(self.position[0]-self.width*0.5 + 0.5*self.cell_width,self.position[0]+self.width*0.5 + 0.5*self.cell_width,self.cell_width)
-        centers_y = np.arange(self.position[1]-self.height*0.5 + 0.5*self.cell_height, self.position[1]+self.height*0.5 + 0.5*self.cell_height, self.cell_height)
+        centers_x = np.arange(self.position[0]-self.width*0.5 + 0.5*self.cell_width,
+                              self.position[0]+self.width*0.5 + 0.5*self.cell_width,self.cell_width)
+        centers_y = np.arange(self.position[1]-self.height*0.5 + 0.5*self.cell_height,
+                              self.position[1]+self.height*0.5 + 0.5*self.cell_height, self.cell_height)
         i, j = 0, 0
         for x in centers_x:
             for y in centers_y:
@@ -497,10 +430,12 @@ class Grid:
                     vertex_y = obstacle.shape.vertices[1]
                     for k in range(len(vertex_x)):
                         if vertex_x[k] == min(vertex_x):
-                            # take into account offset to avoid waypoints which are so close to obstacles that they are not reachable
+                            # take into account offset to avoid waypoints which are so close
+                            # to obstacles that they are not reachable
                             v_x = vertex_x[k] + pos[0] - self.offset[0]
                         else:
-                            # take into account offset to avoid waypoints which are so close to obstacles that they are not reachable
+                            # take into account offset to avoid waypoints which are so close
+                            # to obstacles that they are not reachable
                             v_x = vertex_x[k] + pos[0] + self.offset[0]
                         if vertex_y[k] == min(vertex_y):
                             v_y = vertex_y[k] + pos[1] - self.offset[1]
@@ -510,7 +445,8 @@ class Grid:
                 if isinstance(obstacle.shape, Circle):
                     r = obstacle.shape.radius
                     # approximate circle by a square and add these vertices
-                    # take into account offset, e.g. to avoid waypoints which are closer to obstacles than the vehicle can reach
+                    # take into account offset, e.g. to avoid waypoints which
+                    # are closer to obstacles than the vehicle can reach
                     vertices = [[pos[0] + r + self.offset[0], pos[1] + r + self.offset[1]],
                                 [pos[0] + r + self.offset[0], pos[1] - r - self.offset[1]],
                                 [pos[0] - r - self.offset[0], pos[1] + r + self.offset[1]],
@@ -521,19 +457,19 @@ class Grid:
                 occ_cells = []
                 for cell in cells:
                     blocked = False  # boolean to indicate if cell is blocked
-                    # one of the vertices is inside a cell
+                    # calculate cell vertices
                     cell_vertices = []
                     cell_vertices.append([cell['pos'][0] - 0.5*self.cell_width, cell['pos'][1] - 0.5*self.cell_height])
                     cell_vertices.append([cell['pos'][0] + 0.5*self.cell_width, cell['pos'][1] - 0.5*self.cell_height])
                     cell_vertices.append([cell['pos'][0] - 0.5*self.cell_width, cell['pos'][1] + 0.5*self.cell_height])
                     cell_vertices.append([cell['pos'][0] + 0.5*self.cell_width, cell['pos'][1] + 0.5*self.cell_height])
                     cell_vertices = np.array(cell_vertices)
-                    # cell center is inside the vertices of an obstacle
+                    # cell center is inside the convex hull of the vertices of an obstacle
                     if (min(vertices[:,0]) < cell['pos'][0] < max(vertices[:,0]) and 
                         min(vertices[:,1]) < cell['pos'][1] < max(vertices[:,1])):
                         occ_cells.append(cell)
                     else:
-                        # check if any of the cell vertices are inside the obstacle vertices
+                        # check if any of the cell vertices are inside the convex hull of the obstacle vertices
                         for cell_v in cell_vertices:
                             if (min(vertices[:,0]) < cell_v[0] < max(vertices[:,0]) and 
                                 min(vertices[:,1]) < cell_v[1] < max(vertices[:,1])):
@@ -542,7 +478,7 @@ class Grid:
                                         occ_cells.append(cell)
                                     blocked = True  # cell is blocked, go to next cell
                                     break
-                        # check if any of the obstacle vertices are inside the cell vertices
+                        # check if any of the obstacle vertices are inside the convex hull of the cell vertices
                         if not blocked:  # cell was not detected as blocked yet
                             for v in vertices:
                                 if (min(cell_vertices[:,0]) < v[0] < max(cell_vertices[:,0]) and 
@@ -551,7 +487,7 @@ class Grid:
                                         if cell not in occ_cells:
                                             occ_cells.append(cell)
                                         break  # one obstacle vertex is inside the cell, go to next cell
-                # if cell is found to be occupied, remove it, don't check again for next obstacle
+                # if cell is found to be occupied, remove it, i.e. don't check again for next obstacle
                 for cell in occ_cells:
                     cells.remove(cell)
                 # add cells which are occupied by the obstacle to the collection of occupied cells
@@ -564,10 +500,13 @@ class Grid:
         return occ_cells
 
     def draw(self):
+        # draw the grid
         plt.figure()
         #plot centers
-        centers_x = np.arange(self.position[0]-self.width*0.5 + 0.5*self.cell_width,self.position[0]+self.width*0.5 + 0.5*self.cell_width,self.cell_width)
-        centers_y = np.arange(self.position[1]-self.height*0.5 + 0.5*self.cell_height, self.position[1]+self.height*0.5 + 0.5*self.cell_height, self.cell_height)
+        centers_x = np.arange(self.position[0]-self.width*0.5 + 0.5*self.cell_width,
+                              self.position[0]+self.width*0.5 + 0.5*self.cell_width,self.cell_width)
+        centers_y = np.arange(self.position[1]-self.height*0.5 + 0.5*self.cell_height,
+                              self.position[1]+self.height*0.5 + 0.5*self.cell_height, self.cell_height)
         i, j = 0, 0
         for x in centers_x:
             for y in centers_y:
@@ -591,7 +530,7 @@ class Grid:
         plt.draw()
 
 class SquareGrid(Grid):
-    
+    # special case of a normal Grid, width = height
     def __init__(self, size, position, n_cells, offset=[0.,0.]):
         # make a general grid, with square cell
-        Grid.__init__(self, size, size, position, n_cells)
+        Grid.__init__(self, size, size, position, n_cells, offset)
