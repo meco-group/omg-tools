@@ -153,12 +153,6 @@ class RegularPolyhedron(Polyhedron):
         return vertices
 
 
-class Square(RegularPolyhedron):
-
-    def __init__(self, side, orientation=0.):
-        RegularPolyhedron.__init__(self, side/np.sqrt(2), 4, orientation)
-
-
 class Rectangle(Polyhedron):
 
     def __init__(self, width, height, orientation=0.):
@@ -181,6 +175,12 @@ class Rectangle(Polyhedron):
             b = np.vstack((B[l], B[(l+1) % 4]))
             vertices[:, l] = np.linalg.solve(a, b).ravel()
         return vertices
+
+
+class Square(Rectangle):
+
+    def __init__(self, side, orientation=0.):
+        Rectangle.__init__(self, side, side, orientation)
 
 
 class UFO(Rectangle):

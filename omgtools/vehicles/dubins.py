@@ -46,7 +46,7 @@ import numpy as np
 
 class Dubins(Vehicle):
 
-    def __init__(self, shapes=Circle(0.1), options=None, bounds=None):
+    def __init__(self, shapes=Circle(0.2), options=None, bounds=None):
         bounds = bounds or {}
         if options is not None and 'degree' in options:
             degree = options['degree']
@@ -56,6 +56,7 @@ class Dubins(Vehicle):
             self, n_spl=2, degree=degree, shapes=shapes, options=options)
         self.vmax = bounds['vmax'] if 'vmax' in bounds else 0.5
         self.amax = bounds['amax'] if 'amax' in bounds else 1.
+        # self.amin = bounds['amin'] if 'amin' in bounds else -1.
         self.wmin = bounds['wmin'] if 'wmin' in bounds else -np.pi/6. # in rad/s
         self.wmax = bounds['wmax'] if 'wmax' in bounds else np.pi/6.
 
@@ -83,6 +84,9 @@ class Dubins(Vehicle):
         # acceleration constraint
         # self.define_constraint(
         #     dv_til*(1+tg_ha**2) + 2*v_til*tg_ha*dtg_ha - self.T*self.amax, -inf, 0.)
+        # self.define_constraint(
+        #     -dv_til*(1+tg_ha**2) - 2*v_til*tg_ha*dtg_ha + self.T*self.amin, -inf, 0.)
+
 
         if self.options['substitution']:
             # substitute velocity and introduce equality constraints
@@ -162,9 +166,11 @@ class Dubins(Vehicle):
         # these make sure you get continuity along different iterations
         # inputs are function of v_til, tg_ha and dtg_ha so impose constraints on these
         v_til0 = self.define_parameter('v_til0', 1)
+        # dv_til0 = self.define_parameter('dv_til0', 1)
         tg_ha0 = self.define_parameter('tg_ha0', 1)
         dtg_ha0 = self.define_parameter('dtg_ha0', 1)
         v_til, tg_ha = splines
+        dv_til = v_til.derivative()
         dtg_ha = tg_ha.derivative()
         return [(v_til, v_til0), (tg_ha, tg_ha0),
                 (dtg_ha, self.T*dtg_ha0)]
@@ -173,6 +179,7 @@ class Dubins(Vehicle):
         posT = self.define_parameter('posT', 2)
         tg_haT = self.define_parameter('tg_haT', 1)
         v_til, tg_ha = splines
+        dv_til = v_til.derivative()
         if self.options['substitution']:
             x, y = self.x, self.y
         else:
@@ -219,6 +226,10 @@ class Dubins(Vehicle):
         parameters[self]['tg_ha0'] = np.tan(self.prediction['state'][2]/2.)
         parameters[self]['v_til0'] = self.prediction['input'][0]/(1+parameters[self]['tg_ha0']**2)
         parameters[self]['dtg_ha0'] = 0.5*self.prediction['input'][1]*(1+parameters[self]['tg_ha0']**2)  # dtg_ha
+        # if 'acc' in self.prediction:
+        #     parameters[self]['dv_til0'] = (self.prediction['acc'][0]-2*parameters[self]['v_til0']*parameters[self]['tg_ha0']*parameters[self]['dtg_ha0'])/(1+parameters[self]['tg_ha0']**2)
+        # else:
+        #     parameters[self]['dv_til0'] = (0-2*parameters[self]['v_til0']*parameters[self]['tg_ha0']*parameters[self]['dtg_ha0'])/(1+parameters[self]['tg_ha0']**2)
         parameters[self]['pos0'] = self.prediction['state'][:2]
         parameters[self]['posT'] = self.poseT[:2]  # x,y
         parameters[self]['tg_haT'] = np.tan(self.poseT[2]/2.)
@@ -262,8 +273,12 @@ class Dubins(Vehicle):
         theta = 2*np.arctan2(tg_ha_s,1)
         dtheta = 2*np.array(dtg_ha_s)/(1.+np.array(tg_ha_s)**2)
         v_s = v_til_s*den
+        acc = v_til*(1+tg_ha**2)
+        acc = acc.derivative()
+        acc_s = sample_splines([acc], time)[0]
         signals['state'] = np.c_[x_s, y_s, theta.T].T
         signals['input'] = np.c_[v_s, dtheta.T].T
+        signals['acc'] = np.c_[acc_s].T
         if hasattr(self, 'rel_pos_c'):
             x_c = x_s + sample_splines([self.rel_pos_c[0]*2*tg_ha + self.rel_pos_c[1]*(1-tg_ha**2)], time)[0]/den
             y_c = y_s + sample_splines([self.rel_pos_c[1]*2*tg_ha - self.rel_pos_c[0]*(1-tg_ha**2)], time)[0]/den

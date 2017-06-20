@@ -21,6 +21,8 @@
 from ..basics.optilayer import OptiChild
 from ..basics.spline_extra import get_interval_T
 from ..basics.spline import BSplineBasis, BSpline
+from ..basics.geometry import distance_between_points, point_in_polyhedron, circle_polyhedron_intersection
+from ..basics.shape import Circle, Polyhedron, Rectangle, Square
 from casadi import inf, vertcat, cos, sin
 from scipy.interpolate import interp1d
 from scipy.integrate import odeint
@@ -57,7 +59,7 @@ class ObstaclexD(OptiChild):
     # ========================================================================
 
     def set_default_options(self):
-        self.options = {'draw': True, 'avoid': True}
+        self.options = {'draw': True, 'avoid': True, 'bounce': False}
 
     def set_options(self, options):
         self.options.update(options)
@@ -325,6 +327,138 @@ class Obstacle2D(ObstaclexD):
                 self.signals['orientation'], theta]
             self.signals['angular_velocity'] = np.c_[
                 self.signals['angular_velocity'], omega]
+
+    def overlaps_with(self, obstacle):
+        # check if self overlaps with obstacle
+        # Circle - Polyhedron is based on: 
+        # http://stackoverflow.com/questions/401847/circle-rectangle-collision-detection-intersection
+        if isinstance(self.shape, Circle):
+            obstacle_shape = obstacle.shape
+            obstacle_pos = obstacle.signals['position'][:,-1]
+            if isinstance(obstacle.shape, Circle):
+                self_checkpoints = self.shape.get_checkpoints()
+                obs_checkpoints = obstacle.shape.get_checkpoints()
+
+                for self_chck, self_rad in zip(*self_checkpoints):
+                    self_chck = self_chck + self.signals['position'][:,-1]
+                    for obs_chck, obs_rad in zip(*obs_checkpoints):
+                        obs_chck = obs_chck + obstacle.signals['position'][:,-1]
+                        if (distance_between_points(self_chck, obs_chck) < (self_rad + obs_rad)):
+                            return True
+                # didn't find an overlap
+                return False
+            elif isinstance(obstacle.shape, Polyhedron):
+                if (point_in_polyhedron(self.signals['position'][:,-1], obstacle_shape, obstacle_pos) or
+                   circle_polyhedron_intersection(self, obstacle_shape, obstacle_pos)):
+                    return True
+                else:
+                    return False
+
+        elif isinstance(self.shape, Polyhedron):
+            shape_self = self.shape
+            pos_self = self.signals['position'][:,-1]
+            if isinstance(obstacle.shape, Circle):
+                if (point_in_polyhedron(obstacle.signals['position'][:,-1], shape_self, pos_self) or
+                   circle_polyhedron_intersection(obstacle, shape_self, pos_self)):
+                    return True
+                else:
+                    return False
+                return False
+            elif isinstance(obstacle.shape, Polyhedron):
+                if isinstance(obstacle.shape, Rectangle):
+                    if isinstance(shape_self, Rectangle):
+                        # Rectangle - Rectangle bouncing
+                        
+                        ###################################################################
+                        ### Option1: check for vertices of the one obstacle in the other###
+                        ###################################################################
+                        # if obstacle.shape.orientation == 0:
+                        #     # is self vertex inside obstacle?
+                        #     self_checkpoints = self.shape.get_checkpoints()
+                        #     [[xmin,xmax],[ymin,ymax]] = obstacle.shape.get_canvas_limits()
+                        #     [posx,posy]= obstacle.signals['position'][:,-1]
+                        #     xmin += posx
+                        #     xmax += posx
+                        #     ymin += posy
+                        #     ymax += posy
+                        #     for self_chck, _ in zip(*self_checkpoints):
+                        #         self_chck += pos_self
+                        #         if xmin <= self_chck[0] <= xmax and ymin <= self_chck[1] <= ymax:
+                        #             return True
+                        #     # is obstacle vertex inside self?
+                        #     obstacle_checkpoints = obstacle.shape.get_checkpoints()
+                        #     [[self_xmin,self_xmax],[self_ymin,self_ymax]] = shape_self.get_canvas_limits()
+                        #     self_xmin += pos_self[0]
+                        #     self_xmax += pos_self[0]
+                        #     self_ymin += pos_self[1]
+                        #     self_ymax += pos_self[1]
+                        #     for obs_chck, _ in zip(*obstacle_checkpoints):
+                        #         obs_chck += np.array([posx,posy])
+                        #         if self_xmin <= obs_chck[0] <= self_xmax and self_ymin <= obs_chck[1] <= self_ymax:
+                        #             return True
+                        # else: 
+                        #     raise RuntimeError('Rectangle bouncing with non-zero orientation not yet implemented')
+
+                        ################################################
+                        ### Option2: check for overlapping rectangles###
+                        ################################################
+                        # Advantage: this also works when no vertices of obstacles are inside each other
+                        if obstacle.shape.orientation == 0:
+                            [[xmin_obs,xmax_obs],[ymin_obs,ymax_obs]] = obstacle.shape.get_canvas_limits()
+                            [posx,posy]= obstacle.signals['position'][:,-1]
+                            xmin_obs += posx
+                            xmax_obs += posx
+                            ymin_obs += posy
+                            ymax_obs += posy
+                            [[xmin_self,xmax_self],[ymin_self,ymax_self]] = shape_self.get_canvas_limits()
+                            xmin_self += pos_self[0]
+                            xmax_self += pos_self[0]
+                            ymin_self += pos_self[1]
+                            ymax_self += pos_self[1]
+                            if (xmin_self <= xmax_obs and xmax_self >= xmin_obs and 
+                                ymin_self <= ymax_obs and ymax_self >= ymin_obs):
+                                return True
+                        else: 
+                            raise RuntimeError('Rectangle bouncing with non-zero orientation not yet implemented')
+                    else:
+                        raise RuntimeError('Bouncing with a Polyhedron not yet implemented')
+                else:
+                    raise RuntimeError('Polyhedron - Polyhedron boucing not yet implemented')
+                return False
+
+    def is_outside_of(self, room):
+        # check if self is outside or on the border of room
+        [[xmin,xmax],[ymin,ymax]] = room['shape'].get_canvas_limits()
+        [posx,posy]= room['position']
+        xmin += posx
+        xmax += posx
+        ymin += posy
+        ymax += posy
+        self_checkpoints = self.shape.get_checkpoints()
+        if isinstance(self.shape, Circle):
+            if isinstance(room['shape'], (Rectangle, Square)):
+                for self_chck, self_rad in zip(*self_checkpoints):
+                    self_chck = self_chck + self.signals['position'][:,-1]
+                    if (not (xmin<=self_chck[0]+self.shape.radius<=xmax) or not (ymin<=self_chck[1]+self.shape.radius<=ymax)
+                        or not (xmin<=self_chck[0]-self.shape.radius<=xmax) or not (ymin<=self_chck[1]-self.shape.radius<=ymax)):
+                        #self_chck not within borders
+                        return True
+                # didn't find an overlap
+                return False
+            else:
+                print 'Only rectangular borders can be checked for bouncing obstacles yet'
+        elif isinstance(self.shape, Polyhedron):
+            if isinstance(room['shape'], (Rectangle, Square)):
+                for self_chck, self_rad in zip(*self_checkpoints):
+                    self_chck = self_chck + self.signals['position'][:,-1]
+                    if (not (xmin<=self_chck[0]<=xmax) or not (ymin<=self_chck[1]<=ymax)
+                        or not (xmin<=self_chck[0]<=xmax) or not (ymin<=self_chck[1]<=ymax)):
+                        #self_chck not within borders
+                        return True
+                # didn't find an overlap
+                return False
+            else:
+                print 'Only rectangular borders can be checked for bouncing obstacles yet'
 
     def draw(self, t=-1):
         if not self.options['draw']:
