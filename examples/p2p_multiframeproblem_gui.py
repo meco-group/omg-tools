@@ -59,6 +59,9 @@ vehicle = Holonomic(shapes = Circle(radius=0.6), options={'syslimit': 'norm_2'},
 # when loading an svg, the GUI asks how many pixels there are in 1m e.g. '10',
 # and how many cells you like horizontally and vertically e.g. '20,20'
 # the loaded obstacles are all stationary, but after loading an svg, you can manually add extra (moving) obstacles
+# for drawing.svg use e.g. 25 pixels/m and 30,30 cells
+# for maze_small use e.g. 5 pixels/m and 30,30 cells
+# for maze_big use e.g. 2 pixels/m and 100,100 cells (consider raising vehicle velocity limits to speed up)
 # -) at the far right and below the Save checkmark there are arrows, to scroll through the grid
 
 # Note: LoadSVG only works for a limited type of svg-files for the moment, consisting of
