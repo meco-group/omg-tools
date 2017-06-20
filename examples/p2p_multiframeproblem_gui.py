@@ -50,7 +50,7 @@ vehicle = Holonomic(shapes = Circle(radius=0.6), options={'syslimit': 'norm_2'},
 # -) the Remove button removes the obstacle which was placed most recently
 # clicking this button multiple times removes more obstacles, in the reverse order
 # of their creation (starting with the obstacle which was created most recently)
-# -) the Save checkmark lets you save the current environment
+# -) the Save checkmark lets you save the current environment, in the file environment.pickle
 # -) the Load button loads the most recently saved environment
 # -) the Quit button closes the GUI and stops the example
 # -) the Ready button closes the GUI and continues the example,
