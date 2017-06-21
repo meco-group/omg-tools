@@ -318,7 +318,7 @@ class Environment(OptiChild, PlotLayer):
         if self.room['draw']:
             s_, l_ = self.room['shape'].draw()
             for k, _ in enumerate(s_):
-                surfaces[k]['facecolor'] = mix_with_white(gray, 90)
+                surfaces[k]['facecolor'] = 'none'  # mix_with_white(gray, 90)
         if 'limits' in kwargs:
             limits = kwargs['limits']
         else:
