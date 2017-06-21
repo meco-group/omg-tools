@@ -14,7 +14,7 @@ def test_generator():
     files = os.listdir(example_dir)
     example_files = []
     for f in files:
-        if os.path.isfile(os.path.join(example_dir, f)) and f.endswith('.py'):
+        if (os.path.isfile(os.path.join(example_dir, f)) and f.endswith('.py') and not 'gui' in f):
             example_files.append(f)
     example_files.sort()
     n_files = len(example_files)/node_total
