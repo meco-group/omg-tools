@@ -46,7 +46,7 @@ import numpy as np
 
 class Dubins(Vehicle):
 
-    def __init__(self, shapes=Circle(0.2), options=None, bounds=None):
+    def __init__(self, shapes=Circle(0.1), options=None, bounds=None):
         bounds = bounds or {}
         if options is not None and 'degree' in options:
             degree = options['degree']
