@@ -654,6 +654,11 @@ class MultiFrameProblem(Problem):
 
     def get_init_guess(self, **kwargs):
 
+        # if not self.options['freeT']:
+            # coeffs =  0*self.vehicles[0].knots[self.vehicles[0].degree-1:-(self.vehicles[0].degree-1)]
+            # splines = np.c_[coeffs, coeffs]
+            # motion_time = self.options['horizon_time']
+        # else:
         start_time = time.time()
 
         waypoints = self.frame['waypoints']
