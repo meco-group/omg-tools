@@ -228,22 +228,23 @@ class MultiFrameProblem(Problem):
     def init_plot(self, argument, **kwargs):
         # initialize environment plot
         info = Problem.init_plot(self, argument)
+        gray = [60./255., 61./255., 64./255.]
         if info is not None:
             # initialize frame plot
-            for _ in self.frame['border']['shape'].draw(self.frame['border']['position']):
-                info[0][0]['lines'].append({'color': 'grey', 'linestyle' : '--', 'linewidth': 1.2})
+            s, l = self.frame['border']['shape'].draw(self.frame['border']['position'])
+            surfaces = [{'facecolor': 'none', 'edgecolor': gray, 'linestyle' : '--', 'linewidth': 1.2} for _ in s]
+            info[0][0]['surfaces'] += surfaces
             # initialize global path plot
-            info[0][0]['lines'].append({'color': 'red', 'linestyle' : '--', 'linewidth': 1.2})
+            info[0][0]['lines'] += [{'color': 'red', 'linestyle' : '--', 'linewidth': 1.2}]
         return info        
 
     def update_plot(self, argument, t, **kwargs):
         # plot environment
         data = Problem.update_plot(self, argument, t)
-
         if data is not None:
             # plot frame border
-            for l in self.frame_storage[t]['border']['shape'].draw(self.frame_storage[t]['border']['position']):
-                data[0][0].append([l[k, :] for k in range(self.frame_storage[t]['border']['shape'].n_dim)])
+            s, l = self.frame_storage[t]['border']['shape'].draw(self.frame_storage[t]['border']['position'])
+            data[0][0]['surfaces'] += s
             # plot global path
             # remove last waypoint, since this is the goal position,
             # which was manually added and is not necessarily a grid point
@@ -252,7 +253,7 @@ class MultiFrameProblem(Problem):
             for idx, waypoint in enumerate(self.global_path_storage[t][:-1]):
                 waypoints[0,idx] = waypoint[0]
                 waypoints[1,idx] = waypoint[1]
-            data[0][0].append([waypoints[k, :] for k in range(2)])
+            data[0][0]['lines'] += [waypoints]
         return data
 
     # ========================================================================
