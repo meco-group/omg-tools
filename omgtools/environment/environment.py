@@ -293,7 +293,7 @@ class Environment(OptiChild, PlotLayer):
     def draw(self, t=-1):
         surfaces, lines = [], []
         if self.room['draw']:
-            s, l = self.room['shape'].draw()
+            s, l = self.room['shape'].draw(pose = np.r_[self.room['position'], self.room['orientation']])
             surfaces += s
             lines += l
         for obstacle in self.obstacles:
