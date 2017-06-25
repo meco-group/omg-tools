@@ -1,0 +1,12 @@
+prefix=/home/travis/build/casadi/binaries/casadi/python_install
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: casadi_sundials_common
+Description: CasADi is a symbolic framework for automatic differentation and numeric optimization ( module casadi_sundials_common )
+URL: http://casadi.org
+Version: 3.0.0
+Requires: 
+Libs: -L${libdir} -lcasadi_sundials_common
+Cflags: -I${includedir}
