@@ -1,4 +1,3 @@
-
 # This file is part of OMG-tools.
 #
 # OMG-tools -- Optimal Motion Generation-tools
@@ -18,18 +17,15 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-import sys, os
-sys.path.insert(0, os.getcwd()+"/..")
 from omgtools import *
+
 # create vehicle
 vehicle = Holonomic()
-# Regularization on change in orientation may be required, since the orientation
-# of the holonomic vehicle is free. The weight has to be tuned for the application.
-# By default no regularization is added.
-vehicle.set_options({'reg_type': 'norm_1', 'reg_weight': 10})
+vehicle.set_options({'safety_distance': 0.1})
+vehicle.set_options({'ideal_prediction': False})
 
-vehicle.set_initial_conditions([-1.5, -1.5])  # input orientation in deg
-vehicle.set_terminal_conditions([1.5, 1.5])
+vehicle.set_initial_conditions([-1.5, -1.5])
+vehicle.set_terminal_conditions([2., 2.])
 
 # create environment
 environment = Environment(room={'shape': Square(5.)})
@@ -37,24 +33,19 @@ rectangle = Rectangle(width=3., height=0.2)
 
 environment.add_obstacle(Obstacle({'position': [-2.1, -0.5]}, shape=rectangle))
 environment.add_obstacle(Obstacle({'position': [1.7, -0.5]}, shape=rectangle))
-trajectories = {'velocity': {'time': [ 4.],
-                             'values': [[-0.15, 0.15]]}}
+trajectories = {'velocity': {'time': [3., 4.],
+                             'values': [[-0.15, 0.0], [0., 0.15]]}}
 environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
                                   simulation={'trajectories': trajectories}))
 
 # create a point-to-point problem
-problem = Point2point(vehicle, environment, freeT=True)
-#problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
-problem.set_options({'solver_options': {'ipopt': {'ipopt.hessian_approximation': 'limited-memory'}}})
-
+problem = Point2point(vehicle, environment, freeT=False)
 problem.init()
 
 # create simulator
-simulator = Simulator(problem, update_time=0.1)
+simulator = Simulator(problem)
 problem.plot('scene')
-vehicle.plot('input', knots=True, labels=['v_x (m/s)', 'v_y (m/s)', 'w (rad/s)'])
-vehicle.plot('state', knots=True, labels=['x (m)', 'y (m)', 'theta (rad)'])
+vehicle.plot('input', knots=True, prediction=True, labels=['v_x (m/s)', 'v_y (m/s)'])
 
 # run it!
 simulator.run()
-problem.save_movie('scene', format='gif', name='holonomic_orient', number_of_frames=100, movie_time=5, axis=False)

@@ -23,7 +23,7 @@ from plotlayer import PlotLayer
 
 class Simulator:
 
-    def __init__(self, problem, sample_time=0.01, update_time=0.5):
+    def __init__(self, problem, sample_time=0.01, update_time=0.1):
         self.set_problem(problem)
         self.update_time = update_time
         self.sample_time = sample_time

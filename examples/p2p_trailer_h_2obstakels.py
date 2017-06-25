@@ -41,7 +41,7 @@ rectangle = Rectangle(width=.2, height=4.)
 
 environment.add_obstacle(Obstacle({'position': [3., 3.]}, shape=rectangle))
 # environment.add_obstacle(Obstacle({'position': [6., 7.]}, shape=rectangle))
-trajectory = {'position': {'time': [3.],
+trajectory = {'position': {'time': [4.],
                            'values': [[-0.0 , -1.]]}}
 # Here we defined the time-axis and the corresponding values for velocity.
 # Note that these values should be interpreted relatively: eg. at time 3, we
@@ -69,7 +69,7 @@ problem = Point2point(trailer, environment, freeT=True)  # pass trailer to probl
 # todo: isn't there are a cleaner way?
 problem.father.add(vehicle)  # add vehicle to optifather, such that it knows the trailer variables
 # extra solver settings which may improve performance https://www.coin-or.org/Ipopt/documentation/node53.html#SECTION0001113010000000000000
-problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57', 'ipopt.max_iter':50}}})
+problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57','ipopt.hessian_approximation': 'limited-memory'}}})
 #problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 #problem.set_options({'solver_options': {'ipopt': {'ipopt.print_level': 4}}})
 #problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})

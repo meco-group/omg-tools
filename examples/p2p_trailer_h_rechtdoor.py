@@ -50,7 +50,7 @@ problem.father.add(vehicle)  # add vehicle to optifather, such that it knows the
 #problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'mumps'}}})
 #problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma97','ipopt.hessian_approximation': 'limited-memory'}}})
 
-problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma97'}}})
+#problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma97'}}})
 buildtime = problem.init()
 #problem.export()
 

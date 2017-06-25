@@ -32,7 +32,7 @@ vehicle.set_terminal_conditions([8., 5., 0.]) #eerste waarde naar rechts en twee
 
 # create trailer
 trailer = TrailerJolandHolonomic(lead_veh=vehicle,  shapes=Rectangle(0.3,0.2), l_hitch = 0.215, l_hitch1 = 0.2075,
-                  bounds={'tmax': 50., 'tmin': -50.}, options=options)  # limit angle between vehicle and trailer
+                  bounds={'tmax': 30., 'tmin': -30.}, options=options)  # limit angle between vehicle and trailer
 # Note: the knot intervals of lead_veh and trailer should be the same
 trailer.define_knots(knot_intervals=9)  # adapjkt amount of knot intervals was eerst 9
 trailer.set_initial_conditions([0])  # input orientation in deg
@@ -52,8 +52,8 @@ problem = Point2point(trailer, environment, freeT=True)  # pass trailer to probl
 problem.father.add(vehicle)  # add vehicle to optifather, such that it knows the trailer variables
 # extra solver settings which may improve performance https://www.coin-or.org/Ipopt/documentation/node53.html#SECTION0001113010000000000000
 #problem.set_options({'solver_options': {'ipopt': {'ipopt.hessian_approximation': 'limited-memory'}}})
-problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57','ipopt.max_iter':50}}})
-#problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57','ipopt.hessian_approximation': 'limited-memory'}}})
+#problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
+problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57','ipopt.hessian_approximation': 'limited-memory'}}})
 
 problem.init()
 
