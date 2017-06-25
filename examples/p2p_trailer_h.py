@@ -21,19 +21,17 @@ import sys, os
 sys.path.insert(0, os.getcwd()+"/..")
 from omgtools import *
 
-# create vehicle
-vehicle = Holonomic(shapes=Square(0.4))
+vehicle = Holonomic(shapes=Circle(0.05))
 number_knot_intervals = 9.
 vehicle.define_knots(knot_intervals=number_knot_intervals)  # adapt amount of knot intervals
 vehicle.set_initial_conditions([2., 5.])  # input orientation in deg
 #vehicle.set_terminal_conditions([3., 3., 90.])
-vehicle.set_terminal_conditions([8., 5.])
-
+vehicle.set_terminal_conditions([8., 5.]) #eerste waarde naar rechts en tweede omhoog
 # create trailer
-trailer = TrailerHolonomic(lead_veh=vehicle,  shapes=Square(0.3), l_hitch = 0.6)  # ldie limiet boeit niet, wordt niet in rekening gebracht.
+trailer = TrailerHolonomic(lead_veh=vehicle,  shapes=Rectangle(0.4,0.6), l_hitch = 0.6)  # ldie limiet boeit niet, wordt niet in rekening gebracht.
 # Note: the knot intervals of lead_veh and trailer should be the same
-trailer.define_knots(knot_intervals=number_knot_intervals)  # adapt amount of knot intervals
-trailer.set_initial_conditions(0.)  # input orientation in deg
+trailer.define_knots(knot_intervals=number_knot_intervals)
+trailer.set_initial_conditions(0.)  # input orientation in rad
 trailer.set_terminal_conditions(0.)  # this depends on the application e.g. driving vs parking
 
 # create environment
@@ -56,7 +54,7 @@ problem.init()
 #problem.export()
 
 # create simulator
-simulator = Simulator(problem, update_time = 0.5)
+simulator = Simulator(problem, update_time = 0.1)
 problem.plot('scene')
 trailer.plot('input', knots=True, labels=['v_x (m/s)','v_y (m/s)'])
 trailer.plot('state', knots=True, labels=['x_tr (m)', 'y_tr (m)', 'theta_tr (rad)', 'x_veh (m)', 'y_veh (m)', 'theta_veh (rad)'])

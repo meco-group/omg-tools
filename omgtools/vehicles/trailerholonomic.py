@@ -75,7 +75,8 @@ class TrailerHolonomic(Vehicle):
         dtg_ha_tr0 = self.define_parameter('dtg_ha_tr0', 1)
         tg_ha_tr = splines[0]
         dtg_ha_tr = tg_ha_tr.derivative()
-        con_tr = [(tg_ha_tr, tg_ha_tr0), (dtg_ha_tr, T*dtg_ha_tr0)]
+        #con_tr = [(tg_ha_tr, tg_ha_tr0), (dtg_ha_tr, T*dtg_ha_tr0)]
+        con_tr = [(tg_ha_tr, tg_ha_tr0)]
         con_veh = self.lead_veh.get_initial_constraints(splines[1: ]) #splines[1: ] = (x,y)
         return con_tr + con_veh  # put in one list
 
@@ -201,8 +202,7 @@ class TrailerHolonomic(Vehicle):
         ode_veh = self.lead_veh.ode([x_veh, y_veh], input)  # pass on state and input which are related to veh
         ode_trailer = np.r_[ode_veh[0]+self.l_hitch*np.sin(theta_tr)*dtheta_tr,
                             ode_veh[1]-self.l_hitch*np.cos(theta_tr)*dtheta_tr,
-                            dtheta_tr].T #in dubins (wordt gebruikt in example) is ode_veh[0] = dx (snelheid in x richting), ode_veh[1]=dy.
-#ode wordt gebruikt om de state te bepalen door deze te integreren. zie vehicle.py 'integrate_ode()'
+                            dtheta_tr].T
         ode = np.r_[ode_trailer, ode_veh]
 
         return ode

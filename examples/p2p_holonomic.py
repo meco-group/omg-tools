@@ -50,5 +50,5 @@ problem.plot('scene')
 vehicle.plot('input', knots=True, labels=['v_x (m/s)', 'v_y (m/s)'])
 #problem.export()
 # run it!
-simulator.run_once()
+simulator.run()
 
