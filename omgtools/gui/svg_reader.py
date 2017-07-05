@@ -84,6 +84,9 @@ class SVGReader(object):
     def convert_basic_shapes(self):        
         # code for basic shapes <circle> and <rect>
 
+        # Todo: these shapes can also have a transform, find it and
+        # add this transform to self.transform
+
         # find svg-paths, describing the rectangles
         try:
             # search for the word rect in the outer branch of the SVG-file
@@ -122,6 +125,7 @@ class SVGReader(object):
             pos = [float(rectangle.get('x')), float(rectangle.get('y'))]  # Note: [x,y] is the top left corner
             # axis are placed in the top left corner and point to the right(x) and downward(y)
             obstacle['pos'] = [pos[0]+float(rectangle.get('width'))*0.5, pos[1]+float(rectangle.get('height'))*0.5]
+            obstacle['pos'] += self.transform  # apply transform
             obstacle['width'] = float(rectangle.get('width'))
             obstacle['height'] = float(rectangle.get('height'))
             obstacle['velocity'] = [0, 0]
@@ -132,6 +136,7 @@ class SVGReader(object):
             obstacle = {}
             obstacle['shape'] = 'circle'
             obstacle['pos'] = [float(circle.get('cx')), float(circle.get('cy'))]  # Note: [x,y] is the top left corner
+            obstacle['pos'] += self.transform  # apply transform
             obstacle['radius'] = float(circle.get('r'))
             obstacle['velocity'] = [0, 0]
             obstacle['bounce'] = False
