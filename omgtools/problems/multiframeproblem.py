@@ -935,57 +935,33 @@ class MultiFrameProblem(Problem):
                     # recompute distance from last point to border, for sure one of the two if
                     # conditions will evaluate to True (see overcoupling if)
                     dist_to_border = self.distance_to_border(next_frame['waypoints'][-1], frame=next_frame)
-                    
+                    desired_distance = self.veh_size*self.scale_factor  # desired distance from last waypoint to border
+
                     x1,y1 = waypoint_line[0]
                     x2,y2 = waypoint_line[1]
                     # compute x3, y3 ; being the intersection between the waypoint_line and the frame
                     if abs(dist_to_border[0]) <= self.veh_size:
                         # problem lies in the x-direction
-                        if dist_to_border[0]<=0: 
-                            x3 = xmin
-                        else:                     
-                            x3 = xmax
-                        import pdb; pdb.set_trace()  # breakpoint 8dc96da1 //
-                        if (y1 == y2):  # horizontal waypoint_line
-                            y3 = y1
+                        new_waypoint = [0, 0]
+                        if dist_to_border[0]<=0:
+                            new_waypoint[0] = xmin + desired_distance
                         else:
-                            y3 = (x3-x1)*(float(x2-x1)/(y2-y1))+y1
-                        # compute angle between frame and waypoint_line
-                        angle = np.arctan2(float(dist_to_border[0]),(y3-y2))
-                        # find new waypoint
-                        # this is the point on the waypoint_line, for which the distance
-                        # to the border is self.veh_size*self.scale_factor
-                        new_waypoint = [0, 0]                        
-                        # compute x-coordinate
-                        l2 = float(self.veh_size*self.scale_factor)/np.tan(angle)
-                        if y2 <= y3:
-                            new_waypoint[1] = y3 - l2
+                            new_waypoint[0] = xmax - desired_distance
+                        if (y1 == y2):
+                            new_waypoint[1] = y1
                         else:
-                            new_waypoint[1] = y3 + l2
-                        new_waypoint[0] = (new_waypoint[1]-y1)*(float((y2-y1))/(x2-x1))+x1
+                            new_waypoint[1] = (new_waypoint[0]-x1)*(float((y2-y1))/(x2-x1))+y1
                     if abs(dist_to_border[1]) <= self.veh_size:
                         # problem lies in the y-direction
-                        if dist_to_border[1]<=0: 
-                            y3 = ymin
-                        else:                     
-                            y3 = ymax
-                        if (x1 == x2):  # vertical waypoint_line
-                            x3 = x1
+                        new_waypoint = [0, 0]
+                        if dist_to_border[1]<=0:
+                            new_waypoint[1] = ymin + desired_distance
                         else:
-                            x3 = (y3-y1)*(float(y2-y1)/(x2-x1))+x1
-                        # compute angle between frame and waypoint_line
-                        angle = np.arctan2(float(dist_to_border[1]),(y3-y2))
-                        # find new waypoint
-                        # this is the point on the waypoint_line, for which the distance
-                        # to the border is self.veh_size*self.scale_factor
-                        new_waypoint = [0, 0]                        
-                        # compute x-coordinate
-                        l2 = float(self.veh_size*self.scale_factor)/np.tan(angle)
-                        if x2 <= x3:
-                            new_waypoint[0] = x3 - l2
+                            new_waypoint[1] = ymax - desired_distance
+                        if (x1 == x2):
+                            new_waypoint[0] = x1
                         else:
-                            new_waypoint[0] = x3 + l2
-                        new_waypoint[1] = (new_waypoint[0]-x1)*(float((x2-x1))/(y2-y1))+y1
+                            new_waypoint[0] = (new_waypoint[1]-y1)*(float((x2-x1))/(y2-y1))+x1
                     # remove the old waypoints and change it by the new one
                     for i in range(count):
                         next_frame['waypoints'].pop()  # remove last waypoint
