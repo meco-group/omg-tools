@@ -60,8 +60,8 @@ vehicle = Holonomic(shapes = Circle(radius=0.6), options={'syslimit': 'norm_2'},
 # and how many cells you like horizontally and vertically e.g. '20,20'
 # the loaded obstacles are all stationary, but after loading an svg, you can manually add extra (moving) obstacles
 # for drawing.svg use e.g. 25 pixels/m and 30,30 cells
-# for maze_small use e.g. 5 pixels/m and 30,30 cells
-# for maze_big use e.g. 2 pixels/m and 100,100 cells (consider raising vehicle velocity limits to speed up)
+# for maze_small.svg use e.g. 5 pixels/m and 30,30 cells
+# for maze_big.svg use e.g. 2 pixels/m and 100,100 cells (consider raising vehicle velocity limits to speed up)
 # -) at the far right and below the Save checkmark there are arrows, to scroll through the grid
 
 # Note: LoadSVG only works for a limited type of svg-files for the moment, consisting of
@@ -87,9 +87,10 @@ globalplanner = AStarPlanner(environment, gui.n_cells, start, goal)
 
 # make coordinator
 options={'freeT': True, 'horizon_time': 10, 'no_term_con_der': False}
+
 # Note: When 'min_nobs' is selected and your vehicle size is larger than the cell size,
 # shifting frames sometimes causes problems
-multiproblem=MultiFrameProblem(vehicle, environment, globalplanner, options=options, frame_type='min_nobs')
+multiproblem=MultiFrameProblem(vehicle, environment, globalplanner, options=options, frame_size= 9, frame_type='min_nobs')
 
 simulator = Simulator(multiproblem)
 multiproblem.plot('scene')
@@ -97,5 +98,5 @@ vehicle.plot('input', knots=True, prediction=True, labels=['v_x (m/s)', 'v_y (m/
 
 # run it!
 simulator.run()
-# multiproblem.save_movie('scene', format='gif', name='multiproblemgif', number_of_frames=300, movie_time=30, axis=False)
-# multiproblem.save_movie('scene', format='tikz', name='multiproblemtikz', number_of_frames=100, movie_time=30, axis=False)
+# multiproblem.save_movie('scene', format='gif', name='example1_minobs', number_of_frames=300, movie_time=30, axis=False)
+# multiproblem.save_movie('scene', format='tikz', name='example1_minobs', number_of_frames=100, movie_time=10, axis=False)
