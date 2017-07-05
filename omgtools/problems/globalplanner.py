@@ -40,7 +40,7 @@ class QuadmapPlanner(GlobalPlanner):
     def __init__(self,environment):
         GlobalPlanner.__init__(self, environment)
         raise NotImplementedError('Please implement this method!')
-    
+
     def get_path(self, environment, curr_state, goal_state):
         raise NotImplementedError('Please implement this method!')
 
@@ -60,7 +60,7 @@ class AStarPlanner(GlobalPlanner):
         # check if vehicle size needs to be taken into account while searching a global path
         self.veh_size = options['veh_size'] if 'veh_size' in options else [0.,0.]
 
-        # make grid        
+        # make grid
         if ((grid_width == grid_height) and (n_cells[0] == n_cells[1])):
             self.grid = SquareGrid(size=grid_width, position=grid_position, n_cells=n_cells, offset=self.veh_size)
         else:
@@ -94,7 +94,7 @@ class AStarPlanner(GlobalPlanner):
             if x != par_x and y == par_y:
                 # horizontal movement
                 g_cost = self.grid.cell_width
-            elif x == par_x and y != par_y: 
+            elif x == par_x and y != par_y:
                 # verical movement
                 g_cost = self.grid.cell_height
             elif x != par_x and y != par_y:
@@ -282,8 +282,8 @@ class Grid:
     def in_bounds(self, point):
         x, y = point
         # cell number starts counting at 0, until n_cells-1
-        return 0 <= x < self.n_cells[0] and 0 <= y < self.n_cells[1] 
-    
+        return 0 <= x < self.n_cells[0] and 0 <= y < self.n_cells[1]
+
     def block(self, points):
         # block cells given by indices/position in grid
         if len(points) == 2 and isinstance(points[0], (int)):
@@ -291,7 +291,7 @@ class Grid:
         for point in points:
             if self.in_bounds(point):
                 # only add points which are in the bounds
-                self.occupied.append(point)                
+                self.occupied.append(point)
 
     def free(self, point):
         # check if a gridpoint is free
@@ -307,7 +307,7 @@ class Grid:
         # graphical illustration:
         #  1----2----3
         #  |    |    |
-        #  4----x----6 
+        #  4----x----6
         #  |    |    |
         #  7----8----9
         # if x represents an occupied point, then moving from e.g. 8 to 6 is not possible
@@ -367,7 +367,7 @@ class Grid:
             points_to_check = filter(self.free, points_to_check)
             # select closest point which is not occupied
             if points_to_check is not None:
-                # worst case: only a diagonally placed cell is available 
+                # worst case: only a diagonally placed cell is available
                 # --> distance to it is sqrt(cell_width**2+cell_height**2)
                 # use an upper bound on this to avoid taking sqrt a lot to
                 # initialize d_min
@@ -378,7 +378,7 @@ class Grid:
                         d_min = distance
                         moved_point = p
 
-        # convert position of moved_point to indices 
+        # convert position of moved_point to indices
         return moved_point
 
     def distance_between_cells(self, cell1, cell2):
@@ -418,7 +418,7 @@ class Grid:
                 j += 1
             i += 1
             j = 0
-        
+
         for obstacle in environment.obstacles:
             # only look at stationary obstacles
             if ((not 'trajectories' in obstacle.simulation) or (not 'velocity' in obstacle.simulation['trajectories'])
@@ -465,13 +465,13 @@ class Grid:
                     cell_vertices.append([cell['pos'][0] + 0.5*self.cell_width, cell['pos'][1] + 0.5*self.cell_height])
                     cell_vertices = np.array(cell_vertices)
                     # cell center is inside the convex hull of the vertices of an obstacle
-                    if (min(vertices[:,0]) < cell['pos'][0] < max(vertices[:,0]) and 
+                    if (min(vertices[:,0]) < cell['pos'][0] < max(vertices[:,0]) and
                         min(vertices[:,1]) < cell['pos'][1] < max(vertices[:,1])):
                         occ_cells.append(cell)
                     else:
                         # check if any of the cell vertices are inside the convex hull of the obstacle vertices
                         for cell_v in cell_vertices:
-                            if (min(vertices[:,0]) < cell_v[0] < max(vertices[:,0]) and 
+                            if (min(vertices[:,0]) < cell_v[0] < max(vertices[:,0]) and
                                 min(vertices[:,1]) < cell_v[1] < max(vertices[:,1])):
                                     # avoid adding the same cell multiple times
                                     if cell not in occ_cells:
@@ -481,7 +481,7 @@ class Grid:
                         # check if any of the obstacle vertices are inside the convex hull of the cell vertices
                         if not blocked:  # cell was not detected as blocked yet
                             for v in vertices:
-                                if (min(cell_vertices[:,0]) < v[0] < max(cell_vertices[:,0]) and 
+                                if (min(cell_vertices[:,0]) < v[0] < max(cell_vertices[:,0]) and
                                     min(cell_vertices[:,1]) < v[1] < max(cell_vertices[:,1])):
                                         # avoid adding the same cell multiple times
                                         if cell not in occ_cells:

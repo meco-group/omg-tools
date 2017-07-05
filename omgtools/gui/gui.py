@@ -148,7 +148,7 @@ class EnvironmentGUI(tk.Frame):
         # save meter_to_pixel conversion factor
         # this has to be an input given by the user, when loading an svg
         self.meter_to_pixel = meter_to_pixel
-        
+
         # make environment frame and size it
         self.frame_width_px = int(width*self.meter_to_pixel)
         self.frame_height_px = int(height*self.meter_to_pixel)
@@ -165,7 +165,7 @@ class EnvironmentGUI(tk.Frame):
         self.rows = self.n_cells[1]
 
         self.draw_grid()  # draw grid in canvas
-    
+
         # update cell_size text
         self.cell_size_label['text'] = 'Cell size: ' + str(np.round(self.frame_width_m*1./self.n_cells[0],3)) + 'x' + str(np.round(self.frame_height_m*1./self.n_cells[1],3)) + ' [m]'
 
@@ -269,7 +269,8 @@ class EnvironmentGUI(tk.Frame):
             self.environment = Environment(room={'shape': Rectangle(width = self.frame_width_m,
                                                                     height = self.frame_height_m),
                                                  'position':[self.position[0]*1./self.meter_to_pixel+self.frame_width_m*0.5,
-                                                             self.position[1]*1./self.meter_to_pixel+self.frame_height_m*0.5]})                
+                                                             self.position[1]*1./self.meter_to_pixel+self.frame_height_m*0.5],
+                                                 'draw': True})
             for obstacle in self.obstacles:
                 if obstacle['shape'] == 'rectangle':
                     rectangle = Rectangle(width=obstacle['width'],height=obstacle['height'])
@@ -285,7 +286,7 @@ class EnvironmentGUI(tk.Frame):
                     self.environment.add_obstacle(Obstacle({'position': pos}, shape=circle, simulation=simulation, options={'bounce': obstacle['bounce']}))
                 else:
                     raise ValueError('For now only rectangles and circles are supported, you selected a ' + obstacle['shape'])
-            
+
             # if save environment is checked, save environment in a file
             if self.save_env.get():
                 self.save_environment()
@@ -341,7 +342,7 @@ class EnvironmentGUI(tk.Frame):
 
         self.clicked_positions = saved_env[2]  # clicked start and goal positions
         self.n_cells = saved_env[3]  # number of cells
-        
+
         # resize the canvas, according to the loaded settings
         self.reinitialize(width=self.frame_width_m, height=self.frame_height_m,
                           meter_to_pixel = self.meter_to_pixel, position=self.position, n_cells=self.n_cells)
@@ -398,9 +399,9 @@ class EnvironmentGUI(tk.Frame):
                     self.n_cells[0] = int(value[0])
                     self.n_cells[1] = int(value[1])
                 except:
-                    print ('Please input your desired cell numbers in the form n, m.' +  
+                    print ('Please input your desired cell numbers in the form n, m.' +
                           'In which n and m are natural numbers')
-                    self.n_cells = [0, 0]  # reset values  
+                    self.n_cells = [0, 0]  # reset values
                     continue  # skip next part
                 if 0 in self.n_cells:
                     print 'Your desired number of cells cannot be 0 in one of the directions'
@@ -452,7 +453,7 @@ class EnvironmentGUI(tk.Frame):
 
         x = u/self.meter_to_pixel
         y = (vmax-v)/self.meter_to_pixel + vmin/self.meter_to_pixel
-        
+
         return [x,y]
 
     def world_to_pixel(self, world):
@@ -464,10 +465,10 @@ class EnvironmentGUI(tk.Frame):
 
         x,y = world
         x,y = float(x), float(y)
-        
+
         u = x*self.meter_to_pixel
         v = -y*self.meter_to_pixel + vmin + vmax
-        
+
         return [u,v]
 
 class popupWindow(object):

@@ -32,7 +32,7 @@ class SVGReader(object):
         self.obstacles = []
 
     def convert_path_to_points(self):
-        
+
         # find svg-paths, describing the shapes e.g. using Bezier curves
         # for rectangle check on straight lines --> is control point on line
         # between start and end?
@@ -43,7 +43,7 @@ class SVGReader(object):
                 # if not yet found, search for the word path in the next branch
                 self.svgpath = self.tree.find("{%s}g" %self.ns).findall("{%s}path" %self.ns)
             if not self.svgpath:
-                # if not yet found, search for the word path in the next branch                
+                # if not yet found, search for the word path in the next branch
                 self.svgpath = self.tree.find("{%s}g" %self.ns).find("{%s}g" %self.ns).findall("{%s}path" %self.ns)
         except:  # error occured, e.g. no <g/> found, this is possible when you only have basic shapes
             print 'No shapes found which are described by a path, probably you only have basic shapes'
@@ -64,8 +64,8 @@ class SVGReader(object):
             for line in lines:
                 if line:
                     # line [0] contains Mx,y, the startpoint
-                    test1=line[1:].replace(","," ")  # replace comma by: space 
-                    test2 = test1.replace("-"," -")  # replace minus sign by: space minus 
+                    test1=line[1:].replace(","," ")  # replace comma by: space
+                    test2 = test1.replace("-"," -")  # replace minus sign by: space minus
                     test3 = test2.replace("c"," c ")  # replace c by: space c space
                     # splits the line at each space, to create separate points
                     newpoints = np.array(map(eval, test3.strip().split(' ')))
@@ -79,9 +79,9 @@ class SVGReader(object):
             # save points to file
             f = open("environment.txt", "a")
             f.write( "path_"+ str(counter) + "="+ str(np.array(points)) + "\n" )
-            f.close() 
+            f.close()
 
-    def convert_basic_shapes(self):        
+    def convert_basic_shapes(self):
         # code for basic shapes <circle> and <rect>
 
         # Todo: these shapes can also have a transform, find it and
@@ -147,11 +147,11 @@ class SVGReader(object):
 
         # find svg-polylines
         # example: <polyline fill="none" stroke="#333333" stroke-width="10" points="25.41,40.983 25.41,258.197 414.754,258.197 "/>
-        try: 
+        try:
             # search for the word polyline in the outer branch of the SVG-file
             self.polylines = self.tree.findall("{%s}polyline" %self.ns)
             if not self.polylines:
-                # if not yet found, search for the word polyline in the next branch                
+                # if not yet found, search for the word polyline in the next branch
                 self.polylines = self.tree.find("{%s}g" %self.ns).findall("{%s}polyline" %self.ns)
             if not self.polylines:
                 # if not yet found, search for the word polyline in the next branch
@@ -164,14 +164,14 @@ class SVGReader(object):
 
         # find svg-lines
         # example: <line fill="none" stroke="#333333" stroke-width="10" x1="25.41" y1="174.59" x2="69.672" y2="174.59"/>
-        try: 
+        try:
             # search for the word line in the outer branch of the SVG-file
             self.lines = self.tree.findall("{%s}line" %self.ns)
             if not self.lines:
                 # if not yet found, search for the word line in the next branch
                 self.lines = self.tree.find("{%s}g" %self.ns).findall("{%s}line" %self.ns)
             if not self.lines:
-                # if not yet found, search for the word line in the next branch                
+                # if not yet found, search for the word line in the next branch
                 self.lines = self.tree.find("{%s}g" %self.ns).find("{%s}g" %self.ns).findall("{%s}line" %self.ns)
             self.n_lines = len(self.lines)  # number of paths which build up the figure
             if self.n_lines == 0:
@@ -291,7 +291,7 @@ class SVGReader(object):
                 for word in line.split(' '):
                     if (word != ', ' and word != ',  ' and word != '' and word != ' '):
                         points.append(word)
-        f.close() 
+        f.close()
         newpoints = []
         for point in points:
             if point[-1:] == '\n':
@@ -305,7 +305,7 @@ class SVGReader(object):
         for i in range(0,len(newpoints),2):
             x.append(newpoints[i])
             y.append(newpoints[i+1])
-        
+
         plt.plot(x,y)
         plt.show()
 
