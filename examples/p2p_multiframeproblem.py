@@ -20,14 +20,14 @@
 
 
 # In this example we load a big environment, and solve the motion planning
-# problem by splitting it over different subproblems. First we use a global planner, which 
+# problem by splitting it over different subproblems. First we use a global planner, which
 # is an A-star planner in this case, to find a rough path through the environment. The global
 # planner only takes into account the stationary obstacles. Afterwards, we make a MultiFrameProblem,
 # which consists of several subproblems. Each subproblem is solved inside a so-called frame
 # around the vehicle. Inside the frame, all obstacles, including the moving ones, are taken into
 # account. A trajectory which is parameterized as a spline is computed to move through the local frame.
 # In the beginning, the first two frames are computed. When the vehicles enters the second frame (which
-# overlaps with the first one), the third frame is computed, and so the method continues. 
+# overlaps with the first one), the third frame is computed, and so the method continues.
 
 from omgtools import *
 
@@ -85,7 +85,7 @@ globalplanner = AStarPlanner(environment, [25,25], start, goal)
 options={'freeT': True}
 # one extra setting is the frame_type:
 ## 'min_nobs': use frame which is as big as possible, without containing stationary obstacles
-## 'shift' use frame of fixed size, which is moved when the vehicle comes close to the end point, 
+## 'shift' use frame of fixed size, which is moved when the vehicle comes close to the end point,
 ## this requires an extra setting 'frame_size': select the size of the shifted (square) frame
 
 # Note: When 'min_nobs' is selected and your vehicle size is larger than the cell size,

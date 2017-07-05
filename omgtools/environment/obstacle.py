@@ -330,7 +330,7 @@ class Obstacle2D(ObstaclexD):
 
     def overlaps_with(self, obstacle):
         # check if self overlaps with obstacle
-        # Circle - Polyhedron is based on: 
+        # Circle - Polyhedron is based on:
         # http://stackoverflow.com/questions/401847/circle-rectangle-collision-detection-intersection
         if isinstance(self.shape, Circle):
             obstacle_shape = obstacle.shape
@@ -368,7 +368,7 @@ class Obstacle2D(ObstaclexD):
                 if isinstance(obstacle.shape, Rectangle):
                     if isinstance(shape_self, Rectangle):
                         # Rectangle - Rectangle bouncing
-                        
+
                         ###################################################################
                         ### Option1: check for vertices of the one obstacle in the other###
                         ###################################################################
@@ -396,7 +396,7 @@ class Obstacle2D(ObstaclexD):
                         #         obs_chck += np.array([posx,posy])
                         #         if self_xmin <= obs_chck[0] <= self_xmax and self_ymin <= obs_chck[1] <= self_ymax:
                         #             return True
-                        # else: 
+                        # else:
                         #     raise RuntimeError('Rectangle bouncing with non-zero orientation not yet implemented')
 
                         ################################################
@@ -415,10 +415,10 @@ class Obstacle2D(ObstaclexD):
                             xmax_self += pos_self[0]
                             ymin_self += pos_self[1]
                             ymax_self += pos_self[1]
-                            if (xmin_self <= xmax_obs and xmax_self >= xmin_obs and 
+                            if (xmin_self <= xmax_obs and xmax_self >= xmin_obs and
                                 ymin_self <= ymax_obs and ymax_self >= ymin_obs):
                                 return True
-                        else: 
+                        else:
                             raise RuntimeError('Rectangle bouncing with non-zero orientation not yet implemented')
                     else:
                         raise RuntimeError('Bouncing with a Polyhedron not yet implemented')

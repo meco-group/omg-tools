@@ -44,13 +44,13 @@ class Holonomic(Vehicle):
             self.aymax = bounds['aymax'] if 'aymax' in bounds else 1.
             # user specified a single velocity for x and y
             if 'vmin' in bounds:
-                self.vxmin = self.vymin = bounds['vmin'] 
+                self.vxmin = self.vymin = bounds['vmin']
             if 'vmax' in bounds:
-                self.vxmax = self.vymax = bounds['vmax'] 
+                self.vxmax = self.vymax = bounds['vmax']
             if 'amin' in bounds:
-                self.axmin = self.aymin = bounds['amin'] 
+                self.axmin = self.aymin = bounds['amin']
             if 'amax' in bounds:
-                self.axmax = self.aymax = bounds['amax'] 
+                self.axmax = self.aymax = bounds['amax']
         elif self.options['syslimit'] is 'norm_2':
             self.vmax = bounds['vmax'] if 'vmax' in bounds else 0.5
             self.amax = bounds['amax'] if 'amax' in bounds else 1.
