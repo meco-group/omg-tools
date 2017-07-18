@@ -77,7 +77,7 @@ class Environment(OptiChild, PlotLayer):
             self.obstacles.append(obstacle)
             self.n_obs += 1
 
-    def define_collision_constraints(self, vehicle, splines):
+    def define_collision_constraints(self, vehicle, splines, horizon_time):
         if vehicle.n_dim != self.n_dim:
             raise ValueError('Not possible to combine ' +
                              str(vehicle.n_dim) + 'D vehicle with ' +
@@ -104,10 +104,11 @@ class Environment(OptiChild, PlotLayer):
                     hyp_veh[shape].append({'a': a, 'b': b})
                     hyp_obs[obstacle].append({'a': a, 'b': b})
         for obstacle in self.obstacles:
+            obstacle.reset_pose_spline(horizon_time)
             if obstacle.options['avoid']:
                 obstacle.define_collision_constraints(hyp_obs[obstacle])
-        for spline in vehicle.splines:
-            vehicle.define_collision_constraints(hyp_veh, self, spline)
+        # for spline in vehicle.splines:
+        vehicle.define_collision_constraints(hyp_veh, self, splines, horizon_time)
 
     def define_intervehicle_collision_constraints(self, vehicles):
         hyp_veh = {veh: {sh: [] for sh in veh.shapes} for veh in vehicles}
@@ -219,7 +220,7 @@ class Environment(OptiChild, PlotLayer):
                                         # there was overlap so move up_left
                                         # new_direction = up_left
                                         vel_new = [vel[0],-vel[1]]
-                        
+
                                 # reset position
                                 obstacle.signals['position'][:,-1] = old_pos
                             obstacle.signals['velocity'][:,-1] = vel_new

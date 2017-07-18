@@ -56,14 +56,14 @@ class Point2pointProblem(Problem):
         Problem.construct(self)
         for vehicle in self.vehicles:
             splines = vehicle.define_splines(n_seg=1)[0]
-            vehicle.define_trajectory_constraints(splines)
-            self.environment.define_collision_constraints(vehicle, splines)
+            vehicle.define_trajectory_constraints(splines, self.T)
+            self.environment.define_collision_constraints(vehicle, splines, self.T)
         if len(self.vehicles) > 1 and self.options['inter_vehicle_avoidance']:
             self.environment.define_intervehicle_collision_constraints(self.vehicles)
 
     def define_init_constraints(self):
         for vehicle in self.vehicles:
-            init_con = vehicle.get_initial_constraints(vehicle.splines[0])
+            init_con = vehicle.get_initial_constraints(vehicle.splines[0], self.T)
             for con in init_con:
                 spline, condition = con[0], con[1]
                 self.define_constraint(
@@ -289,7 +289,7 @@ class FreeTPoint2point(Point2pointProblem):
     def define_terminal_constraints(self):
         for vehicle in self.vehicles:
             term_con, term_con_der = vehicle.get_terminal_constraints(
-                vehicle.splines[0])    
+                vehicle.splines[0])
             if ('no_term_con_der' in self.options and self.options['no_term_con_der']):
                 term_con_der = []
             for con in (term_con + term_con_der):

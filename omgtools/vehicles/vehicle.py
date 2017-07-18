@@ -113,9 +113,9 @@ class Vehicle(OptiChild, PlotLayer):
         return self.splines
 
     def define_collision_constraints_2d(self, hyperplanes,
-        environment, positions, tg_ha=0, offset=0):
+        environment, positions, horizon_time, tg_ha=0, offset=0):
         t = self.define_symbol('t')
-        T = self.define_symbol('T')
+        # T = self.define_symbol('T')
         safety_distance = self.options['safety_distance']
         safety_weight = self.options['safety_weight']
         positions = [positions] if not isinstance(
@@ -131,7 +131,7 @@ class Vehicle(OptiChild, PlotLayer):
                     if safety_distance > 0.:
                         eps = self.define_spline_variable(
                             'eps_'+str(s)+str(k))[0]
-                        obj = safety_weight*definite_integral(eps, t/T, 1.)
+                        obj = safety_weight*definite_integral(eps, t/horizon_time, 1.)
                         self.define_objective(obj)
                         self.define_constraint(eps - safety_distance, -inf, 0.)
                         self.define_constraint(-eps, -inf, 0.)
@@ -198,6 +198,7 @@ class Vehicle(OptiChild, PlotLayer):
                     safety_distance = self.options['safety_distance']
                     safety_weight = self.options['safety_weight']
                     if safety_distance > 0.:
+                        # Todo: remove?
                         t = self.define_symbol('t')
                         T = self.define_symbol('T')
                         eps = self.define_spline_variable(
