@@ -3,5 +3,6 @@ from formation import FormationPoint2point
 from rendezvous import RendezVous
 from formation_central import FormationPoint2pointCentral
 from formation_dualdec import FormationPoint2pointDualDecomposition
+from schedulerproblem import SchedulerProblem
 from multiframeproblem import MultiFrameProblem
 from globalplanner import *
