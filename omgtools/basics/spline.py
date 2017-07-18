@@ -437,8 +437,11 @@ class BSpline(Spline):
         return Nurbs(NurbsBasis(basis.knots, basis.degree, weights), coeffs)
 
     def derivative(self, o=1):
-        Bd, Pd = self.basis.derivative(o=o)
-        return self.__class__(Bd, Pd.dot(self.coeffs))
+        if o == 0:
+            return self
+        else:
+            Bd, Pd = self.basis.derivative(o=o)
+            return self.__class__(Bd, Pd.dot(self.coeffs))
 
     def insert_knots(self, knots):
         """Returns an equivalent spline with knot insertion"""
