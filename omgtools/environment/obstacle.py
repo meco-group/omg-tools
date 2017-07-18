@@ -87,6 +87,21 @@ class ObstaclexD(OptiChild):
         self.checkpoints = self.define_parameter('checkpoints', len(checkpoints)*self.n_dim)
         self.rad = self.define_parameter('rad', len(checkpoints))
 
+    def reset_pose_spline(self, horizon_time):
+        # pos, vel, acc
+        x = self.define_parameter('x', self.n_dim)
+        v = self.define_parameter('v', self.n_dim)
+        a = self.define_parameter('a', self.n_dim)
+        # pos, vel, acc at time zero of time horizon
+        self.t = self.define_symbol('t')
+        self.T = horizon_time
+        v0 = v - self.t*a
+        x0 = x - self.t*v0 - 0.5*(self.t**2)*a
+        a0 = a
+        # pos spline over time horizon
+        self.pos_spline = [BSpline(self.basis, vertcat(x0[k], 0.5*v0[k]*self.T + x0[k], x0[k] + v0[k]*self.T + 0.5*a0[k]*(self.T**2)))
+                           for k in range(self.n_dim)]
+
     def define_collision_constraints(self, hyperplanes):
         raise ValueError('Please implement this method.')
 
