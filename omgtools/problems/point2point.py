@@ -289,7 +289,7 @@ class FreeTPoint2point(Point2pointProblem):
     def define_terminal_constraints(self):
         for vehicle in self.vehicles:
             term_con, term_con_der = vehicle.get_terminal_constraints(
-                vehicle.splines[0])    
+                vehicle.splines[0])
             if ('no_term_con_der' in self.options and self.options['no_term_con_der']):
                 term_con_der = []
             for con in (term_con + term_con_der):
