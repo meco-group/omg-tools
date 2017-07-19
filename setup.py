@@ -29,7 +29,7 @@ setup(
         'casadi >= 3.1.0'
         ],
     test_suite='nose.collector',
-    tests_require=['nose'],
+    tests_require=['nose>=1.0'],
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Science/Research',
