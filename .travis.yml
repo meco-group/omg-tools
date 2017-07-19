@@ -25,7 +25,8 @@ before_script:
   - bob_get libhsl.tar.gz && mkdir $HOME/libhsl && tar -xf libhsl.tar.gz -C $HOME/libhsl
 
 script:
-  - python setup.py nosetests
+  # - python setup.py nosetests
+  - nosetests
 
 after_success:
   - coveralls
