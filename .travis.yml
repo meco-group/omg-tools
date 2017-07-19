@@ -26,7 +26,7 @@ before_script:
 
 script:
   # - python setup.py nosetests
-  - nosetests
+  - nosetests tests
 
 after_success:
   - coveralls
