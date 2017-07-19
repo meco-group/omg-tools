@@ -26,7 +26,7 @@ before_script:
 
 script:
   # - python setup.py nosetests
-  - nosetests --verbosity=2 --nocapture --with-xcoverage --cover-package=omgtools --cover-tests=1
+  - nosetests --verbosity=2 --nocapture --with-xcoverage --cover-package=omgtools --cover-tests
 
 after_success:
   - coveralls
