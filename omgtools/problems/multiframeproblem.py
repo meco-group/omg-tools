@@ -362,7 +362,10 @@ class MultiFrameProblem(Problem):
             # was added to the global path. This was necessary because otherwise you will end up on a grid point
             # and not necessarily in the goal position (which can lie between grid points, anywhere on the map)
             self.frame['endpoint_frame'] = endpoint
-            points_in_frame.append(endpoint)
+            if endpoint != points_in_frame[-1]:
+                # don't add endpoint if it is the same as the last point in the frame
+                # this is the case if shift_point_back gives the last point in the frame
+                points_in_frame.append(endpoint)
             self.frame['waypoints'] = points_in_frame
 
             end_time = time.time()
