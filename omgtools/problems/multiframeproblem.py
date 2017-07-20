@@ -501,6 +501,8 @@ class MultiFrameProblem(Problem):
 
             end_time = time.time()
             print 'elapsed time while creating min_nobs frame: ', end_time-start_time
+        else:
+            raise ValueError('Frame type should be shift or min_nobs, you selected: '+self.frame['type'])
 
     def check_frame(self):
         if self.frame['type'] == 'shift':
