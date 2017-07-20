@@ -23,7 +23,7 @@ using namespace std;
 
 namespace omg{
 
-Holonomic::Holonomic() : Vehicle(2, 2, 2, 3), positionT(2){
+Holonomic::Holonomic() : Vehicle(2, 2, 2, 3), poseT(2){
 
 }
 
@@ -33,7 +33,7 @@ void Holonomic::setInitialConditions(vector<double>& conditions){
 }
 
 void Holonomic::setTerminalConditions(vector<double>& conditions){
-    this->positionT = conditions;
+    this->poseT = conditions;
 }
 
 void Holonomic::getInitSplineValue(vector<vector<double>>& init_value){
@@ -46,15 +46,15 @@ void Holonomic::getInitSplineValue(vector<vector<double>>& init_value){
     // for(int k=0; k<n_spl; k++){
     //     for(int d=0; d<degree; d++){
     //         init_value[k][d] = state0[k];
-    //         init_value[k][len_basis-degree+d] = this->positionT[k];
+    //         init_value[k][len_basis-degree+d] = this->poseT[k];
     //     }
     //     for (int j=0; j<len_basis-2*degree; j++){
-    //         init_value[k][degree+j] = state0[k]+j*(this->positionT[k]-state0[k])/(len_basis-2*degree-1);
+    //         init_value[k][degree+j] = state0[k]+j*(this->poseT[k]-state0[k])/(len_basis-2*degree-1);
     //     }
     // }
     for(int k=0; k<n_spl; k++){
         for(int j=0; j<len_basis; j++){
-            init_value[k][j] = state0[k]+j*(this->positionT[k]-state0[k])/(len_basis-1);
+            init_value[k][j] = state0[k]+j*(this->poseT[k]-state0[k])/(len_basis-1);
         }
     }
 }
@@ -65,7 +65,7 @@ void Holonomic::setParameters(map<string,vector<double>>& parameters){
     getPrediction(state0, input0);
     parameters["state0"] = state0;
     parameters["input0"] = input0;
-    parameters["positionT"] = this->positionT;
+    parameters["poseT"] = this->poseT;
 }
 
 void Holonomic::splines2State(vector<vector<double>>& spline_coeffs, vector<double> time, vector<vector<double>>& state){
