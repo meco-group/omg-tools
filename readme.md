@@ -80,7 +80,7 @@ The animations below give an overview of typical problems that OMG-tools can han
 <img width=100% src="./doc/gifs/formation_quad_rotatingwall.gif" alt="Formation of quadrotor with rotating wall"/>
 </td>
 <td align="center" valign="center" style="background-color:rgba(0, 0, 0, 0);">
-<img width=100% src="./doc/gifs/ICRA_example1_minobs_dubins.gif" alt="Differential drive vehicle moving through environment using multiple frames"/>
+<img width=100% src="./doc/gifs/ICRA_example2_minobs.gif" alt="Differential drive vehicle moving through environment using multiple frames"/>
 </td>
 <tr>
 <td align="center" valign="center" bgcolor="#FFFFFF">
@@ -90,7 +90,7 @@ The animations below give an overview of typical problems that OMG-tools can han
 <img width=100% src="./doc/gifs/ICRA_example1_minobs.gif" alt="Holonomic vehicle moving through big warehouse using multiple frames without stationary obstacles"/>
 </td>
 <td align="center" valign="center" bgcolor="#FFFFFF">
-<img width=100% src="./doc/gifs/ICRA_example2_minobs.gif" alt="Holonomic vehicle moving through vast warehouse using multiple frames without stationary obstacles"/>
+<img width=100% src="./doc/gifs/ICRA_example1_minobs_dubins.gif" alt="Holonomic vehicle moving through vast warehouse using multiple frames without stationary obstacles"/>
 </td>
 </tr>
 </table>
