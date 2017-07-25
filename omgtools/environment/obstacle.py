@@ -68,14 +68,15 @@ class ObstaclexD(OptiChild):
     # Optimization modelling related functions
     # ========================================================================
 
-    def init(self):
+    def init(self, motion_time=None):
         # pos, vel, acc
         x = self.define_parameter('x', self.n_dim)
         v = self.define_parameter('v', self.n_dim)
         a = self.define_parameter('a', self.n_dim)
         # pos, vel, acc at time zero of time horizon
         self.t = self.define_symbol('t')
-        self.T = self.define_symbol('T')
+        # motion time can be passed from environment
+        self.T = motion_time if motion_time is not None else self.define_symbol('T')
         v0 = v - self.t*a
         x0 = x - self.t*v0 - 0.5*(self.t**2)*a
         a0 = a
@@ -86,21 +87,6 @@ class ObstaclexD(OptiChild):
         checkpoints, _ = self.shape.get_checkpoints()
         self.checkpoints = self.define_parameter('checkpoints', len(checkpoints)*self.n_dim)
         self.rad = self.define_parameter('rad', len(checkpoints))
-
-    def reset_pose_spline(self, horizon_time):
-        # pos, vel, acc
-        x = self.define_parameter('x', self.n_dim)
-        v = self.define_parameter('v', self.n_dim)
-        a = self.define_parameter('a', self.n_dim)
-        # pos, vel, acc at time zero of time horizon
-        self.t = self.define_symbol('t')
-        self.T = horizon_time
-        v0 = v - self.t*a
-        x0 = x - self.t*v0 - 0.5*(self.t**2)*a
-        a0 = a
-        # pos spline over time horizon
-        self.pos_spline = [BSpline(self.basis, vertcat(x0[k], 0.5*v0[k]*self.T + x0[k], x0[k] + v0[k]*self.T + 0.5*a0[k]*(self.T**2)))
-                           for k in range(self.n_dim)]
 
     def define_collision_constraints(self, hyperplanes):
         raise ValueError('Please implement this method.')
@@ -247,8 +233,8 @@ class Obstacle2D(ObstaclexD):
     # Optimization modelling related functions
     # ========================================================================
 
-    def init(self):
-        ObstaclexD.init(self)
+    def init(self, motion_time=None):
+        ObstaclexD.init(self, motion_time=motion_time)
         if self.signals['angular_velocity'][:, -1] == 0.:
             self.cos = cos(self.signals['orientation'][:, -1][0])
             self.sin = sin(self.signals['orientation'][:, -1][0])

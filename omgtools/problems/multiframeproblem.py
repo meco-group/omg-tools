@@ -1,3 +1,22 @@
+# This file is part of OMG-tools.
+#
+# OMG-tools -- Optimal Motion Generation-tools
+# Copyright (C) 2016 Ruben Van Parys & Tim Mercy, KU Leuven.
+# All rights reserved.
+#
+# OMG-tools is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 3 of the License, or (at your option) any later version.
+# This software is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+
 from problem import Problem
 from point2point import Point2pointProblem
 from ..basics.optilayer import OptiFather, OptiChild
@@ -12,32 +31,14 @@ from itertools import groupby
 
 class MultiFrameProblem(Problem):
 
-    def __init__(self, fleet, environments, n_frames, options=None, label='multiframeproblem'):
+    def __init__(self, fleet, environment, n_frames, options=None):
         # Todo: cannot use Problem.__init__ because this is only for one environment?
-        options = options or {}
-        OptiChild.__init__(self, label)
-        PlotLayer.__init__(self)
-        self.fleet, self.vehicles = get_fleet_vehicles(fleet)
-        self.environments = environments
+        # Try to let it inherit more cleanly from Problem?
+        Problem.__init__(self, fleet, environment, options, label='multiframeproblem')
         self.n_frames = n_frames
-        self.set_default_options()
-        self.set_options(options)
-        self.iteration = 0
         self.init_time = None
         self.start_time = 0.
-        self.update_times = []
         self.objective = 0.
-
-        # first add children and construct father, this allows making a
-        # difference between the simulated and the processed vehicles,
-        # e.g. when passing on a trailer + leading vehicle to problem, but
-        # only the trailer to the simulator
-        children = [vehicle for vehicle in self.vehicles]
-        for environment in self.environments:
-            children += [obstacle for obstacle in environment.obstacles]
-            children += [environment]
-        children += [self]
-        self.father = OptiFather(children)
 
     def set_default_options(self):
         Problem.set_default_options(self)
@@ -51,7 +52,7 @@ class MultiFrameProblem(Problem):
 
     def construct(self):
         self.t = self.define_parameter('t')
-        self.motion_times = []
+        self.motion_times = []  # holds motion time through each frame
         for frame in range(self.n_frames):
             self.motion_times.append(self.define_variable('T'+str(frame), value=10))
 
@@ -63,15 +64,16 @@ class MultiFrameProblem(Problem):
             self.define_constraint(-motion_time, -inf, 0.)
 
         # collision constraints
-        for environment in self.environments:
-            environment.init()
+        for environment, motion_time in zip(self.environments, self.motion_times):
+            environment.init(motion_time=motion_time)  # couple environment and motion time
         for vehicle in self.vehicles:
             vehicle.init()
+            # create splines with correct amount of segments, i.e. a segment per frame
             total_splines = vehicle.define_splines(n_seg=self.n_frames)
             for frame in range(self.n_frames):
                 vehicle.define_trajectory_constraints(total_splines[frame], self.motion_times[frame])
             for environment, splines, frame in zip(self.environments, total_splines, range(self.n_frames)):
-                # Todo: needed to pass motion_times[frame] to account for safety distance
+                # need to pass motion_times[frame] to account for safety distance
                 # in define_collision_constraints_2d in vehicle.py
                 environment.define_collision_constraints(vehicle, splines, self.motion_times[frame])
         if len(self.vehicles) > 1 and self.options['inter_vehicle_avoidance']:
@@ -84,7 +86,7 @@ class MultiFrameProblem(Problem):
         self.define_connection_constraints()
 
     def define_init_constraints(self):
-        # place initial constraints only on first spline
+        # place initial constraints only on first spline segment
         for vehicle in self.vehicles:
             init_con = vehicle.get_initial_constraints(vehicle.splines[0], self.motion_times[0])
             for con in init_con:
@@ -94,6 +96,7 @@ class MultiFrameProblem(Problem):
                     evalspline(spline, self.t/self.motion_times[0]) - condition, 0., 0.)
 
     def define_terminal_constraints(self):
+        # place final constraints only on last spline segment
         for vehicle in self.vehicles:
             term_con, term_con_der = vehicle.get_terminal_constraints(
                 vehicle.splines[-1])  # select last spline segment
@@ -104,12 +107,13 @@ class MultiFrameProblem(Problem):
                 self.define_constraint(spline(1.) - condition, 0., 0.)
 
     def define_connection_constraints(self):
+        # connect splines over different frames
         # only necessary when n_frames>1
         for j in range(self.n_frames-1):
             for vehicle in self.vehicles:
                 for spline1, spline2 in zip(vehicle.splines[j], vehicle.splines[j+1]):
                     for d in range(spline1.basis.degree):
-                        # in connection splines should be equal until derivative of order degree-1
+                        # in connection point splines should be equal until derivative of order degree-1
                         self.define_constraint(
                             evalspline(spline1.derivative(d), 1) - evalspline(spline2.derivative(d), 0), 0., 0.)
 
@@ -139,7 +143,7 @@ class MultiFrameProblem(Problem):
         # compute total remaining motion time
         for frame in range(self.n_frames):
             segment_times.append(self.father.get_variables(self, 'T'+str(frame))[0][0])
-        horizon_time = sum(segment_times)
+        horizon_time = sum(segment_times)  # total horizon time
         if self.init_time is None:
             rel_current_time = 0.0
         else:
@@ -224,7 +228,7 @@ class MultiFrameProblem(Problem):
             # to goal position at target_time. Approximate/Represent this spline in
             # a new basis with new equidistant knots.
 
-            # Todo: does this work for multiple segmenst?
+            # Todo: does this work for multiple segments?
             self.father.transform_primal_splines(
                 lambda coeffs, basis: shift_spline(coeffs, update_time/target_time, basis))
             T_0 = self.father.get_variables(self, 'T'+str(0))[0][0]  # remaining motion time for first segment
@@ -245,9 +249,9 @@ class MultiFrameProblem(Problem):
         if argument == 'scene':
             if not hasattr(self.vehicles[0], 'signals'):
                 return None
-            info = (self.environments[0].init_plot(None, **kwargs))
+            info = self.environment.init_plot(None, **kwargs)
             labels = kwargs['labels'] if 'labels' in kwargs else [
-                '' for _ in range(self.environments[0].n_dim)]
+                '' for _ in range(self.environment.n_dim)]
             n_colors = len(self.colors)
             indices = [int([''.join(g) for _, g in groupby(
                 v.label, str.isalpha)][-1]) % n_colors for v in self.vehicles]
@@ -269,7 +273,7 @@ class MultiFrameProblem(Problem):
         if argument == 'scene':
             if not hasattr(self.vehicles[0], 'signals'):
                 return None
-            data = self.environments[0].update_plot(None, t, **kwargs)
+            data = self.environment.update_plot(None, t, **kwargs)
             for vehicle in self.vehicles:
                 data[0][0]['lines'] += [vehicle.traj_storage['pose'][t][:3, :]]
             for vehicle in self.vehicles:

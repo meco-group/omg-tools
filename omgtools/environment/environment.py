@@ -104,7 +104,6 @@ class Environment(OptiChild, PlotLayer):
                     hyp_veh[shape].append({'a': a, 'b': b})
                     hyp_obs[obstacle].append({'a': a, 'b': b})
         for obstacle in self.obstacles:
-            obstacle.reset_pose_spline(horizon_time)
             if obstacle.options['avoid']:
                 obstacle.define_collision_constraints(hyp_obs[obstacle])
         # for spline in vehicle.splines:
@@ -141,9 +140,9 @@ class Environment(OptiChild, PlotLayer):
     # Optimization modelling related functions
     # ========================================================================
 
-    def init(self):
+    def init(self, motion_time=None):
         for obstacle in self.obstacles:
-            obstacle.init()
+            obstacle.init(motion_time=motion_time)
 
     # ========================================================================
     # Simulate environment
