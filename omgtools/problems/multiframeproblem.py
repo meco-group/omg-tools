@@ -31,14 +31,16 @@ from itertools import groupby
 
 class MultiFrameProblem(Problem):
 
+    # Problem consisting of multiple frames, connecting multiple spline segments
     def __init__(self, fleet, environment, n_frames, options=None):
-        # Todo: cannot use Problem.__init__ because this is only for one environment?
-        # Try to let it inherit more cleanly from Problem?
         Problem.__init__(self, fleet, environment, options, label='multiframeproblem')
         self.n_frames = n_frames
         self.init_time = None
         self.start_time = 0.
         self.objective = 0.
+        if self.n_frames > len(self.environment.rooms):
+            raise RuntimeError('Number of frames you want to consider at once is larger' +
+                               'than the amount of rooms provided in environment')
 
     def set_default_options(self):
         Problem.set_default_options(self)
@@ -64,21 +66,16 @@ class MultiFrameProblem(Problem):
             self.define_constraint(-motion_time, -inf, 0.)
 
         # collision constraints
-        for environment, motion_time in zip(self.environments, self.motion_times):
-            environment.init(motion_time=motion_time)  # couple environment and motion time
+        self.environment.init()
         for vehicle in self.vehicles:
             vehicle.init()
             # create splines with correct amount of segments, i.e. a segment per frame
             total_splines = vehicle.define_splines(n_seg=self.n_frames)
             for frame in range(self.n_frames):
                 vehicle.define_trajectory_constraints(total_splines[frame], self.motion_times[frame])
-            for environment, splines, frame in zip(self.environments, total_splines, range(self.n_frames)):
-                # need to pass motion_times[frame] to account for safety distance
-                # in define_collision_constraints_2d in vehicle.py
-                environment.define_collision_constraints(vehicle, splines, self.motion_times[frame])
+            self.environment.define_collision_constraints(vehicle, total_splines, self.motion_times)
         if len(self.vehicles) > 1 and self.options['inter_vehicle_avoidance']:
-            for environment in self.environments:
-                environment.define_intervehicle_collision_constraints(self.vehicles)
+            self.environment.define_intervehicle_collision_constraints(self.vehicles)
 
         # constrain spline segments
         self.define_init_constraints()
@@ -183,8 +180,7 @@ class MultiFrameProblem(Problem):
         self.compute_partial_objective(current_time+simulation_time-self.start_time)
         for vehicle in self.vehicles:
             vehicle.simulate(simulation_time, sample_time)
-        for environment in self.environments:
-            environment.simulate(simulation_time, sample_time)
+        self.environment.simulate(simulation_time, sample_time)
         self.fleet.update_plots()
         self.update_plots()
 
@@ -239,52 +235,3 @@ class MultiFrameProblem(Problem):
 
     def compute_objective(self):
         return self.objective
-
-
-    # ========================================================================
-    # Plot related functions
-    # ========================================================================
-
-    def init_plot(self, argument, **kwargs):
-        if argument == 'scene':
-            if not hasattr(self.vehicles[0], 'signals'):
-                return None
-            info = self.environment.init_plot(None, **kwargs)
-            labels = kwargs['labels'] if 'labels' in kwargs else [
-                '' for _ in range(self.environment.n_dim)]
-            n_colors = len(self.colors)
-            indices = [int([''.join(g) for _, g in groupby(
-                v.label, str.isalpha)][-1]) % n_colors for v in self.vehicles]
-            for v in range(len(self.vehicles)):
-                info[0][0]['lines'] += [{'color': self.colors_w[indices[v]]}]
-            for v in range(len(self.vehicles)):
-                info[0][0]['lines'] += [{'color': self.colors[indices[v]]}]
-            for v, vehicle in enumerate(self.vehicles):
-                s, l = vehicle.draw()
-                info[0][0]['lines'] += [{'color': self.colors[indices[v]]} for _ in l]
-                info[0][0]['surfaces'] += [{'facecolor': self.colors_w[indices[v]],
-                    'edgecolor': self.colors[indices[v]], 'linewidth': 1.2} for _ in s]
-            info[0][0]['labels'] = labels
-            return info
-        else:
-            return None
-
-    def update_plot(self, argument, t, **kwargs):
-        if argument == 'scene':
-            if not hasattr(self.vehicles[0], 'signals'):
-                return None
-            data = self.environment.update_plot(None, t, **kwargs)
-            for vehicle in self.vehicles:
-                data[0][0]['lines'] += [vehicle.traj_storage['pose'][t][:3, :]]
-            for vehicle in self.vehicles:
-                if t == -1:
-                    data[0][0]['lines'] += [vehicle.signals['pose'][:3, :]]
-                else:
-                    data[0][0]['lines'] += [vehicle.signals['pose'][:3, :t+1]]
-            for vehicle in self.vehicles:
-                surfaces, lines = vehicle.draw(t)
-                data[0][0]['surfaces'] += surfaces
-                data[0][0]['lines'] += lines
-            return data
-        else:
-            return None

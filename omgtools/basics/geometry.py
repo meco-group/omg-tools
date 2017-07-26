@@ -20,7 +20,7 @@
 import numpy as np
 
 
-def distance_between_points(point1, point2):  
+def distance_between_points(point1, point2):
         # calculate distance between two points
         return np.sqrt((point2[0]-point1[0])**2+(point2[1]-point1[1])**2)
 
@@ -71,9 +71,9 @@ def order_is_ccw(point1, point2, point3):
     # based on: http://bryceboe.com/2006/10/23/line-segment-intersection-algorithm/
     # Determine if three points are listed in a counterclockwise order.
     # There are three points: point1, point2, point3. If the slope of the line between point1&point2 is
-    # smaller than the slope of the line between point1&point3, 
+    # smaller than the slope of the line between point1&point3,
     # then the three points have a counterclockwise order.
-    
+
     return (point3[1]-point1[1])*(point2[0]-point1[0]) > (point2[1]-point1[1])*(point3[0]-point1[0])
 
 def intersect_line_segments(line1, line2):
@@ -82,11 +82,11 @@ def intersect_line_segments(line1, line2):
     # based on: http://bryceboe.com/2006/10/23/line-segment-intersection-algorithm/
     # There are two line segments, one between point1&point2, one between point2&point3.
     # The segments only intersect if point1 and point2 are separated by the line segment between
-    # point2 & point3 and point3 & point4 are separated by the segment between point1 & point2. 
+    # point2 & point3 and point3 & point4 are separated by the segment between point1 & point2.
     # If point1 and point 2 are separated by the segment between point3 & point4, then the connection of
-    # point1-point3-point4 and point2-point3-point4 have an opposite order, this means that 
+    # point1-point3-point4 and point2-point3-point4 have an opposite order, this means that
     # one of both connections is ordered counterclockwise, but noth both.
-    
+
     return order_is_ccw(point1,point3,point4) != order_is_ccw(point2,point3,point4) and order_is_ccw(point1,point2,point3) != order_is_ccw(point1,point2,point4)
 
 def intersect_lines(line1, line2):
@@ -116,7 +116,7 @@ def point_in_polyhedron(point, polyhedron_shape, polyhedron_position):
     return True
 
 def circle_polyhedron_intersection(circle, polyhedron_shape, polyhedron_position):
-    
+
     # Does one of the sides of the polyhedron have a point inside the circle?
     # Compute perpendicular from the circle center to the polyhedron side
     # Check if the intersection between the normal and the side is inside the circle
@@ -128,7 +128,7 @@ def circle_polyhedron_intersection(circle, polyhedron_shape, polyhedron_position
 
     # get polyhedron vertices
     vertices = polyhedron_shape.vertices.copy()
-    # duplicate first vertex and place at the end, 
+    # duplicate first vertex and place at the end,
     # to check all sides
     vertices = np.c_[vertices, vertices[:,0]]
     # add current position to vertices
@@ -157,3 +157,30 @@ def circle_polyhedron_intersection(circle, polyhedron_shape, polyhedron_position
            (distance_between_points(center, [x4,y4]) <= circle.shape.radius)):
             return True
     return False
+
+def point_in_rectangle(rectangle_limits, point, horizon_time=None, velocity=None, distance=0):
+        # check if the provided point is inside the provided rectangle
+        # both for stationary or moving points
+        xmin, ymin, xmax, ymax = rectangle_limits
+        # check stationary point
+        if horizon_time is None:
+            if (xmin+distance <= point[0] <= xmax-distance) and (ymin+distance <= point[1] <= ymax-distance):
+                return True
+            else:
+                return False
+        # check moving point
+        elif isinstance(horizon_time, (float, int)):
+            # check at each time_interval seconds
+            time_interval = 0.5
+            # amount of times to check
+            N = int(round(horizon_time/time_interval)+1)
+            # sample time of check
+            Ts = float(horizon_time)/N
+            x, y = point
+            vx, vy = velocity
+            for l in range(N+1):
+                if xmin <= (x+l*Ts*vx) <= xmax and ymin <= (y+l*Ts*vy) <= ymax:
+                    return True
+            return False
+        else:
+            raise RuntimeError('Argument horizon_time was of the wrong type, not None, float or int')
