@@ -33,12 +33,16 @@ class ExportP2P(Export):
             raise ValueError(('Only export for single vehicle ' +
                               'problems is supported.'))
         self.vehicle = problem.vehicles[0]
-        src_files = ['Point2Point.cpp', 'Vehicle.cpp']
+        if self.options['obstTraj'] == False:
+            src_files = ['Point2Point.cpp', 'Vehicle.cpp']
+        else:
+            src_files = ['Point2Point_flexonomy.cpp', 'Vehicle_flexonomy.cpp']
         self.export(['point2point', 'vehicles', 'tests/point2point'], self.options['directory'], src_files, problem.father, problem)
 
     def set_default_options(self):
         Export.set_default_options(self)
         self.options['executable'] = 'Point2Point'
+        self.options['obstTraj'] = False
 
     def export_casadi_problems(self, destination, father, problem):
         filenames = Export.export_casadi_problems(self, destination, father, problem)
