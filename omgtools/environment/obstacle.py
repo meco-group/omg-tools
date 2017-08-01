@@ -23,6 +23,7 @@ from ..basics.spline_extra import get_interval_T
 from ..basics.spline import BSplineBasis, BSpline
 from ..basics.geometry import distance_between_points, point_in_polyhedron
 from ..basics.geometry import point_in_rectangle, circle_polyhedron_intersection
+from ..basics.geometry import rectangles_overlap
 from ..basics.shape import Circle, Polyhedron, Rectangle, Square
 from casadi import inf, vertcat, cos, sin
 from scipy.interpolate import interp1d
@@ -89,127 +90,21 @@ class ObstaclexD(OptiChild):
         self.checkpoints = self.define_parameter('checkpoints', len(checkpoints)*self.n_dim)
         self.rad = self.define_parameter('rad', len(checkpoints))
 
-    def reset_pose_spline(self, horizon_time):
-        # Change horizon time for the motion of the vehicle
-        # pos, vel, acc
-        x = self.define_parameter('x', self.n_dim)
-        v = self.define_parameter('v', self.n_dim)
-        a = self.define_parameter('a', self.n_dim)
-        # pos, vel, acc at time zero of time horizon
-        self.t = self.define_symbol('t')
-        self.T = horizon_time
-        v0 = v - self.t*a
-        x0 = x - self.t*v0 - 0.5*(self.t**2)*a
-        a0 = a
-        # pos spline over time horizon
-        self.pos_spline = [BSpline(self.basis, vertcat(x0[k], 0.5*v0[k]*self.T + x0[k], x0[k] + v0[k]*self.T + 0.5*a0[k]*(self.T**2)))
-                           for k in range(self.n_dim)]
-
-    def is_inside_room(self, room, horizon_time):
-        # decide if obstacle is inside room over the horizon time
-        xmin_r = room['position'][0] - room['shape'].width
-        xmax_r = room['position'][0] + room['shape'].width
-        ymin_r = room['position'][1] - room['shape'].height
-        ymax_r = room['position'][1] + room['shape'].height
-        shape_r = room['shape']
-        pos_f = room['position']
-
-        # is it a stationary obstacle? if:
-        #  - there is no entry trajectories or
-        #  - there are trajectories but no velocity or
-        #  - all velocities are 0
-        if ((not 'trajectories' in self.simulation) or (not 'velocity' in self.simulation['trajectories'])
-           or (all(vel == [0.]*self.n_dim for vel in self.simulation['trajectories']['velocity']['values']))):
-            # we have a stationary obstacle, Circle or Rectangle
-            # now check if room intersects with the obstacle, there are two options
-
-            ###############################################
-            ###### Option1: handle circle as circular #####
-            ###############################################
-            # if isinstance(self.shape, Circle):
-            #     if (point_in_polyhedron(self.signals['position'][:,-1], shape_r, pos_r) or
-            #        circle_polyhedron_intersection(self, shape_r, pos_r)):
-            #         return True
-            #     else:
-            #         return False
-            # elif isinstance(self.shape, Rectangle):
-            #     if self.shape.orientation == 0:
-            #         # is frame vertex inside obstacle? Check rectangle overlap
-            #         [[xmin_obs, xmax_obs],[ymin_obs, ymax_obs]] = self.shape.get_canvas_limits()
-            #         posx, posy = self.signals['position'][:,-1]
-            #         xmin_obs += posx
-            #         xmax_obs += posx
-            #         ymin_obs += posy
-            #         ymax_obs += posy
-            #         # based on: http://stackoverflow.com/questions/306316/determine-if-two-rectangles-overlap-each-other
-            #         if (xmin_r <= xmax_obs and xmax_r >= xmin_obs and ymin_r <= ymax_obs and ymax_r >= ymin_obs):
-            #             return True
-            #         else:
-            #             return False
-            #     else:
-            #         raise RuntimeError('Only rectangle with zero orientation\
-            #                             are supported in multiframeproblem for now')
-            # else:
-            #     raise RuntimeError('Only Circle and Rectangle shaped obstacles\
-            #                         are supported for now')
-
-            #####################################################
-            ###### Option2: approximate circle as as square #####
-            #####################################################
-            if ((isinstance(self.shape, Rectangle) and self.shape.orientation == 0) or
-                isinstance(self.shape, Circle)):
-                # is room vertex inside obstacle? check rectangle overlap
-                # if obstacle is Circle, it gets approximated by a square
-                [[xmin_obs, xmax_obs],[ymin_obs, ymax_obs]] = self.shape.get_canvas_limits()
-                posx, posy = self.signals['position'][:,-1]
-                xmin_obs += posx
-                xmax_obs += posx
-                ymin_obs += posy
-                ymax_obs += posy
-                # based on: http://stackoverflow.com/questions/306316/determine-if-two-rectangles-overlap-each-other
-                if (xmin_r <= xmax_obs and xmax_r >= xmin_obs and ymin_r <= ymax_obs and ymax_r >= ymin_obs):
-                    # stationary obstacle is in room
-                    return True
-                else:
-                    # stationary obstacle is not in room
-                    return False
-            else:
-                raise RuntimeError('Only Circle and Rectangle shaped obstacles\
-                                    with orientation 0 are supported for now')
-        else:
-            # obstacle is moving
-
-            # get obstacle checkpoints
-            if not isinstance(self.shape, Circle):
-                # element [0] gives vertices, not the corresponding radii
-                obs_chck = self.shape.get_checkpoints()[0]
-            # Todo: circle is approximated as a square, so sometimes seen as inside the room while it is not
-            # Improvement: check if distance to room < radius, by using extra
-            # input to point_in_room(distance=radius)
-            else:  # it is a Circle
-                # for a circle only the center is returned as a checkpoint
-                # make a square representation of it and use those checkpoints
-                [[xmin, xmax],[ymin, ymax]] = self.shape.get_canvas_limits()
-                obs_chck = [[xmin, ymin], [xmin, ymax], [xmax, ymax], [xmax, ymin]]
-                # also check center, because vertices of square approximation may be outside
-                # of the frame, while the center is in the frame
-                obs_chck.insert(0, [0,0])
-            obs_pos = self.signals['position'][:,-1]
-            obs_vel = self.signals['velocity'][:,-1]
-            for chck in obs_chck:
-                # if it is not a circle, rotate the vertices
-                if hasattr(self.shape, 'orientation'):
-                    vertex = self.shape.rotate(self.shape.orientation, chck)
-                else:
-                    vertex = chck
-                # move to correct position
-                vertex += obs_pos
-                # check if vertex is in frame during movement
-                rectangle_limits = [xmin_r, ymin_r, xmax_r, ymax_r]
-                if point_in_rectangle(rectangle_limits, vertex, horizon_time=horizon_time, velocity=obs_vel):
-                    return True
-                else:
-                    return False
+    # def reset_pos_spline(self, horizon_time):
+    #     # Change horizon time for the motion of the vehicle
+    #     # pos, vel, acc
+    #     x = self.define_parameter('x', self.n_dim)
+    #     v = self.define_parameter('v', self.n_dim)
+    #     a = self.define_parameter('a', self.n_dim)
+    #     # pos, vel, acc at time zero of time horizon
+    #     self.t = self.define_symbol('t')
+    #     self.T = horizon_time
+    #     v0 = v - self.t*a
+    #     x0 = x - self.t*v0 - 0.5*(self.t**2)*a
+    #     a0 = a
+    #     # pos spline over time horizon
+    #     self.pos_spline = [BSpline(self.basis, vertcat(x0[k], 0.5*v0[k]*self.T + x0[k], x0[k] + v0[k]*self.T + 0.5*a0[k]*(self.T**2)))
+    #                        for k in range(self.n_dim)]
 
     def define_collision_constraints(self, hyperplanes):
         raise ValueError('Please implement this method.')
@@ -398,9 +293,7 @@ class Obstacle2D(ObstaclexD):
         self.sin = cos_wt*sin(theta0) + sin_wt*cos(theta0)
         self.gon_weight = BSpline(basis, weight_cfs)
 
-    def define_collision_constraints(self, hyperplanes, horizon_time=None):
-        if horizon_time is not None:
-            self.reset_pose_spline(horizon_time)
+    def define_collision_constraints(self, hyperplanes):
         for hyperplane in hyperplanes:
             a, b = hyperplane['a'], hyperplane['b']
             for l in range(self.checkpoints.shape[0]/self.n_dim):
@@ -529,20 +422,10 @@ class Obstacle2D(ObstaclexD):
                         ### Option2: check for overlapping rectangles###
                         ################################################
                         # Advantage: this also works when no vertices of obstacles are inside each other
+
                         if obstacle.shape.orientation == 0:
-                            [[xmin_obs,xmax_obs],[ymin_obs,ymax_obs]] = obstacle.shape.get_canvas_limits()
-                            [posx,posy]= obstacle.signals['position'][:,-1]
-                            xmin_obs += posx
-                            xmax_obs += posx
-                            ymin_obs += posy
-                            ymax_obs += posy
-                            [[xmin_self,xmax_self],[ymin_self,ymax_self]] = shape_self.get_canvas_limits()
-                            xmin_self += pos_self[0]
-                            xmax_self += pos_self[0]
-                            ymin_self += pos_self[1]
-                            ymax_self += pos_self[1]
-                            if (xmin_self <= xmax_obs and xmax_self >= xmin_obs and
-                                ymin_self <= ymax_obs and ymax_self >= ymin_obs):
+                            if rectangles_overlap(obstacle.shape, obstacle.signals['position'][:,-1],
+                                               shape_self, pos_self):
                                 return True
                         else:
                             raise RuntimeError('Rectangle bouncing with non-zero orientation not yet implemented')
