@@ -36,12 +36,12 @@ class MultiFrameProblem(Problem):
     def __init__(self, fleet, environment, n_frames, options=None):
         Problem.__init__(self, fleet, environment, options, label='multiframeproblem')
         self.n_frames = n_frames
-        self.init_time = None
-        self.start_time = 0.
-        self.objective = 0.
         if self.n_frames > len(self.environment.rooms):
             raise RuntimeError('Number of frames you want to consider at once is larger' +
                                'than the amount of rooms provided in environment')
+        self.init_time = None
+        self.start_time = 0.
+        self.objective = 0.
 
     def set_default_options(self):
         Problem.set_default_options(self)
@@ -67,7 +67,7 @@ class MultiFrameProblem(Problem):
             self.define_constraint(-motion_time, -inf, 0.)
 
         # collision constraints
-        self.environment.init()
+        # self.environment.init()
         for vehicle in self.vehicles:
             vehicle.init()
             # create splines with correct amount of segments, i.e. a segment per frame
