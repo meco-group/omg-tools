@@ -92,10 +92,13 @@ class Holonomic(Vehicle):
     def get_initial_constraints(self, splines, horizon_time):
         state0 = self.define_parameter('state0', 2)
         input0 = self.define_parameter('input0', 2)
+        dinput0 = self.define_parameter('dinput0', 2)
         x, y = splines
         dx, dy = x.derivative(), y.derivative()
+        ddx, ddy = x.derivative(2), y.derivative(2)
         return [(x, state0[0]), (y, state0[1]),
-                (dx, horizon_time*input0[0]), (dy, horizon_time*input0[1])]
+                (dx, horizon_time*input0[0]), (dy, horizon_time*input0[1])]#,
+                # (ddx, horizon_time**2*dinput0[0]), (ddy, horizon_time**2*dinput0[1])]
 
     def get_terminal_constraints(self, splines):
         position = self.define_parameter('positionT', 2)
@@ -112,6 +115,7 @@ class Holonomic(Vehicle):
         # list all predictions that are used in set_parameters
         self.prediction['state'] = state
         self.prediction['input'] = input
+        self.prediction['dinput'] = np.zeros(2)
 
     def set_terminal_conditions(self, position):
         self.positionT = position
@@ -138,6 +142,7 @@ class Holonomic(Vehicle):
         parameters = Vehicle.set_parameters(self, current_time)
         parameters[self]['state0'] = self.prediction['state']
         parameters[self]['input0'] = self.prediction['input']
+        parameters[self]['dinput0'] = self.prediction['dinput']
         parameters[self]['positionT'] = self.positionT
         return parameters
 
@@ -154,7 +159,7 @@ class Holonomic(Vehicle):
         signals['state'] = np.c_[sample_splines([x, y], time)]
         signals['input'] = input
         signals['v_tot'] = np.sqrt(input[0, :]**2 + input[1, :]**2)
-        signals['a'] = np.c_[sample_splines([ddx, ddy], time)]
+        signals['dinput'] = np.c_[sample_splines([ddx, ddy], time)]
         return signals
 
     def state2pose(self, state):
