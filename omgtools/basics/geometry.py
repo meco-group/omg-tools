@@ -184,3 +184,59 @@ def point_in_rectangle(rectangle_limits, point, horizon_time=None, velocity=None
             return False
         else:
             raise RuntimeError('Argument horizon_time was of the wrong type, not None, float or int')
+
+def rectangles_overlap(shape1, pos1, shape2, pos2):
+
+    if shape1.orientation == 0 and shape2.orientation == 0:
+        [[xmin1,xmax1],[ymin1,ymax1]] = shape1.get_canvas_limits()
+        xmin1 += pos1[0]
+        xmax1 += pos1[0]
+        ymin1 += pos1[1]
+        ymax1 += pos1[1]
+        [[xmin2,xmax2],[ymin2,ymax2]] = shape2.get_canvas_limits()
+        xmin2 += pos2[0]
+        xmax2 += pos2[0]
+        ymin2 += pos2[1]
+        ymax2 += pos2[1]
+        if (xmin2 <= xmax1 and xmax2 >= xmin1 and
+            ymin2 <= ymax1 and ymax2 >= ymin1):
+            return True
+        else:
+            return False
+    else:
+        raise RuntimeError('Provided a rectangle with non-zero orientation, this function only supports' +
+                           ' zero orientation')
+
+def compute_rectangle_overlap_center(shape1, pos1, shape2, pos2):
+    # Compute the center of the overlap region of two overlapping rectangles
+    # Note: this function only works for non-rotated rectangles
+
+    [[xmin1,xmax1],[ymin1,ymax1]] = shape1.get_canvas_limits()
+    [[xmin2,xmax2],[ymin2,ymax2]] = shape2.get_canvas_limits()
+
+    xmin1 += pos1[0]
+    xmax1 += pos1[0]
+    ymin1 += pos1[1]
+    ymax1 += pos1[1]
+
+    xmin2 += pos2[0]
+    xmax2 += pos2[0]
+    ymin2 += pos2[1]
+    ymax2 += pos2[1]
+
+    # Check if the rectangles overlap
+    if (xmin2 <= xmax1 and xmax2 >= xmin1 and
+        ymin2 <= ymax1 and ymax2 >= ymin1):
+
+        xmin3 = max(xmin1, xmin2)
+        xmax3 = min(xmax1, xmax2)
+        ymin3 = max(ymin1, ymin2)
+        ymax3 = min(ymax1, ymax2)
+
+        center = [0, 0]
+        center[0] = xmin3 + (xmax3-xmin3)*0.5
+        center[1] = ymin3 + (ymax3-ymin3)*0.5
+        return center
+    else:
+        raise RuntimeError('Trying to compute center of overlap region, but rectangles don\'t overlap')
+
