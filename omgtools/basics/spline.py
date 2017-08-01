@@ -186,6 +186,12 @@ class Basis(object):
         return [1. / self.degree * sum(self.knots[k + 1:k + self.degree + 1])
                 for k in range(len(self))]
 
+    def scale(self, factor, shift=0):
+        # by default the domain is [0,1]
+        # this function scales the basis domain and shifts it
+        knots = self.knots*factor + shift
+        return self.__class__(knots, self.degree)
+
 
 @cached_class
 class BSplineBasis(Basis):
@@ -479,6 +485,12 @@ class BSpline(Spline):
             roots.extend([r for r in root
                          if spline.knots[i] <= r < spline.knots[i + 1]])
         return roots
+
+    def scale(self, factor, shift=0):
+        # by default the domain is [0,1]
+        # this function scales the domain of the spline and shifts it
+        basis = self.basis.scale(factor, shift=shift)
+        return self.__class__(basis, self.coeffs)
 
 
 class Nurbs(Spline):
