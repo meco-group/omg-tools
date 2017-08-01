@@ -20,6 +20,7 @@
 from spline import BSpline, BSplineBasis
 from casadi import SX, MX, mtimes, Function, vertcat
 from scipy.interpolate import splev
+import scipy.linalg as la
 import numpy as np
 
 
@@ -304,22 +305,61 @@ def crop_spline(spline, min_value, max_value):
 
 
 def concat_splines(segments, segment_times):
+    # While concatenating check continuity of segments, this determines
+    # the required amount of knots to insert. If segments are continuous
+    # up to degree, no extra knots are required. If they are not continuous
+    # at all, degree+1 knots are inserted in between the splines.
     spl0 = segments[0]
     knots = [s.basis.knots*segment_times[0] for s in spl0]
     degree = [s.basis.degree for s in spl0]
     coeffs = [s.coeffs for s in spl0]
     for k in range(1, len(segments)):
         for l, s in enumerate(segments[k]):
+            time_shift = 0  # required to shift the spline domain
             if s.basis.degree != degree[l]:
+                # all concatenated splines should be of the same degree
                 raise ValueError(
                     'Splines at index ' + l + 'should have same degree.')
-            knots[l] = np.r_[
-                knots[l], s.basis.knots[degree[l]+1:]*segment_times[k] + knots[l][-1]]
-            coeffs[l] = np.r_[coeffs[l], s.coeffs]
+            # check continuity, n_insert can be different for each l
+            n_insert = degree[l]+1  # starts at max value
+            for d in range(degree[l]+1):
+                # use ipopt default tolerance as a treshold for check
+                if abs(segments[k][l].derivative(d)(0) - segments[k-1][l].derivative(d)(1)) <= 1e-3:
+                    # more continuity = insert less knots
+                    n_insert -= 1
+                else:
+                    # spline values were not equal, stop comparing and take latest n_insert value
+                    break
+            if n_insert!= degree[l]+1:
+                # concatenation requires re-computing the coefficients and/or adding extra knots
+                end_idx = len(knots[l])-(degree[l]+1)+n_insert
+                knots[l] = np.r_[
+                    knots[l][:end_idx], s.basis.knots[degree[l]+1:]*segment_times[k] + knots[l][-1]]
+                # make union basis
+                basis = BSplineBasis(knots[l], degree[l])
+                grev_b = basis.greville()
+                # evaluate basis on its greville points
+                eval_b = basis(grev_b).toarray()
+
+                # first give spline dimensions, by scaling it and shifting it appropriatly
+                # this is necessary, since by default the spline domain is [0,1]
+                # then evaluate the splines that you want to concatenate on greville points
+                # of union basis, will give 0 outside their domain
+                s_1 = segments[k-1][l].scale(segment_times[k-1], shift = time_shift)(grev_b)
+                time_shift += segment_times[k-1]
+                s_2 = segments[k][l].scale(segment_times[k], shift = time_shift)(grev_b)
+                # sum to get total evaluation
+                eval_s = s_1 + s_2
+                # solve system to find new coeffs
+                coeffs[l] = la.solve(eval_b, eval_s)
+            else:
+                #there was no continuity, just compute new knot vector and stack coefficients
+                knots[l] = np.r_[
+                           knots[l], s.basis.knots[degree[l]+1:]*segment_times[k] + knots[l][-1]]
+                coeffs[l] = np.r_[coeffs[l], s.coeffs]
     bases = [BSplineBasis(knots[l], degree[l])
              for l in range(len(segments[0]))]
     return [BSpline(bases[l], coeffs[l]) for l in range(len(segments[0]))]
-
 
 def sample_splines(spline, time):
     if isinstance(spline, list):
