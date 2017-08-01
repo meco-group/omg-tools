@@ -162,7 +162,7 @@ class MultiFrameProblem(Problem):
             n_samp = int(
                 round((horizon_time-rel_current_time)/sample_time, 6)) + 1
             time_axis = np.linspace(rel_current_time, rel_current_time + (n_samp-1)*sample_time, n_samp)
-            spline_segments = [self.father.get_variables(vehicle, 'splines'+str(k)) for k in range(vehicle.n_seg)]
+            spline_segments = [self.father.get_variables(vehicle, 'splines_seg'+str(k)) for k in range(vehicle.n_seg)]
             vehicle.store(current_time, sample_time, spline_segments, segment_times, time_axis)
 
     def reset_init_time(self):
@@ -234,9 +234,9 @@ class MultiFrameProblem(Problem):
             # to goal position at target_time. Approximate/Represent this spline in
             # a new basis with new equidistant knots.
 
-            # Todo: does this work for multiple segments?
+            # shifting spline is only required for first segment, so n_seg_shift=1
             self.father.transform_primal_splines(
-                lambda coeffs, basis: shift_spline(coeffs, update_time/target_time, basis))
+                lambda coeffs, basis: shift_spline(coeffs, update_time/target_time, basis), n_seg_shift=1)
             T_0 = self.father.get_variables(self, 'T'+str(0))[0][0]  # remaining motion time for first segment
             self.father.set_variables(T_0-update_time, self, 'T0')  # only change time of first segment
 
