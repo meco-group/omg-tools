@@ -24,6 +24,7 @@ from ..vehicles.fleet import get_fleet_vehicles
 from ..execution.plotlayer import PlotLayer
 from ..basics.spline_extra import definite_integral
 from ..basics.spline_extra import shiftoverknot_T, shift_spline, evalspline
+from ..basics.geometry import compute_rectangle_overlap_center
 from casadi import inf
 import numpy as np
 from itertools import groupby
@@ -132,8 +133,17 @@ class MultiFrameProblem(Problem):
             father = self.father
         Problem.reinitialize(self)
         for vehicle in self.vehicles:
-            init = vehicle.get_init_spline_value()
-            father.set_variables(init, vehicle, 'splines0')
+            # compute initial guess for all spline values
+            subgoals = []
+            for k in range(self.n_frames-1):
+                room1 = self.environment.rooms[k]
+                room2 = self.environment.rooms[k+1]
+                # subgoals is given as initial position, center of overlap of regions and overall goal
+                # compute center of overlap region of rooms
+                subgoals.append(compute_rectangle_overlap_center(room1['shape'], room1['position'], room2['shape'], room2['position']))
+            init = vehicle.get_init_spline_value(subgoals = subgoals)
+            for k in range(self.n_frames):
+                father.set_variables(init[k], vehicle, 'splines_seg'+str(k))
 
     def store(self, current_time, update_time, sample_time):
         segment_times = []
