@@ -313,9 +313,9 @@ def concat_splines(segments, segment_times):
     knots = [s.basis.knots*segment_times[0] for s in spl0]
     degree = [s.basis.degree for s in spl0]
     coeffs = [s.coeffs for s in spl0]
+    time_shift = 0  # required to shift the spline domain
     for k in range(1, len(segments)):
         for l, s in enumerate(segments[k]):
-            time_shift = 0  # required to shift the spline domain
             if s.basis.degree != degree[l]:
                 # all concatenated splines should be of the same degree
                 raise ValueError(
@@ -332,31 +332,59 @@ def concat_splines(segments, segment_times):
                     break
             if n_insert!= degree[l]+1:
                 # concatenation requires re-computing the coefficients and/or adding extra knots
+                # here we make the knot vector and coeffs of the total spline (the final output),
+                # but we also compute the knot vector and coeffs for concatenating just two splines,
+                # to limit the size of the system that we need to solve
+                # i.e.: when concatenating 3 splines, we first concatenate segments 1 and 2,
+                # and afterwards segments 2 and 3
+
+                # make total knot vector
                 end_idx = len(knots[l])-(degree[l]+1)+n_insert
                 knots[l] = np.r_[
                     knots[l][:end_idx], s.basis.knots[degree[l]+1:]*segment_times[k] + knots[l][-1]]
-                # make union basis
-                basis = BSplineBasis(knots[l], degree[l])
-                grev_b = basis.greville()
-                # evaluate basis on its greville points
-                eval_b = basis(grev_b).toarray()
 
-                # first give spline dimensions, by scaling it and shifting it appropriatly
-                # this is necessary, since by default the spline domain is [0,1]
+                # make knot vector for two segments to concatenate
+                end_idx_concat = len(segments[k-1][l].basis.knots)-(degree[l]+1)+n_insert
+                knots1 = segments[k-1][l].basis.knots[:end_idx_concat]*segment_times[k-1]+time_shift
+                knots2 = s.basis.knots[degree[l]+1:]*segment_times[k] + knots1[-1]
+                knots_concat = np.r_[knots1, knots2]
+
+                # make union basis for two segments to concatenate
+                basis_concat = BSplineBasis(knots_concat, degree[l])
+                grev_bc = basis_concat.greville()
+                # shift first and last greville point inwards, to avoid numerical problems,
+                # in which the spline evaluates to 0 because the evaluation lies just outside the domain
+                grev_bc[0] = grev_bc[0] + (grev_bc[1]-grev_bc[0])*0.01
+                grev_bc[-1] = grev_bc[-1] - (grev_bc[-1]-grev_bc[-2])*0.01
+                # evaluate basis on its greville points
+                eval_bc = basis_concat(grev_bc).toarray()
+
+                # only the last degree coeffs of segment1 and the first degree coeffs
+                # of segment2 will change --> we can reduce the size of the system to solve
+                # Todo: implement this reduction
+
+                # first give the segment dimensions, by scaling it and shifting it appropriatly
+                # this is necessary, since by default the domain is [0,1]
                 # then evaluate the splines that you want to concatenate on greville points
                 # of union basis, will give 0 outside their domain
-                s_1 = segments[k-1][l].scale(segment_times[k-1], shift = time_shift)(grev_b)
-                time_shift += segment_times[k-1]
-                s_2 = segments[k][l].scale(segment_times[k], shift = time_shift)(grev_b)
+                s_1 = segments[k-1][l].scale(segment_times[k-1], shift = time_shift)(grev_bc)
+                s_2 = segments[k][l].scale(segment_times[k], shift = time_shift+segment_times[k-1])(grev_bc)
                 # sum to get total evaluation
-                eval_s = s_1 + s_2
+                eval_sc = s_1 + s_2
                 # solve system to find new coeffs
-                coeffs[l] = la.solve(eval_b, eval_s)
+                coeffs_concat = la.solve(eval_bc, eval_sc)
+                # combine new coefficients with the old ones
+                # remove last segment
+                coeffs[l] = coeffs[l][:-len(segments[k-1][l].coeffs)]
+                # add coeffs_concat
+                coeffs[l] = np.r_[coeffs[l], coeffs_concat]
             else:
                 #there was no continuity, just compute new knot vector and stack coefficients
                 knots[l] = np.r_[
                            knots[l], s.basis.knots[degree[l]+1:]*segment_times[k] + knots[l][-1]]
                 coeffs[l] = np.r_[coeffs[l], s.coeffs]
+        # going to next segment, update time shift
+        time_shift += segment_times[k-1]
     bases = [BSplineBasis(knots[l], degree[l])
              for l in range(len(segments[0]))]
     return [BSpline(bases[l], coeffs[l]) for l in range(len(segments[0]))]
