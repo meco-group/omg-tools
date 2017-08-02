@@ -155,7 +155,7 @@ class SchedulerProblem(Problem):
                 # make a new local problem
                 problem = self.generate_problem()
                 # np.array converts DM to array
-                init_guess = np.array(self.local_problem.father.get_variables()[self.vehicles[0].label, 'splines0'])
+                init_guess = np.array(self.local_problem.father.get_variables()[self.vehicles[0].label, 'splines_seg0'])
                 problem.reset_init_guess(init_guess)  # use init_guess from previous problem = best we can do
                 self.local_problem = problem
 
@@ -857,7 +857,7 @@ class SchedulerProblem(Problem):
         #     # fixedT: the remaining motion time is always the horizon time
         #     motion_time = problem.options['horizon_time']
         # # Save trajectories for all frames, as initial guesses
-        # splines = problem.father.get_variables()[self.vehicles[0].label, 'splines0']
+        # splines = problem.father.get_variables()[self.vehicles[0].label, 'splines_seg0']
         # splines = np.array(splines)  # convert DM to array
 
         end_time = time.time()
