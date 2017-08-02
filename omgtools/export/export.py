@@ -423,34 +423,33 @@ class Export(object):
 
     def _create_fillParameterDict(self, father):
         code = ''
-        obst_enumerate = 0
-        #Type 1 : x, v, a
-        type1_bool = 0
+        obst_ind = 0
+        # type 1 : x, v, a
+        classic_obst_present = False
         for label, child in father.children.items():
             if 'obstacle' in label:
-                label = label.replace('obstacle','')
-                if str(obst_enumerate) == label:
+                ind = label.replace('obstacle', '')
+                if str(obst_ind) == ind:
                     code += '\n'
-                    obst_enumerate += 1
-                    if child.options['spline_traj'] == False:
-                        if type1_bool == 0:
+                    if not child.options['spline_traj']:
+                        if not classic_obst_present:
                             code += '\tstd::vector<double> pos0(2), vel0(2), acc0(2);\n'
                             code += '\tstd::vector<double> posT(2), velT(2), accT(2);\n'
-                            type1_bool = 1
-
-                        code += '\tpos0 = obstacles['+str(obst_enumerate-1)+'].position;\n'
-                        code += '\tvel0 = obstacles['+str(obst_enumerate-1)+'].velocity;\n'
-                        code += '\tacc0 = obstacles['+str(obst_enumerate-1)+'].acceleration;\n'
+                            classic_obst_present = True
+                        code += '\tpos0 = obstacles['+str(obst_ind)+'].position;\n'
+                        code += '\tvel0 = obstacles['+str(obst_ind)+'].velocity;\n'
+                        code += '\tacc0 = obstacles['+str(obst_ind)+'].acceleration;\n'
                         code += '\t// prediction over update_time\n'
                         code += '\tfor (int j=0; j<2; j++){\n'
                         code += '\t\tposT[j] = pos0[j] + update_time*vel0[j] + 0.5*pow(update_time,2)*acc0[j];\n'
                         code += '\t\tvelT[j] = vel0[j] + update_time*acc0[j];\n'
                         code += '\t\taccT[j] = acc0[j];\n'
                         code += '\t}\n'
-                        code += '\tpar_dict[obstacle_lbls['+str(obst_enumerate-1)+']]["x"] = posT;\n'
-                        code += '\tpar_dict[obstacle_lbls['+str(obst_enumerate-1)+']]["v"] = velT;\n'
-                        code += '\tpar_dict[obstacle_lbls['+str(obst_enumerate-1)+']]["a"] = accT;\n'
+                        code += '\tpar_dict[obstacle_lbls['+str(obst_ind)+']]["x"] = posT;\n'
+                        code += '\tpar_dict[obstacle_lbls['+str(obst_ind)+']]["v"] = velT;\n'
+                        code += '\tpar_dict[obstacle_lbls['+str(obst_ind)+']]["a"] = accT;\n'
                     else:
-                        code += '\tpar_dict[obstacle_lbls['+str(obst_enumerate-1)+']]["traj_coeffs"] = obstacles['+str(obst_enumerate-1)+'].traj_coeffs;\n'
-                    code += '\n'                             
+                        code += '\tpar_dict[obstacle_lbls['+str(obst_ind)+']]["traj_coeffs"] = obstacles['+str(obst_ind)+'].traj_coeffs;\n'
+                    code += '\n'
+                    obst_ind += 1
         return {'fillParameterDict': code}

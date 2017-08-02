@@ -80,13 +80,13 @@ class ObstaclexD(OptiChild):
             a0 = a
             # pos spline over time horizon
             self.pos_spline = [BSpline(self.basis, vertcat(x0[k], 0.5*v0[k]*self.T + x0[k], x0[k] + v0[k]*self.T + 0.5*a0[k]*(self.T**2)))
-                               for k in range(self.n_dim)]            
+                               for k in range(self.n_dim)]
         else:
-            #Using a spline to define obstacle trajectory
-            self.basis = BSplineBasis(self.options['spline_params']['knots'],self.options['spline_params']['degree'])
-            traj_coeffs = self.define_parameter('traj_coeffs',len(self.options['spline_params']['knots'])-self.options['spline_params']['degree']-1,self.n_dim)
+            # using a spline to define obstacle trajectory
+            self.basis = BSplineBasis(self.options['spline_params']['knots'], self.options['spline_params']['degree'])
+            traj_coeffs = self.define_parameter('traj_coeffs', len(self.basis), self.n_dim)
             # pos spline over time horizon
-            self.pos_spline = [BSpline(self.basis, traj_coeffs[:,k]) for k in range(self.n_dim)]
+            self.pos_spline = [BSpline(self.basis, traj_coeffs[:, k]) for k in range(self.n_dim)]
         # checkpoints + radii
         checkpoints, _ = self.shape.get_checkpoints()
         self.checkpoints = self.define_parameter('checkpoints', len(checkpoints)*self.n_dim)
@@ -97,13 +97,13 @@ class ObstaclexD(OptiChild):
 
     def set_parameters(self, current_time):
         parameters = {self: {}}
-        if self.options['spline_traj'] == False:
-            #2x1 for each parameter to build the spline
+        if not self.options['spline_traj']:
+            # 2x1 for each parameter to build the spline
             parameters[self]['x'] = self.signals['position'][:, -1]
             parameters[self]['v'] = self.signals['velocity'][:, -1]
             parameters[self]['a'] = self.signals['acceleration'][:, -1]
         else:
-            #[n-k-1]x2 for building the spline
+            # [n-k-1]x2 for building the spline
             parameters[self]['traj_coeffs'] = self.options['spline_params']['coeffs']
         checkpoints, rad = self.shape.get_checkpoints()
         parameters[self]['checkpoints'] = np.reshape(checkpoints, (len(checkpoints)*self.n_dim, ))
