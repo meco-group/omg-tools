@@ -37,6 +37,8 @@ typedef struct obstacle {
     std::vector<double> acceleration;
     std::vector<double> checkpoints;
     std::vector<double> radii;
+    //To keep datatype compatible, put x coefficients first and then y coefficients in the same vector
+    std::vector<double> traj_coeffs;
     bool avoid;
 } obstacle_t;
 

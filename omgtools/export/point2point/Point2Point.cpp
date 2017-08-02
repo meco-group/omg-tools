@@ -257,21 +257,10 @@ void Point2Point::fillParameterDict(vector<obstacle_t>& obstacles, map<string, m
         par_dict[P2PLBL]["t"] = {0.0};
     }
     string obstacle_lbls [N_OBS] = OBSTACLELBLS;
-    std::vector<double> pos0(2), vel0(2), acc0(2);
-    std::vector<double> posT(2), velT(2), accT(2);
+
+@fillParameterDict@
+
     for (int k=0; k<n_obs; k++){
-        pos0 = obstacles[k].position;
-        vel0 = obstacles[k].velocity;
-        acc0 = obstacles[k].acceleration;
-        // prediction over update_time
-        for (int j=0; j<2; j++){
-            posT[j] = pos0[j] + update_time*vel0[j] + 0.5*pow(update_time,2)*acc0[j];
-            velT[j] = vel0[j] + update_time*acc0[j];
-            accT[j] = acc0[j];
-        }
-        par_dict[obstacle_lbls[k]]["x"] = posT;
-        par_dict[obstacle_lbls[k]]["v"] = velT;
-        par_dict[obstacle_lbls[k]]["a"] = accT;
         par_dict[obstacle_lbls[k]]["checkpoints"] = obstacles[k].checkpoints;
         par_dict[obstacle_lbls[k]]["rad"] = obstacles[k].radii;
     }

@@ -30,15 +30,17 @@ vehicle.set_terminal_conditions([2., 2.])
 
 # extract spline parameters
 coeffs = np.zeros([len(vehicle.basis.knots)-vehicle.basis.degree-1,2])
-splineParams = {'knots':vehicle.basis.knots,'degree':vehicle.basis.degree,'coeffs':coeffs}
+spline_params = {'knots':vehicle.basis.knots,'degree':vehicle.basis.degree,'coeffs':coeffs}
 
 # create environment
 environment = Environment(room={'shape': Square(5.)})
 rectangle = Rectangle(width=3., height=0.2)
+environment.add_obstacle(Obstacle({'position': [1.7, -0.5]}, shape=rectangle))
 obstacles = Obstacle({'position': [1.5, 0.5]},shape=Circle(0.4))
-obstacles.set_options({'splineTraj': True})
-obstacles.set_options({'splineParams': splineParams})
+obstacles.set_options({'spline_traj': True})
+obstacles.set_options({'spline_params': spline_params})
 environment.add_obstacle(obstacles)
+environment.add_obstacle(Obstacle({'position': [-2.1, -0.5]}, shape=rectangle))
 
 # create a point-to-point problem
 problem = Point2point(vehicle, environment, freeT=False)
@@ -48,7 +50,6 @@ options = {}
 options['directory'] = os.path.join(os.getcwd(), 'export/')
 # path to object files of your exported optimization problem
 options['casadiobj'] = os.path.join(options['directory'], 'bin/')
-options['obstTraj'] = obstacles.options['splineTraj']
 problem.export(options)
 
 print 'Exported! :)'
