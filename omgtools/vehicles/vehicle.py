@@ -106,9 +106,9 @@ class Vehicle(OptiChild, PlotLayer):
                 try:
                     init = self.get_init_spline_value()
                 except AttributeError as exc:
-                    init = None
+                    init = [None]*n_seg
             spline = self.define_spline_variable(
-                'splines_seg'+str(k), self.n_spl, value=init)
+                'splines_seg'+str(k), self.n_spl, value=init[k])
             self.splines.append(spline)
         return self.splines
 

@@ -129,6 +129,7 @@ class Holonomic(Vehicle):
                 # init_value[:, k] = np.r_[pos0[k]*np.ones(self.degree), np.linspace(
                 #     pos0[k], posT[k], len(self.basis) - 2*self.degree), posT[k]*np.ones(self.degree)]
                 init_value[:, k] = np.linspace(pos0[k], posT[k], len(self.basis))
+            init_value = [init_value]  # use same format as in n_seg > 1
         else:  # multiple segments
             if subgoals is None:
                 raise AttributeError('No subgoal given, while there are multiple segments,'
