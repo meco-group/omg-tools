@@ -451,14 +451,19 @@ class OptiFather(object):
                     _init_tf[basis] = init_dual_transform(basis)
                 child._splines_dual[name]['init'] = _init_tf[basis]
 
-    def transform_primal_splines(self, transform_fun, n_seg_shift=None):
-        # n_seg_shift: indicates the amount of segments of which the variables must be shifted
+    def transform_primal_splines(self, transform_fun, seg_shift=None):
+        # seg_shift: index list of the segments of which the variables must be shifted
+        if seg_shift is None:
+            # by default only shift first segment, with index 0
+            seg_shift = [0]
+        elif not isinstance(seg_shift, list):
+            # should be an index list
+            seg_shift = [seg_shift]
         for label, child in self.children.items():
             for name, spl in child._splines_prim.items():
                 if name in child._variables:
-                    # check if n in 'segn' is smaller than n_seg_shift, to decide if shift is necessary
-                    if (n_seg_shift is not None and 'seg' in name and
-                    int(name[name.index('seg')+3]) < n_seg_shift):
+                    # check if n in 'segn' is in the index list of segments to shift
+                    if ('seg' in name and int(name[name.index('seg')+3]) in seg_shift):
                         basis = spl['basis']
                         init = spl['init']
                         if init is not None:

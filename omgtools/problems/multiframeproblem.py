@@ -234,9 +234,9 @@ class MultiFrameProblem(Problem):
             # to goal position at target_time. Approximate/Represent this spline in
             # a new basis with new equidistant knots.
 
-            # shifting spline is only required for first segment, so n_seg_shift=1
+            # shifting spline is only required for first segment (index 0), so seg_shift=[0]
             self.father.transform_primal_splines(
-                lambda coeffs, basis: shift_spline(coeffs, update_time/target_time, basis), n_seg_shift=1)
+                lambda coeffs, basis: shift_spline(coeffs, update_time/target_time, basis), seg_shift=[0])
             T_0 = self.father.get_variables(self, 'T'+str(0))[0][0]  # remaining motion time for first segment
             self.father.set_variables(T_0-update_time, self, 'T0')  # only change time of first segment
 
