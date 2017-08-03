@@ -41,12 +41,27 @@ class Deployer:
         current_time = float(current_time)
         if not update_time:
             update_time = self.update_time
+        ### Adapted
+        if hasattr(self.problem.vehicles[0], 'signals'):
+            if round(update_time - float(self.problem.vehicles[0].signals['time'][:, -1] - self.current_time),4) >= self.sample_time:
+                update_time = float(self.problem.vehicles[0].signals['time'][:, -1] - self.current_time)
+        # is there enough time left to update with the normal update time?
+        # if not, lower update time
+        elif hasattr(self.problem.vehicles[0], 'trajectories'):
+            if round(update_time - float(self.problem.vehicles[0].trajectories['time'][:, -1] - self.current_time),4) >= self.sample_time:
+                update_time = float(self.problem.vehicles[0].trajectories['time'][:, -1] - self.current_time)
         if (self.iteration0):
             self.iteration0 = False
             self.problem.initialize(current_time)
             delay = 0
         else:
             delay = int((current_time - self.current_time - update_time)/self.sample_time)
+
+        # if the update time + delay is more than the time which is left, leave out the delay
+        if hasattr(self.problem.vehicles[0], 'trajectories'):
+            if (delay + int(np.round(update_time/self.sample_time, 6))) > int(np.round(float(self.problem.vehicles[0].trajectories['time'][:, -1] - self.current_time)/self.sample_time,6)):
+                delay = 0
+
         self.problem.predict(current_time, update_time, self.sample_time, states, delay)
         self.problem.solve(current_time, update_time)
         self.problem.store(current_time, update_time, self.sample_time)

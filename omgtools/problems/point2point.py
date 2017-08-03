@@ -137,7 +137,7 @@ class FixedTPoint2point(Point2pointProblem):
         Point2pointProblem.set_default_options(self)
         self.options['horizon_time'] = 10.
         self.options['hard_term_con'] = False
-
+        self.options['no_term_con_der'] = False
     # ========================================================================
     # Optimization modelling related functions
     # ========================================================================
@@ -153,6 +153,8 @@ class FixedTPoint2point(Point2pointProblem):
         for vehicle in self.vehicles:
             term_con, term_con_der = vehicle.get_terminal_constraints(
                 vehicle.splines[0])
+            if ('no_term_con_der' in self.options and self.options['no_term_con_der']):
+                term_con_der = []
             self.term_con_len.append(len(term_con))
             for k, con in enumerate(term_con):
                 spline, condition = con[0], con[1]
@@ -183,6 +185,8 @@ class FixedTPoint2point(Point2pointProblem):
 
     def init_step(self, current_time, update_time):
         # transform spline variables
+        if not hasattr(self, 'current_time_prev'):
+            self.current_time_prev = 0
         interval_prev = int(np.round(self.current_time_prev/self.knot_time, 6))
         interval_now = int(np.round(current_time/self.knot_time, 6))
         if (interval_prev < interval_now): # passed a knot
@@ -286,6 +290,8 @@ class FreeTPoint2point(Point2pointProblem):
         for vehicle in self.vehicles:
             term_con, term_con_der = vehicle.get_terminal_constraints(
                 vehicle.splines[0])
+            if ('no_term_con_der' in self.options and self.options['no_term_con_der']):
+                term_con_der = []
             for con in (term_con + term_con_der):
                 spline, condition = con[0], con[1]
                 self.define_constraint(spline(1.) - condition, 0., 0.)
