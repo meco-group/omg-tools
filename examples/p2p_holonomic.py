@@ -31,11 +31,11 @@ vehicle.set_terminal_conditions([2., 2.])
 environment = Environment(room={'shape': Square(5.)})
 rectangle = Rectangle(width=3., height=0.2)
 
-environment.add_obstacle(Obstacle({'position': [-2.1, -0.5]}, shape=rectangle))
-environment.add_obstacle(Obstacle({'position': [1.7, -0.5]}, shape=rectangle))
-trajectories = {'velocity': {'time': [3., 4.],
-                             'values': [[-0.15, 0.0], [0., 0.15]]}}
-environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
+# environment.add_obstacle(Obstacle({'position': [-2.1, -0.5]}, shape=rectangle))
+# environment.add_obstacle(Obstacle({'position': [1.7, -0.5]}, shape=rectangle))
+trajectories = {'velocity': {'time': [0., 40.],
+                             'values': [[-0.35, 0.35], [0., 0.15]]}}
+environment.add_obstacle(Obstacle({'position': [1.5, -1]}, shape=Circle(0.5), options={'bounce':False},
                                   simulation={'trajectories': trajectories}))
 
 # create a point-to-point problem
@@ -49,3 +49,6 @@ vehicle.plot('input', knots=True, prediction=True, labels=['v_x (m/s)', 'v_y (m/
 
 # run it!
 simulator.run()
+
+problem.save_movie('scene', format='gif', name='problemgif', number_of_frames=80, movie_time=4, axis=False)
+

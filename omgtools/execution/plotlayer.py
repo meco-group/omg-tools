@@ -151,6 +151,9 @@ def _cleanup_rubbish(path, info, root=None):
             for l in range(ax_c):
                 insert = ''
                 index = body.find('\end{axis}', index)
+                if index == -1:  # there was no \end{axis}
+                    index = 0
+                    index = body.find('\end{groupplot}', index)
                 if 'xlim' in info[k][l] and info[k][l]['xlim'] is not None:
                     x_min = info[k][l]['xlim'][0]
                     x_max = info[k][l]['xlim'][1]

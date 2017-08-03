@@ -53,7 +53,7 @@ class Holonomic1D(Vehicle):
         return [(x, state0[0]), (dx, self.T*input0[0])]
 
     def get_terminal_constraints(self, splines):
-        position = self.define_parameter('positionT')
+        position = self.define_parameter('poseT')
         x = splines[0]
         term_con = [(x, position[0])]
         term_con_der = []
@@ -69,18 +69,18 @@ class Holonomic1D(Vehicle):
         self.prediction['input'] = input
 
     def set_terminal_conditions(self, position):
-        self.positionT = position
+        self.poseT = position
 
     def get_init_spline_value(self):
         pos0 = self.prediction['state'][0]
-        posT = self.positionT[0]
+        posT = self.poseT[0]
         # init_value = np.r_[pos0[0]*np.ones(self.degree), np.linspace(pos0[0], posT[0], len(self.basis) - 2*self.degree), posT[0]*np.ones(self.degree)]
         init_value = np.linspace(pos0, posT, len(self.basis))
         return init_value
 
     def check_terminal_conditions(self):
         tol = self.options['stop_tol']
-        if (np.linalg.norm(self.signals['state'][:, -1] - self.positionT) > tol or
+        if (np.linalg.norm(self.signals['state'][:, -1] - self.poseT) > tol or
                 np.linalg.norm(self.signals['input'][:, -1])) > tol:
             return False
         else:
@@ -90,7 +90,7 @@ class Holonomic1D(Vehicle):
         parameters = Vehicle.set_parameters(self, current_time)
         parameters[self]['state0'] = self.prediction['state']
         parameters[self]['input0'] = self.prediction['input']
-        parameters[self]['positionT'] = self.positionT
+        parameters[self]['poseT'] = self.poseT
         return parameters
 
     def define_collision_constraints(self, hyperplanes, environment, splines):

@@ -26,7 +26,7 @@ namespace omg{
 
 class Holonomic: public Vehicle{
     private:
-        std::vector<double> positionT;
+        std::vector<double> poseT;
 
     public:
         Holonomic();

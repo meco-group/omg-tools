@@ -33,11 +33,6 @@ class Holonomic(Vehicle):
 
         if ((not 'syslimit' in self.options) or  # default choose norm_inf
                 (self.options['syslimit'] is 'norm_inf')):
-            # user specified a single velocity for x and y
-            self.vxmin = self.vymin = bounds['vmin'] if 'vmin' in bounds else None
-            self.vxmax = self.vymax = bounds['vmax'] if 'vmax' in bounds else None
-            self.axmin = self.aymin = bounds['amin'] if 'amin' in bounds else None
-            self.axmax = self.aymax = bounds['amax'] if 'amax' in bounds else None
             # user specified separate velocities for x and y
             self.vxmin = bounds['vxmin'] if 'vxmin' in bounds else -0.5
             self.vymin = bounds['vymin'] if 'vymin' in bounds else -0.5
@@ -47,6 +42,15 @@ class Holonomic(Vehicle):
             self.aymin = bounds['aymin'] if 'aymin' in bounds else -1.
             self.axmax = bounds['axmax'] if 'axmax' in bounds else 1.
             self.aymax = bounds['aymax'] if 'aymax' in bounds else 1.
+            # user specified a single velocity for x and y
+            if 'vmin' in bounds:
+                self.vxmin = self.vymin = bounds['vmin']
+            if 'vmax' in bounds:
+                self.vxmax = self.vymax = bounds['vmax']
+            if 'amin' in bounds:
+                self.axmin = self.aymin = bounds['amin']
+            if 'amax' in bounds:
+                self.axmax = self.aymax = bounds['amax']
         elif self.options['syslimit'] is 'norm_2':
             self.vmax = bounds['vmax'] if 'vmax' in bounds else 0.5
             self.amax = bounds['amax'] if 'amax' in bounds else 1.
@@ -93,7 +97,7 @@ class Holonomic(Vehicle):
                 (dx, self.T*input0[0]), (dy, self.T*input0[1])]
 
     def get_terminal_constraints(self, splines):
-        position = self.define_parameter('positionT', 2)
+        position = self.define_parameter('poseT', 2)
         x, y = splines
         term_con = [(x, position[0]), (y, position[1])]
         term_con_der = []
@@ -109,12 +113,12 @@ class Holonomic(Vehicle):
         self.prediction['input'] = input
 
     def set_terminal_conditions(self, position):
-        self.positionT = position
+        self.poseT = position
 
     def get_init_spline_value(self):
         init_value = np.zeros((len(self.basis), 2))
         pos0 = self.prediction['state']
-        posT = self.positionT
+        posT = self.poseT
         for k in range(2):
             # init_value[:, k] = np.r_[pos0[k]*np.ones(self.degree), np.linspace(
             #     pos0[k], posT[k], len(self.basis) - 2*self.degree), posT[k]*np.ones(self.degree)]
@@ -123,7 +127,7 @@ class Holonomic(Vehicle):
 
     def check_terminal_conditions(self):
         tol = self.options['stop_tol']
-        if (np.linalg.norm(self.signals['state'][:, -1] - self.positionT) > tol or
+        if (np.linalg.norm(self.signals['state'][:, -1] - self.poseT) > tol or
                 np.linalg.norm(self.signals['input'][:, -1])) > tol:
             return False
         else:
@@ -133,7 +137,7 @@ class Holonomic(Vehicle):
         parameters = Vehicle.set_parameters(self, current_time)
         parameters[self]['state0'] = self.prediction['state']
         parameters[self]['input0'] = self.prediction['input']
-        parameters[self]['positionT'] = self.positionT
+        parameters[self]['poseT'] = self.poseT
         return parameters
 
     def define_collision_constraints(self, hyperplanes, environment, splines):
