@@ -49,7 +49,7 @@ problem = Point2point(vehicle, environment, freeT=False)
 problem.init()
 
 options = {}
-options['directory'] = os.path.join(os.getcwd(), 'export/')
+options['directory'] = os.path.join(os.getcwd(), 'export_obsttraj/')
 # path to object files of your exported optimization problem
 options['casadiobj'] = os.path.join(options['directory'], 'bin/')
 problem.export(options)

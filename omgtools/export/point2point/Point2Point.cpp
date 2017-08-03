@@ -256,14 +256,7 @@ void Point2Point::fillParameterDict(vector<obstacle_t>& obstacles, map<string, m
     } else{
         par_dict[P2PLBL]["t"] = {0.0};
     }
-    string obstacle_lbls [N_OBS] = OBSTACLELBLS;
-
 @fillParameterDict@
-
-    for (int k=0; k<n_obs; k++){
-        par_dict[obstacle_lbls[k]]["checkpoints"] = obstacles[k].checkpoints;
-        par_dict[obstacle_lbls[k]]["rad"] = obstacles[k].radii;
-    }
 }
 
 void Point2Point::extractData(){
