@@ -103,10 +103,8 @@ class Environment(OptiChild, PlotLayer):
                           vehicle.degree:-vehicle.degree],
                       np.ones(degree)]
         basis = BSplineBasis(knots, degree)
-        if len(self.rooms) == 1:
-            splines = [splines]
-        for idx in range(len(splines)):
-            # loop over splines, not over rooms since number of considered segments
+        for idx in range(vehicle.n_seg):
+            # loop over vehicle segments, not over rooms since number of considered segments
             # may be different from total number of rooms
             room = self.rooms[idx]  # select current room
             hyp_veh, hyp_obs = {}, {}
