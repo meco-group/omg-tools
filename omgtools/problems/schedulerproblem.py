@@ -303,10 +303,10 @@ class SchedulerProblem(Problem):
 
         if self.frames:
             # already computed frames before, end up here because frame[0] was not valid anymore
-            # shift all frames forward over one frame
-            for k in range(self.n_frames-1):
-                self.frames[k] = self.frames[k+1].copy()
-            self.frames.pop()  # remove last frame, since it is doubled above
+            # shift all frames forward over one frame, i.e. remove self.frames[0]
+            # but only if there is more than one frame
+            if self.n_frames != 1:
+                self.frames.pop(0)
             frame = self.frames[-1]  # start from this frame
             # add one extra frame
             n_frames_to_create = 1
@@ -328,8 +328,11 @@ class SchedulerProblem(Problem):
                 else:
                     start_pos = self.curr_state
                 frame = self.create_frame_shift(start_pos)
-                # append new frame to the frame list
-                self.frames.append(frame)
+                if self.n_frames != 1:
+                    # append new frame to the frame list
+                    self.frames.append(frame)
+                else:  # considering only 1 frame, so replace the previous one
+                    self.frames = [frame]
 
             end_time = time.time()
             if self.options['verbose'] >= 2:
