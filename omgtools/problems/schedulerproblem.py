@@ -380,7 +380,7 @@ class SchedulerProblem(Problem):
 
         # start with waypoint that is closest to start_pos
         _, start_idx = self.find_closest_waypoint(start_pos, self.global_path)
-        for idx, point in enumerate(self.global_path[start_index:]):
+        for idx, point in enumerate(self.global_path[start_idx:]):
             if not self.point_in_frame(frame, point):
                 # Is point also out of frame when moving the frame towards the waypoint?
                 # if so, we move the window over a distance of 'move_limit' extra
@@ -403,7 +403,7 @@ class SchedulerProblem(Problem):
         if waypoint is not None:
             # found waypoint outside frame, which is not even inside the frame after shifting
             # over move_limit: shift frame in the direction of this point
-            xmin, ymin, xmax, ymax = self.move_frame(delta_x, delta_y, move_limit)
+            xmin, ymin, xmax, ymax = self.move_frame(start_pos, delta_x, delta_y, move_limit)
             frame['border'] = self.make_border(xmin, ymin, xmax, ymax)
 
             # Todo: maybe first check if points_in_frame[-1] is close to border, if so keep it as endpoint?
@@ -418,7 +418,7 @@ class SchedulerProblem(Problem):
         elif endpoint is not None:
             # vehicle goal is inside frame after shifting
             # shift frame over calculated distance
-            xmin, ymin, xmax, ymax = self.move_frame(delta_x, delta_y, move_limit)
+            xmin, ymin, xmax, ymax = self.move_frame(start_pos, delta_x, delta_y, move_limit)
             frame['border'] = self.make_border(xmin, ymin, xmax, ymax)
         else:
             # all waypoints are within frame, even without shifting, so don't shift the frame
@@ -1244,7 +1244,7 @@ class SchedulerProblem(Problem):
         # make sure new limits are not outside the main environment room
         # if so, shrink the frame to fit inside the environment
         environment_limits = self.environment.get_canvas_limits()  #[[xmin,xmax],[ymin,ymax]]
-        environment_limits = environments_limits[0]  # select first room, the main one
+        environment_limits = environment_limits[0]  # select first room, the main one
         if newx_min < environment_limits[0][0]:
             newx_min = environment_limits[0][0]
         if newx_max > environment_limits[0][1]:
@@ -1414,7 +1414,6 @@ class SchedulerProblem(Problem):
     def generate_problem(self):
         # transform frames into a multiframe problem
 
-        import pdb; pdb.set_trace()  # breakpoint 4e67901a //
         rooms = []
         for k in range(self.n_frames):
             room = {}
