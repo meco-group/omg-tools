@@ -160,7 +160,7 @@ class Problem(OptiChild, PlotLayer):
                         if init_guess[l].shape[1] != vehicle.n_spl:
                             raise ValueError('Each vehicle spline should receive an initial guess.')
                         else:
-                            self.father.set_variables(init_guess[l].tolist(),child=vehicle, name='splines'+str(l))
+                            self.father.set_variables(init_guess[l].tolist(),child=vehicle, name='splines_seg'+str(l))
 
     # ========================================================================
     # Simulation related functions
