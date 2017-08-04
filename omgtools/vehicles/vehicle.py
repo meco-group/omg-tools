@@ -47,7 +47,7 @@ class Vehicle(OptiChild, PlotLayer):
                                  'dimension.')
 
         self.prediction = {}
-        self.init_spline_value = None
+        self.init_spline_values = None
         self.degree = degree
 
         self.to_simulate = True
@@ -83,13 +83,17 @@ class Vehicle(OptiChild, PlotLayer):
             self.knots = kwargs['knots']
         self.basis = BSplineBasis(self.knots, self.degree)
 
-    def set_init_spline_value(self, value):
-        if value.shape == (len(self.basis), self.n_spl):
-            self.init_spline_value = value
-        else:
-            raise ValueError('Initial guess has wrong dimensions, ' +
-                'required: ' + str((len(self.basis), self.n_spl)) +
-                ' while you gave: ' + str(values.shape))
+    def set_init_spline_values(self, values, n_seg=1):
+        # first initialize as empty list
+        self.init_spline_values = [0]*n_seg
+        # then assign input values
+        for k in range(n_seg):
+            if values[k].shape == (len(self.basis), self.n_spl):
+                self.init_spline_values[k] = values[k]
+            else:
+                raise ValueError('Initial guess has wrong dimensions for spline ' +
+                    str(k) + ', required: ' + str((len(self.basis), self.n_spl)) +
+                    ' while you gave: ' + str(values[k].shape))
 
     # ========================================================================
     # Optimization modelling related functions
@@ -98,15 +102,15 @@ class Vehicle(OptiChild, PlotLayer):
     def define_splines(self, n_seg=1):
         self.n_seg = n_seg
         self.splines = []
-        for k in range(n_seg):
-            if self.init_spline_value is not None:
-                init = self.init_spline_value
-                self.init_spline_value = None
-            else:
-                try:
-                    init = self.get_init_spline_value()
-                except AttributeError as exc:
-                    init = [None]*n_seg
+        if self.init_spline_values is not None:
+            init = self.init_spline_values
+            self.init_spline_values = None
+        else:
+            try:
+                init = self.get_init_spline_values()
+            except AttributeError as exc:
+                init = [None]*n_seg
+        for k in range(self.n_seg):
             spline = self.define_spline_variable(
                 'splines_seg'+str(k), self.n_spl, value=init[k])
             self.splines.append(spline)
