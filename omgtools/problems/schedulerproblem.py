@@ -129,9 +129,8 @@ class SchedulerProblem(Problem):
 
             # frames were not valid anymore, update based on current position
 
-            # Todo: what if n_frames=1 and using min_nobs? Then we need self.next_frame, but only then
+            # Todo: what if n_frames=1 Then we need self.next_frame
             if (self.n_frames == 1 and
-                self.frame_type is 'min_nobs' and
                 hasattr(self, 'next_frame')):
                 self.update_frames(next_frame=self.next_frame)
             else:
@@ -328,11 +327,12 @@ class SchedulerProblem(Problem):
                 else:
                     start_pos = self.curr_state
                 frame = self.create_frame_shift(start_pos)
-                if self.n_frames != 1:
-                    # append new frame to the frame list
-                    self.frames.append(frame)
-                else:  # considering only 1 frame, so replace the previous one
-                    self.frames = [frame]
+
+                # append new frame to the frame list
+                self.frames.append(frame)
+
+                if self.n_frames == 1:
+                    self.next_frame = self.create_next_frame(frame)
 
             end_time = time.time()
             if self.options['verbose'] >= 2:
@@ -585,15 +585,27 @@ class SchedulerProblem(Problem):
     def check_frames(self):
         if self.frame_type == 'shift':
             # if travelled over this 'percentage' then get new frame
-            percentage = 80
+            # percentage = 99
 
             # if final goal is not in the current frame, compare current distance
             # to the local goal with the initial distance
             if not self.frames[0]['endpoint_frame'] == self.goal_state:
-                    init_dist = distance_between_points(self.frames[0]['waypoints'][0], self.frames[0]['endpoint_frame'])
-                    curr_dist = distance_between_points(self.curr_state[:2], self.frames[0]['endpoint_frame'])
-                    if curr_dist < init_dist*(1-(percentage/100.)):
-                        # if already covered 'percentage' of the distance
+                    # init_dist = distance_between_points(self.frames[0]['waypoints'][0], self.frames[0]['endpoint_frame'])
+                    # curr_dist = distance_between_points(self.curr_state[:2], self.frames[0]['endpoint_frame'])
+                    # if curr_dist < init_dist*(1-(percentage/100.)):
+                    #     # if already covered 'percentage' of the distance
+                    #     valid = False
+                    #     return valid
+                    if (self.n_frames == 1 and hasattr(self, 'next_frame')):
+                        if self.point_in_frame(self.next_frame, self.curr_state[:2], distance=self.veh_size):
+                            # only called if self.n_frames = 1,
+                            # then self.frames[1] doesn't exist and self.next_frame does exist
+                            valid = False
+                        else:
+                            valid = True
+                        return valid
+                    elif self.point_in_frame(self.frames[1], self.curr_state[:2], distance=self.veh_size):
+                        # if vehicle is in overlap region between current and next frame
                         valid = False
                         return valid
                     else:
@@ -606,25 +618,25 @@ class SchedulerProblem(Problem):
             # if travelled over this 'percentage' then get new frame
             # Note: normally you will automatically shift to the next frame when the vehicle enters it,
             # without reaching this 'percentage' value
-            percentage = 99
+            # percentage = 99
 
             # if final goal is not in the current frame, compare current distance
             # to the local goal with the initial distance
             if not self.point_in_frame(self.frames[0], self.goal_state):
-                    init_dist = distance_between_points(self.frames[0]['waypoints'][0], self.frames[0]['endpoint_frame'])
-                    curr_dist = distance_between_points(self.curr_state[:2], self.frames[0]['endpoint_frame'])
-                    if curr_dist < init_dist*(1-(percentage/100.)):
-                        # if already covered 'percentage' of the distance
-                        valid = False
+                    # init_dist = distance_between_points(self.frames[0]['waypoints'][0], self.frames[0]['endpoint_frame'])
+                    # curr_dist = distance_between_points(self.curr_state[:2], self.frames[0]['endpoint_frame'])
+                    # if curr_dist < init_dist*(1-(percentage/100.)):
+                    #     # if already covered 'percentage' of the distance
+                    #     valid = False
+                    #     return valid
+                    if (self.n_frames == 1 and hasattr(self, 'next_frame')):
+                        if self.point_in_frame(self.next_frame, self.curr_state[:2], distance=self.veh_size):
+                            # only called if self.n_frames = 1,
+                            # then self.frames[1] doesn't exist and self.next_frame does exist
+                            valid = False
+                        else:
+                            valid = True
                         return valid
-                    elif (self.n_frames == 1 and hasattr(self, 'next_frame')):
-                            if self.point_in_frame(self.next_frame, self.curr_state[:2], distance=self.veh_size):
-                                # only called if self.n_frames = 1 and frame_type is 'min_nobs',
-                                # then self.frames[1] doesn't exist and self.next_frame does exist
-                                valid = False
-                            else:
-                                valid = True
-                            return valid
                     elif self.point_in_frame(self.frames[1], self.curr_state[:2], distance=self.veh_size):
                         # if vehicle is in overlap region between current and next frame
                         valid = False
@@ -649,7 +661,7 @@ class SchedulerProblem(Problem):
 
         # make new frame
         if next_frame is not None:
-            # only possible if self.n_frames=1 and frame_type is 'shift'
+            # only possible if self.n_frames=1
 
             # we already have the next frame, so we first compute the frame
             # after the next one
@@ -941,30 +953,33 @@ class SchedulerProblem(Problem):
          'position': position, 'orientation': angle, 'limits': limits}
 
     def create_next_frame(self, frame):
-        # only used if self.n_frames = 1 and frame_type is 'min_nobs'
-
-        start = time.time()
+        # only used if self.n_frames = 1
 
         if not frame['endpoint_frame'] == self.goal_state:
-            # only search the next frame if the current frame doesn't contain the goal state
-            start_position = frame['endpoint_frame']
-            next_frame = self.create_min_nobs_base_frame(start_position)
+            start = time.time()
+            start_position = frame['endpoint_frame']  # start at end of current frame
+            if self.frame_type is 'shift':
+               next_frame = self.create_frame_shift(start_position)
 
-            # try to scale up frame
-            next_frame['border'], next_frame['waypoints'] = self.scale_up_frame(next_frame)
+            elif self.frame_type is 'min_nobs':
+                # only search the next frame if the current frame doesn't contain the goal state
+                next_frame = self.create_min_nobs_base_frame(start_position)
 
-            # possibly the last waypoint is not reachable by the vehicle, fix this
-            method = 2  # 1 = shift frame, 2 = shift waypoint
-            next_frame = self.make_last_waypoint_reachable(next_frame, method)
+                # try to scale up frame
+                next_frame['border'], next_frame['waypoints'] = self.scale_up_frame(next_frame)
 
-            # finish frame description
-            # next_frame['border'] is already determined
-            stationary_obstacles = self.get_stationary_obstacles_in_frame(next_frame)
-            next_frame['stationary_obstacles'] = stationary_obstacles
-            # Last waypoint of frame is a point of global_path or the goal_state which was added to self.global_path.
-            # This was necessary because otherwise you will end up on a grid point and not necessarily in the goal
-            # position (which can lie between grid points, anywhere on the map)
-            next_frame['endpoint_frame'] = next_frame['waypoints'][-1]
+                # possibly the last waypoint is not reachable by the vehicle, fix this
+                method = 2  # 1 = shift frame, 2 = shift waypoint
+                next_frame = self.make_last_waypoint_reachable(next_frame, method)
+
+                # finish frame description
+                # next_frame['border'] is already determined
+                stationary_obstacles = self.get_stationary_obstacles_in_frame(next_frame)
+                next_frame['stationary_obstacles'] = stationary_obstacles
+                # Last waypoint of frame is a point of global_path or the goal_state which was added to self.global_path.
+                # This was necessary because otherwise you will end up on a grid point and not necessarily in the goal
+                # position (which can lie between grid points, anywhere on the map)
+                next_frame['endpoint_frame'] = next_frame['waypoints'][-1]
 
             end = time.time()
             if self.options['verbose'] >= 2:
