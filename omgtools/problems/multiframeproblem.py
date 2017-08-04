@@ -197,8 +197,8 @@ class MultiFrameProblem(Problem):
     def stop_criterium(self, current_time, update_time):
         T_tot = 0
         # compute total remaining motion time
-        for frame in range(self.n_frames):
-            T_tot += self.father.get_variables(self, 'T'+str(frame))[0][0]
+        for k in range(self.n_frames):
+            T_tot += self.father.get_variables(self, 'T'+str(k))[0][0]
         if T_tot < update_time:
             return True
         stop = True
