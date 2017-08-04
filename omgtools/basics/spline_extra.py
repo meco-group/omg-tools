@@ -371,10 +371,11 @@ def concat_splines(segments, segment_times):
                 s_2 = segments[k][l].scale(segment_times[k], shift = time_shift+segment_times[k-1])(grev_bc)
                 # sum to get total evaluation
                 eval_sc = s_1 + s_2
+
                 # solve system to find new coeffs
                 coeffs_concat = la.solve(eval_bc, eval_sc)
                 # combine new coefficients with the old ones
-                # remove last segment
+                # remove last segment (its coeffs were adapted)
                 coeffs[l] = coeffs[l][:-len(segments[k-1][l].coeffs)]
                 # add coeffs_concat
                 coeffs[l] = np.r_[coeffs[l], coeffs_concat]
