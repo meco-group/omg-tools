@@ -266,11 +266,11 @@ class EnvironmentGUI(tk.Frame):
         # only build environment and shut down GUI if start and goal positions are clicked
         if len(self.clicked_positions) == 2:
             # make border
-            self.environment = Environment(room={'shape': Rectangle(width = self.frame_width_m,
+            self.environment = Environment(rooms=[{'shape': Rectangle(width = self.frame_width_m,
                                                                     height = self.frame_height_m),
                                                  'position':[self.position[0]*1./self.meter_to_pixel+self.frame_width_m*0.5,
                                                              self.position[1]*1./self.meter_to_pixel+self.frame_height_m*0.5],
-                                                 'draw': True})
+                                                 'draw': True}])
             for obstacle in self.obstacles:
                 if obstacle['shape'] == 'rectangle':
                     rectangle = Rectangle(width=obstacle['width'],height=obstacle['height'])
