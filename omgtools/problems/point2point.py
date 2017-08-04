@@ -55,8 +55,8 @@ class Point2pointProblem(Problem):
         self.t0 = self.t/self.T
         Problem.construct(self)
         for vehicle in self.vehicles:
-            splines = vehicle.define_splines(n_seg=1)[0]
-            vehicle.define_trajectory_constraints(splines, self.T)
+            splines = vehicle.define_splines(n_seg=1)
+            vehicle.define_trajectory_constraints(splines[0], self.T)
             self.environment.define_collision_constraints(vehicle, splines, self.T)
         if len(self.vehicles) > 1 and self.options['inter_vehicle_avoidance']:
             self.environment.define_intervehicle_collision_constraints(self.vehicles)
