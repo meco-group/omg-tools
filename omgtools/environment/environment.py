@@ -250,7 +250,8 @@ class Environment(OptiChild, PlotLayer):
                                 obstacle.signals['position'][:,-1] = old_pos
                             obstacle.signals['velocity'][:,-1] = vel_new
                 # check if the obstacle doesn't hit the borders
-                if obstacle.is_outside_of(self.room):
+                # Todo: supposed that self.rooms[0] is the total room, containing outer border
+                if obstacle.is_outside_of(self.rooms[0]):
                     # bounce straight off border
                     if any(v == 0 for v in vel):
                         vel_new = -vel
@@ -262,7 +263,7 @@ class Environment(OptiChild, PlotLayer):
                             # new direction may be down_right or up_left
                             # test new direction down_right by shifting obstacle
                             obstacle.signals['position'][:,-1] += [0.15,-0.15]
-                            if not obstacle.is_outside_of(self.room):
+                            if not obstacle.is_outside_of(self.rooms[0]):
                                 # no overlap so move down_right
                                 # new_direction = down_right
                                 vel_new = [vel[0], -vel[1]]
@@ -275,7 +276,7 @@ class Environment(OptiChild, PlotLayer):
                             # new direction may be down_left or up_right
                             # test new direction down_left by shifting obstacle
                             obstacle.signals['position'][:,-1] += [-0.15,-0.15]
-                            if not obstacle.is_outside_of(self.room):
+                            if not obstacle.is_outside_of(self.rooms[0]):
                                 # no overlap so move down_left
                                 # new_direction = down_left
                                 vel_new = [vel[0], -vel[1]]
@@ -288,7 +289,7 @@ class Environment(OptiChild, PlotLayer):
                             # new direction may be down_left or up_right
                             # test new direction down_left by shifting obstacle
                             obstacle.signals['position'][:,-1] += [-0.15,-0.15]
-                            if not obstacle.is_outside_of(self.room):
+                            if not obstacle.is_outside_of(self.rooms[0]):
                                 # no overlap so move down_left
                                 # new_direction = down_left
                                 vel_new = [-vel[0], vel[1]]
@@ -301,7 +302,7 @@ class Environment(OptiChild, PlotLayer):
                             # new direction may be down_right or up_left
                             # test new direction down_right by shifting obstacle
                             obstacle.signals['position'][:,-1] += [0.15,-0.15]
-                            if not obstacle.is_outside_of(self.room):
+                            if not obstacle.is_outside_of(self.rooms[0]):
                                 # no overlap so move down_right
                                 # new_direction = down_right
                                 vel_new = [-vel[0], vel[1]]
