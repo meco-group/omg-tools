@@ -49,13 +49,19 @@ class SchedulerProblem(Problem):
 
         if (self.n_frames > 1 and not self.problem_options['freeT']):
             raise ValueError('Fixed time problems are only supported for n_frames = 1')
+        self._n_frames = self.n_frames  # save original value
 
         # save vehicle dimension, determines how close waypoints can be to the border
         shape = self.vehicles[0].shapes[0]
         if isinstance(shape, Circle):
             self.veh_size = shape.radius
+            # used to check if vehicle fits completely in a cell
+            # radius is only half the vehicle size
+            size_to_check = self.veh_size*2
         elif isinstance(shape, Rectangle):
             self.veh_size = max(shape.width, shape.height)
+            # veh_size is complete width or height for rectangular shape
+            size_to_check = self.veh_size
         # Todo: remove this?
         self.scale_factor = 1.2  # margin, to keep vehicle a little further from border
 
@@ -76,7 +82,7 @@ class SchedulerProblem(Problem):
 
         # check if vehicle size is larger than the cell size
         n_cells = self.global_planner.grid.n_cells
-        if (self.veh_size >= (min(environment.rooms[0]['shape'].width/float(n_cells[0]), \
+        if (size_to_check >= (min(environment.rooms[0]['shape'].width/float(n_cells[0]), \
                                   environment.rooms[0]['shape'].height/float(n_cells[1])))
            and self.frame_type == 'min_nobs'):
             warnings.warn('Vehicle is bigger than one cell, this may cause problems' +
@@ -205,13 +211,12 @@ class SchedulerProblem(Problem):
         # store trajectories
         if not hasattr(self, 'frame_storage'):
             self.frame_storage = []
-            for k in range(self.n_frames):
-                # build frame storage structure
-                self.frame_storage.append([])
             self.global_path_storage = []
         repeat = int(simulation_time/sample_time)
-        for k in range(self.n_frames):
-            self._add_to_memory(self.frame_storage[k], self.frames[k], repeat)
+        # copy frames, to avoid problems when removing elements from self.frames
+        frames_to_save = self.frames[:]
+        for k in range(repeat):
+            self._add_to_memory(self.frame_storage, frames_to_save)
         self._add_to_memory(self.global_path_storage, self.global_path, repeat)
 
         # simulate the multiframe problem
@@ -256,9 +261,9 @@ class SchedulerProblem(Problem):
         info = Problem.init_plot(self, argument)
         gray = [60./255., 61./255., 64./255.]
         if info is not None:
-            for k in range(self.n_frames):
-                # initialize frame plot
-                s, l = self.frames[k]['border']['shape'].draw(self.frames[k]['border']['position'])
+            for k in range(self._n_frames):
+                # initialize frame plot, always use frames[0]
+                s, l = self.frames[0]['border']['shape'].draw(self.frames[0]['border']['position'])
                 surfaces = [{'facecolor': 'none', 'edgecolor': gray, 'linestyle' : '--', 'linewidth': 1.2} for _ in s]
                 info[0][0]['surfaces'] += surfaces
                 # initialize global path plot
@@ -269,9 +274,10 @@ class SchedulerProblem(Problem):
         # plot environment
         data = Problem.update_plot(self, argument, t)
         if data is not None:
-            for k in range(self.n_frames):
+            for k in range(len(self.frame_storage[t])):
+                # for every frame at this point in time
                 # plot frame border
-                s, l = self.frame_storage[k][t]['border']['shape'].draw(self.frame_storage[k][t]['border']['position'])
+                s, l = self.frame_storage[t][k]['border']['shape'].draw(self.frame_storage[t][k]['border']['position'])
                 data[0][0]['surfaces'] += s
             # plot global path
             # remove last waypoint, since this is the goal position,
@@ -894,12 +900,14 @@ class SchedulerProblem(Problem):
 
             # make interpolation functions
             if (all( t == 0 for t in time_x) and all(t == 0 for t in time_y)):
-                # motion_time = 0.1
+                # motion_times.append(0.1)
                 # coeffs_x = x[0]*np.ones(len(self.vehicles[0].knots[self.vehicles[0].degree-1:-(self.vehicles[0].degree-1)]))
                 # coeffs_y = y[0]*np.ones(len(self.vehicles[0].knots[self.vehicles[0].degree-1:-(self.vehicles[0].degree-1)]))
-                # splines = np.c_[coeffs_x, coeffs_y]
-                # return splines, motion_time
-                raise RuntimeError('Trying to make a prediction for goal = current position')
+                # init_splines.append(np.c_[coeffs_x, coeffs_y])
+                # break
+                raise RuntimeError('Trying to make a prediction for goal = current position. This may' +
+                    ' be because vehicle is larger than one cell, this may cause problems when switching frames.'
+                    ' Consider reducing the amount of cells, or scale your vehicle.')
             elif all(t == 0 for t in time_x):
                 # if you don't do this, f evaluates to NaN for f(0)
                 time_x = time_y
@@ -1291,9 +1299,9 @@ class SchedulerProblem(Problem):
             # time interval to check
             time_interval = 0.5
             # amount of times to check
-            N = int(round(self.motion_time/time_interval)+1)
+            N = int(round(time/time_interval)+1)
             # sample time of check
-            Ts = float(self.motion_time)/N
+            Ts = float(time)/N
             x, y = point
             vx, vy = velocity
             for l in range(N+1):
