@@ -61,6 +61,7 @@ class Point2Point{
         std::map<std::string, casadi::DM> args, sol;
         std::vector<double> parameters;
         std::vector<double> variables;
+        std::vector<double> spline_coeffs_vec;
         std::vector<double> lbg;
         std::vector<double> ubg;
         std::vector<double> time;
@@ -99,6 +100,7 @@ class Point2Point{
         virtual void resetTime();
         bool update(std::vector<double>&, std::vector<double>&, std::vector<std::vector<double>>&, std::vector<std::vector<double>>&, std::vector<obstacle_t>&);
         bool update(std::vector<double>&, std::vector<double>&, std::vector<std::vector<double>>&, std::vector<std::vector<double>>&, std::vector<obstacle_t>&, int);
+        void getCoefficients(std::vector<double>& coeffs);
     };
 }
 

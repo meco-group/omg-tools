@@ -224,6 +224,10 @@ bool Point2Point::solve(double current_time, vector<obstacle_t>& obstacles){
     }
 }
 
+void Point2Point::getCoefficients(std::vector<double>& coeffs){
+    coeffs = std::vector<double>(spline_coeffs_vec);
+}
+
 void Point2Point::initVariables(){
     map<string, map<string, vector<double>>> var_dict;
     int n_spl = vehicle->getNSplines();
@@ -262,7 +266,7 @@ void Point2Point::fillParameterDict(vector<obstacle_t>& obstacles, map<string, m
 void Point2Point::extractData(){
     map<string, map<string, vector<double>>> var_dict;
     getVariableDict(variables, var_dict);
-    vector<double> spline_coeffs_vec(var_dict[VEHICLELBL]["splines0"]);
+    spline_coeffs_vec = std::vector<double>(var_dict[VEHICLELBL]["splines0"]);
     vehicle->setKnotHorizon(horizon_time);
     if (freeT){
         horizon_time = var_dict[P2PLBL]["T"][0];
