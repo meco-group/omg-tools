@@ -116,7 +116,8 @@ class SchedulerProblem(Problem):
         # get moving obstacles inside frame, taking into account the calculated motion time
         for k in range(self.n_frames):
             # updates self.frames[:]['moving_obstacles']
-            self.frames[k]['moving_obstacles'], _ = self.get_moving_obstacles_in_frame(self.frames[k], self.motion_times[k])
+            # Todo: this never gives an output, because velocities are not assigned yet here...
+            self.frames[k]['moving_obstacles'] = self.get_moving_obstacles_in_frame(self.frames[k], self.motion_times[k])
 
         # get a problem representation of the frames
         # the schedulerproblem (self) has a local problem (multiframeproblem) at each moment
@@ -168,9 +169,12 @@ class SchedulerProblem(Problem):
             #       for now dummies have influence on solving time...
             new_problem = False
             for k in range(self.n_frames):
-                self.frames[k]['moving_obstacles'], obs_change = self.get_moving_obstacles_in_frame(self.frames[k], self.motion_times[k])
-                if obs_change:
+                moving_obs_in_frame = self.get_moving_obstacles_in_frame(self.frames[k], self.motion_times[k])
+                if set(moving_obs_in_frame) != set(self.frames[k]['moving_obstacles']):
                     new_problem = True
+                    self.frames[k]['moving_obstacles'] = moving_obs_in_frame
+                else:
+                    new_problem = False
             if new_problem:
                 # new moving obstacle in one of the frames or obstacle disappeared from frame
                 # np.array converts DM to array
@@ -688,7 +692,7 @@ class SchedulerProblem(Problem):
 
         # get moving obstacles inside frame for this time
         for k in range(self.n_frames):
-            self.frames[k]['moving_obstacles'], _ = self.get_moving_obstacles_in_frame(self.frames[k], self.motion_times[k])
+            self.frames[k]['moving_obstacles'] = self.get_moving_obstacles_in_frame(self.frames[k], self.motion_times[k])
 
         end_time = time.time()
         if self.options['verbose'] >= 2:
@@ -765,10 +769,8 @@ class SchedulerProblem(Problem):
 
         start_time = time.time()
 
-        moving_obstacles = []
-        obs_change = False
+        moving_obs_in_frame = []
         for obstacle in self.environment.obstacles:
-            avoid_old = obstacle.options['avoid']  # save avoid from previous check
             # check if obstacle is moving, this is when:
             # there is an entry trajectories, and there is a velocity,
             # and not all velocities are 0.
@@ -792,8 +794,6 @@ class SchedulerProblem(Problem):
                     obs_chck.insert(0, [0,0])
                 obs_pos = obstacle.signals['position'][:,-1]
                 obs_vel = obstacle.signals['velocity'][:,-1]
-                # add all moving obstacles, but only avoid those that matter
-                moving_obstacles.append(obstacle)
 
                 for chck in obs_chck:
                     # if it is not a circle, rotate the vertices
@@ -807,38 +807,16 @@ class SchedulerProblem(Problem):
                     if self.point_in_frame(frame, vertex, time=motion_time, velocity=obs_vel):
                         # avoid corresponding obstacle
                         obstacle.set_options({'avoid': True})
-                        # if it was not avoided before, set obs_change to True
-                        if obstacle.options['avoid'] != avoid_old:
-                            obs_change = True
-                        else:
-                            obs_change = False
+                        moving_obs_in_frame.append(obstacle)
                         # break from for chck in obs_chck, move on to next obstacle, since
                         # obstacle is added to the frame if any of its vertices is in the frame
                         break
-                        # Note: if one or more of the vertices are inside the frame, while others
-                        # are not, this leads to switching the avoid flag, therefore check
-                        # avoid_old before breaking from the loop, and set obs_change accordingly
-                    if obstacle.options['avoid'] is not False:
-                        # obstacle was avoided in previous frame, but not necessary now
-                        obs_change = True
-                        # obstacle was not in the frame, so don't avoid
-                        obstacle.set_options({'avoid': False})
 
         end_time = time.time()
         if self.options['verbose'] >= 3:
             print 'elapsed time in get_moving_obstacles_in_frame', end_time-start_time
 
-        # Originally all moving obstacles are put to avoid = True, but if they all need to be
-        # added to the frame, obs_change will still be False, since there are no changes compared to before...
-        # Therefore, the obstacles will not be added/avoided
-
-        # Todo: improve the implementation with the _attribute below?
-        if hasattr(self, '_moving_obs'):
-            if len(self._moving_obs) != len(moving_obstacles):
-                obs_change = True  # required in first iteration, when all obstacles need to be added
-        self._moving_obs = moving_obstacles
-
-        return moving_obstacles, obs_change
+        return moving_obs_in_frame
 
     def get_init_guess(self, **kwargs):
         init_splines = []
