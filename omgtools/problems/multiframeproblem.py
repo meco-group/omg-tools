@@ -112,8 +112,10 @@ class MultiFrameProblem(Problem):
                 for spline1, spline2 in zip(vehicle.splines[j], vehicle.splines[j+1]):
                     for d in range(spline1.basis.degree):
                         # in connection point splines should be equal until derivative of order degree-1
+                        # give dimensions by multplication with the motion time
                         self.define_constraint(
-                            evalspline(spline1.derivative(d), 1) - evalspline(spline2.derivative(d), 0), 0., 0.)
+                            evalspline(spline1.derivative(d), 1)*self.motion_times[j+1]**d -
+                            evalspline(spline2.derivative(d), 0)*self.motion_times[j]**d, 0., 0.)
 
     def set_parameters(self, current_time):
         parameters = Problem.set_parameters(self, current_time)

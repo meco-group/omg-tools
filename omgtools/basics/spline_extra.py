@@ -323,8 +323,11 @@ def concat_splines(segments, segment_times):
             # check continuity, n_insert can be different for each l
             n_insert = degree[l]+1  # starts at max value
             for d in range(degree[l]+1):
-                # use ipopt default tolerance as a treshold for check
-                if abs(segments[k][l].derivative(d)(0) - segments[k-1][l].derivative(d)(1)) <= 1e-3:
+                # use ipopt default tolerance as a treshold for check (1e-3)
+                # give dimensions, to compare using the same time scale,
+                # requires multiplication with motion_time
+                if abs(segments[k][l].derivative(d)(0)*segment_times[k-1]**d -
+                       segments[k-1][l].derivative(d)(1)*segment_times[k]**d) <= 1e-3:
                     # more continuity = insert less knots
                     n_insert -= 1
                 else:
