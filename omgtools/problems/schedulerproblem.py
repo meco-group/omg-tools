@@ -23,10 +23,13 @@ from point2point import Point2point
 from ..basics.shape import Rectangle, Circle
 from ..basics.geometry import distance_between_points, intersect_lines, intersect_line_segments
 from ..basics.geometry import point_in_polyhedron, circle_polyhedron_intersection
+from ..basics.spline import BSplineBasis
+from ..basics.spline_extra import concat_splines
 from ..environment.environment import Environment
 from globalplanner import AStarPlanner
 
 from scipy.interpolate import interp1d
+import scipy.linalg as la
 import numpy as np
 import time
 import warnings
@@ -689,7 +692,9 @@ class SchedulerProblem(Problem):
         else:
             self.create_frames()
 
-        # get initial guess based on global path, get motion time
+        # use previous solution to get an initial guess for all frames except the last one,
+        # for this one get initial guess based on global path
+        # analogously for the motion_times
         self.init_guess, self.motion_times = self.get_init_guess()
 
         # get moving obstacles inside frame for this time
@@ -821,97 +826,40 @@ class SchedulerProblem(Problem):
         return moving_obs_in_frame
 
     def get_init_guess(self, **kwargs):
-        init_splines = []
-        motion_times = []
-        # if not self.options['freeT']:
-            # coeffs =  0*self.vehicles[0].knots[self.vehicles[0].degree-1:-(self.vehicles[0].degree-1)]
-            # splines = np.c_[coeffs, coeffs]
-            # motion_time = self.options['horizon_time']
-        # else:
+        # if first iteration, compute init_guess based on global_path for all frames
+        # else, use previous solutions to build a new initial guess:
+        #   if 2 frames: combine splines in frame 1 and 2 to form a new spline in a single frame = new frame1
+        #   if 3 frames or more: combine frame1 and 2 and keep splines of frame 3 and next as new splines of frame2 and next
+        # only use global path for initial guess of new frame
         start_time = time.time()
 
-        for k in range(self.n_frames):
+        # initialize variables to hold guesses
+        init_splines = []
+        motion_times = []
 
-            waypoints = self.frames[k]['waypoints']
-            if k == 0:
-                # current frame: change first waypoint to current state,
-                # the startpoint of the init guess
-                waypoints[0] = [self.curr_state[0], self.curr_state[1]]
-            # else:
-                # start in first waypoint of frame k, so waypoints[0]
+        if hasattr(self, 'local_problem') and hasattr(self.local_problem.father, '_var_result'):
+            # local_problem was already solved, re-use previous solutions to form initial guess
+            if self.n_frames > 1:
+                # combine first two spline segments into a new spline = guess for new current frame
+                init_spl, motion_time = self.get_init_guess_combined_frame()
+                init_splines.append(init_spl)
+                motion_times.append(motion_time)
+            if self.n_frames > 2:
+                # use old solutions for frame 2 until second last frame, these don't change
+                for k in range(2, self.n_frames):
+                    init_splines.append(self.local_problem.father.get_variables(self.vehicles[0].label,'splines_seg'+str(k)))
+                    motion_times.append(self.local_problem.father.get_variables(self.local_problem, 'T'+str(k),)[0][0])
+            # only make guess using global path for last frame
+            guess_idx = [self.n_frames-1]
+        else:
+            # local_problem was not solved yet, make guess using global path for all frames
+            guess_idx = range(self.n_frames)
 
-            # use waypoints for prediction
-            x, y = [], []
-            for waypoint in waypoints:
-                x.append(waypoint[0])
-                y.append(waypoint[1])
-            # calculate total length in x- and y-direction
-            l_x, l_y = 0., 0.
-            for i in range(len(waypoints)-1):
-                l_x += waypoints[i+1][0] - waypoints[i][0]
-                l_y += waypoints[i+1][1] - waypoints[i][1]
-            # calculate distance in x and y between each 2 waypoints
-            # and use it as a relative measure to build time vector
-            time_x = [0.]
-            time_y = [0.]
-
-            for i in range(len(waypoints)-1):
-                if (l_x == 0. and l_y !=0.):
-                    time_x.append(0.)
-                    time_y.append(time_y[-1] + float(waypoints[i+1][1] - waypoints[i][1])/l_y)
-                elif (l_x != 0. and l_y == 0.):
-                    time_x.append(time_x[-1] + float(waypoints[i+1][0] - waypoints[i][0])/l_x)
-                    time_y.append(0.)
-                elif (l_x == 0. and l_y == 0.):
-                    time_x.append(0.)
-                    time_y.append(0.)
-                else:
-                    time_x.append(time_x[-1] + float(waypoints[i+1][0] - waypoints[i][0])/l_x)
-                    time_y.append(time_y[-1] + float(waypoints[i+1][1] - waypoints[i][1])/l_y)  # gives time 0...1
-
-            # make approximate one an exact one
-            # otherwise fx(1) = 1
-            for idx, t in enumerate(time_x):
-                if (1 - t < 1e-5):
-                    time_x[idx] = 1
-            for idx, t in enumerate(time_y):
-                if (1 - t < 1e-5):
-                    time_y[idx] = 1
-
-            # make interpolation functions
-            if (all( t == 0 for t in time_x) and all(t == 0 for t in time_y)):
-                # motion_times.append(0.1)
-                # coeffs_x = x[0]*np.ones(len(self.vehicles[0].knots[self.vehicles[0].degree-1:-(self.vehicles[0].degree-1)]))
-                # coeffs_y = y[0]*np.ones(len(self.vehicles[0].knots[self.vehicles[0].degree-1:-(self.vehicles[0].degree-1)]))
-                # init_splines.append(np.c_[coeffs_x, coeffs_y])
-                # break
-                raise RuntimeError('Trying to make a prediction for goal = current position. This may' +
-                    ' be because vehicle is larger than one cell, this may cause problems when switching frames.'
-                    ' Consider reducing the amount of cells, or scale your vehicle.')
-            elif all(t == 0 for t in time_x):
-                # if you don't do this, f evaluates to NaN for f(0)
-                time_x = time_y
-            elif all(t == 0 for t in time_y):
-                # if you don't do this, f evaluates to NaN for f(0)
-                time_y = time_x
-            # kind='cubic' requires a minimum of 4 waypoints
-            fx = interp1d(time_x, x, kind='linear', bounds_error=False, fill_value=1.)
-            fy = interp1d(time_y, y, kind='linear', bounds_error=False, fill_value=1.)
-
-            # evaluate resulting splines to get evaluations at knots = coeffs-guess
-            # Note: conservatism is neglected here (spline value = coeff value)
-            coeffs_x = fx(self.vehicles[0].knots[self.vehicles[0].degree-1:-(self.vehicles[0].degree-1)])
-            coeffs_y = fy(self.vehicles[0].knots[self.vehicles[0].degree-1:-(self.vehicles[0].degree-1)])
-            init_guess = np.c_[coeffs_x, coeffs_y]
-
-            # suppose vehicle is moving at half of vmax to calculate motion time,
-            # instead of building and solving the problem
-            length_to_travel = np.sqrt((l_x**2+l_y**2))
-            max_vel = self.vehicles[0].vmax if hasattr(self.vehicles[0], 'vmax') else (self.vehicles[0].vxmax+self.vehicles[0].vymax)*0.5
-            motion_times.append(length_to_travel/(max_vel*0.5))
-            init_guess[-3] = init_guess[-1]  # final acceleration is also 0 normally
-            init_guess[-4] = init_guess[-1]  # final acceleration is also 0 normally
-            init_splines.append(init_guess)
+        # make guesses based on global path
+        for k in guess_idx:
+            init_spl, motion_time = self.get_init_guess_new_frame(self.frames[k])
+            init_splines.append(init_spl)
+            motion_times.append(motion_time)
 
         # pass on initial guess
         self.vehicles[0].set_init_spline_values(init_splines, n_seg = self.n_frames)
@@ -929,6 +877,130 @@ class SchedulerProblem(Problem):
             print 'elapsed time in get_init_guess ', end_time - start_time
 
         return init_splines, motion_times
+
+    def get_init_guess_new_frame(self, frame):
+        # generate initial guess for new frame, based on the waypoints of
+        # the global path that are inside the frame
+
+        waypoints = frame['waypoints']
+        if frame is self.frames[0]:
+            # current frame: change first waypoint to current state,
+            # the startpoint of the init guess
+            waypoints[0] = [self.curr_state[0], self.curr_state[1]]
+
+        # use waypoints for prediction
+        x, y = [], []
+        for waypoint in waypoints:
+            x.append(waypoint[0])
+            y.append(waypoint[1])
+        # calculate total length in x- and y-direction
+        l_x, l_y = 0., 0.
+        for i in range(len(waypoints)-1):
+            l_x += waypoints[i+1][0] - waypoints[i][0]
+            l_y += waypoints[i+1][1] - waypoints[i][1]
+        # calculate distance in x and y between each 2 waypoints
+        # and use it as a relative measure to build time vector
+        time_x = [0.]
+        time_y = [0.]
+
+        for i in range(len(waypoints)-1):
+            if (l_x == 0. and l_y !=0.):
+                time_x.append(0.)
+                time_y.append(time_y[-1] + float(waypoints[i+1][1] - waypoints[i][1])/l_y)
+            elif (l_x != 0. and l_y == 0.):
+                time_x.append(time_x[-1] + float(waypoints[i+1][0] - waypoints[i][0])/l_x)
+                time_y.append(0.)
+            elif (l_x == 0. and l_y == 0.):
+                time_x.append(0.)
+                time_y.append(0.)
+            else:
+                time_x.append(time_x[-1] + float(waypoints[i+1][0] - waypoints[i][0])/l_x)
+                time_y.append(time_y[-1] + float(waypoints[i+1][1] - waypoints[i][1])/l_y)  # gives time 0...1
+
+        # make approximate one an exact one
+        # otherwise fx(1) = 1
+        for idx, t in enumerate(time_x):
+            if (1 - t < 1e-5):
+                time_x[idx] = 1
+        for idx, t in enumerate(time_y):
+            if (1 - t < 1e-5):
+                time_y[idx] = 1
+
+        # make interpolation functions
+        if (all( t == 0 for t in time_x) and all(t == 0 for t in time_y)):
+            # motion_times.append(0.1)
+            # coeffs_x = x[0]*np.ones(len(self.vehicles[0].knots[self.vehicles[0].degree-1:-(self.vehicles[0].degree-1)]))
+            # coeffs_y = y[0]*np.ones(len(self.vehicles[0].knots[self.vehicles[0].degree-1:-(self.vehicles[0].degree-1)]))
+            # init_splines.append(np.c_[coeffs_x, coeffs_y])
+            # break
+            raise RuntimeError('Trying to make a prediction for goal = current position. This may' +
+                ' be because vehicle is larger than one cell, this may cause problems when switching frames.'
+                ' Consider reducing the amount of cells, or scale your vehicle.')
+        elif all(t == 0 for t in time_x):
+            # if you don't do this, f evaluates to NaN for f(0)
+            time_x = time_y
+        elif all(t == 0 for t in time_y):
+            # if you don't do this, f evaluates to NaN for f(0)
+            time_y = time_x
+        # kind='cubic' requires a minimum of 4 waypoints
+        fx = interp1d(time_x, x, kind='linear', bounds_error=False, fill_value=1.)
+        fy = interp1d(time_y, y, kind='linear', bounds_error=False, fill_value=1.)
+
+        # evaluate resulting splines to get evaluations at knots = coeffs-guess
+        # Note: conservatism is neglected here (spline value = coeff value)
+        coeffs_x = fx(self.vehicles[0].knots[self.vehicles[0].degree-1:-(self.vehicles[0].degree-1)])
+        coeffs_y = fy(self.vehicles[0].knots[self.vehicles[0].degree-1:-(self.vehicles[0].degree-1)])
+        init_guess = np.c_[coeffs_x, coeffs_y]
+
+        # suppose vehicle is moving at half of vmax to calculate motion time,
+        # instead of building and solving the problem
+        length_to_travel = np.sqrt((l_x**2+l_y**2))
+        max_vel = self.vehicles[0].vmax if hasattr(self.vehicles[0], 'vmax') else (self.vehicles[0].vxmax+self.vehicles[0].vymax)*0.5
+        motion_time = length_to_travel/(max_vel*0.5)
+        init_guess[-3] = init_guess[-1]  # final acceleration is also 0 normally
+        init_guess[-4] = init_guess[-1]  # final acceleration is also 0 normally
+
+        return init_guess, motion_time
+
+    def get_init_guess_combined_frame(self):
+        # combines the splines in the first two frames into a new one, forming the guess
+        # for the new current frame
+
+        # remaining spline through current frame
+        spl1 = self.local_problem.father.get_variables(self.vehicles[0], 'splines_seg0')
+        # frame through next frame
+        spl2 = self.local_problem.father.get_variables(self.vehicles[0], 'splines_seg1')
+
+        time1 = self.local_problem.father.get_variables(self.local_problem, 'T0',)[0][0]
+        time2 = self.local_problem.father.get_variables(self.local_problem, 'T1',)[0][0]
+        motion_time = time1 + time2  # guess for motion time
+
+        # form connection of spl1 and spl2, in union basis
+        spl = concat_splines([spl1, spl2], [time1, time2])
+
+        # now find spline in original basis (the one of spl1 = the one of spl2) which is closest to
+        # the one in the union basis, by solving a system
+
+        coeffs = []  # holds new coeffs
+        degree = [s.basis.degree for s in spl1]
+        knots = [s.basis.knots*motion_time for s in spl1]  # scale knots with guess for motion time
+        for l in range (len(spl1)):
+            new_basis =  BSplineBasis(knots[l], degree[l])  # make basis with new knot sequence
+            grev_bc = new_basis.greville()
+            # shift greville points inwards, to avoid that evaluation at the greville points returns
+            # zero, because they fall outside the domain due to numerical errors
+            grev_bc[0] = grev_bc[0] + (grev_bc[1]-grev_bc[0])*0.01
+            grev_bc[-1] = grev_bc[-1] - (grev_bc[-1]-grev_bc[-2])*0.01
+            # evaluate connection of splines greville points of new basis
+            eval_sc = spl[l](grev_bc)
+            # evaluate basis at its greville points
+            eval_bc = new_basis(grev_bc).toarray()
+            # solve system to obtain coefficients of spl in new_basis
+            coeffs.append(la.solve(eval_bc, eval_sc))
+        # put in correct format
+        init_splines = np.r_[coeffs].transpose()
+
+        return init_splines, motion_time
 
     def make_border(self, xmin, ymin, xmax, ymax):
         width = xmax - xmin
