@@ -47,6 +47,12 @@ class ObstaclexD(OptiChild):
     def __init__(self, initial, shape, simulation, options):
         OptiChild.__init__(self, 'obstacle')
         self.simulation = simulation
+        if 'trajectories' in simulation:
+            for key in simulation['trajectories']:
+                # user specified a value at time 0
+                if 0 in simulation['trajectories'][key]['time']:
+                    # this value should be added to initial
+                    initial[key] = simulation['trajectories'][key]['values'][0]
         self.set_default_options()
         self.set_options(options)
         self.shape = shape
@@ -168,17 +174,20 @@ class ObstaclexD(OptiChild):
         time_state = np.array([0.])
         for l, key in enumerate(['position', 'velocity', 'acceleration']):
             for k, time in enumerate(trajectories[key]['time']):
-                index = np.where(time_state == time)[0]
-                if index.size == 0:
-                    time_state = np.r_[time_state, time]
-                    state_k = np.zeros((3*self.n_dim))
-                    state_k[
-                        l*self.n_dim:(l+1)*self.n_dim] += trajectories[key]['values'][:, k]
-                    state = np.c_[state, state_k]
-                else:
-                    index = index[0]
-                    state[
-                        l*self.n_dim:(l+1)*self.n_dim, index] += trajectories[key]['values'][:, k]
+                # the simulation trajectories for time = 0 were already added to initial,
+                # so skip all values for time = 0
+                if time != 0:
+                    index = np.where(time_state == time)[0]
+                    if index.size == 0:
+                        time_state = np.r_[time_state, time]
+                        state_k = np.zeros((3*self.n_dim))
+                        state_k[
+                            l*self.n_dim:(l+1)*self.n_dim] += trajectories[key]['values'][:, k]
+                        state = np.c_[state, state_k]
+                    else:
+                        index = index[0]
+                        state[
+                            l*self.n_dim:(l+1)*self.n_dim, index] += trajectories[key]['values'][:, k]
         ind_sorted = np.argsort(time_state)
         state_incr = np.cumsum(state[:, ind_sorted], axis=1)
         time_state = time_state[ind_sorted]
