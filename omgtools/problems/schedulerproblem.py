@@ -216,6 +216,8 @@ class SchedulerProblem(Problem):
         if not hasattr(self, 'frame_storage'):
             self.frame_storage = []
             self.global_path_storage = []
+        if simulation_time == np.inf:
+            simulation_time = sum(self.motion_times)
         repeat = int(simulation_time/sample_time)
         # copy frames, to avoid problems when removing elements from self.frames
         frames_to_save = self.frames[:]
