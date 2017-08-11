@@ -76,7 +76,7 @@ class ObstaclexD(OptiChild):
     # Optimization modelling related functions
     # ========================================================================
 
-    def init(self, horizon_time=None):
+    def init(self, horizon_times=None):
         # pos, vel, acc
         x = self.define_parameter('x', self.n_dim)
         v = self.define_parameter('v', self.n_dim)
@@ -84,13 +84,29 @@ class ObstaclexD(OptiChild):
         # pos, vel, acc at time zero of time horizon
         self.t = self.define_symbol('t')
         # motion time can be passed from environment
-        self.T = horizon_time if horizon_time is not None else self.define_symbol('T')
+        if horizon_times is None:
+            self.T = self.define_symbol('T')
+        elif not isinstance(horizon_times, list):
+            horizon_times = [horizon_times]
         v0 = v - self.t*a
         x0 = x - self.t*v0 - 0.5*(self.t**2)*a
         a0 = a
-        # pos spline over time horizon
-        self.pos_spline = [BSpline(self.basis, vertcat(x0[k], 0.5*v0[k]*self.T + x0[k], x0[k] + v0[k]*self.T + 0.5*a0[k]*(self.T**2)))
-                           for k in range(self.n_dim)]
+
+        if horizon_times:  # not None
+            # build up pos_spline gradually, e.g. the pos_spline for second segment starts at
+            # end position for first segment (pos0(1))
+            pos0 = x0
+            self.pos_spline = [0]*self.n_dim
+            for horizon_time in horizon_times:
+                for k in range(self.n_dim):
+                    self.pos_spline[k] = BSpline(self.basis, vertcat(pos0[k], 0.5*v0[k]*horizon_time + pos0[k], pos0[k] + v0[k]*horizon_time + 0.5*a0[k]*(horizon_time**2)))
+                # update start position for next segment
+                pos0 = [self.pos_spline[k](1) for k in range(self.n_dim)]
+        else:
+            # horizon_times was None
+            # pos spline over time horizon
+            self.pos_spline = [BSpline(self.basis, vertcat(x0[k], 0.5*v0[k]*self.T + x0[k], x0[k] + v0[k]*self.T + 0.5*a0[k]*(self.T**2)))
+                               for k in range(self.n_dim)]
         # checkpoints + radii
         checkpoints, _ = self.shape.get_checkpoints()
         self.checkpoints = self.define_parameter('checkpoints', len(checkpoints)*self.n_dim)
@@ -260,8 +276,8 @@ class Obstacle2D(ObstaclexD):
     # Optimization modelling related functions
     # ========================================================================
 
-    def init(self, horizon_time=None):
-        ObstaclexD.init(self, horizon_time=horizon_time)
+    def init(self, horizon_times=None):
+        ObstaclexD.init(self, horizon_times=horizon_times)
         if self.signals['angular_velocity'][:, -1] == 0.:
             self.cos = cos(self.signals['orientation'][:, -1][0])
             self.sin = sin(self.signals['orientation'][:, -1][0])

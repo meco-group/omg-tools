@@ -103,7 +103,9 @@ class Environment(OptiChild, PlotLayer):
                           vehicle.degree:-vehicle.degree],
                       np.ones(degree)]
         basis = BSplineBasis(knots, degree)
+        shift_time = 0
         for idx in range(vehicle.n_seg):
+            shift_time += horizon_times[idx]
             # loop over vehicle segments, not over rooms since number of considered segments
             # may be different from total number of rooms
             room = self.rooms[idx]  # select current room
@@ -117,7 +119,9 @@ class Environment(OptiChild, PlotLayer):
                 hyp_veh[shape] = []
                 for l, obstacle in enumerate(obs_to_add):
                     # Todo: is it a problem to call obstacle.init multiple times?
-                    obstacle.init(horizon_time=horizon_times[idx])
+                    # pass the horizon_time for current segment, and all the previous ones, allowing to
+                    # gradually build up the position spline for the obstacle
+                    obstacle.init(horizon_times=horizon_times[:idx+1])
                     if obstacle.options['avoid']:
                         if obstacle not in hyp_obs:
                             hyp_obs[obstacle] = []
