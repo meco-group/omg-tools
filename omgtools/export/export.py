@@ -24,13 +24,13 @@ import shutil
 def search_casadi():
     import casadi
     search_path = os.path.dirname(casadi.__file__)
+    search_path = search_path + '/..'
     for root, dirnames, files in os.walk(search_path):
         if 'libcasadi.so' in files:
             libdir = root
         if 'casadi.hpp' in files:
             incdir = os.path.join(root, os.pardir)
     return libdir, incdir
-
 
 class Export(object):
 

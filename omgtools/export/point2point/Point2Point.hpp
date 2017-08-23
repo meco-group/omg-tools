@@ -61,7 +61,7 @@ class Point2Point{
         std::map<std::string, casadi::DM> args, sol;
         std::vector<double> parameters;
         std::vector<double> variables;
-        std::vector<double> spline_coeffs_vec;
+        
         std::vector<double> lbg;
         std::vector<double> ubg;
         std::vector<double> time;
@@ -92,7 +92,7 @@ class Point2Point{
     public:
         const int n_dim = N_DIM;
         const int n_obs = N_OBS;
-
+	std::vector<double> spline_coeffs_vec;
         Point2Point(Vehicle* vehicle, double update_time, double sample_time, double horizon_time);
         Point2Point(Vehicle* vehicle, double update_time, double sample_time, double horizon_time, int trajectory_length);
         Point2Point(Vehicle* vehicle, double update_time, double sample_time, double horizon_time, int trajectory_length, bool initialize);
