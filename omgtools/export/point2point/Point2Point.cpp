@@ -30,7 +30,7 @@ namespace omg{
 
 Point2Point::Point2Point(Vehicle* vehicle,
     double update_time, double sample_time, double horizon_time, int trajectory_length, bool initialize):
-parameters(N_PAR), variables(N_VAR), lbg(LBG_DEF), ubg(UBG_DEF) {
+parameters(N_PAR), variables(N_VAR), lbg(LBG_DEF), ubg(UBG_DEF), _recover(false) {
     if (trajectory_length > int(horizon_time/sample_time)){
         cerr << "trajectory_length > (horizon_time/sample_time)!" << endl;
     }
@@ -109,6 +109,11 @@ void Point2Point::reset(){
 void Point2Point::resetTime(){
     current_time = 0.0;
     current_time_prev = 0.0;
+}
+
+void Point2Point::recover(){
+    // this method should be called (by user) when encountered infeasibilities
+    _recover = true;
 }
 
 bool Point2Point::update(vector<double>& condition0, vector<double>& conditionT,
@@ -201,8 +206,9 @@ bool Point2Point::update(vector<double>& condition0, vector<double>& conditionT,
 
 bool Point2Point::solve(double current_time, vector<obstacle_t>& obstacles){
     // init variables if first time
-    if(fabs(current_time)<=1.e-6){
+    if(fabs(current_time)<=1.e-6 || _recover){
         initVariables();
+        _recover = false;
     }
     updateBounds(current_time, obstacles);
     setParameters(obstacles);

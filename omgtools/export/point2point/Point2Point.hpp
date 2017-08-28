@@ -46,6 +46,7 @@ class Point2Point{
     private:
         casadi::Function problem;
         bool solve(double, std::vector<obstacle_t>&);
+        bool _recover;
         void generateSubstituteFunctions();
         void initSplines();
 
@@ -98,6 +99,7 @@ class Point2Point{
         Point2Point(Vehicle* vehicle, double update_time, double sample_time, double horizon_time, int trajectory_length, bool initialize);
         virtual void reset();
         virtual void resetTime();
+        virtual void recover();
         bool update(std::vector<double>&, std::vector<double>&, std::vector<std::vector<double>>&, std::vector<std::vector<double>>&, std::vector<obstacle_t>&);
         bool update(std::vector<double>&, std::vector<double>&, std::vector<std::vector<double>>&, std::vector<std::vector<double>>&, std::vector<obstacle_t>&, int);
         void getCoefficients(std::vector<double>& coeffs);
