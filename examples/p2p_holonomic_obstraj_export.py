@@ -22,7 +22,7 @@ import os
 import numpy as np
 
 # create vehicle
-vehicle = Holonomic(bounds={'vxmax':0.1,'vxmin':-0.1,'vymax':0.1,'vymin':-0.1})
+vehicle = Holonomic()
 vehicle.set_options({'safety_distance': 0.1})
 vehicle.set_options({'ideal_prediction': False})
 
@@ -37,13 +37,13 @@ spline_params = {'knots': vehicle.basis.knots, 'degree': vehicle.basis.degree, '
 environment = Environment(room={'shape': Square(5.)})
 rectangle = Rectangle(width=3., height=0.2)
 environment.add_obstacle(Obstacle({'position': [1.7, -0.5]}, shape=rectangle))
-obstacle = Obstacle({'position': [1.5, 0.5]},shape=Circle(0.4))
+obstacle = Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4))
 obstacle.set_options({'spline_traj': True})
 obstacle.set_options({'spline_params': spline_params})
 environment.add_obstacle(obstacle)
 
 # create a point-to-point problem
-problem = Point2point(vehicle, environment, freeT=False,options={'horizon_time':40})
+problem = Point2point(vehicle, environment, freeT=False, options={'horizon_time': 10})
 problem.init()
 
 options = {}
