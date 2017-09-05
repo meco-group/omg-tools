@@ -72,7 +72,7 @@ class Quadrotor(Vehicle):
                 (ddx, (self.T**2)*ddspl0[0]), (ddy, (self.T**2)*ddspl0[1])]
 
     def get_terminal_constraints(self, splines):
-        position = self.define_parameter('positionT', 2)
+        position = self.define_parameter('poseT', 2)
         x, y = splines
         term_con = [(x, position[0]), (y, position[1])]
         term_con_der = []
@@ -86,12 +86,12 @@ class Quadrotor(Vehicle):
         self.prediction['ddspl'] = np.zeros(2)
 
     def set_terminal_conditions(self, position):
-        self.positionT = position
+        self.poseT = position
 
     def get_init_spline_value(self):
         init_value = np.zeros((len(self.basis), 2))
         pos0 = self.prediction['state'][:2]
-        posT = self.positionT
+        posT = self.poseT
         for k in range(2):
             init_value[:, k] = np.r_[pos0[k]*np.ones(self.degree), np.linspace(
                 pos0[k], posT[k], len(self.basis) - 2*self.degree), posT[k]*np.ones(self.degree)]
@@ -99,7 +99,7 @@ class Quadrotor(Vehicle):
 
     def check_terminal_conditions(self):
         tol = self.options['stop_tol']
-        if (np.linalg.norm(self.signals['pose'][:2, -1] - self.positionT) > tol or
+        if (np.linalg.norm(self.signals['pose'][:2, -1] - self.poseT) > tol or
                 np.linalg.norm(self.signals['dspl'][:, -1])) > tol:
             return False
         else:
@@ -110,7 +110,7 @@ class Quadrotor(Vehicle):
         parameters[self]['spl0'] = self.prediction['state'][:2]
         parameters[self]['dspl0'] = self.prediction['dspl']
         parameters[self]['ddspl0'] = self.prediction['ddspl']
-        parameters[self]['positionT'] = self.positionT
+        parameters[self]['poseT'] = self.poseT
         return parameters
 
     def define_collision_constraints(self, hyperplanes, environment, splines):

@@ -23,7 +23,7 @@ import time
 from matplotlib import pyplot as plt
 import numpy as np
 
-class GlobalPlanner:
+class GlobalPlanner(object):
     def __init__(self, environment):
         pass
 
@@ -243,7 +243,7 @@ class AStarPlanner(GlobalPlanner):
         plt.plot(posx,posy)
         plt.show()
 
-class Node:
+class Node(object):
     def __init__(self, position, parent=None):
         self.pos = position  # index of the point in the grid
         self.parent = parent  # how did you end up in this node
@@ -266,7 +266,7 @@ class Node:
     def get_f_cost(self):
         return self.f_cost
 
-class Grid:
+class Grid(object):
     # based on: http://www.redblobgames.com/pathfinding/a-star/implementation.html
     def __init__(self, width, height, position, n_cells, offset=[0.,0.]):
         self.occupied = []  # initialize grid as empty

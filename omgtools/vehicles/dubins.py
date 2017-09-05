@@ -329,15 +329,15 @@ class Dubins(Vehicle):
                 surfaces += wheel.draw(self.signals['pose'][:, t]+
                                   (shape.radius/2.)*np.array([np.cos(self.signals['pose'][2, t]-np.pi/2.),
                                                              np.sin(self.signals['pose'][2, t]-np.pi/2.),
-                                                             self.signals['pose'][2, t]]))[0]
+                                                             0]))[0]
                 surfaces += wheel.draw(self.signals['pose'][:, t]+
                                   (shape.radius/2.)*np.array([np.cos(self.signals['pose'][2, t]+np.pi/2.),
                                                              np.sin(self.signals['pose'][2, t]+np.pi/2.),
-                                                             self.signals['pose'][2, t]]))[0]
+                                                             0]))[0]
                 surfaces += front.draw(self.signals['pose'][:, t]+
                                   (shape.radius/1.5)*np.array([np.cos(self.signals['pose'][2, t]),
                                                                np.sin(self.signals['pose'][2, t]),
-                                                               self.signals['pose'][2, t]]))[0]
+                                                               0]))[0]
             else:
                 surfaces += shape.draw(self.signals['pose'][:, t])[0]
         return surfaces, []

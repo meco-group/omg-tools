@@ -101,7 +101,7 @@ class Holonomic(Vehicle):
                 # (ddx, horizon_time**2*dinput0[0]), (ddy, horizon_time**2*dinput0[1])]
 
     def get_terminal_constraints(self, splines):
-        position = self.define_parameter('positionT', 2)
+        position = self.define_parameter('poseT', 2)
         x, y = splines
         term_con = [(x, position[0]), (y, position[1])]
         term_con_der = []
@@ -118,11 +118,11 @@ class Holonomic(Vehicle):
         self.prediction['dinput'] = np.zeros(2)
 
     def set_terminal_conditions(self, position):
-        self.positionT = position
+        self.poseT = position
 
     def get_init_spline_value(self, subgoals=None):
         pos0 = self.prediction['state']
-        posT = self.positionT
+        posT = self.poseT
         if self.n_seg == 1:  # default
             init_value = np.zeros((len(self.basis), 2))
             for k in range(2):
@@ -149,7 +149,7 @@ class Holonomic(Vehicle):
 
     def check_terminal_conditions(self):
         tol = self.options['stop_tol']
-        if (np.linalg.norm(self.signals['state'][:, -1] - self.positionT) > tol or
+        if (np.linalg.norm(self.signals['state'][:, -1] - self.poseT) > tol or
                 np.linalg.norm(self.signals['input'][:, -1])) > tol:
             return False
         else:
@@ -160,7 +160,7 @@ class Holonomic(Vehicle):
         parameters[self]['state0'] = self.prediction['state']
         parameters[self]['input0'] = self.prediction['input']
         parameters[self]['dinput0'] = self.prediction['dinput']
-        parameters[self]['positionT'] = self.positionT
+        parameters[self]['poseT'] = self.poseT
         return parameters
 
     def define_collision_constraints(self, hyperplanes, room_limits, splines, horizon_time):

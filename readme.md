@@ -20,7 +20,7 @@ The animations below give an overview of typical problems that OMG-tools can han
 <table style="border: none; border-collapse: collapse;" border="0" cellspacing="0" cellpadding="0" width="100%" align="center">
 <tr>
 <td align="center" valign="center" style="background-color:rgba(0, 0, 0, 0);">
-<img width=100% src="./doc/gifs/bicycle.gif" alt="Point-to-point motion of bicycle model"/>
+<img width=100% src="./doc/gifs/cannonballs.gif" alt="Formation attacked by cannonballs"/>
 </td>
 <td align="center" valign="center" bgcolor="#FFFFFF">
 <img width=100% src="./doc/gifs/maze.gif" alt="Holonomic vehicle moving through a maze"/>
@@ -30,7 +30,7 @@ The animations below give an overview of typical problems that OMG-tools can han
 </td>
 <tr>
 <td align="center" valign="center" style="background-color:rgba(0, 0, 0, 0);">
-<img width=100% src="./doc/gifs/formation_quad_rotatingwall.gif" alt="Formation of quadrotor with rotating wall"/>
+<img width=100% src="./doc/gifs/narrowpassage.gif" alt="Formation through narrow passage"/>
 </td>
 <td align="center" valign="center" style="background-color:rgba(0, 0, 0, 0);">
 <img width=100% src="./doc/gifs/formation_dubins.gif" alt="Dubins vehicles moving in relative formation"/>
@@ -70,6 +70,27 @@ The animations below give an overview of typical problems that OMG-tools can han
 </td>
 <td align="center" valign="center" bgcolor="#FFFFFF">
 <img width=100% src="./doc/gifs/platform_landing.gif" alt="Quadrotors landing on platform"/>
+</td>
+</tr>
+<tr>
+<td align="center" valign="center" style="background-color:rgba(0, 0, 0, 0);">
+<img width=100% src="./doc/gifs/bicycle.gif" alt="Point-to-point motion of bicycle model"/>
+</td>
+<td align="center" valign="center" style="background-color:rgba(0, 0, 0, 0);">
+<img width=100% src="./doc/gifs/formation_quad_rotatingwall.gif" alt="Formation of quadrotor with rotating wall"/>
+</td>
+<td align="center" valign="center" style="background-color:rgba(0, 0, 0, 0);">
+<img width=100% src="./doc/gifs/ICRA_example2_minobs.gif" alt="Differential drive vehicle moving through environment using multiple frames"/>
+</td>
+<tr>
+<td align="center" valign="center" bgcolor="#FFFFFF">
+<img width=100% src="./doc/gifs/ICRA_example1_shift.gif" alt="Holonomic vehicle moving through big warehouse using multiple shifted frames"/>
+</td>
+<td align="center" valign="center" style="background-color:rgba(0, 0, 0, 0);">
+<img width=100% src="./doc/gifs/ICRA_example1_minobs.gif" alt="Holonomic vehicle moving through big warehouse using multiple frames without stationary obstacles"/>
+</td>
+<td align="center" valign="center" bgcolor="#FFFFFF">
+<img width=100% src="./doc/gifs/ICRA_example1_minobs_dubins.gif" alt="Holonomic vehicle moving through vast warehouse using multiple frames without stationary obstacles"/>
 </td>
 </tr>
 </table>

@@ -26,10 +26,10 @@ setup(
                                       '*/*/*/*.cpp', '*/*/*/*.hpp']},
     install_requires=[
         'matplotlib2tikz',
-        'casadi >= 3.1.0'
+        'casadi == 3.1.1.post3'
         ],
     test_suite='nose.collector',
-    tests_require=['nose'],
+    tests_require=['nose>=1.0'],
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Science/Research',

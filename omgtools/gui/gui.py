@@ -7,6 +7,7 @@ import tkFileDialog as tkfiledialog
 import tkMessageBox as tkmessagebox
 import pickle
 import numpy as np
+import os, sys  # for retreiving example name while saving environment
 
 class EnvironmentGUI(tk.Frame):
     # Graphical assistant to make an environment
@@ -323,15 +324,23 @@ class EnvironmentGUI(tk.Frame):
         environment['width'] = self.frame_width_m
         environment['height'] = self.frame_height_m
         env_to_save = [environment, self.obstacles, self.clicked_positions, self.n_cells]
-        with open('environment.pickle', 'wb') as handle:  # save environment in 'environment.pickle'
+        filename = os.path.basename(sys.argv[0])  # name of example file in which the self object was created
+        filename = filename.replace('.py', '.pickle')  # change extension from .py to .pickle
+        with open(filename, 'wb') as handle:  # save environment in 'name_of_current_example.pickle'
             pickle.dump(env_to_save, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     def load_environment(self):
         # first remove all obstacles which were already present in canvas
         for obstacle in self.obstacles:
             self.canvas.delete(obstacle['variable'])
-        with open('environment.pickle', 'rb') as handle:
-            saved_env = pickle.load(handle)
+        # show a popup window to let the user select an environment pickle
+        filename = tkfiledialog.askopenfilename(filetypes=[('Pickle files', '.pickle'), ('all files','.*')])
+        try:
+            data = open(filename, 'rb')
+        except Exception, details:
+            tkmessagebox.showerror(('Error'),details)
+            return
+        saved_env = pickle.load(data)
         env = saved_env[0]  # the environment itself
         self.meter_to_pixel = env['meter_to_pixel']
         self.position = env['position']

@@ -23,8 +23,7 @@ import shutil
 
 def search_casadi():
     import casadi
-    module_path = os.path.dirname(casadi.__file__)
-    search_path = os.path.join(module_path, os.pardir)
+    search_path = os.path.dirname(casadi.__file__)
     for root, dirnames, files in os.walk(search_path):
         if 'libcasadi.so' in files:
             libdir = root
