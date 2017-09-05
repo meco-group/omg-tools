@@ -52,7 +52,7 @@ globalplanner = AStarPlanner(environment, [25,25], start, goal)
 # make problem
 options = {}
 schedulerproblem = SchedulerProblem(vehicle, environment, globalplanner, options=options,
-                                    frame_type='min_nobs', n_frames=3)
+                                    frame_type='min_nobs', n_frames=2)
 
 # simulate the problem
 simulator = Simulator(schedulerproblem)
@@ -60,9 +60,11 @@ simulator = Simulator(schedulerproblem)
 # define what you want to plot
 schedulerproblem.plot('scene')
 vehicle.plot('input', knots=True, prediction=True, labels=['v_x (m/s)', 'v_y (m/s)'])
+vehicle.plot('dinput', knots=True, prediction=True, labels=['a_x (m/s^2)', 'a_y (m/s^2)'])
 
 # run it!
 simulator.run()
 
 schedulerproblem.plot_movie('scene', number_of_frames=100, repeat=False)
-# schedulerproblem.save_movie('scene', format='gif', name='problemgif', number_of_frames=100, movie_time=10, axis=False)
+schedulerproblem.save_movie('scene', format='gif', name='schedulergif', number_of_frames=100, movie_time=10, axis=False)
+# schedulerproblem.save_movie('scene', number_of_frames=50, name='scheduler', axis=False)
