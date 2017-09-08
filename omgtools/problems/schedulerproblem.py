@@ -40,7 +40,7 @@ class SchedulerProblem(Problem):
     def __init__(self, fleet, environment, global_planner=None, options=None, **kwargs):
         Problem.__init__(self, fleet, environment, options, label='schedulerproblem')
         self.curr_state = self.vehicles[0].prediction['state'] # initial vehicle position
-        self.goal_state = self.vehicles[0].positionT # overall goal
+        self.goal_state = self.vehicles[0].poseT # overall goal
         self.problem_options = options  # e.g. selection of problem type (freeT, fixedT)
         if not 'freeT' in options:
             # select default type
