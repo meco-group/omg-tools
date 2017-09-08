@@ -170,9 +170,9 @@ class Environment(OptiChild, PlotLayer):
     # Optimization modelling related functions
     # ========================================================================
 
-    def init(self, horizon_time=None):
+    def init(self, horizon_times=None):
         for obstacle in self.obstacles:
-            obstacle.init(horizon_time=horizon_time)
+            obstacle.init(horizon_times=horizon_times)
 
     # ========================================================================
     # Simulate environment
