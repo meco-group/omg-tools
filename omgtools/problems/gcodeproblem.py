@@ -28,16 +28,13 @@ class GCodeProblem(Problem):
     # Problem containing several blocks of GCode
     # here environment is a local part (given by some GCode blocks) of the
     # total environment (given by the combination of all GCode blocks)
-    # the shape of the segments is the same as the one of
-    # the rooms in the environment
-    def __init__(self, fleet, environment, segments, n_segments, options=None):
-        # Todo: environment and segments partly hold the same information, improve?
+    # the rooms represent the GCode segments
+    def __init__(self, fleet, environment, n_segments, options=None):
         Problem.__init__(self, fleet, environment, options, label='gcodeproblem')
-        self.segments = segments
-        self.n_segments = n_segments
-        if self.n_segments > len(self.segments):
+        self.n_segments = n_segments  # amount of GCode commands to connect
+        if self.n_segments > len(self.environment.rooms):
             raise RuntimeError('Number of segments is larger than the amount of ' +
-                               'GCode segments provided')
+                               'GCode segments/rooms provided')
         self.init_time = None
         self.start_time = 0.
         self.objective = 0.
@@ -54,9 +51,9 @@ class GCodeProblem(Problem):
 
     def construct(self):
         self.t = self.define_parameter('t')
-        self.motion_times = []  # holds motion time for each segment
-        for segment in range(self.n_segments):
-            self.motion_times.append(self.define_variable('T'+str(segment), value=10))
+        self.motion_times = []  # holds motion time for each room
+        for room in range(self.n_segments):
+            self.motion_times.append(self.define_variable('T'+str(room), value=10))
 
         # minimize total motion time
         self.define_objective(sum(self.motion_times))
@@ -72,7 +69,7 @@ class GCodeProblem(Problem):
         for idx in range(self.n_segments):
             self.vehicles[0].define_trajectory_constraints(total_splines[idx], self.motion_times[idx])
             # set up room constraints
-            self.vehicles[0].define_collision_constraints(self.segments[idx], total_splines[idx], self.motion_times[idx])
+            self.vehicles[0].define_collision_constraints(self.environment.rooms[idx], total_splines[idx], self.motion_times[idx])
 
         # constrain spline segments
         self.define_init_constraints()
@@ -105,7 +102,7 @@ class GCodeProblem(Problem):
             for spline1, spline2 in zip(self.vehicles[0].splines[j], self.vehicles[0].splines[j+1]):
                 for d in range(spline1.basis.degree):
                     # in connection point splines should be equal until derivative of order degree-1
-                    # give dimensions by multplication with the motion time
+                    # give dimensions by multiplication with the motion time
                     self.define_constraint(
                         evalspline(spline1.derivative(d), 1)*self.motion_times[j+1]**d -
                         evalspline(spline2.derivative(d), 0)*self.motion_times[j]**d, 0., 0.)
@@ -124,21 +121,25 @@ class GCodeProblem(Problem):
     # ========================================================================
 
     def reinitialize(self, father=None):
+
+        # Todo: this code is never called?
+
         if father is None:
             father = self.father
         Problem.reinitialize(self)
         # compute initial guess for all spline values
         subgoals = []
         for k in range(self.n_segments-1):
-            segment1 = self.segments[k]
-            segment2 = self.segments[k+1]
-            # subgoals is given as [initial position, center of overlap of regions and overall goal]
-            # compute center of overlap region of the area that is shared by two subsequent segments (after taking tolerance into account)
+            room1 = self.environment.rooms[k]
+            room2 = self.environment.rooms[k+1]
+            # subgoals is given as [initial position, center(!) of overlap of regions, overall goal]
+            # compute center of overlap region of the area that is shared by two subsequent rooms
+            # (after taking tolerance into account)
 
             # Todo: change this from rooms to segments: e.g. how handle a circle arc?
             # Put subgoal on a line between the two segments? (i.e. a line with correct orientation)
-            subgoals.append(compute_rectangle_overlap_center(segment1['border']['shape'], segment1['borer']['position'],
-                                                             segment2['border']['shape'], segment2['border']['position']))
+            subgoals.append(compute_rectangle_overlap_center(room1['border']['shape'], room1['border']['position'],
+                                                             room2['border']['shape'], room2['border']['position']))
         init = vehicle.get_init_spline_value(subgoals = subgoals)
         for k in range(self.n_segments):
             father.set_variables(init[k], self.vehicles[0], 'splines_seg'+str(k))
@@ -171,13 +172,14 @@ class GCodeProblem(Problem):
 
     def simulate(self, current_time, simulation_time, sample_time):
 
-        # Todo: how simulate and shift one segment at a time?
+        # Todo: this code is not called?
 
+        # Todo: how simulate and shift one segment at a time?
 
         horizon_time = 0
         # compute total remaining motion time
-        for segment in range(self.n_segments):
-            horizon_time += self.father.get_variables(self, 'T'+str(segment))[0][0]
+        for room in range(self.n_segments):
+            horizon_time += self.father.get_variables(self, 'T'+str(room))[0][0]
         if self.init_time is None:
             rel_current_time = 0.0
         else:
@@ -221,8 +223,8 @@ class GCodeProblem(Problem):
         if (current_time - self.start_time) > 0:
             # compute total remaining motion time
             T = 0
-            for segment in range(self.n_segments):
-                T += self.father.get_variables(self, 'T'+str(segment))[0][0]
+            for room in range(self.n_segments):
+                T += self.father.get_variables(self, 'T'+str(room))[0][0]
             # check if almost arrived, if so lower the update time
             if T < 2*update_time:
                 update_time = T - update_time
@@ -233,11 +235,11 @@ class GCodeProblem(Problem):
             # to goal position at target_time. Approximate/Represent this spline in
             # a new basis with new equidistant knots.
 
-            # shifting spline is only required for first segment (index 0), so seg_shift=[0]
+            # shifting spline is only required for first room (index 0), so seg_shift=[0]
             self.father.transform_primal_splines(
                 lambda coeffs, basis: shift_spline(coeffs, update_time/target_time, basis), seg_shift=[0])
-            T_0 = self.father.get_variables(self, 'T'+str(0))[0][0]  # remaining motion time for first segment
-            self.father.set_variables(T_0-update_time, self, 'T0')  # only change time of first segment
+            T_0 = self.father.get_variables(self, 'T'+str(0))[0][0]  # remaining motion time for first room
+            self.father.set_variables(T_0-update_time, self, 'T0')  # only change time of first room
 
     def compute_partial_objective(self, current_time):
         self.objective = current_time

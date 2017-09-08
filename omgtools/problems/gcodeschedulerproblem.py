@@ -37,10 +37,11 @@ class GCodeSchedulerProblem(Problem):
 
     def __init__(self, tool, GCode, options=None, **kwargs):
         options = options or {}
-        self.environment = self.get_environment(GCode, tool.tolerance)
-        # pass on environment and tool to Problem constructor, generates self.vehicles
+        environment = self.get_environment(GCode, tool.tolerance)
+        # pass on environment and tool to Problem constructor,
+        # generates self.vehicles and self.environment
         # self.vehicles[0] = tool
-        Problem.__init__(self, tool, self.environment, options, label='schedulerproblem')
+        Problem.__init__(self, tool, environment, options, label='schedulerproblem')
         self.n_current_block = 0  # number of the block that the tool will follow next/now
         self.curr_state = self.vehicles[0].prediction['state'] # initial vehicle position
         self.goal_state = self.vehicles[0].poseT # overall goal
@@ -52,17 +53,8 @@ class GCodeSchedulerProblem(Problem):
         self._n_segments = self.n_segments  # save original value (for plotting)
         self.segments = []
 
-        # save vehicle dimension, determines how close waypoints can be to the border
-        shape = self.vehicles[0].shapes[0]
-        if isinstance(shape, Circle):
-            self.veh_size = shape.radius
-            # used to check if vehicle fits completely in a cell
-            # radius is only half the vehicle size
-            size_to_check = self.veh_size*2
-        else:
+        if not isinstance(self.vehicles[0].shapes[0], Circle):
             raise RuntimeError('Vehicle shape can only be a Circle when solving a GCodeSchedulerProblem')
-        # Todo: remove this?
-        self.scale_factor = 1.2  # margin, to keep vehicle a little further from border
 
     def init(self):
         # otherwise the init of Problem is called, which is not desirable
@@ -74,48 +66,43 @@ class GCodeSchedulerProblem(Problem):
     def reinitialize(self):
         # this function is called at the start and creates the first local problem
 
-        # make segments by combining all GCode commands, fills in self.segments,
-        # create all segments at once, but only compute trajectories for self.n_segments
-
         self.segments = []
         # select the next blocks of GCode that will be handled
         # if less than self.n_segments are left, only the remaining blocks
         # will be selected
-        next_blocks = self.environment.rooms[
+        self.segments = self.environment.rooms[
                            self.n_current_block:self.n_current_block+self.n_segments]
-        for block in next_blocks:
-            segment = self.create_segment(block)
-            self.segments.append(segment)
 
-        # total number of considered segments
-        self.cnt = len(self.environment.rooms)
+        # total number of considered segments in the provided GCode
+        self.cnt = self.segments[-1]['number']
 
-        # get initial guess (based on central line), get motion time, for all segments
+        # get initial guess for trajectories (based on central line) and motion times, for all segments
         init_guess, self.motion_times = self.get_init_guess()
 
         # get a problem representation of the combination of segments
-        # the gcodeschedulerproblem (self) has a local problem (gcodeproblem) at each moment
+        # the gcodeschedulerproblem (self) has a local_problem (gcodeproblem) at each moment
         self.local_problem = self.generate_problem()
         # Todo: is this function doing what we want?
         self.local_problem.reset_init_guess(init_guess)
 
     def solve(self, current_time, update_time):
-
         # solve the local problem with a receding horizon,
         # and update segments if necessary
+
+        # did we move far enough over the current segment yet?
         segments_valid = self.check_segments()
         if not segments_valid:
+            # add new segment and remove first one
             self.n_current_block += 1
             self.update_segments()
 
-            # transform segments into local_problem and simulate
+            # transform segments into local_problem
             self.local_problem = self.generate_problem()
             # self.init_guess is filled in by update_segments()
             # this also updates self.motion_time
             self.local_problem.reset_init_guess(self.init_guess)
         else:
             # update motion time variables (remaining time)
-            # freeT: there is a time variable
             for k in range(self.n_segments):
                 self.motion_times[k] = self.local_problem.father.get_variables(
                                        self.local_problem, 'T'+str(k),)[0][0]
@@ -143,13 +130,22 @@ class GCodeSchedulerProblem(Problem):
         self.local_problem.store(current_time, update_time, sample_time)
 
     def simulate(self, current_time, simulation_time, sample_time):
+        # update motion times
+        for k in range(self.n_segments):
+            self.motion_times[k] = self.local_problem.father.get_variables(
+                                   self.local_problem, 'T'+str(k),)[0][0]
         # save segment
         # store trajectories
         if not hasattr(self, 'segment_storage'):
             self.segment_storage = []
+
+        # simulate one segment at a time
+        # simulation_time = self.motion_times[0]
+        # simulate in receding horizon with small steps
         if simulation_time == np.inf:  # when calling run_once
             simulation_time = sum(self.motion_times)
         repeat = int(simulation_time/sample_time)
+
         # copy segments, to avoid problems when removing elements from self.segments
         segments_to_save = self.segments[:]
         for k in range(repeat):
@@ -163,7 +159,7 @@ class GCodeSchedulerProblem(Problem):
 
     def stop_criterium(self, current_time, update_time):
         # check if the current segment is the last one
-        if self.segments[-1]['end'] == self.goal_state:
+        if self.segments[0]['end'] == self.goal_state:
             # if we now reach the goal, the tool has arrived
             if self.local_problem.stop_criterium(current_time, update_time):
                 return True
@@ -198,9 +194,9 @@ class GCodeSchedulerProblem(Problem):
         if info is not None:
             for k in range(self._n_segments):
                 # initialize segment plot, always use segments[0]
-                pose_2d = self.segments[0]['border']['pose'][:2] + [0.]  # was already rotated
+                pose_2d = self.segments[0]['pose'][:2] + [0.]  # shape was already rotated
                 # Todo: generalize to 3d later
-                s, l = self.segments[0]['border']['shape'].draw(pose_2d)
+                s, l = self.segments[0]['shape'].draw(pose_2d)
                 surfaces = [{'facecolor': 'none', 'edgecolor': 'red', 'linestyle' : '--', 'linewidth': 1.2} for _ in s]
                 info[0][0]['surfaces'] += surfaces
                 # initialize global path plot
@@ -215,8 +211,8 @@ class GCodeSchedulerProblem(Problem):
                 # for every frame at this point in time
                 # plot frame border
                 # Todo: generalize to 3d later
-                pose_2d = self.segment_storage[t][k]['border']['pose'][:2] + [0.]  # was already rotated
-                s, l = self.segment_storage[t][k]['border']['shape'].draw(pose_2d)
+                pose_2d = self.segment_storage[t][k]['pose'][:2] + [0.]  # shape was already rotated
+                s, l = self.segment_storage[t][k]['shape'].draw(pose_2d)
                 data[0][0]['surfaces'] += s
         return data
 
@@ -229,12 +225,14 @@ class GCodeSchedulerProblem(Problem):
         # each GCode block is represented as a room in which the trajectory
         # has to stay
 
+        number = 0  # each room has a number
         rooms = []
 
         for block in GCode:
             # convert block to room
             if block.type in ['G00', 'G01']:
-                width = distance_between_points(block.start, block.end)
+                # add tolerance to width to obtain the complete reachable region
+                width = distance_between_points(block.start, block.end) + 2*tolerance
                 height = tolerance
                 orientation = np.arctan2(block.end[1]-block.start[1], block.end[0]-block.start[0])
                 shape = Rectangle(width = width,  height = height, orientation = orientation)
@@ -242,41 +240,41 @@ class GCodeSchedulerProblem(Problem):
                         block.start[1] + (block.end[1]-block.start[1])*0.5,
                         block.start[2] + (block.end[2]-block.start[2])*0.5,
                         orientation,0.,0.]
+                # Todo: for now orientation is only taken into account as if it were a 2D segment
             elif block.type in ['G02', 'G03']:
                 radius_in = block.radius - tolerance
                 radius_out = block.radius + tolerance
                 # move to origin
                 start = np.array(block.start) - np.array(block.center)
                 end = np.array(block.end) - np.array(block.center)
+
+                # adapt start and end to include tolerance, i.e. make ring a little wider, such that
+                # perpendicular distance from start (and end) to border of ring = tolerance
+                theta = np.arctan2(tolerance,((radius_in+radius_out)*0.5))  # angle over which to rotate
+                # provide two turning directions
+                R1 = np.array([[np.cos(theta), -np.sin(theta)],[np.sin(theta), np.cos(theta)]])  # rotation matrix
+                R2 = np.array([[np.cos(-theta), -np.sin(-theta)],[np.sin(-theta), np.cos(-theta)]])  # rotation matrix
+
+                # Todo: rotation only works for 2D XY arcs for now
+
                 if block.type == 'G02':
                     direction = 'CW'
+                    start[:2] = np.dot(R1, start[:2])  # slightly rotated start point
+                    end[:2] = np.dot(R2, end[:2])  # slightly rotated end point
                 else:
                     direction = 'CCW'
+                    start[:2] = np.dot(R2, start[:2])  # slightly rotated start point
+                    end[:2] = np.dot(R1, end[:2])  # slightly rotated end point
                 shape = Ring(radius_in = radius_in, radius_out = radius_out,
                              start = start, end = end, direction = direction)
                 pose = block.center
-                pose.extend([0.,0.,0.])  # [x,y,z,orientation]
-
-
+                pose.extend([0.,0.,0.])  # [x,y,z,orientation], ring always has orientation 0
             # save original GCode block in the room description
-            rooms.append({'shape': shape, 'pose': pose, 'position':pose[:2], 'draw':True,
-                          'start': block.start, 'end': block.end})
+            rooms.append({'shape': shape, 'pose': pose, 'position': pose[:2], 'draw':True,
+                          'start': block.start, 'end': block.end, 'number':number})
+            # Todo: is it weird that room has a start and end field?
+            number += 1
         return Environment(rooms=rooms)
-
-    def create_segment(self, block):
-        if isinstance(block['shape'], Rectangle):
-            xmin = block['pose'][0] - block['shape'].width*0.5
-            xmax = block['pose'][0] + block['shape'].width*0.5
-            ymin = block['pose'][1] - block['shape'].height*0.5
-            ymax = block['pose'][1] + block['shape'].height*0.5
-            limits = [xmin, ymin, xmax, ymax]
-        else:
-            # not possible to give simple limits for e.g. Ring shape
-            limits = None
-        border = {'shape': block['shape'],
-                  'pose': block['pose'], 'limits': limits}
-        segment = {'border': border, 'number': self.n_current_block, 'start':block['start'], 'end':block['end']}
-        return segment
 
     def check_segments(self):
 
@@ -291,21 +289,30 @@ class GCodeSchedulerProblem(Problem):
 
         warnings.warn('solving with receding horizon and small steps for the moment')
 
-        if (np.array(self.curr_state) != np.array(self.segments[0]['end'])).any():
-            return True
-        else:
+        if (np.array(self.curr_state) == np.array(self.segments[0]['end'])).all():
+            # current state is equal to end of segment 0
             return False
+        else:
+            # current state is not yet equal to the end of segment 0
+            return True
 
     def update_segments(self):
 
         # update the considered segments: remove first one, and add a new one
 
         self.segments = self.segments[1:]  # drop first segment
-        # create segment for next block
-        new_segment = self.create_segment(self.environment.rooms[self.n_current_block+(self.n_segments-1)])
-        self.segments.append(new_segment)  # add next segment
+        if self.segments[-1]['number'] < self.cnt:
+            # last segment is not yet in self.segments, so there are some segments left,
+            # create segment for next block
+            new_segment = self.environment.rooms[self.n_current_block+(self.n_segments-1)]
+            self.segments.append(new_segment)  # add next segment
+        else:
+            # all segments are currently in self.segments, don't add a new one
+            # and lower the amount of segments that are combined
+            self.n_segments -= 1
 
-        # use previous solution to get an initial guess for all segments except the last one,
+        # self.get_init_guess() uses previous solution to get an initial guess for
+        # all segments except the last one,
         # for this one get initial guess based on the center line
         # analogously for the motion_times
         self.init_guess, self.motion_times = self.get_init_guess()
@@ -314,7 +321,7 @@ class GCodeSchedulerProblem(Problem):
 
         local_rooms = self.environment.rooms[self.n_current_block:self.n_current_block+self.n_segments]
         local_environment = Environment(rooms=local_rooms)
-        problem = GCodeProblem(self.vehicles[0], local_environment, self.segments, self.n_segments)
+        problem = GCodeProblem(self.vehicles[0], local_environment, self.n_segments)
 
         problem.set_options({'solver_options': self.options['solver_options']})
         problem.init()
@@ -324,7 +331,7 @@ class GCodeSchedulerProblem(Problem):
         return problem
 
     def get_init_guess(self, **kwargs):
-        # if first iteration, compute init_guess based on center line for all segments
+        # if first iteration, compute init_guess based on center line (i.e. connection between start and end) for all segments
         # else, use previous solutions to build a new initial guess:
         #   if combining 2 segments: combine splines in segment 1 and 2 to form a new spline in a single segment = new segment1
         #   if combining 3 segments or more: combine segment1 and 2 and keep splines of segment 3 and next as new splines of segment2 and next
@@ -368,6 +375,7 @@ class GCodeSchedulerProblem(Problem):
             self.vehicles[0].set_initial_conditions(self.curr_state, input=self.vehicles[0].signals['input'][:,-1])
         else:
             self.vehicles[0].set_initial_conditions(self.curr_state)
+        import pdb; pdb.set_trace()  # breakpoint 07ab7e9c //
         self.vehicles[0].set_terminal_conditions(self.segments[-1]['end'])
 
         end_time = time.time()
@@ -379,22 +387,22 @@ class GCodeSchedulerProblem(Problem):
     def get_init_guess_new_segment(self, segment):
         # generate initial guess for new segment, based on center line
 
-        if isinstance(segment['border']['shape'], Rectangle):
+        if isinstance(segment['shape'], Rectangle):
             points = np.c_[segment['start'], segment['end']]
-        elif isinstance(segment['border']['shape'], Ring):
-            start_angle = np.arctan2(segment['start'][1]-segment['border']['pose'][1],segment['start'][0]-segment['border']['pose'][0])
-            end_angle = np.arctan2(segment['end'][1]-segment['border']['pose'][1],segment['end'][0]-segment['border']['pose'][0])
-            # Todo: is it logical to put direction in border shape? Or put directly in segment somehow?
-            if segment['border']['shape'].direction == 'CW':
+        elif isinstance(segment['shape'], Ring):
+            start_angle = np.arctan2(segment['start'][1]-segment['pose'][1],segment['start'][0]-segment['pose'][0])
+            end_angle = np.arctan2(segment['end'][1]-segment['pose'][1],segment['end'][0]-segment['pose'][0])
+            # Todo: is it logical to put direction in segment shape? Or put directly in segment somehow?
+            if segment['shape'].direction == 'CW':
                 if start_angle < end_angle:
                     start_angle += 2*np.pi  # arctan2 returned a negative start_angle, make positive
-            elif segment['border']['shape'].direction == 'CCW':
+            elif segment['shape'].direction == 'CCW':
                 if start_angle > end_angle:  # arctan2 returned a negative end_angle, make positive
                     end_angle += 2*np.pi
             s = np.linspace(start_angle, end_angle, 50)
             # calculate radius
-            radius = (segment['border']['shape'].radius_in+segment['border']['shape'].radius_out)*0.5
-            points = np.vstack((segment['border']['pose'][0] + radius*np.cos(s), segment['border']['pose'][1] + radius*np.sin(s)))
+            radius = (segment['shape'].radius_in+segment['shape'].radius_out)*0.5
+            points = np.vstack((segment['pose'][0] + radius*np.cos(s), segment['pose'][1] + radius*np.sin(s)))
             points = np.vstack((points, 0*points[0,:]))  # add guess of all 0 in z-direction
             # Todo: for now only arcs in the XY-plane are considered
 
