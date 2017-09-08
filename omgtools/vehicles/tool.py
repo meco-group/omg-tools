@@ -189,23 +189,22 @@ class Tool(Vehicle):
         # these determine the formulation of the collision avoidance constraints
         shape = self.shapes[0]  # tool shape
         checkpoints, rad = shape.get_checkpoints()  # tool checkpoints
-        import pdb; pdb.set_trace()  # breakpoint eecc380f //
-        if ((isinstance(segment['border']['shape'], (Rectangle, Square)) and
-            segment['border']['shape'].orientation == 0.0) and
+        if ((isinstance(segment['shape'], (Rectangle, Square)) and
+            segment['shape'].orientation == 0.0) and
             (isinstance(shape, Circle) or
             (isinstance(shape, (Rectangle, Square)) and
              shape.orientation == 0))):
             # we have a horizontal or vertical straight line segment and
             # a Circular or rectangular tool
 
-            lims = segment['border']['shape'].get_canvas_limits()
+            lims = segment['shape'].get_canvas_limits()
             room_limits = []
-            room_limits += [lims[k]+segment['border']['pose'][k] for k in range(self.n_dim)]
+            room_limits += [lims[k]+segment['pose'][k] for k in range(self.n_dim)]
             for chck in checkpoints:
                 for k in range(2):
                     self.define_constraint(-(chck[k]+position[k]) + room_limits[k][0] + rad[0], -inf, 0.)
                     self.define_constraint((chck[k]+position[k]) - room_limits[k][1] + rad[0], -inf, 0.)
-        elif (isinstance(segment['border']['shape'], (Rectangle, Square)) and
+        elif (isinstance(segment['shape'], (Rectangle, Square)) and
             (isinstance(shape, Circle))):
             # we have a diagonal line segment
 
@@ -233,12 +232,11 @@ class Tool(Vehicle):
             # Todo: for now we impose that the trajectory must lie inside the complete ring, not that it
             # must lie inside the ring segment. So not sure that the solver picks the right arc...
 
-            center = segment['border']['pose']
+            center = segment['pose']
             self.define_constraint(-(position[0] - center[0])**2 - (position[1] - center[1])**2 +
-                                  segment['border']['shape'].radius_in**2, -inf, 0.)
+                                  segment['shape'].radius_in**2, -inf, 0.)
             self.define_constraint((position[0] - center[0])**2 + (position[1] - center[1])**2 -
-                                  segment['border']['shape'].radius_out**2, -inf, 0.)
-
+                                  segment['shape'].radius_out**2, -inf, 0.)
         else:
             raise RuntimeError('Invalid segment obtained when setting up collision avoidance constraints')
 
