@@ -67,6 +67,50 @@ class Circle(Shape2D):
         return [np.array([-self.radius, self.radius]),
                 np.array([-self.radius, self.radius])]
 
+class Ring(Shape2D):
+    def __init__(self, radius_in, radius_out, start, end, direction):
+        self.radius_in = radius_in
+        self.radius_out = radius_out
+        self.start = start
+        self.end = end
+        self.direction = direction
+        Shape2D.__init__(self, self.get_surfaces())
+
+    def get_surfaces(self):
+        if (self.start == self.end).all():
+            # full ring, placed in the origin
+            s = linspace(0,2*np.pi,50)
+        else:
+            # part of a ring, placed in the origin
+            start_angle = np.arctan2(self.start[1],self.start[0])
+            end_angle = np.arctan2(self.end[1],self.end[0])
+            if self.direction == 'CW':
+                if start_angle < end_angle:
+                    start_angle += 2*np.pi  # arctan2 returned a negative start_angle, make positive
+            elif self.direction == 'CCW':
+                if start_angle > end_angle:  # arctan2 returned a negative end_angle, make positive
+                    end_angle += 2*np.pi
+            s = np.linspace(start_angle, end_angle, 50)
+        # inner radius
+        points_in = np.vstack(
+            (self.radius_in*np.cos(s), self.radius_in*np.sin(s)))
+        # outer radius
+        # move over outer points in other direction, to obtain a closed figure without diagonal connection
+        # between end of inner circle and beginning of outer circle
+        s = np.flipud(s)
+        points_out = np.vstack(
+            (self.radius_out*np.cos(s), self.radius_out*np.sin(s)))
+        points = np.c_[points_in, points_out]
+        return [points]
+
+    def get_canvas_limits(self):
+        points = np.c_[self.start, self.end]
+        max_xy = np.amax(points, axis=1)
+        min_xy = np.amin(points, axis=1)
+        return [np.array([min_xy[0], max_xy[0]]),
+                np.array([min_xy[1], max_xy[1]])]
+
+    # def get_checkpoints():  # not applicable because non-convex shape
 
 class Polyhedron(Shape2D):
 
