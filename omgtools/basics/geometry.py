@@ -21,8 +21,13 @@ import numpy as np
 
 
 def distance_between_points(point1, point2):
-        # calculate distance between two points
-        return np.sqrt((point2[0]-point1[0])**2+(point2[1]-point1[1])**2)
+        # calculate distance between two points in kD-space
+        dist = 0
+        if len(point1) != len(point2):
+            raise ValueError('Dimensions of point1 and point2 do not match: ', len(point1), ', ', len(point2))
+        for k in range(len(point1)):
+            dist += (point2[k]-point1[k])**2
+        return np.sqrt(dist)
 
 def distance_to_rectangle(point, rectangle):
     # returns the x- and y-direction distance from point to a rectangle
