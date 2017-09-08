@@ -4,4 +4,6 @@ from rendezvous import RendezVous
 from formation_central import FormationPoint2pointCentral
 from formation_dualdec import FormationPoint2pointDualDecomposition
 from multiframeproblem import MultiFrameProblem
+from payload import PayloadTransport
+from distributedPayload import DistributedPayload
 from globalplanner import *

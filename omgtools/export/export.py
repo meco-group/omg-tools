@@ -209,7 +209,7 @@ class Export(object):
             for o in problem.environment.obstacles]) + '}'
         if point2point.__class__.__name__ == 'FreeTPoint2point':
             defines['FREET'] = 'true'
-        elif point2point.__class__.__name__ in ('FixedTPoint2point', 'FreeEndPoint2point'):
+        elif point2point.__class__.__name__ in ('FixedTPoint2point', 'FreeEndPoint2point','FixedTDistributedPayload'):
             defines['FREET'] = 'false'
         else:
             raise ValueError('This type of point2point problem is not ' +

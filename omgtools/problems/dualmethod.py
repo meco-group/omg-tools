@@ -187,6 +187,92 @@ class DualUpdater(Problem):
         raise NotImplementedError('Please implement this method!')
 
 
+    #++++++++++++++++
+    #Payload
+
+    def _struct2dict_payload(self, var, dic):
+        from admm_payload import ADMM_PAYLOAD
+        from dualdecomposition import DDUpdater
+        if isinstance(var, list):
+            return [self._struct2dict_payload(v, dic) for v in var]
+        elif isinstance(dic.keys()[0], (DDUpdater, ADMM_PAYLOAD)):
+            ret = {}
+            for nghb in dic.keys():
+                ret[nghb.label] = {}
+                for child, q in dic[nghb].items():
+                    ret[nghb.label][child.label] = {}
+                    for name in q.keys():
+                        ret[nghb.label][child.label][name] = var[
+                            nghb.label, child.label, name]
+            return ret
+        else:
+            ret = {}
+            for child, q in dic.items():
+                ret[child.label] = {}
+                for name in q.keys():
+                    ret[child.label][name] = var[child.label, name]
+            return ret
+
+    def _dict2struct_payload(self, var, stru):
+        if isinstance(var, list):
+            return [self._dict2struct_payload(v, stru) for v in var]
+        elif 'dd' in var.keys()[0] or 'admm_payload' in var.keys()[0]:
+            chck = var.values()[0].values()[0].values()[0]
+            if isinstance(chck, SX):
+                ret = structure.SXStruct(stru)
+            elif isinstance(chck, MX):
+                ret = structure.MXStruct(stru)
+            elif isinstance(chck, DM):
+                ret = stru(0)
+            for nghb in var.keys():
+                for child, q in var[nghb].items():
+                    for name in q.keys():
+                        ret[nghb, child, name] = var[nghb][child][name]
+            return ret
+        else:
+            chck = var.values()[0].values()[0]
+            if isinstance(chck, SX):
+                ret = structure.SXStruct(stru)
+            elif isinstance(chck, MX):
+                ret = structure.MXStruct(stru)
+            elif isinstance(chck, DM):
+                ret = stru(0)
+            for child, q in var.items():
+                for name in q.keys():
+                    ret[child, name] = var[child][name]
+            return ret
+
+    def _transform_spline_payload(self, var, tf, dic):
+        from admm_payload import ADMM_PAYLOAD
+        from dualdecomposition import DDUpdater
+        if isinstance(var, list):
+            return [self._transform_spline_payload(v, tf, dic) for v in var]
+        elif isinstance(var, struct):
+            var = self._struct2dict_payload(var, dic)
+            var = self._transform_spline_payload(var, tf, dic)
+            return self._dict2struct_payload(var, _create_struct_from_dict(dic))
+        elif isinstance(dic.keys()[0], (DDUpdater, ADMM_PAYLOAD)):
+            ret = {}
+            for nghb in dic.keys():
+                ret[nghb.label] = self._transform_spline_payload(
+                    var[nghb.label], tf, dic[nghb])
+            return ret
+        else:
+            for child, q_i in dic.items():
+                for name, ind in q_i.items():
+                    if name in child._splines_prim:
+                        basis = child._splines_prim[name]['basis']
+                        for l in range(len(basis)):
+                            sl_min = l*len(basis)
+                            sl_max = (l+1)*len(basis)
+                            if set(range(sl_min, sl_max)) <= set(ind):
+                                sl = slice(sl_min-ind[0], sl_max-ind[0])
+                                v = var[child.label][name][sl]
+                                v = tf(v, basis)
+                                var[child.label][name][sl] = v
+            return var
+
+
 class DualProblem(DistributedProblem):
 
     def __init__(self, fleet, environment, problems, updater_type, options):
