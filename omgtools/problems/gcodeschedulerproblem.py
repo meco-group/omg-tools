@@ -264,10 +264,10 @@ class GCodeSchedulerProblem(Problem):
         return Environment(rooms=rooms)
 
     def create_segment(self, block):
-        # if 'orientation' in block:
-        #     orientation = block['orientation']
-        # else:
-        #     orientation = 0
+        if 'orientation' in block:
+            orientation = block['orientation']
+        else:
+            orientation = 0
         if isinstance(block['shape'], Rectangle):
             xmin = block['pose'][0] - block['shape'].width*0.5
             xmax = block['pose'][0] + block['shape'].width*0.5
