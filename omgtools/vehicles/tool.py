@@ -216,18 +216,16 @@ class Tool(Vehicle):
 
             # Todo: now we impose that position must lie somewhere on the connection, not that it must lie between
             # start and end. Adapt?
+            # Todo: use hyperplanes?
+            # hyp_room = segment['shape'].get_hyperplanes(position = segment['position'])
 
-            angle = np.arctan2(segment['end'][1]-segment['start'][1], segment['end'][0]-segment['start'][0])
+            angle = segment['shape'].orientation
             length = np.sqrt((segment['end'][0]-segment['start'][0])**2+(segment['end'][1]-segment['start'][1])**2)
             self.define_constraint((position[0] * length*np.sin(angle) - position[1] * length*np.cos(angle)) -
                                     self.tolerance, -inf, 0.)  # minus
-            self.define_constraint((position[0] * length*np.sin(angle) - position[1] * length*np.cos(angle)) -
+            self.define_constraint((-position[0] * length*np.sin(angle) + position[1] * length*np.cos(angle)) -
                                     self.tolerance, -inf, 0.)  # plus
-
-            # Todo: use hyperplanes?
-            # hyp_room = segment['border']['shape'].get_hyperplanes(position = segment['border']['position'])
-
-        elif (isinstance(segment['border']['shape'], (Ring)) and
+        elif (isinstance(segment['shape'], (Ring)) and
             (isinstance(shape, Circle))):
             # we have a ring/circle segment
             # we impose that the trajectory/splines must lie within the outside and inside circle
