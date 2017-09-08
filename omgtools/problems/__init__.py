@@ -6,3 +6,5 @@ from formation_dualdec import FormationPoint2pointDualDecomposition
 from schedulerproblem import SchedulerProblem
 from multiframeproblem import MultiFrameProblem
 from globalplanner import *
+from gcodeproblem import GCodeProblem
+from gcodeschedulerproblem import GCodeSchedulerProblem
