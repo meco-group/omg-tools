@@ -948,8 +948,8 @@ class SchedulerProblem(Problem):
 
         # evaluate resulting splines to get evaluations at knots = coeffs-guess
         # Note: conservatism is neglected here (spline value = coeff value)
-        coeffs_x = fx(self.vehicles[0].knots[self.vehicles[0].degree-1:-(self.vehicles[0].degree-1)])
-        coeffs_y = fy(self.vehicles[0].knots[self.vehicles[0].degree-1:-(self.vehicles[0].degree-1)])
+        coeffs_x = fx(self.vehicles[0].basis.greville())
+        coeffs_y = fy(self.vehicles[0].basis.greville())
         init_guess = np.c_[coeffs_x, coeffs_y]
 
         # suppose vehicle is moving at half of vmax to calculate motion time,
