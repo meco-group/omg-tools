@@ -264,10 +264,6 @@ class GCodeSchedulerProblem(Problem):
         return Environment(rooms=rooms)
 
     def create_segment(self, block):
-        if 'orientation' in block:
-            orientation = block['orientation']
-        else:
-            orientation = 0
         if isinstance(block['shape'], Rectangle):
             xmin = block['pose'][0] - block['shape'].width*0.5
             xmax = block['pose'][0] + block['shape'].width*0.5
@@ -278,7 +274,7 @@ class GCodeSchedulerProblem(Problem):
             # not possible to give simple limits for e.g. Ring shape
             limits = None
         border = {'shape': block['shape'],
-                  'pose': block['pose'], 'orientation': orientation, 'limits': limits}
+                  'pose': block['pose'], 'limits': limits}
         segment = {'border': border, 'number': self.n_current_block, 'start':block['start'], 'end':block['end']}
         return segment
 
