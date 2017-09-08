@@ -23,11 +23,10 @@ from ..basics.optilayer import OptiFather, OptiChild
 from ..vehicles.fleet import get_fleet_vehicles
 from ..execution.plotlayer import PlotLayer
 from ..basics.spline_extra import definite_integral
-from ..basics.spline_extra import shiftoverknot_T, shift_spline, evalspline
+from ..basics.spline_extra import shift_spline, evalspline
 from ..basics.geometry import compute_rectangle_overlap_center
 from casadi import inf
 import numpy as np
-from itertools import groupby
 
 
 class MultiFrameProblem(Problem):
