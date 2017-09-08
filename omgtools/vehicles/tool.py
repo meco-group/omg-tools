@@ -117,7 +117,6 @@ class Tool(Vehicle):
         position = self.define_parameter('poseT', 3)
         x, y, z = splines
         term_con = [(x, position[0]), (y, position[1]), (z, position[2])]
-        term_con_der = []
         for d in range(1, self.degree+1):
             term_con_der.extend([(x.derivative(d), 0.), (y.derivative(d), 0.), (z.derivative(d), 0.)])
         return [term_con, term_con_der]
