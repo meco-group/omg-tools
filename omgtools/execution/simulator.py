@@ -132,6 +132,38 @@ class Simulator:
                 trajectories[str(vehicle)] = vehicle.trajectories
         return trajectories
 
+    def run_segment(self, simulate=True, **kwargs):
+        self.deployer.reset()
+        stop = False
+        while not stop:
+            if isinstance(self.problem.motion_times[0], (int,float)):
+                self.update_time = self.problem.motion_times[0]
+            else:
+                self.update_time = 0.1  # in first iteration make small step
+            # update deployer
+            self.deployer.update(self.current_time, None, self.update_time)
+            self.update_time = self.problem.motion_times[0]
+            # simulate problem
+            self.problem.simulate(self.current_time, self.update_time, self.sample_time)
+            # check stop condition
+            stop = self.problem.stop_criterium(self.current_time, self.update_time)
+            ### adapted ###
+            if (stop or self.update_time - float(self.problem.vehicles[0].signals['time'][:, -1] - self.current_time)) > self.sample_time:
+                update_time = float(self.problem.vehicles[0].signals['time'][:, -1] - self.current_time)
+                self.update_timing(update_time-self.sample_time) #correcting for first time
+            else:
+                self.update_timing()
+        self.problem.final()
+        # return trajectories and signals
+        trajectories, signals = {}, {}
+        if len(self.problem.vehicles) == 1:
+            return self.problem.vehicles[0].traj_storage, self.problem.vehicles[0].signals
+        else:
+            for vehicle in self.problem.vehicles:
+                trajectories[str(vehicle)] = vehicle.traj_storage
+                signals[str(vehicle)] = vehicle.signals
+        return trajectories, signals
+
     def hard_stop(self, current_time, stop_time, perturbation):
         self.problem.simulate(current_time, stop_time, self.sample_time)
         for k, vehicle in enumerate(self.problem.vehicles):
