@@ -101,8 +101,8 @@ class Problem(OptiChild, PlotLayer):
         father.init_parameters()
 
     def solve(self, current_time, update_time):
-        current_time -= self.start_time # start_time: the point in time where you start solving
-        self.init_step(current_time, update_time)
+        current_time -= self.start_time  # start_time: the point in time where you start solving
+        self.init_step(current_time, update_time)  # pass on update_time to make initial guess
         # set initial guess, parameters, lb & ub
         var = self.father.get_variables()
         par = self.father.set_parameters(current_time)

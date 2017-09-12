@@ -20,10 +20,10 @@
 
 from problem import Problem
 from gcodeproblem import GCodeProblem
-from ..basics.shape import Rectangle, Circle
+from ..basics.shape import Rectangle, Square, Circle
 from ..environment.environment import Environment
 from ..basics.shape import Rectangle, Ring
-from ..basics.geometry import distance_between_points
+from ..basics.geometry import distance_between_points, point_in_polyhedron
 from ..basics.spline import BSplineBasis
 from ..basics.spline_extra import concat_splines
 
@@ -72,9 +72,12 @@ class GCodeSchedulerProblem(Problem):
         # will be selected
         self.segments = self.environment.rooms[
                            self.n_current_block:self.n_current_block+self.n_segments]
+        # if there is only one segment, save the next one to check when the tool enters the next segment
+        if self.n_segments == 1:
+            self.next_segment = self.environment.rooms[self.n_current_block+1]
 
         # total number of considered segments in the provided GCode
-        self.cnt = self.segments[-1]['number']
+        self.cnt = len(self.environment.rooms)-1
 
         # get initial guess for trajectories (based on central line) and motion times, for all segments
         init_guess, self.motion_times = self.get_init_guess()
@@ -89,10 +92,19 @@ class GCodeSchedulerProblem(Problem):
         # solve the local problem with a receding horizon,
         # and update segments if necessary
 
+        # update current state
+        if not hasattr(self.vehicles[0], 'signals'):
+            # first iteration
+            self.curr_state = self.vehicles[0].prediction['state']
+        else:
+            # all other iterations
+            self.curr_state = self.vehicles[0].signals['state'][:,-1]
+
         # did we move far enough over the current segment yet?
         segments_valid = self.check_segments()
         if not segments_valid:
             # add new segment and remove first one
+            import pdb; pdb.set_trace()  # breakpoint 52ff7b10 //
             self.n_current_block += 1
             self.update_segments()
 
@@ -101,25 +113,17 @@ class GCodeSchedulerProblem(Problem):
             # self.init_guess is filled in by update_segments()
             # this also updates self.motion_time
             self.local_problem.reset_init_guess(self.init_guess)
-        else:
-            # update motion time variables (remaining time)
-            for k in range(self.n_segments):
-                self.motion_times[k] = self.local_problem.father.get_variables(
-                                       self.local_problem, 'T'+str(k),)[0][0]
 
         # solve local problem
         self.local_problem.solve(current_time, update_time)
 
+        # update motion time variables (remaining time)
+        for k in range(self.n_segments):
+            self.motion_times[k] = self.local_problem.father.get_variables(
+                                   self.local_problem, 'T'+str(k),)[0][0]
+
         # save solving time
         self.update_times.append(self.local_problem.update_times[-1])
-
-        # get current state
-        if not hasattr(self.vehicles[0], 'signals'):
-            # first iteration
-            self.curr_state = self.vehicles[0].prediction['state']
-        else:
-            # all other iterations
-            self.curr_state = self.vehicles[0].signals['state'][:,-1]
 
     # ========================================================================
     # Simulation related functions
@@ -131,9 +135,11 @@ class GCodeSchedulerProblem(Problem):
 
     def simulate(self, current_time, simulation_time, sample_time):
         # update motion times
-        for k in range(self.n_segments):
-            self.motion_times[k] = self.local_problem.father.get_variables(
-                                   self.local_problem, 'T'+str(k),)[0][0]
+        # import pdb; pdb.set_trace()  # breakpoint e82fb6b2 //
+        # for k in range(self.n_segments):
+        #     self.motion_times[k] = self.local_problem.father.get_variables(
+        #                            self.local_problem, 'T'+str(k),)[0][0]
+
         # save segment
         # store trajectories
         if not hasattr(self, 'segment_storage'):
@@ -142,8 +148,8 @@ class GCodeSchedulerProblem(Problem):
         # simulate one segment at a time
         # simulation_time = self.motion_times[0]
         # simulate in receding horizon with small steps
-        if simulation_time == np.inf:  # when calling run_once
-            simulation_time = sum(self.motion_times)
+        # if simulation_time == np.inf:  # when calling run_once
+        #     simulation_time = sum(self.motion_times)
         repeat = int(simulation_time/sample_time)
 
         # copy segments, to avoid problems when removing elements from self.segments
@@ -233,7 +239,7 @@ class GCodeSchedulerProblem(Problem):
             if block.type in ['G00', 'G01']:
                 # add tolerance to width to obtain the complete reachable region
                 width = distance_between_points(block.start, block.end) + 2*tolerance
-                height = tolerance
+                height = 2*tolerance
                 orientation = np.arctan2(block.end[1]-block.start[1], block.end[0]-block.start[0])
                 shape = Rectangle(width = width,  height = height, orientation = orientation)
                 pose = [block.start[0] + (block.end[0]-block.start[0])*0.5,
@@ -280,14 +286,31 @@ class GCodeSchedulerProblem(Problem):
 
         # check if the tool still has to move over the first element of
         # self.segments, if so this means no movement is made in this iteration yet
-        # if tool has already moved, we will add an extra segment and drop the first one
+        # if tool has already moved (i.e. the tool position is inside the overlap region
+        # between the two segments), we will add an extra segment and drop the first one
 
-        # Todo: to update per segment change below by
-        #  if (np.array(self.curr_state) == np.array(self.segments[0]['start'])).all():
-        # i.e. if you still have to move over first segment, keep segments, else you are probably
-        # at the end of segment one --> shift
-
-        warnings.warn('solving with receding horizon and small steps for the moment')
+        # if final goal is not on the current segment, check if current state overlaps with the next segment
+        if (self.segments[0]['end'] == self.goal_state and
+            self.segments[0]['start'] == self.environment.rooms[-1]['start']):
+            # this is the last segment, keep it until arrival
+            valid = True
+            return valid
+        else:
+            if (self.n_segments == 1 and hasattr(self, 'next_segment')):
+                if self.point_in_segment(self.next_segment, self.curr_state[:2], distance=self.vehicles[0].shapes[0].radius):
+                    # only called if self.n_segments = 1,
+                    # then self.segments[1] doesn't exist and self.next_segment does exist
+                    valid = False
+                else:
+                    valid = True
+                return valid
+            elif self.point_in_segment(self.segments[1], self.curr_state[:2], distance=self.vehicles[0].shapes[0].radius):
+                # if vehicle is in overlap region between current and next segment
+                valid = False
+                return valid
+            else:
+                valid = True
+                return valid
 
         if (np.array(self.curr_state) == np.array(self.segments[0]['end'])).all():
             # current state is equal to end of segment 0
@@ -306,6 +329,8 @@ class GCodeSchedulerProblem(Problem):
             # create segment for next block
             new_segment = self.environment.rooms[self.n_current_block+(self.n_segments-1)]
             self.segments.append(new_segment)  # add next segment
+            if self.n_segments == 1:
+                self.next_segment = self.environment.rooms[self.n_current_block+1]
         else:
             # all segments are currently in self.segments, don't add a new one
             # and lower the amount of segments that are combined
@@ -362,6 +387,7 @@ class GCodeSchedulerProblem(Problem):
                                   segment['shape'].radius_in**2, -inf, 0.)
             self.define_constraint((position[0] - center[0])**2 + (position[1] - center[1])**2 -
                                   segment['shape'].radius_out**2, -inf, 0.)
+
     def generate_problem(self):
 
         local_rooms = self.environment.rooms[self.n_current_block:self.n_current_block+self.n_segments]
@@ -420,7 +446,6 @@ class GCodeSchedulerProblem(Problem):
             self.vehicles[0].set_initial_conditions(self.curr_state, input=self.vehicles[0].signals['input'][:,-1])
         else:
             self.vehicles[0].set_initial_conditions(self.curr_state)
-        import pdb; pdb.set_trace()  # breakpoint 07ab7e9c //
         self.vehicles[0].set_terminal_conditions(self.segments[-1]['end'])
 
         end_time = time.time()
@@ -435,16 +460,8 @@ class GCodeSchedulerProblem(Problem):
         if isinstance(segment['shape'], Rectangle):
             points = np.c_[segment['start'], segment['end']]
         elif isinstance(segment['shape'], Ring):
-            start_angle = np.arctan2(segment['start'][1]-segment['pose'][1],segment['start'][0]-segment['pose'][0])
-            end_angle = np.arctan2(segment['end'][1]-segment['pose'][1],segment['end'][0]-segment['pose'][0])
-            # Todo: is it logical to put direction in segment shape? Or put directly in segment somehow?
-            if segment['shape'].direction == 'CW':
-                if start_angle < end_angle:
-                    start_angle += 2*np.pi  # arctan2 returned a negative start_angle, make positive
-            elif segment['shape'].direction == 'CCW':
-                if start_angle > end_angle:  # arctan2 returned a negative end_angle, make positive
-                    end_angle += 2*np.pi
-            s = np.linspace(start_angle, end_angle, 50)
+            import pdb; pdb.set_trace()  # breakpoint 8b9c8928 //
+            s = np.linspace(segment['shape'].start_angle, segment['shape'].end_angle, 50)
             # calculate radius
             radius = (segment['shape'].radius_in+segment['shape'].radius_out)*0.5
             points = np.vstack((segment['pose'][0] + radius*np.cos(s), segment['pose'][1] + radius*np.sin(s)))
