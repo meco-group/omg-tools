@@ -38,7 +38,7 @@ tool.set_terminal_conditions([GCode[-1].end])  # goal position of last GCode blo
 schedulerproblem = GCodeSchedulerProblem(tool, GCode, n_segments=n_blocks)
 
 # put problem in simulator
-simulator = Simulator(schedulerproblem)
+simulator = Simulator(schedulerproblem, sample_time=0.001)
 
 # define what you want to plot
 schedulerproblem.plot('scene')
