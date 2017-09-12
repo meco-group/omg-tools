@@ -46,8 +46,7 @@ tool.plot('input', knots=True, prediction=True, labels=['v_x (m/s)', 'v_y (m/s)'
 tool.plot('dinput', knots=True, prediction=True, labels=['a_x (m/s^2)', 'a_y (m/s^2)', 'a_z (m/s^2)'])
 
 # simulate using a receding horizon of one segment
-# Todo: run(some_option) or run_segment()
-simulator.run()
+simulator.run_segment()
 
 schedulerproblem.plot_movie('scene', number_of_frames=100, repeat=False)
 # schedulerproblem.save_movie('scene', format='gif', name='gcodegif', number_of_frames=100, movie_time=10, axis=False)
