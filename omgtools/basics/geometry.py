@@ -107,7 +107,7 @@ def intersect_lines(line1, line2):
 
     return intersection_point
 
-def point_in_polyhedron(point, polyhedron_shape, polyhedron_position):
+def point_in_polyhedron(point, polyhedron_shape, polyhedron_position, margin=0):
     # is the point inside the polyhedron?
 
     # for each vertex couple (=side) check if point is at positive side of normal
@@ -116,7 +116,7 @@ def point_in_polyhedron(point, polyhedron_shape, polyhedron_position):
     for idx, hyperplane in hyperplanes.items():
         a = hyperplane['a']
         b = hyperplane['b']
-        if ((a[0]*point[0] + a[1]*point[1] - b) > 0):
+        if ((a[0]*point[0] + a[1]*point[1] - b - margin) > 0):
             return False
     return True
 
