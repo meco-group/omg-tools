@@ -133,6 +133,15 @@ class SchedulerProblem(Problem):
     def solve(self, current_time, update_time):
         # solve the local problem with a receding horizon,
         # and update frames if necessary
+
+        # update current state
+        if not hasattr(self.vehicles[0], 'signals'):
+            # first iteration
+            self.curr_state = self.vehicles[0].prediction['state']
+        else:
+            # all other iterations
+            self.curr_state = self.vehicles[0].signals['state'][:,-1]
+
         frames_valid = self.check_frames()
         if not frames_valid:
             self.cnt += 1  # count frame
@@ -196,14 +205,6 @@ class SchedulerProblem(Problem):
 
         # save solving time
         self.update_times.append(self.local_problem.update_times[-1])
-
-        # get current state
-        if not hasattr(self.vehicles[0], 'signals'):
-            # first iteration
-            self.curr_state = self.vehicles[0].prediction['state']
-        else:
-            # all other iterations
-            self.curr_state = self.vehicles[0].signals['state'][:,-1]
 
     # ========================================================================
     # Simulation related functions
