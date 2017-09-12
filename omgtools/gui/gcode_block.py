@@ -14,9 +14,9 @@ class GCodeBlock(object):
             self.Y0 = prev_block.Y1
             self.Z0 = prev_block.Z1
         else:
-            self.X0 = 0
-            self.Y0 = 0
-            self.Z0 = 0
+            self.X0 = 0.
+            self.Y0 = 0.
+            self.Z0 = 0.
 
         self.X1 = command['X'] if 'X' in command else self.X0
         self.Y1 = command['Y'] if 'Y' in command else self.Y0
@@ -80,15 +80,17 @@ class G02(GCodeBlock):
         start = [self.X0, self.Y0, self.Z0]
         end = [self.X1, self.Y1, self.Z1]
 
-        value = (2*self.radius**2 -distance_between(start,end)**2)/(2*self.radius**2)
-        if np.abs(value) > 1:
-            # may be due to floating point operations, but arccos only works in [-1,1]
-            if np.abs(value) - 1 <= 1e-2:
-                # manual rounding
-                value = 1*np.sign(value)
-            else:
-                raise ValueError('Arccos was significantly outside range [-1,1], something is wrong')
-        arc_angle = np.arccos(value)
+        value = np.arctan2(end[1],end[0]) - np.arctan2(start[1],start[0])
+        arc_angle = value
+        # value = (2*self.radius**2 -distance_between(start,end)**2)/(2*self.radius**2)
+        # if np.abs(value) > 1:
+        #     # may be due to floating point operations, but arccos only works in [-1,1]
+        #     if np.abs(value) - 1 <= 1e-2:
+        #         # manual rounding
+        #         value = 1*np.sign(value)
+        #     else:
+        #         raise ValueError('Arccos was significantly outside range [-1,1], something is wrong')
+        # arc_angle = np.arccos(value)
 
         coords = []
 
@@ -188,15 +190,17 @@ class G03(GCodeBlock):
         start = [self.X0, self.Y0, self.Z0]
         end = [self.X1, self.Y1, self.Z1]
 
-        value = (2*self.radius**2 -distance_between(start,end)**2)/(2*self.radius**2)
-        if np.abs(value) > 1:
-            # may be due to floating point operations, but arccos only works in [-1,1]
-            if np.abs(value) - 1 <= 1e-2:
-                # manual rounding
-                value = 1*np.sign(value)
-            else:
-                raise ValueError('Arccos was significantly outside range [-1,1], something is wrong')
-        arc_angle = np.arccos(value)
+        value = np.arctan2(end[1],end[0]) - np.arctan2(start[1],start[0])
+        arc_angle = value
+        # value = (2*self.radius**2 -distance_between(start,end)**2)/(2*self.radius**2)
+        # if np.abs(value) > 1:
+        #     # may be due to floating point operations, but arccos only works in [-1,1]
+        #     if np.abs(value) - 1 <= 1e-2:
+        #         # manual rounding
+        #         value = 1*np.sign(value)
+        #     else:
+        #         raise ValueError('Arccos was significantly outside range [-1,1], something is wrong')
+        # arc_angle = np.arccos(value)
 
         coords = []
 
