@@ -96,7 +96,7 @@ class GCodeProblem(Problem):
             self.define_constraint(spline(1.) - condition, 0., 0.)
 
     def define_connection_constraints(self):
-        # connect splines over different frames
+        # connect splines over different segments
         # only necessary when n_segments>1
         for j in range(self.n_segments-1):
             for spline1, spline2 in zip(self.vehicles[0].splines[j], self.vehicles[0].splines[j+1]):
