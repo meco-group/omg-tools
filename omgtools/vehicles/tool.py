@@ -117,6 +117,7 @@ class Tool(Vehicle):
         position = self.define_parameter('poseT', 3)
         x, y, z = splines
         term_con = [(x, position[0]), (y, position[1]), (z, position[2])]
+        term_con_der = []
         for d in range(1, self.degree+1):
             term_con_der.extend([(x.derivative(d), 0.), (y.derivative(d), 0.), (z.derivative(d), 0.)])
         return [term_con, term_con_der]
@@ -145,7 +146,7 @@ class Tool(Vehicle):
             init_value = [init_value]  # use same format as in n_seg > 1
         else:  # multiple segments
             if subgoals is None:
-                raise AttributeError('No subgoal given, while there are multiple segments,'
+                raise AttributeError('No subgoal given, while there are multiple segments, '
                                     +'cannot compute initial guess')
             else:
                 init_value = []
@@ -189,7 +190,7 @@ class Tool(Vehicle):
         shape = self.shapes[0]  # tool shape
         checkpoints, rad = shape.get_checkpoints()  # tool checkpoints
         if ((isinstance(segment['shape'], (Rectangle, Square)) and
-            segment['shape'].orientation == 0.0) and
+            segment['shape'].orientation in [0.0, np.pi/2, np.pi, 2*np.pi, -np.pi/2, -np.pi, -2*np.pi]) and
             (isinstance(shape, Circle) or
             (isinstance(shape, (Rectangle, Square)) and
              shape.orientation == 0))):
@@ -207,9 +208,10 @@ class Tool(Vehicle):
             (isinstance(shape, Circle))):
             # we have a diagonal line segment
 
-            # in that case for any point [x, y] on the (infinite) line must hold:
-            # x = l*cos(theta), y = l*sin(theta)
-            # and xy = yx, so x*l*sin(theta) - y*l*cos(theta) = 0
+            # in that case for any point [x, y] on the (infinite) line, the following equation must hold:
+            # y = ax+b
+            # and y - ax + b = 0
+            # with a = the slope, and b = the offset
             # then we can relax this to <= tol and >= tol
 
             # Todo: now we impose that position must lie somewhere on the connection, not that it must lie between
@@ -217,12 +219,17 @@ class Tool(Vehicle):
             # Todo: use hyperplanes?
             # hyp_room = segment['shape'].get_hyperplanes(position = segment['position'])
 
-            angle = segment['shape'].orientation
-            length = np.sqrt((segment['end'][0]-segment['start'][0])**2+(segment['end'][1]-segment['start'][1])**2)
-            self.define_constraint((position[0] * length*np.sin(angle) - position[1] * length*np.cos(angle)) -
-                                    self.tolerance, -inf, 0.)  # minus
-            self.define_constraint((-position[0] * length*np.sin(angle) + position[1] * length*np.cos(angle)) -
-                                    self.tolerance, -inf, 0.)  # plus
+            x1, y1, z1 = segment['start']
+            x2, y2, z2 = segment['end']
+            if x1 != x2:
+                a = (y2-y1)/(x2-x1)
+            else:
+                raise ValueError('Trying to compute the slope of a vertical line,'
+                               + ' impose constraints with alternative formulation')
+            b = y1 - x1*a
+
+            self.define_constraint(a*position[0] + b - position[1] - self.tolerance, -inf, 0.)
+            self.define_constraint(-a*position[0] - b + position[1] - self.tolerance, -inf, 0.)
         elif (isinstance(segment['shape'], (Ring)) and
             (isinstance(shape, Circle))):
             # we have a ring/circle segment
@@ -238,6 +245,18 @@ class Tool(Vehicle):
                                   segment['shape'].radius_out**2, -inf, 0.)
         else:
             raise RuntimeError('Invalid segment obtained when setting up collision avoidance constraints')
+
+        # constrain end point of segment[0] to lie inside a box around its desired end position, because the spline
+        # must stay inside the inifinite line segment or complete circle, this can lead to problems if you don't constrain
+        # the end position to a box (e.g. a trajectory going outside of the overlap region between segments)
+
+        # Todo: combining this constraint with the fact that the spline must lie inside the tolerance band around the line/ring
+        # should give good results?
+        self.define_constraint(position[0](1.) - segment['end'][0] - self.tolerance*1.5, -inf, 0.)
+        self.define_constraint(-position[0](1.) + segment['end'][0] - self.tolerance*1.5, -inf, 0.)
+        self.define_constraint(position[1](1.) - segment['end'][1] - self.tolerance*1.5, -inf, 0.)
+        self.define_constraint(-position[1](1.) + segment['end'][1] - self.tolerance*1.5, -inf, 0.)
+
 
     def splines2signals(self, splines, time):
         signals = {}
