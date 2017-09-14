@@ -586,6 +586,7 @@ class GCodeSchedulerProblem(Problem):
         length_to_travel = np.sqrt((l_x**2+l_y**2+l_z**2))
         max_vel = self.vehicles[0].vmax if hasattr(self.vehicles[0], 'vmax') else (self.vehicles[0].vxmax+self.vehicles[0].vymax+self.vehicles[0].vzmax)*0.5
         motion_time = length_to_travel/(max_vel*0.5)
+        init_guess[-2] = init_guess[-1]  # final velocity is zero
         init_guess[-3] = init_guess[-1]  # final acceleration is also 0 normally
         init_guess[-4] = init_guess[-1]  # final acceleration is also 0 normally
 
