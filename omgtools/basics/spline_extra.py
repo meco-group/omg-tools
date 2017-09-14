@@ -23,6 +23,7 @@ from scipy.interpolate import splev
 import scipy.linalg as la
 import numpy as np
 
+import warnings
 
 def evalspline(s, x):
     # Evaluate spline with symbolic variable
@@ -328,13 +329,22 @@ def concat_splines(segments, segment_times):
                 # give dimensions, to compare using the same time scale
                 # use scale function to give segments[k][l] dimensions
                 # prev_segment already has dimensions
-                if abs(segments[k][l].scale(segment_times[k], shift = prev_time).derivative(d)(prev_time) -
-                       prev_segment[l].derivative(d)(prev_time)) <= 1e-3:
+
+                # Todo: sometimes this check fails, or you get 1e-10 and 1e-11 values that should actually be equal
+                # this seems due to the finite tolerance of ipopt?
+                val1 = segments[k][l].scale(segment_times[k], shift = prev_time).derivative(d)(prev_time)
+                val2 = prev_segment[l].derivative(d)(prev_time)
+                if ( abs(val1 - val2)*0.5/(val1 + val2) <= 1e-3):
                     # more continuity = insert less knots
                     n_insert -= 1
                 else:
                     # spline values were not equal, stop comparing and use latest n_insert value
                     break
+
+            print n_insert
+            warnings.warn('Setting n_insert to 1 manually for now')
+            n_insert = 1
+
             if n_insert!= degree[l]+1:
                 # concatenation requires re-computing the coefficients and/or adding extra knots
                 # here we make the knot vector and coeffs of the total spline (the final output),
@@ -379,12 +389,8 @@ def concat_splines(segments, segment_times):
 
                 # solve system to find new coeffs
                 coeffs_concat = la.solve(eval_bc, eval_sc)
+                # save new coefficients
                 coeffs[l] = coeffs_concat
-                # combine new coefficients with the old ones
-                # remove last segment (its coeffs were adapted)
-                # coeffs[l] = coeffs[l][:-len(prev_segment[l].coeffs)]
-                # add coeffs_concat
-                # coeffs[l] = np.r_[coeffs[l], coeffs_concat]
             else:
                 #there was no continuity, just compute new knot vector and stack coefficients
                 knots[l] = np.r_[
