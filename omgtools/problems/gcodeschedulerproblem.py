@@ -419,10 +419,22 @@ class GCodeSchedulerProblem(Problem):
         if hasattr(self, 'local_problem') and hasattr(self.local_problem.father, '_var_result'):
             # local_problem was already solved, re-use previous solutions to form initial guess
             if self.n_segments > 1:
+                # if updating in receding horizon with small steps:
                 # combine first two spline segments into a new spline = guess for new current segment
-                init_spl, motion_time = self.get_init_guess_combined_segment()
-                init_splines.append(init_spl)
-                motion_times.append(motion_time)
+                # init_spl, motion_time = self.get_init_guess_combined_segment()
+
+                # if updating per segment:
+                # the first segment disappears and the guess is given by data of next segment
+                # spline through next segment and its motion time
+                # spl2 = self.local_problem.father.get_variables(self.vehicles[0], 'splines_seg1')
+                # time2 = self.local_problem.father.get_variables(self.local_problem, 'T1',)[0][0]
+                # init_spl = np.c_[spl2[0].coeffs,spl2[1].coeffs,spl2[2].coeffs]
+                # motion_time = time2
+                # init_splines.append(init_spl)
+                # motion_times.append(motion_time)
+                init_splines.append(np.array(self.local_problem.father.get_variables()[self.vehicles[0].label,'splines_seg1']))
+                motion_times.append(self.local_problem.father.get_variables(self.local_problem, 'T1',)[0][0])
+
             if self.n_segments > 2:
                 # use old solutions for segment 2 until second last segment, these don't change
                 for k in range(2, self.n_segments):
