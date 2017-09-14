@@ -104,6 +104,8 @@ class Problem(OptiChild, PlotLayer):
         current_time -= self.start_time  # start_time: the point in time where you start solving
         self.init_step(current_time, update_time)  # pass on update_time to make initial guess
         # set initial guess, parameters, lb & ub
+        import pdb; pdb.set_trace()  # breakpoint 1bcd8a2a //
+        # Todo: check if initial guess is passed on correctly
         var = self.father.get_variables()
         par = self.father.set_parameters(current_time)
         lb, ub = self.father.update_bounds(current_time)
@@ -113,6 +115,7 @@ class Problem(OptiChild, PlotLayer):
         t1 = time.time()
         t_upd = t1-t0
         self.father.set_variables(result['x'])
+        import pdb; pdb.set_trace()  # breakpoint 7e7a94bf //
         stats = self.problem.stats()
         if stats['return_status'] != 'Solve_Succeeded':
             if stats['return_status'] == 'Maximum_CpuTime_Exceeded':

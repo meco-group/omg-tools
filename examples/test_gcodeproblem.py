@@ -23,12 +23,13 @@ from omgtools import *
 reader = GCodeReader()
 GCode = reader.run()
 
-n_blocks = 3  # amount of GCode blocks to combine
+n_blocks = 2  # amount of GCode blocks to combine
 tol = 5e-1  # required tolerance of the machined part
 bounds = {'vmin':-5, 'vmax':5,
           'amin':-50, 'amax':50,
-          'jmin':-500, 'jmax': 500}
+          'jmin':-500, 'jmax':500}
 tool = Tool(tol, bounds = bounds)
+tool.define_knots(knot_intervals=10)
 tool.set_initial_conditions(GCode[0].start)  # start position of first GCode block
 tool.set_terminal_conditions(GCode[-1].end)  # goal position of last GCode block
 
@@ -36,6 +37,9 @@ tool.set_terminal_conditions(GCode[-1].end)  # goal position of last GCode block
 # each block will be converted to a room, that is put inside the total environment
 # there are two room shapes: rectangle and ring (circle segment with inner and outer diameter)
 schedulerproblem = GCodeSchedulerProblem(tool, GCode, n_segments=n_blocks)
+schedulerproblem.set_options({'solver_options': {'ipopt': {'ipopt.tol': 1e-3,
+														   'ipopt.linear_solver': 'ma57'}}})#,
+                                                           #'ipopt.hessian_approximation': 'limited-memory'}}})
 
 # put problem in simulator
 simulator = Simulator(schedulerproblem, sample_time=0.001)
@@ -45,6 +49,7 @@ schedulerproblem.plot('scene')
 tool.plot('state', knots=True, prediction=True, labels=['x (m)', 'y (m)', 'z (m)'])
 tool.plot('input', knots=True, prediction=True, labels=['v_x (m/s)', 'v_y (m/s)', 'v_z (m/s)'])
 tool.plot('dinput', knots=True, prediction=True, labels=['a_x (m/s^2)', 'a_y (m/s^2)', 'a_z (m/s^2)'])
+tool.plot('ddinput', knots=True, prediction=True, labels=['j_x (m/s^3)', 'j_y (m/s^3)', 'j_z (m/s^3)'])
 
 # simulate using a receding horizon of one segment
 simulator.run_segment()

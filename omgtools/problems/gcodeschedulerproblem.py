@@ -137,12 +137,6 @@ class GCodeSchedulerProblem(Problem):
         self.local_problem.store(current_time, update_time, sample_time)
 
     def simulate(self, current_time, simulation_time, sample_time):
-        # update motion times
-        # import pdb; pdb.set_trace()  # breakpoint e82fb6b2 //
-        # for k in range(self.n_segments):
-        #     self.motion_times[k] = self.local_problem.father.get_variables(
-        #                            self.local_problem, 'T'+str(k),)[0][0]
-
         # save segment
         # store trajectories
         if not hasattr(self, 'segment_storage'):
@@ -332,7 +326,15 @@ class GCodeSchedulerProblem(Problem):
             # last segment is not yet in self.segments, so there are some segments left,
             # create segment for next block
             new_segment = self.environment.rooms[self.n_current_block+(self.n_segments-1)]
-            self.segments.append(new_segment)  # add next segment
+
+            ####################################
+
+            # self.segments.append(new_segment)  # add next segment
+            self.n_segments -= 1
+
+            ####################################
+
+
             if self.n_segments == 1:
                 self.next_segment = self.environment.rooms[self.n_current_block+1]
         else:
@@ -396,7 +398,7 @@ class GCodeSchedulerProblem(Problem):
 
         local_rooms = self.environment.rooms[self.n_current_block:self.n_current_block+self.n_segments]
         local_environment = Environment(rooms=local_rooms)
-        problem = GCodeProblem(self.vehicles[0], local_environment, self.n_segments)
+        problem = GCodeProblem(self.vehicles[0], local_environment, self.n_segments, motion_guess=self.motion_times)
 
         problem.set_options({'solver_options': self.options['solver_options']})
         problem.init()
@@ -454,12 +456,28 @@ class GCodeSchedulerProblem(Problem):
             motion_times.append(motion_time)
 
         # pass on initial guess
+
+        #######################################
+        if hasattr(self, 'local_problem') and hasattr(self.local_problem.father, '_var_result'):
+            init_splines[-1] = np.array(self.local_problem.father.get_variables()[self.vehicles[0].label,'splines_seg1'])
+            motion_times[-1] = self.local_problem.father.get_variables(self.local_problem, 'T1',)[0][0]
+
+            # make beginning of initial guess equal to current state
+            init_splines[0][0][0] = self.curr_state[0]
+            init_splines[0][0][1] = self.curr_state[1]
+            init_splines[0][0][2] = self.curr_state[2]
+
+        #######################################
+
         self.vehicles[0].set_init_spline_values(init_splines, n_seg = self.n_segments)
 
         # set start and goal
         if hasattr (self.vehicles[0], 'signals'):
             # use current vehicle velocity as starting velocity for next frame
-            self.vehicles[0].set_initial_conditions(self.curr_state, input=self.vehicles[0].signals['input'][:,-1])
+            import pdb; pdb.set_trace()  # breakpoint 80b442f1 //
+            self.vehicles[0].set_initial_conditions(self.curr_state, input = 0.99*self.vehicles[0].signals['input'][:,-1],
+                                                                     dinput = 0.99*self.vehicles[0].signals['dinput'][:,-1],
+                                                                     ddinput = 0.99*self.vehicles[0].signals['ddinput'][:,-1])
         else:
             self.vehicles[0].set_initial_conditions(self.curr_state)
         self.vehicles[0].set_terminal_conditions(self.segments[-1]['end'])
@@ -493,9 +511,33 @@ class GCodeSchedulerProblem(Problem):
             #     listy = listy *sign(arrayRow(1,3) - y0) + y0
 
 
+
+
+
+
+
         elif isinstance(segment['shape'], Ring):
-            import pdb; pdb.set_trace()  # breakpoint 8b9c8928 //
-            s = np.linspace(segment['shape'].start_angle, segment['shape'].end_angle, 50)
+            # Todo: start_angle and end_angle are defined based on shape.start and shape.end, which is moved
+            # to make the ring a little larger to take into account the tolerance -->  better use the segment start
+            # and end points to make a guess
+
+            ################################################
+
+            # part of a ring, placed in the origin
+            start_angle = np.arctan2(segment['start'][1]-segment['position'][1],segment['start'][0]-segment['position'][0])
+            end_angle = np.arctan2(segment['end'][1]-segment['position'][1],segment['end'][0]-segment['position'][0])
+            if segment['shape'].direction == 'CW':
+                if start_angle < end_angle:
+                    start_angle += 2*np.pi  # arctan2 returned a negative start_angle, make positive
+            elif segment['shape'] == 'CCW':
+                if start_angle > end_angle:  # arctan2 returned a negative end_angle, make positive
+                    end_angle += 2*np.pi
+
+            s = np.linspace(start_angle, end_angle, 50)
+            # s = np.linspace(segment['shape'].start_angle, segment['shape'].end_angle, 50)
+
+            ###############################################
+
             # calculate radius
             radius = (segment['shape'].radius_in+segment['shape'].radius_out)*0.5
             points = np.vstack((segment['pose'][0] + radius*np.cos(s), segment['pose'][1] + radius*np.sin(s)))

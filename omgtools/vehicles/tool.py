@@ -122,14 +122,18 @@ class Tool(Vehicle):
             term_con_der.extend([(x.derivative(d), 0.), (y.derivative(d), 0.), (z.derivative(d), 0.)])
         return [term_con, term_con_der]
 
-    def set_initial_conditions(self, state, input=None):
+    def set_initial_conditions(self, state, input=None, dinput=None, ddinput=None):
         if input is None:
             input = np.zeros(3)
+        if dinput is None:
+            dinput = np.zeros(3)
+        if ddinput is None:
+            ddinput = np.zeros(3)
         # list all predictions that are used in set_parameters
         self.prediction['state'] = state
         self.prediction['input'] = input
-        self.prediction['dinput'] = np.zeros(3)
-        self.prediction['ddinput'] = np.zeros(3)
+        self.prediction['dinput'] = dinput
+        self.prediction['ddinput'] = ddinput
 
     def set_terminal_conditions(self, position):
         self.poseT = position
