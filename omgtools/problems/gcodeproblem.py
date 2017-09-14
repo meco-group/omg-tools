@@ -29,7 +29,7 @@ class GCodeProblem(Problem):
     # here environment is a local part (given by some GCode blocks) of the
     # total environment (given by the combination of all GCode blocks)
     # the rooms represent the GCode segments
-    def __init__(self, fleet, environment, n_segments, options=None):
+    def __init__(self, fleet, environment, n_segments, options=None, **kwargs):
         Problem.__init__(self, fleet, environment, options, label='gcodeproblem')
         self.n_segments = n_segments  # amount of GCode commands to connect
         if self.n_segments > len(self.environment.rooms):
@@ -38,6 +38,10 @@ class GCodeProblem(Problem):
         self.init_time = None
         self.start_time = 0.
         self.objective = 0.
+
+        # an initial guess for the motion time may be passed by the scheduler during problem creation
+        if 'motion_time_guess' in kwargs:
+            self.motion_time_guess = kwargs['motion_time_guess']
 
     def set_default_options(self):
         Problem.set_default_options(self)
@@ -220,26 +224,18 @@ class GCodeProblem(Problem):
                                      len(self.update_times)))
 
     def init_step(self, current_time, update_time):
-        if (current_time - self.start_time) > 0:
-            # compute total remaining motion time
-            T = 0
-            for room in range(self.n_segments):
-                T += self.father.get_variables(self, 'T'+str(room))[0][0]
-            # check if almost arrived, if so lower the update time
-            if T < 2*update_time:
-                update_time = T - update_time
-                target_time = T
-            else:
-                target_time = T - update_time
-            # create spline which starts from the position at update_time and goes
-            # to goal position at target_time. Approximate/Represent this spline in
-            # a new basis with new equidistant knots.
+        import pdb; pdb.set_trace()  # breakpoint 1d7a7c0a //
+        # set guess for motion time, that was passed on by the scheduler
+        if hasattr(self, 'motion_time_guess'):
+            T_guess = self.motion_time_guess
+        else:
+            T_guess = []
+            for idx in range(self.n_segments):
+                T_guess.append(self.father.get_variables(self, 'T'+str(idx))[0][0])  # remaining motion time for first room
+        for idx in range(self.n_segments):
+            self.father.set_variables(T_guess[idx], self, 'T'+str(idx))  # only change time of first room
 
-            # shifting spline is only required for first room (index 0), so seg_shift=[0]
-            self.father.transform_primal_splines(
-                lambda coeffs, basis: shift_spline(coeffs, update_time/target_time, basis), seg_shift=[0])
-            T_0 = self.father.get_variables(self, 'T'+str(0))[0][0]  # remaining motion time for first room
-            self.father.set_variables(T_0-update_time, self, 'T0')  # only change time of first room
+        # since we are simulating per segment, no further shifting of splines is required
 
     def compute_partial_objective(self, current_time):
         self.objective = current_time
