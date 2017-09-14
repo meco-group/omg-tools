@@ -49,6 +49,7 @@ class GCodeSchedulerProblem(Problem):
         self.problem_options['freeT'] = True  # only this one is available
         self.start_time = 0.
         self.update_times=[]
+        self.motion_time_log = []  # save the required motion times
         self.n_segments = kwargs['n_segments'] if 'n_segments' in kwargs else 1  # amount of segments to combine
         self._n_segments = self.n_segments  # save original value (for plotting)
         self.segments = []
@@ -121,6 +122,8 @@ class GCodeSchedulerProblem(Problem):
         for k in range(self.n_segments):
             self.motion_times[k] = self.local_problem.father.get_variables(
                                    self.local_problem, 'T'+str(k),)[0][0]
+        # save motion time for current segment
+        self.motion_time_log.append(self.motion_times[0])
 
         # save solving time
         self.update_times.append(self.local_problem.update_times[-1])
