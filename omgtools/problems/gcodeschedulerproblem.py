@@ -175,6 +175,7 @@ class GCodeSchedulerProblem(Problem):
     def final(self):
         print 'The tool has reached its goal!'
         print self.cnt, ' GCode commands were executed.'
+        print 'Total machining time: ', sum(self.motion_time_log), ' s'
         if self.options['verbose'] >= 1:
             print '%-18s %6g ms' % ('Max update time:',
                                     max(self.update_times)*1000.)
