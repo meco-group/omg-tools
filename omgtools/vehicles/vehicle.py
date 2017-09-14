@@ -247,25 +247,24 @@ class Vehicle(OptiChild, PlotLayer):
     def store(self, current_time, sample_time, spline_segments, segment_times, time_axis=None):
         if not isinstance(segment_times, list):
             segment_times = [segment_times]
-        s = np.linspace(0,1,1000)
-        plotx = []
-        ploty = []
-        for segment in spline_segments:
-            plotx.extend(segment[0](s))
-            ploty.extend(segment[1](s))
-        from matplotlib import pyplot as plt
-        plt.figure()
-        plt.plot(plotx,ploty)
-        plt.pause(0.1)
+        # s = np.linspace(0,1,1000)
+        # plotx = []
+        # ploty = []
+        # for segment in spline_segments:
+        #     plotx.extend(segment[0](s))
+        #     ploty.extend(segment[1](s))
+        # from matplotlib import pyplot as plt
+        # plt.figure()
+        # plt.plot(plotx,ploty)
+        # plt.pause(0.1)
         splines = concat_splines(spline_segments, segment_times)
-        s2 = np.linspace(0,sum(segment_times),1000)
-        plotx2 = []
-        ploty2 = []
-        plotx2.extend(splines[0](s2))
-        ploty2.extend(splines[1](s2))
-        plt.plot(plotx2,ploty2)
-        plt.show()
-        import pdb; pdb.set_trace()  # breakpoint 343a66f6 //
+        # s2 = np.linspace(0,sum(segment_times),1000)
+        # plotx2 = []
+        # ploty2 = []
+        # plotx2.extend(splines[0](s2))
+        # ploty2.extend(splines[1](s2))
+        # plt.plot(plotx2,ploty2)
+        # plt.show()
         self.result_splines = splines
         horizon_time = sum(segment_times)
         if time_axis is None:
