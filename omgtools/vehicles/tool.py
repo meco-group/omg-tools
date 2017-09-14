@@ -35,9 +35,9 @@ class Tool(Vehicle):
         self.tolerance = tolerance
         bounds = bounds or {}
         # three movement directions (3 splines)
-        # impose jerk limits (degree 4)
+        # impose jerk limits (degree 3)
         Vehicle.__init__(
-            self, n_spl=3, degree=4, shapes=self.shapes, options=options)
+            self, n_spl=3, degree=3, shapes=self.shapes, options=options)
 
         # user specified separate velocities for x, y and z
         self.vxmin = bounds['vxmin'] if 'vxmin' in bounds else -0.5
