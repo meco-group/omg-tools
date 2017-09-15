@@ -339,10 +339,13 @@ class Vehicle(OptiChild, PlotLayer):
         self.prediction['state'] = state
         self.prediction['pose'] = self._state2pose(state)
 
-    def overrule_input(self, input):
+    def overrule_input(self, input, dinput=None):
         input = np.array(input)
         self.signals['input'][:, -1] = input
         self.prediction['input'] = input
+        if dinput is not None:
+            self.signals['dinput'][:, -1] = dinput
+            self.prediction['dinput'] = dinput
 
     def simulate(self, simulation_time, sample_time):
         if self.to_simulate:
