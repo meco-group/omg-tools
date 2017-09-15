@@ -325,15 +325,7 @@ class GCodeSchedulerProblem(Problem):
             # last segment is not yet in self.segments, so there are some segments left,
             # create segment for next block
             new_segment = self.environment.rooms[self.n_current_block+(self.n_segments-1)]
-
-            ####################################
-
-            # switch commented lines to only look at a specific set of segments
             self.segments.append(new_segment)  # add next segment
-            # self.n_segments -= 1
-
-            ####################################
-
 
             if self.n_segments == 1:
                 self.next_segment = self.environment.rooms[self.n_current_block+1]
@@ -450,29 +442,7 @@ class GCodeSchedulerProblem(Problem):
             motion_times.append(motion_time)
 
         # pass on initial guess
-
-        #######################################
-        # to look at a specific set of 2 segments uncomment lines below
-        # if hasattr(self, 'local_problem') and hasattr(self.local_problem.father, '_var_result'):
-        #     init_splines[-1] = np.array(self.local_problem.father.get_variables()[self.vehicles[0].label,'splines_seg1'])
-        #     motion_times[-1] = self.local_problem.father.get_variables(self.local_problem, 'T1',)[0][0]
-
-        #     # make beginning of initial guess equal to current state
-        #     init_splines[0][0][0] = self.curr_state[0]
-        #     init_splines[0][0][1] = self.curr_state[1]
-        #     init_splines[0][0][2] = self.curr_state[2]
-
-        #######################################
-
         self.vehicles[0].set_init_spline_values(init_splines, n_seg = self.n_segments)
-
-        # manually set the position and inputs to the end of the simulation (that is unreachable)
-        # set start and goal
-        # test = False
-        # if test:
-        #     self.curr_state = np.array([3.45,40.45,-1.12e-21])
-        #     input_saved = np.array([0.99999999,-0.91890203,-2.43e-21])
-        #     dinput_saved = np.array([1.999e-8,0.31986347,7.938e-21])
 
         if hasattr (self.vehicles[0], 'signals'):
             # use current vehicle velocity as starting velocity for next frame
