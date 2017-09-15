@@ -154,6 +154,19 @@ class Simulator:
             self.update_time = self.problem.motion_times[0]
             # simulate problem
             self.problem.simulate(self.current_time, self.update_time, self.sample_time)
+
+            # adapt state and input to the values at the beginning of the next trajectory, this is necessary because
+            # the simulation can only reach points in time that are multiples of the sample time, such that a gap mostly
+            # between the end position of the simulation and the point in which segments are connected, leading to problems
+            # when constraints are active at the connection point between segments
+            import pdb; pdb.set_trace()  # breakpoint 1325cf66 //
+            pos_splines = self.problem.vehicles[0].result_splines
+            input_splines = [s.derivative(1) for s in pos_splines]
+            dinput_splines = [s.derivative(2) for s in pos_splines]
+            self.problem.vehicles[0].overrule_state(np.hstack([s(self.problem.motion_times[0]) for s in pos_splines]))
+            self.problem.vehicles[0].overrule_input(np.hstack([s(self.problem.motion_times[0]) for s in input_splines]),
+                                             dinput=np.hstack([s(self.problem.motion_times[0]) for s in dinput_splines]))
+
             # check stop condition
             stop = self.problem.stop_criterium(self.current_time, self.update_time)
             ### adapted ###
