@@ -105,7 +105,6 @@ class GCodeSchedulerProblem(Problem):
         segments_valid = self.check_segments()
         if not segments_valid:
             # add new segment and remove first one
-            import pdb; pdb.set_trace()  # breakpoint 52ff7b10 //
             self.n_current_block += 1
             self.update_segments()
 
@@ -142,7 +141,7 @@ class GCodeSchedulerProblem(Problem):
         if not hasattr(self, 'segment_storage'):
             self.segment_storage = []
 
-        # simulate one segment at a time
+        # normally simulate one segment at a time
         # simulation_time = self.motion_times[0]
         # simulate in receding horizon with small steps
         # if simulation_time == np.inf:  # when calling run_once
@@ -329,8 +328,9 @@ class GCodeSchedulerProblem(Problem):
 
             ####################################
 
-            # self.segments.append(new_segment)  # add next segment
-            self.n_segments -= 1
+            # switch commented lines to only look at a specific set of segments
+            self.segments.append(new_segment)  # add next segment
+            # self.n_segments -= 1
 
             ####################################
 
@@ -398,7 +398,7 @@ class GCodeSchedulerProblem(Problem):
 
         local_rooms = self.environment.rooms[self.n_current_block:self.n_current_block+self.n_segments]
         local_environment = Environment(rooms=local_rooms)
-        problem = GCodeProblem(self.vehicles[0], local_environment, self.n_segments, motion_guess=self.motion_times)
+        problem = GCodeProblem(self.vehicles[0], local_environment, self.n_segments, motion_time_guess=self.motion_times)
 
         problem.set_options({'solver_options': self.options['solver_options']})
         problem.init()
@@ -428,12 +428,6 @@ class GCodeSchedulerProblem(Problem):
                 # if updating per segment:
                 # the first segment disappears and the guess is given by data of next segment
                 # spline through next segment and its motion time
-                # spl2 = self.local_problem.father.get_variables(self.vehicles[0], 'splines_seg1')
-                # time2 = self.local_problem.father.get_variables(self.local_problem, 'T1',)[0][0]
-                # init_spl = np.c_[spl2[0].coeffs,spl2[1].coeffs,spl2[2].coeffs]
-                # motion_time = time2
-                # init_splines.append(init_spl)
-                # motion_times.append(motion_time)
                 init_splines.append(np.array(self.local_problem.father.get_variables()[self.vehicles[0].label,'splines_seg1']))
                 motion_times.append(self.local_problem.father.get_variables(self.local_problem, 'T1',)[0][0])
 
@@ -458,26 +452,32 @@ class GCodeSchedulerProblem(Problem):
         # pass on initial guess
 
         #######################################
-        if hasattr(self, 'local_problem') and hasattr(self.local_problem.father, '_var_result'):
-            init_splines[-1] = np.array(self.local_problem.father.get_variables()[self.vehicles[0].label,'splines_seg1'])
-            motion_times[-1] = self.local_problem.father.get_variables(self.local_problem, 'T1',)[0][0]
+        # to look at a specific set of 2 segments uncomment lines below
+        # if hasattr(self, 'local_problem') and hasattr(self.local_problem.father, '_var_result'):
+        #     init_splines[-1] = np.array(self.local_problem.father.get_variables()[self.vehicles[0].label,'splines_seg1'])
+        #     motion_times[-1] = self.local_problem.father.get_variables(self.local_problem, 'T1',)[0][0]
 
-            # make beginning of initial guess equal to current state
-            init_splines[0][0][0] = self.curr_state[0]
-            init_splines[0][0][1] = self.curr_state[1]
-            init_splines[0][0][2] = self.curr_state[2]
+        #     # make beginning of initial guess equal to current state
+        #     init_splines[0][0][0] = self.curr_state[0]
+        #     init_splines[0][0][1] = self.curr_state[1]
+        #     init_splines[0][0][2] = self.curr_state[2]
 
         #######################################
 
         self.vehicles[0].set_init_spline_values(init_splines, n_seg = self.n_segments)
 
+        # manually set the position and inputs to the end of the simulation (that is unreachable)
         # set start and goal
+        # test = False
+        # if test:
+        #     self.curr_state = np.array([3.45,40.45,-1.12e-21])
+        #     input_saved = np.array([0.99999999,-0.91890203,-2.43e-21])
+        #     dinput_saved = np.array([1.999e-8,0.31986347,7.938e-21])
+
         if hasattr (self.vehicles[0], 'signals'):
             # use current vehicle velocity as starting velocity for next frame
-            import pdb; pdb.set_trace()  # breakpoint 80b442f1 //
-            self.vehicles[0].set_initial_conditions(self.curr_state, input = 0.99*self.vehicles[0].signals['input'][:,-1],
-                                                                     dinput = 0.99*self.vehicles[0].signals['dinput'][:,-1],
-                                                                     ddinput = 0.99*self.vehicles[0].signals['ddinput'][:,-1])
+            self.vehicles[0].set_initial_conditions(self.curr_state, input = self.vehicles[0].signals['input'][:,-1],
+                                                                     dinput = self.vehicles[0].signals['dinput'][:,-1])
         else:
             self.vehicles[0].set_initial_conditions(self.curr_state)
         self.vehicles[0].set_terminal_conditions(self.segments[-1]['end'])

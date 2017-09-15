@@ -178,8 +178,6 @@ class GCodeProblem(Problem):
 
         # Todo: this code is not called?
 
-        # Todo: how simulate and shift one segment at a time?
-
         horizon_time = 0
         # compute total remaining motion time
         for room in range(self.n_segments):
@@ -196,7 +194,6 @@ class GCodeProblem(Problem):
             simulation_time = horizon_time - rel_current_time
         self.compute_partial_objective(current_time+simulation_time-self.start_time)
         self.vehicles[0].simulate(simulation_time, sample_time)
-        # self.environment.simulate(simulation_time, sample_time)
         self.vehicles[0].update_plots()
         self.update_plots()
 
@@ -224,7 +221,6 @@ class GCodeProblem(Problem):
                                      len(self.update_times)))
 
     def init_step(self, current_time, update_time):
-        import pdb; pdb.set_trace()  # breakpoint 1d7a7c0a //
         # set guess for motion time, that was passed on by the scheduler
         if hasattr(self, 'motion_time_guess'):
             T_guess = self.motion_time_guess
@@ -236,6 +232,9 @@ class GCodeProblem(Problem):
             self.father.set_variables(T_guess[idx], self, 'T'+str(idx))  # only change time of first room
 
         # since we are simulating per segment, no further shifting of splines is required
+        # if you want to simulate with a receding horizon, add:
+        # self.father.transform_primal_splines(
+        #         lambda coeffs, basis: shift_spline(coeffs, update_time/T_guess[0], basis))
 
     def compute_partial_objective(self, current_time):
         self.objective = current_time
