@@ -37,7 +37,7 @@ tool.set_terminal_conditions(GCode[-1].end)  # goal position of last GCode block
 # each block will be converted to a room, that is put inside the total environment
 # there are two room shapes: rectangle and ring (circle segment with inner and outer diameter)
 schedulerproblem = GCodeSchedulerProblem(tool, GCode, n_segments=n_blocks)
-schedulerproblem.set_options({'solver_options': {'ipopt': {'ipopt.tol': 1e-3,
+schedulerproblem.set_options({'solver_options': {'ipopt': {'ipopt.tol': 1e-8,
 														   'ipopt.linear_solver': 'ma57'}}})#,
                                                            #'ipopt.hessian_approximation': 'limited-memory'}}})
 
