@@ -484,14 +484,10 @@ class GCodeSchedulerProblem(Problem):
 
 
 
-
-
         elif isinstance(segment['shape'], Ring):
-            # Todo: start_angle and end_angle are defined based on shape.start and shape.end, which is moved
-            # to make the ring a little larger to take into account the tolerance -->  better use the segment start
+            # start_angle and end_angle are defined based on shape.start and shape.end, which is moved
+            # to make the ring a little larger to take into account the tolerance, so better use the segment start
             # and end points to make a guess
-
-            ################################################
 
             # part of a ring, placed in the origin
             start_angle = np.arctan2(segment['start'][1]-segment['position'][1],segment['start'][0]-segment['position'][0])
@@ -504,9 +500,9 @@ class GCodeSchedulerProblem(Problem):
                     end_angle += 2*np.pi
 
             s = np.linspace(start_angle, end_angle, 50)
+            # instead of:
             # s = np.linspace(segment['shape'].start_angle, segment['shape'].end_angle, 50)
 
-            ###############################################
 
             # calculate radius
             radius = (segment['shape'].radius_in+segment['shape'].radius_out)*0.5
