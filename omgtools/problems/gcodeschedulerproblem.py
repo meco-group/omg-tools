@@ -463,27 +463,6 @@ class GCodeSchedulerProblem(Problem):
 
         if isinstance(segment['shape'], Rectangle):
             points = np.c_[segment['start'], segment['end']]
-
-            # distance_x = np.abs(segment['end'][0] - segment['start'][0])
-            # distance_y = np.abs(segment['end'][0] - segment['start'][0])
-            # Tx, Tx_tot = self.predict_spline_timing(distance_x)
-            # Ty, Ty_tot = self.predict_spline_timing(distance_y)
-
-            # if Tx_tot > Ty_tot:
-            #     listx, time = obj.create_spline_guess(Tx, Tx_tot, abs(arrayRow(1,2) - x0), n, d)
-            #     # scale according to x
-            #     listy = listx / abs(arrayRow(1,2) - x0) * (arrayRow(1,3) - y0) + y0
-            #     # take sign into account
-            #     listx = listx *sign(arrayRow(1,2) - x0)+ x0
-            # else:
-            #     listy, time = obj.create_spline_guess(Ty, Ty_, abs(arrayRow(1,3) - y0), n, d)
-            #     listx= listy / abs(arrayRow(1,3) - y0) * (arrayRow(1,2) - x0) + x0
-            #     listy = listy *sign(arrayRow(1,3) - y0) + y0
-
-
-
-
-
         elif isinstance(segment['shape'], Ring):
             # start_angle and end_angle are defined based on shape.start and shape.end, which is moved
             # to make the ring a little larger to take into account the tolerance, so better use the segment start
@@ -639,44 +618,3 @@ class GCodeSchedulerProblem(Problem):
         init_splines = np.r_[coeffs].transpose()
 
         return init_splines, motion_time
-
-
-    # def predict_spline_timing(self, distance):
-    #     # predict the time of each of the 8 phases of the guess:
-    #     # 1: j_lim
-    #     # 2: a_lim
-    #     # 3: -j_lim
-    #     # 4 & 5: v_lim
-    #     # 6: -j_lim
-    #     # 7: -a_lim
-    #     # 8: j_lim
-
-    #     j_lim = self.vehicles[0].vxmax
-    #     a_lim = self.vehicles[0].axmax
-    #     v_lim = self.vehicles[0].jxmax
-
-    #     # determine what the limiting factor is when applying max jerk in phase 1
-    #     # this factor determines the selected T1
-    #     T1_acc = (a_lim/j_lim)  # apply max jerk, when is amax reached
-    #     T1_vel = np.sqrt(v_lim/j_lim)  # apply max jerk, when is vmax reached
-    #     T1_pos = (32 * distance/j_lim)**(1/3.)/4  # apply max jerk, when is distance reached
-    #     T1 = min([T1_acc, T1_vel, T1_pos])
-    #     T3 = T1
-    #     if T1 == T1_pos:
-    #         T2 = 0.
-    #         T4 = 0.
-    #     elif T1 == T1_vel:
-    #         T2 = 0.
-    #         T4 = float(distance/2.-(j_lim*T1**3))/v_lim
-    #     else:
-    #         T2_pos = (2*np.sqrt((a_lim*(a_lim**3 + 4*distance*j_lim**2))/4.) - 3*a_lim**2)/(2.*a_lim*j_lim)  # distance limit
-    #         T2_vel = (float(-a_lim**2)/j_lim + v_lim)/a_lim
-    #         T2 = min([T2_vel, T2_pos])
-    #         if T2 == T2_vel:
-    #             T4 = -(a_lim**2*v_lim - j_lim*distance*a_lim + j_lim*v_lim**2)/float(2*a_lim*j_lim*v_lim)
-    #         else:
-    #             T4 = 0.
-    #     T = [T1, T2, T3, T4, T4, T3, T2, T1]
-    #     T_tot = sum(T)
-
-    #     return T, T_tot
