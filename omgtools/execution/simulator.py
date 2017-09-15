@@ -21,6 +21,7 @@ import numpy as np
 from deployer import Deployer
 from plotlayer import PlotLayer
 
+
 class Simulator:
 
     def __init__(self, problem, sample_time=0.01, update_time=0.1):
@@ -138,6 +139,14 @@ class Simulator:
         while not stop:
             if isinstance(self.problem.motion_times[0], (int,float)):
                 self.update_time = self.problem.motion_times[0]
+
+                # Todo: use self.problem.motion_times[1] here? then in deployer.update you can predict with the right time
+                # in first iteration the used update time is just a guess
+                # in second iteration, self.problem.motion_times has the two calculated values, but the first one is already used,
+                # so actually you want to use the second one
+                # in the end this update time is only used for state prediction, so not really used in our case, since we know
+                # the state at end of segment
+                # downside: now in the first iteration you will use the guess for the second segment...
             else:
                 self.update_time = 0.1  # in first iteration make small step
             # update deployer
