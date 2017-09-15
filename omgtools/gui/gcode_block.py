@@ -14,8 +14,8 @@ class GCodeBlock(object):
             self.Y0 = prev_block.Y1
             self.Z0 = prev_block.Z1
         else:
-            self.X0 = 13.
-            self.Y0 = 35.
+            self.X0 = 0.
+            self.Y0 = 0.
             self.Z0 = 0.
 
         self.X1 = command['X'] if 'X' in command else self.X0
