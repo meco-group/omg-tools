@@ -233,7 +233,7 @@ class Tool(Vehicle):
 
             # in that case for any point [x, y] on the (infinite) line, the following equation must hold:
             # y = ax+b
-            # and y - ax + b = 0
+            # and y - ax - b = 0
             # with a = the slope, and b = the offset
             # then we can relax this to <= tol and >= tol
 
