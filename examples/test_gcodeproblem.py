@@ -23,11 +23,11 @@ from omgtools import *
 reader = GCodeReader()
 GCode = reader.run()
 
-n_blocks = 2  # amount of GCode blocks to combine
+n_blocks = 3  # amount of GCode blocks to combine
 tol = 5e-1  # required tolerance of the machined part
-bounds = {'vmin':-5, 'vmax':5,
-          'amin':-50, 'amax':50,
-          'jmin':-500, 'jmax':500}
+bounds = {'vmin':-1000, 'vmax':1000,
+          'amin':-2e4, 'amax':2e4,
+          'jmin':-0.85e6, 'jmax':0.85e6}
 tool = Tool(tol, bounds = bounds)
 tool.define_knots(knot_intervals=10)
 tool.set_initial_conditions(GCode[0].start)  # start position of first GCode block
