@@ -275,12 +275,12 @@ class Tool(Vehicle):
 
         # Todo: combining this constraint with the fact that the spline must lie inside the tolerance band around the line/ring
         # should give good results?
-        # build in a little conservatism (0.9 instead of 1) to take into account that the overlap region is not a rectangle
-        # with orientation 0
-        self.define_constraint(position[0](1.) - segment['end'][0] - self.tolerance*0.9, -inf, 0.)
-        self.define_constraint(-position[0](1.) + segment['end'][0] - self.tolerance*0.9, -inf, 0.)
-        self.define_constraint(position[1](1.) - segment['end'][1] - self.tolerance*0.9, -inf, 0.)
-        self.define_constraint(-position[1](1.) + segment['end'][1] - self.tolerance*0.9, -inf, 0.)
+        # build in a margin to take into account that the overlap region is not a rectangle
+        # with orientation 0, this effect has a maximum when orientation is 45 degrees, and has effect of sqrt(2)~1.42
+        self.define_constraint(position[0](1.) - segment['end'][0] - self.tolerance*1.42, -inf, 0.)
+        self.define_constraint(-position[0](1.) + segment['end'][0] - self.tolerance*1.42, -inf, 0.)
+        self.define_constraint(position[1](1.) - segment['end'][1] - self.tolerance*1.42, -inf, 0.)
+        self.define_constraint(-position[1](1.) + segment['end'][1] - self.tolerance*1.42, -inf, 0.)
 
 
     def splines2signals(self, splines, time):
