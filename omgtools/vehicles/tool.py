@@ -210,6 +210,7 @@ class Tool(Vehicle):
         # check vehicle shape and orientation
         # these determine the formulation of the collision avoidance constraints
         shape = self.shapes[0]  # tool shape
+        shape_size = shape.radius  # tool size
         checkpoints, rad = shape.get_checkpoints()  # tool checkpoints
         if ((isinstance(segment['shape'], (Rectangle, Square)) and
             segment['shape'].orientation in [0.0, np.pi/2, np.pi, 2*np.pi, -np.pi/2, -np.pi, -2*np.pi]) and
@@ -262,9 +263,9 @@ class Tool(Vehicle):
 
             center = segment['pose']
             self.define_constraint(-(position[0] - center[0])**2 - (position[1] - center[1])**2 +
-                                  segment['shape'].radius_in**2, -inf, 0.)
+                                  (segment['shape'].radius_in + shape_size)**2, -inf, 0.)
             self.define_constraint((position[0] - center[0])**2 + (position[1] - center[1])**2 -
-                                  segment['shape'].radius_out**2, -inf, 0.)
+                                  (segment['shape'].radius_out - shape_size)**2, -inf, 0.)
         else:
             raise RuntimeError('Invalid segment obtained when setting up collision avoidance constraints')
 
