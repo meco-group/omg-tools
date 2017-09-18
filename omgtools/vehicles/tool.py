@@ -251,8 +251,8 @@ class Tool(Vehicle):
                                + ' impose constraints with alternative formulation')
             b = y1 - x1*a
 
-            self.define_constraint(a*position[0] + b - position[1] - self.tolerance, -inf, 0.)
-            self.define_constraint(-a*position[0] - b + position[1] - self.tolerance, -inf, 0.)
+            self.define_constraint(a*position[0] + b - position[1] - self.tolerance + shape_size, -inf, 0.)
+            self.define_constraint(-a*position[0] - b + position[1] - self.tolerance + shape_size, -inf, 0.)
         elif (isinstance(segment['shape'], (Ring)) and
             (isinstance(shape, Circle))):
             # we have a ring/circle segment
