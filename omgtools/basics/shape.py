@@ -104,7 +104,12 @@ class Ring(Shape2D):
         return [points]
 
     def get_canvas_limits(self):
-        points = np.c_[self.start, self.end]
+        # take into account the ring-shape in computation, by computing points on
+        # outer side of the ring
+        s = np.linspace(self.start_angle, self.end_angle, 50)
+        points_out = np.vstack((
+            (self.radius_out*np.cos(s), self.radius_out*np.sin(s)), 0*s))
+        points = np.c_[self.start, self.end, points_out]
         max_xy = np.amax(points, axis=1)
         min_xy = np.amin(points, axis=1)
         return [np.array([min_xy[0], max_xy[0]]),
