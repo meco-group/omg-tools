@@ -102,10 +102,13 @@ class GCodeProblem(Problem):
     def define_connection_constraints(self):
         # connect splines over different segments
         # only necessary when n_segments>1
+
+        # in connection point splines should be equal until derivative of order degree-1
+        # suppose that all splines have the same degree
+        self.continuity = self.vehicles[0].splines[0][0].basis.degree  # save desired continuity
         for j in range(self.n_segments-1):
             for spline1, spline2 in zip(self.vehicles[0].splines[j], self.vehicles[0].splines[j+1]):
-                for d in range(spline1.basis.degree):
-                    # in connection point splines should be equal until derivative of order degree-1
+                for d in range(self.continuity):
                     # give dimensions by multiplication with the motion time
                     self.define_constraint(
                         evalspline(spline1.derivative(d), 1)*self.motion_times[j+1]**d -
@@ -165,7 +168,7 @@ class GCodeProblem(Problem):
             round((horizon_time-rel_current_time)/sample_time, 6)) + 1
         time_axis = np.linspace(rel_current_time, rel_current_time + (n_samp-1)*sample_time, n_samp)
         spline_segments = [self.father.get_variables(self.vehicles[0], 'splines_seg'+str(k)) for k in range(self.vehicles[0].n_seg)]
-        self.vehicles[0].store(current_time, sample_time, spline_segments, segment_times, time_axis)
+        self.vehicles[0].store(current_time, sample_time, spline_segments, segment_times, time_axis, continuity=self.continuity)
 
     def reset_init_time(self):
         self.init_time = None

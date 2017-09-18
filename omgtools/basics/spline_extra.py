@@ -305,7 +305,7 @@ def crop_spline(spline, min_value, max_value):
     return BSpline(basis2, coeffs2)
 
 
-def concat_splines(segments, segment_times):
+def concat_splines(segments, segment_times, n_insert=None):
     # While concatenating check continuity of segments, this determines
     # the required amount of knots to insert. If segments are continuous
     # up to degree, no extra knots are required. If they are not continuous
@@ -322,28 +322,26 @@ def concat_splines(segments, segment_times):
                 # all concatenated splines should be of the same degree
                 raise ValueError(
                     'Splines at index ' + l + 'should have same degree.')
-            # check continuity, n_insert can be different for each l
-            n_insert = degree[l]+1  # starts at max value
-            for d in range(degree[l]+1):
-                # use ipopt default tolerance as a treshold for check (1e-3)
-                # give dimensions, to compare using the same time scale
-                # use scale function to give segments[k][l] dimensions
-                # prev_segment already has dimensions
+            if n_insert is None:
+                # check continuity, n_insert can be different for each l
+                n_insert = degree[l]+1  # starts at max value
+                for d in range(degree[l]+1):
+                    # use ipopt default tolerance as a treshold for check (1e-3)
+                    # give dimensions, to compare using the same time scale
+                    # use scale function to give segments[k][l] dimensions
+                    # prev_segment already has dimensions
 
-                # Todo: sometimes this check fails, or you get 1e-10 and 1e-11 values that should actually be equal
-                # this seems due to the finite tolerance of ipopt?
-                val1 = segments[k][l].scale(segment_times[k], shift = prev_time).derivative(d)(prev_time)
-                val2 = prev_segment[l].derivative(d)(prev_time)
-                if ( abs(val1 - val2)*0.5/(val1 + val2) <= 1e-3):
-                    # more continuity = insert less knots
-                    n_insert -= 1
-                else:
-                    # spline values were not equal, stop comparing and use latest n_insert value
-                    break
-
-            print n_insert
-            warnings.warn('Setting n_insert to 1 manually for now')
-            n_insert = 1
+                    # Todo: sometimes this check fails, or you get 1e-10 and 1e-11 values that should actually be equal
+                    # this seems due to the finite tolerance of ipopt? and due to the fact that these are floating point numbers
+                    val1 = segments[k][l].scale(segment_times[k], shift = prev_time).derivative(d)(prev_time)
+                    val2 = prev_segment[l].derivative(d)(prev_time)
+                    if ( abs(val1 - val2)*0.5/(val1 + val2) <= 1e-3):
+                        # more continuity = insert less knots
+                        n_insert -= 1
+                    else:
+                        # spline values were not equal, stop comparing and use latest n_insert value
+                        break
+            # else:  # keep n_insert from input
 
             if n_insert!= degree[l]+1:
                 # concatenation requires re-computing the coefficients and/or adding extra knots

@@ -244,9 +244,16 @@ class Vehicle(OptiChild, PlotLayer):
     # Deploying related functions
     # ========================================================================
 
-    def store(self, current_time, sample_time, spline_segments, segment_times, time_axis=None):
+    def store(self, current_time, sample_time, spline_segments, segment_times, time_axis=None, **kwargs):
         if not isinstance(segment_times, list):
             segment_times = [segment_times]
+        # determine how many knots must be inserted when concatenating splines
+        # obtaining a certain continuity requires inserting this continuity - degree+1 knots
+        import pdb; pdb.set_trace()  # breakpoint 57e8a079 //
+        if 'continuity' in kwargs:
+            n_insert = kwargs['continuity'] - (self.degree-1)
+        else:
+            n_insert = None
         # s = np.linspace(0,1,1000)
         # plotx = []
         # ploty = []
@@ -257,7 +264,7 @@ class Vehicle(OptiChild, PlotLayer):
         # plt.figure()
         # plt.plot(plotx,ploty)
         # plt.pause(0.1)
-        splines = concat_splines(spline_segments, segment_times)
+        splines = concat_splines(spline_segments, segment_times, n_insert=n_insert)
         # s2 = np.linspace(0,sum(segment_times),1000)
         # plotx2 = []
         # ploty2 = []
