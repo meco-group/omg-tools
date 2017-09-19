@@ -53,6 +53,8 @@ class GCodeSchedulerProblem(Problem):
         self.n_segments = kwargs['n_segments'] if 'n_segments' in kwargs else 1  # amount of segments to combine
         self._n_segments = self.n_segments  # save original value (for plotting)
         self.segments = []
+        # are we running over the GCode using the deployer
+        self.with_deployer = kwargs['with_deployer'] if 'with_deployer' in kwargs else False
 
         if not isinstance(self.vehicles[0].shapes[0], Circle):
             raise RuntimeError('Vehicle shape can only be a Circle when solving a GCodeSchedulerProblem')
@@ -449,6 +451,11 @@ class GCodeSchedulerProblem(Problem):
             # use current vehicle velocity as starting velocity for next frame
             self.vehicles[0].set_initial_conditions(self.curr_state, input = self.vehicles[0].signals['input'][:,-1],
                                                                      dinput = self.vehicles[0].signals['dinput'][:,-1])
+        elif self.with_deployer:
+            # initial conditions are already set by calling problem.predict()
+            # which calls vehicle.predict in deployer.run_segment(),
+            # so don't repeat here since this would erase the input and dinput values
+            pass
         else:
             self.vehicles[0].set_initial_conditions(self.curr_state)
         self.vehicles[0].set_terminal_conditions(self.segments[-1]['end'])
