@@ -19,28 +19,30 @@
 
 from omgtools import *
 
-# make GCode reader and run it to obtain object-oriented description of the GCode
+# make GCode reader and run it to obtain an object-oriented description of the GCode
 reader = GCodeReader()
+# this opens a file dialog in which you can select your GCode as an .nc-file
 GCode = reader.run()
 
 n_blocks = 3  # amount of GCode blocks to combine
-tol = 5e-1  # required tolerance of the machined part
+tol = 5e-1  # required tolerance of the machined part [mm]
 bounds = {'vmin':-1000, 'vmax':1000,
           'amin':-2e4, 'amax':2e4,
-          'jmin':-0.85e6, 'jmax':0.85e6}
-tool = Tool(tol, bounds = bounds)
+          'jmin':-0.85e6, 'jmax':0.85e6}  # [mm]
+tool = Tool(tol, bounds = bounds)  # tool to follow the GCode
 tool.define_knots(knot_intervals=10)
 tool.set_initial_conditions(GCode[0].start)  # start position of first GCode block
 tool.set_terminal_conditions(GCode[-1].end)  # goal position of last GCode block
 
-# solve with a GCodeSchedulerProblem: this problem will combine n_blocks of GCode and compute trajectories for the tool
+# solve with a GCodeSchedulerProblem: this problem will combine n_blocks of GCode
+# and compute trajectories for the tool
 # each block will be converted to a room, that is put inside the total environment
-# there are two room shapes: rectangle and ring (circle segment with inner and outer diameter)
-schedulerproblem = GCodeSchedulerProblem(tool, GCode, n_segments=n_blocks)
+# there are two room shapes: Rectangle and Ring (circle segment with inner and outer diameter)
+# if you want to compute trajectories by using the deployer, put with_deployer=True
+schedulerproblem = GCodeSchedulerProblem(tool, GCode, n_segments=n_blocks, with_deployer=True)
 schedulerproblem.set_options({'solver_options': {'ipopt': {'ipopt.tol': 1e-8,
 														   'ipopt.linear_solver': 'ma57'}}})#,
                                                            #'ipopt.hessian_approximation': 'limited-memory'}}})
-
 # put problem in simulator
 simulator = Simulator(schedulerproblem, sample_time=0.001)
 
