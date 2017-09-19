@@ -159,7 +159,6 @@ class Simulator:
             # the simulation can only reach points in time that are multiples of the sample time, such that a gap mostly
             # between the end position of the simulation and the point in which segments are connected, leading to problems
             # when constraints are active at the connection point between segments
-            import pdb; pdb.set_trace()  # breakpoint 1325cf66 //
             pos_splines = self.problem.vehicles[0].result_splines
             input_splines = [s.derivative(1) for s in pos_splines]
             dinput_splines = [s.derivative(2) for s in pos_splines]
