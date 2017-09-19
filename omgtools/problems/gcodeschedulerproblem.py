@@ -171,7 +171,8 @@ class GCodeSchedulerProblem(Problem):
     def final(self):
         print 'The tool has reached its goal!'
         print self.cnt, ' GCode commands were executed.'
-        print 'Total machining time: ', sum(self.motion_time_log), ' s'
+        print 'Total machining time when considering standstill-standstill segments: ', np.round(self.get_init_guess_total_motion_time(),3), ' s'
+        print 'Total machining time for computed trajectories: ', np.round(sum(self.motion_time_log),3), ' s'
         if self.options['verbose'] >= 1:
             print '%-18s %6g ms' % ('Max update time:',
                                     max(self.update_times)*1000.)
