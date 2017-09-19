@@ -249,29 +249,11 @@ class Vehicle(OptiChild, PlotLayer):
             segment_times = [segment_times]
         # determine how many knots must be inserted when concatenating splines
         # obtaining a certain continuity requires inserting this continuity - degree+1 knots
-        import pdb; pdb.set_trace()  # breakpoint 57e8a079 //
         if 'continuity' in kwargs:
             n_insert = kwargs['continuity'] - (self.degree-1)
         else:
             n_insert = None
-        # s = np.linspace(0,1,1000)
-        # plotx = []
-        # ploty = []
-        # for segment in spline_segments:
-        #     plotx.extend(segment[0](s))
-        #     ploty.extend(segment[1](s))
-        # from matplotlib import pyplot as plt
-        # plt.figure()
-        # plt.plot(plotx,ploty)
-        # plt.pause(0.1)
         splines = concat_splines(spline_segments, segment_times, n_insert=n_insert)
-        # s2 = np.linspace(0,sum(segment_times),1000)
-        # plotx2 = []
-        # ploty2 = []
-        # plotx2.extend(splines[0](s2))
-        # ploty2.extend(splines[1](s2))
-        # plt.plot(plotx2,ploty2)
-        # plt.show()
         self.result_splines = splines
         horizon_time = sum(segment_times)
         if time_axis is None:
@@ -308,14 +290,25 @@ class Vehicle(OptiChild, PlotLayer):
                 self.trajectories_kn[key] = self.trajectories_kn[
                     key].reshape(1, shape[0])
 
-    def predict(self, current_time, predict_time, sample_time, state0=None, delay=0, enforce=False):
-        if enforce:
+    def predict(self, current_time, predict_time, sample_time, state0=None, input0=None, dinput0=None, delay=0, enforce_states=False, enforce_inputs=False):
+        if enforce_states and enforce_inputs:
+            if not all(l is None for l in [state0, input0, dinput0]):
+                # all three have a value, and are not None
+                self.set_initial_conditions(state0, input=input0, dinput=dinput0)
+            elif not all(l is None for l in [state0, input0]):
+                # all two have a value and are not None
+                self.set_initial_conditions(state0, input=input0)
+            else:
+                if hasattr(self, 'signals'):
+                    self.set_initial_conditions(
+                        self.signals['state'][:, -1], self.signals['input'][:, -1], self.signals['dinput'][:, -1])
+            return
+        if enforce_states:
             if state0 is not None:
                 self.set_initial_conditions(state0)
             else:
                 if hasattr(self, 'signals'):
-                    self.set_initial_conditions(
-                        self.signals['state'][:, -1], self.signals['input'][:, -1])
+                    self.set_initial_conditions(self.signals['state'][:, -1])
             return
         n_samp = int(np.round(predict_time/sample_time, 6))
         if self.options['ideal_prediction']:

@@ -132,17 +132,32 @@ class Problem(OptiChild, PlotLayer):
             print "%3d | %.4e | %.4e " % (self.iteration, t_upd, current_time)
         self.update_times.append(t_upd)
 
-    def predict(self, current_time, predict_time, sample_time, states=None, delay=0):
+    def predict(self, current_time, predict_time, sample_time, states=None, inputs=None, dinputs=None, delay=0, enforce_states=False, enforce_inputs=False):
         if states is None:
             states = [None for k in range(len(self.vehicles))]
+        if inputs is None:
+            inputs = [None for k in range(len(self.vehicles))]
+        if dinputs is None:
+            dinputs = [None for k in range(len(self.vehicles))]
         if len(self.vehicles) == 1:
             if not isinstance(states, list):
                 states = [states]
             elif isinstance(states[0], float):
                 states = [states]
-        enforce = True if (current_time == self.start_time) else False
+        if len(self.vehicles) == 1:
+            if not isinstance(inputs, list):
+                inputs = [inputs]
+            elif isinstance(inputs[0], float):
+                inputs = [inputs]
+        if len(self.vehicles) == 1:
+            if not isinstance(dinputs, list):
+                dinputs = [dinputs]
+            elif isinstance(dinputs[0], float):
+                dinputs = [dinputs]
+        if current_time == self.start_time:
+            enforce_states = True
         for k, vehicle in enumerate(self.vehicles):
-            vehicle.predict(current_time, predict_time, sample_time, states[k], delay, enforce)
+            vehicle.predict(current_time, predict_time, sample_time, states[k], inputs[k], dinputs[k], delay, enforce_states, enforce_inputs)
 
     def reset_init_guess(self, init_guess=None):
             if init_guess is None:  # no user provided initial guess
