@@ -280,10 +280,10 @@ class Tool(Vehicle):
 
         # depending on the tightness of the tolerance, you may have to change the factor in self.tolerance*factor
         # for tight tolerances, make 'factor' smaller, for larger tolerances, make it bigger
-        self.define_constraint(position[0](1.) - segment['end'][0] - self.tolerance*1.42, -inf, 0.)
-        self.define_constraint(-position[0](1.) + segment['end'][0] - self.tolerance*1.42, -inf, 0.)
-        self.define_constraint(position[1](1.) - segment['end'][1] - self.tolerance*1.42, -inf, 0.)
-        self.define_constraint(-position[1](1.) + segment['end'][1] - self.tolerance*1.42, -inf, 0.)
+        self.define_constraint(position[0](1.) - segment['end'][0] - self.tolerance*0.9, -inf, 0.)
+        self.define_constraint(-position[0](1.) + segment['end'][0] - self.tolerance*0.9, -inf, 0.)
+        self.define_constraint(position[1](1.) - segment['end'][1] - self.tolerance*0.9, -inf, 0.)
+        self.define_constraint(-position[1](1.) + segment['end'][1] - self.tolerance*0.9, -inf, 0.)
 
     def splines2signals(self, splines, time):
         signals = {}
