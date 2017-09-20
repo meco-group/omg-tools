@@ -278,8 +278,12 @@ class Tool(Vehicle):
         # build in a margin to take into account that the overlap region is not a rectangle
         # with orientation 0, this effect has a maximum when orientation is 45 degrees, and has effect of sqrt(2)~1.42
 
-        # depending on the tightness of the tolerance, you may have to change the factor in self.tolerance*factor
+        # depending on the tightness of the tolerance, you may have to change the factor in self.tolerance*'factor'
         # for tight tolerances, make 'factor' smaller, for larger tolerances, make it bigger
+        # the reason is that for tight tolerances and e.g. a sequence of a straight line and a ring, the constraints
+        # impose only that the trajectory must lie inside the ring and the line + its tolerances, not that the connection
+        # point has to lie within the overlap region
+        # for now, the overlap region is approximated by setting the 'factor' below
         # Warning: the value of this parameter may have a big influence on the total machining time!
         self.define_constraint(position[0](1.) - segment['end'][0] - self.tolerance*0.9, -inf, 0.)
         self.define_constraint(-position[0](1.) + segment['end'][0] - self.tolerance*0.9, -inf, 0.)
