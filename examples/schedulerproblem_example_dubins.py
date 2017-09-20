@@ -22,14 +22,14 @@ from omgtools import *
 
 # create vehicle
 vehicle = Dubins(shapes=Circle(radius=0.3), bounds={'vmax': 0.7, 'wmax': np.pi/3., 'wmin': -np.pi/3.}, # in rad/s
-                 options={'substitution': False})
+                 options={'substitution': False, 'stop_tol': 1e-1})
 vehicle.define_knots(knot_intervals=10)
 
 # create environment
 print 'Using environment for known example'
 #for now fix environment to the one for which A*-path is known
-start = [2,2,0]
-goal = [8,8,0]
+start = [2.,2.,0.]
+goal = [8.,8.,0.]
 vehicle.set_initial_conditions(start)
 vehicle.set_terminal_conditions(goal)
 
@@ -49,9 +49,8 @@ globalplanner = AStarPlanner(environment, [10,10], start, goal)
 
 # make coordinator
 options={'freeT': True, 'horizon_time': 15}
-multiproblem=MultiFrameProblem(vehicle, environment, globalplanner, options=options, frame_type='min_nobs')
-multiproblem.set_options({'solver_options': {'ipopt': {
-													   # 'ipopt.linear_solver': 'ma57',
+multiproblem=SchedulerProblem(vehicle, environment, globalplanner, options=options, frame_type='min_nobs')
+multiproblem.set_options({'solver_options': {'ipopt': {# 'ipopt.linear_solver': 'ma57',
                                                        'ipopt.hessian_approximation': 'limited-memory'}}})
 multiproblem.init()
 
