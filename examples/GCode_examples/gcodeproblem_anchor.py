@@ -17,6 +17,10 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
+
+# This example computes a trajectory that a tool of e.g. a milling machine has to follow
+# to machine a part, described by GCode in a .nc file, with a certain tolerance.
+
 from omgtools import *
 
 # make GCode reader and run it to obtain an object-oriented description of the GCode
