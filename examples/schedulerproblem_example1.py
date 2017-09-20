@@ -29,6 +29,9 @@
 # In the beginning, the first two frames are computed. When the vehicles enters the second frame (which
 # overlaps with the first one), the third frame is computed, and so the method continues.
 
+# When computing the trajectory, only one frame is taken into account. This means that sometimes problems
+# can arise when obstacles are moving behind the corner.
+
 from omgtools import *
 
 # create vehicle

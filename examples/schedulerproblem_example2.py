@@ -18,6 +18,14 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 
+# This code shows an expansion of a normal multiframeproblem (schedulerproblem_example1.py),
+# in which a large environment is split over several frames.
+# In a multiframeproblem we only consider one room/frame at a time.
+# Using a schedulerproblem, you can combine frames, i.e. a trajectory is computed through multiple frames at a
+# time. The advantage is that e.g. moving obstacles around the corner can immediately be taken into account.
+# Note that when putting n_frames=1 you get exactly the same idea/behaviour as in the
+# p2p_multiframeproblem.py example.
+
 from omgtools import *
 
 # create vehicle
