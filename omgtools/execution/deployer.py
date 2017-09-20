@@ -242,9 +242,9 @@ class Deployer:
                         current_time -= self.problem.motion_times[0]
 
                     self.cnt += 1
-                    if self.cnt > 10:
-                        states = states_old + np.random.rand(3,)*1e-5  # perturb initial state
-                    if self.cnt > 30:
+                    # if it takes too many iterations, stop
+                    if self.cnt > 20:
+                        raise RuntimeError('Couldn\'t find a feasible trajectory for this segment, stopping calculations')
                         return
                 else:  # user was happy or optimal solution found, just continue
                     self.cnt = 0
