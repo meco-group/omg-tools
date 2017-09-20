@@ -22,6 +22,7 @@ from omgtools import *
 # make GCode reader and run it to obtain an object-oriented description of the GCode
 reader = GCodeReader()
 # this opens a file dialog in which you can select your GCode as an .nc-file
+# the settings inside this example are made specifically for the anchor2D.nc file
 GCode = reader.run()
 
 n_blocks = 3  # amount of GCode blocks to combine
@@ -45,7 +46,7 @@ schedulerproblem.set_options({'solver_options': {'ipopt': {'ipopt.tol': 1e-8,
                                                            # 'ipopt.hessian_approximation': 'limited-memory'}}})
 # put problem in deployer: choose this if you just want to obtain the trajectories for the tool
 deployer = Deployer(schedulerproblem, sample_time=0.001)
-# put problem in simulator: choose this if you want to simulate step by step, and investigate after each segment
+# put problem in simulator: choose this if you want to simulate step by step
 simulator = Simulator(schedulerproblem, sample_time=0.001)
 
 # define what you want to plot
@@ -59,7 +60,7 @@ tool.plot('ddinput', knots=True, prediction=True, labels=['j_x (m/s^3)', 'j_y (m
 deployer.run_segment()
 # simulator.run_segment()
 
-# plotting and saving afterwards is only available when using the simulator
+# plotting afterwards, and saving is only available when using the simulator
 # schedulerproblem.plot_movie('scene', number_of_frames=100, repeat=False)
 # schedulerproblem.save_movie('scene', format='gif', name='gcodegif', number_of_frames=100, movie_time=10, axis=False)
 # schedulerproblem.save_movie('scene', number_of_frames=50, name='gcodescheduler', axis=False)
