@@ -101,6 +101,7 @@ class Deployer:
                 states = self.problem.curr_state
                 inputs = None
                 dinputs = None
+                ddinputs = None
                 enforce_inputs = False  # since there are no inputs yet
                 current_time = 0.
                 trajectories = self.update(current_time, states=states, inputs=inputs, dinputs=dinputs, update_time=update_time, enforce_states=True, enforce_inputs=enforce_inputs)
@@ -116,6 +117,13 @@ class Deployer:
             # required amount of samples to take from trajectories to reach connection point between segments
             n_samp = int(np.round(update_time/self.sample_time, 6))
 
+            # save old values
+            states_old = states
+            inputs_old = inputs
+            dinputs_old = dinputs
+            ddinputs_old = ddinputs
+
+            # update values
             pos_splines = self.problem.vehicles[0].result_splines
             input_splines = [s.derivative(1) for s in pos_splines]
             dinput_splines = [s.derivative(2) for s in pos_splines]
@@ -127,6 +135,13 @@ class Deployer:
 
             # save and plot results
             if trajectories is not None:
+
+                # save old values
+                state_traj_old = state_traj[:]
+                input_traj_old = input_traj[:]
+                dinput_traj_old = dinput_traj[:]
+                ddinput_traj_old = ddinput_traj[:]
+
                 # state trajectory, append current state because this is not reached at a multiple of sample_time
                 state_traj = np.c_[state_traj, trajectories['state'][:, 1:n_samp+1], states]
                 # input trajectory, append current input
@@ -183,6 +198,56 @@ class Deployer:
                     points = np.c_[points, [points[0,0], points[1,0]]]
                     plt.plot(points[0,:], points[1,:], color='red', linestyle = '--', linewidth= 1.2)
                 plt.pause(0.1)
+
+                # If the latest segment was not what you liked, there are two options:
+                # 1) let the user decide about each segment if it is good or not
+                # user_input = ''
+                # while (not user_input in ['yes', 'no']):
+                #     user_input = raw_input("Are you happy with the latest computed segment (yes/no): ")
+                # if user_input == 'no':
+                # 2) automatically re-solve a slightly adapted version of the problem when no optimal solution was found
+                if not self.problem.local_problem.problem.stats()['return_status'] == 'Solve_Succeeded':
+                    # reset saved trajectories
+                    state_traj = state_traj_old[:]
+                    input_traj = input_traj_old[:]
+                    dinput_traj = dinput_traj_old[:]
+                    ddinput_traj = ddinput_traj_old[:]
+
+                    # reset states and inputs
+                    states = states_old  # + np.random.rand(3,)*1e-5  # perturb initial state randomly
+
+                    # compute perturbed input, that lies on the line between the last two inputs of the input traj
+                    inputs = [0, 0, 0]  # initialize
+                    # draw line between last and second last input to compute the y-coordinate of
+                    # the slightly changed initial point, that is right outside the connection of these two points
+                    x1, y1, z1 = input_traj_old[:,-2]  # second last point
+                    x2, y2, z2 = input_traj_old[:,-1]  # last point
+                    inputs[0] = x2+(x2-x1)*0.01  # perturb
+                    if (abs(y2 - y1) > 1e-3):  # line is not vertical
+                        a = (y2-y1)/(x2-x1)  # slope
+                        b = -x1*a+y1  # offset
+                        inputs[1] = a*inputs[0] + b
+                    else:
+                        inputs[1] = y1
+                    input_traj[:,-1] = inputs  # replace the old 'last point'
+
+                    # inputs = inputs_old + np.random.rand(3,)*1e-4  # perturb initial input randomly
+                    dinputs = dinputs_old
+                    ddinputs = ddinputs_old
+
+                    # reset time
+                    if self.current_time != 0.:
+                        self.current_time -= self.problem.motion_times[0]
+                    if current_time != 0.:
+                        current_time -= self.problem.motion_times[0]
+
+                    self.cnt += 1
+                    if self.cnt > 10:
+                        states = states_old + np.random.rand(3,)*1e-5  # perturb initial state
+                    if self.cnt > 30:
+                        return
+                else:  # user was happy or optimal solution found, just continue
+                    self.cnt = 0
 
                 # check if target is reached
                 if (np.linalg.norm(self.problem.segments[0]['end']-state_traj[:, -1]) < 1e-2 and np.linalg.norm(input_traj[:, -1]) < 1e-2):
