@@ -90,9 +90,9 @@ options={'freeT': True, 'horizon_time': 10, 'no_term_con_der': False}
 
 # Note: When 'min_nobs' is selected and your vehicle size is larger than the cell size,
 # shifting frames sometimes causes problems
-multiproblem=MultiFrameProblem(vehicle, environment, globalplanner, options=options, frame_size= 9, frame_type='min_nobs')
+schedulerproblem=SchedulerProblem(vehicle, environment, globalplanner, options=options, frame_size= 9, frame_type='min_nobs')
 
-simulator = Simulator(multiproblem)
+simulator = Simulator(schedulerproblem)
 multiproblem.plot('scene')
 vehicle.plot('input', knots=True, prediction=True, labels=['v_x (m/s)', 'v_y (m/s)'])
 
