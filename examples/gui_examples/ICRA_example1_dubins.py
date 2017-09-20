@@ -56,10 +56,10 @@ options={'freeT': True, 'horizon_time': 10, 'no_term_con_der': False}
 
 # Note: When 'min_nobs' is selected and your vehicle size is larger than the cell size,
 # shifting frames sometimes causes problems
-multiproblem=MultiFrameProblem(vehicle, environment, globalplanner, options=options, frame_size= 9, frame_type='min_nobs')
+schedulerproblem=SchedulerProblem(vehicle, environment, globalplanner, options=options, frame_size= 9, frame_type='min_nobs')
 
 # Note: using linear solver ma57 is optional, normally it reduces the solving time
-multiproblem.set_options({'solver_options':
+schedulerproblem.set_options({'solver_options':
     {'ipopt': {
     		   # 'ipopt.linear_solver': 'ma57',
     		   'ipopt.warm_start_init_point': 'yes',
@@ -68,11 +68,11 @@ multiproblem.set_options({'solver_options':
 			   # 'ipopt.mu_init': 1e-5,
     		   'ipopt.hessian_approximation': 'limited-memory'}}})
 
-simulator = Simulator(multiproblem)
-multiproblem.plot('scene')
+simulator = Simulator(schedulerproblem)
+schedulerproblem.plot('scene')
 vehicle.plot('input', knots=True, prediction=True, labels=['v_x (m/s)', 'v_y (m/s)'])
 
 # run it!
 simulator.run()
-# multiproblem.save_movie('scene', format='gif', name='example1_minobs', number_of_frames=300, movie_time=30, axis=False)
-# multiproblem.save_movie('scene', format='tikz', name='example1_minobs', number_of_frames=100, movie_time=10, axis=False)
+# schedulerproblem.save_movie('scene', format='gif', name='example1_minobs', number_of_frames=300, movie_time=30, axis=False)
+# schedulerproblem.save_movie('scene', format='tikz', name='example1_minobs', number_of_frames=100, movie_time=10, axis=False)

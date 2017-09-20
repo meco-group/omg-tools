@@ -55,14 +55,14 @@ options={'freeT': True, 'horizon_time': 10, 'no_term_con_der': False}
 
 # Note: When 'min_nobs' is selected as frame_type and your vehicle size is larger than the cell size,
 # shifting frames sometimes causes problems
-multiproblem=MultiFrameProblem(vehicle, environment, globalplanner, options=options, frame_size= 9, frame_type='min_nobs')
+schedulerproblem=SchedulerProblem(vehicle, environment, globalplanner, options=options, frame_size= 9, frame_type='min_nobs')
 
 # Note: using linear solver ma57 is optional, normally it reduces the solving time
 # multiproblem.set_options({'solver_options':
 #     {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 
-simulator = Simulator(multiproblem)
-multiproblem.plot('scene')
+simulator = Simulator(schedulerproblem)
+schedulerproblem.plot('scene')
 vehicle.plot('input', knots=True, prediction=True, labels=['v_x (m/s)', 'v_y (m/s)'])
 
 # run it!
