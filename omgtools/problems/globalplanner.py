@@ -47,11 +47,11 @@ class QuadmapPlanner(GlobalPlanner):
 class AStarPlanner(GlobalPlanner):
     # global planner using the A*-algorithm
     def __init__(self, environment, n_cells, start, goal, options={}):
-        if isinstance(environment.rooms[0]['shape'], (Rectangle, Square)):
-            grid_width = environment.rooms[0]['shape'].width
-            grid_height = environment.rooms[0]['shape'].height
-            if 'position' in environment.rooms[0]:
-                grid_position = environment.rooms[0]['position']
+        if isinstance(environment.room[0]['shape'], (Rectangle, Square)):
+            grid_width = environment.room[0]['shape'].width
+            grid_height = environment.room[0]['shape'].height
+            if 'position' in environment.room[0]:
+                grid_position = environment.room[0]['position']
             else:
                 grid_position = [0, 0]
         else:

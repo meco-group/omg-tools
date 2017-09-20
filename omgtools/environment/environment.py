@@ -27,15 +27,17 @@ import numpy as np
 
 class Environment(OptiChild, PlotLayer):
 
-    def __init__(self, rooms, obstacles=None):
+    def __init__(self, room, obstacles=None):
         obstacles = obstacles or []
         OptiChild.__init__(self, 'environment')
         PlotLayer.__init__(self)
 
         # create rooms and define dimension of the space
-        self.rooms = rooms if isinstance(rooms, list) else [rooms]
-        self.n_dim = rooms[0]['shape'].n_dim  # use dimension of first room for all rooms
-        for room in self.rooms:
+        # note: in general self.room may contain a list of several rooms, this is the case for
+        # e.g. multiframeproblems and gcodeproblems
+        self.room = room if isinstance(room, list) else [room]
+        self.n_dim = self.room[0]['shape'].n_dim  # use dimension of first room for all rooms
+        for room in self.room:
             if room['shape'].n_dim != self.n_dim:
                 raise ValueError('You try to combine rooms of different dimensions,' +
                                  ' which is invalid')
@@ -53,7 +55,6 @@ class Environment(OptiChild, PlotLayer):
                 room['draw'] = False
 
         # add obstacles
-        # Todo: how divide obstacles over rooms?
         self.obstacles, self.n_obs = [], 0
         for obstacle in obstacles:
             self.add_obstacle(obstacle)
@@ -65,7 +66,7 @@ class Environment(OptiChild, PlotLayer):
     def copy(self):
         obstacles = [Obstacle(o.initial, o.shape, o.simulation, o.options)
                      for o in self.obstacles]
-        return Environment(self.rooms, obstacles)
+        return Environment(self.room, obstacles)
 
     # ========================================================================
     # Add obstacles/vehicles
@@ -86,8 +87,8 @@ class Environment(OptiChild, PlotLayer):
     def fill_room(self, room, obstacles):
         # if key didn't exist yet, it is created
         # if key existed already, all obstacles are replaced
-        idx = self.rooms.index(room)
-        self.rooms[idx]['obstacles'] = obstacles  # assign to room
+        idx = self.room.index(room)
+        self.room[idx]['obstacles'] = obstacles  # assign to room
         for o in obstacles:
             if not o in self.obstacles:
                 self.obstacles += [o]  # save in total list
@@ -108,7 +109,7 @@ class Environment(OptiChild, PlotLayer):
             shift_time += horizon_times[idx]
             # loop over vehicle segments, not over rooms since number of considered segments
             # may be different from total number of rooms
-            room = self.rooms[idx]  # select current room
+            room = self.room[idx]  # select current room
             hyp_veh, hyp_obs = {}, {}
             # add all obstacles, unless user specified it differently
             if 'obstacles' in room:
@@ -254,8 +255,8 @@ class Environment(OptiChild, PlotLayer):
                                 obstacle.signals['position'][:,-1] = old_pos
                             obstacle.signals['velocity'][:,-1] = vel_new
                 # check if the obstacle doesn't hit the borders
-                # Todo: supposed that self.rooms[0] is the total room, containing outer border
-                if obstacle.is_outside_of(self.rooms[0]):
+                # Todo: supposed that self.room[0] is the total room, containing outer border
+                if obstacle.is_outside_of(self.room[0]):
                     # bounce straight off border
                     if any(v == 0 for v in vel):
                         vel_new = -vel
@@ -267,7 +268,7 @@ class Environment(OptiChild, PlotLayer):
                             # new direction may be down_right or up_left
                             # test new direction down_right by shifting obstacle
                             obstacle.signals['position'][:,-1] += [0.15,-0.15]
-                            if not obstacle.is_outside_of(self.rooms[0]):
+                            if not obstacle.is_outside_of(self.room[0]):
                                 # no overlap so move down_right
                                 # new_direction = down_right
                                 vel_new = [vel[0], -vel[1]]
@@ -280,7 +281,7 @@ class Environment(OptiChild, PlotLayer):
                             # new direction may be down_left or up_right
                             # test new direction down_left by shifting obstacle
                             obstacle.signals['position'][:,-1] += [-0.15,-0.15]
-                            if not obstacle.is_outside_of(self.rooms[0]):
+                            if not obstacle.is_outside_of(self.room[0]):
                                 # no overlap so move down_left
                                 # new_direction = down_left
                                 vel_new = [vel[0], -vel[1]]
@@ -293,7 +294,7 @@ class Environment(OptiChild, PlotLayer):
                             # new direction may be down_left or up_right
                             # test new direction down_left by shifting obstacle
                             obstacle.signals['position'][:,-1] += [-0.15,-0.15]
-                            if not obstacle.is_outside_of(self.rooms[0]):
+                            if not obstacle.is_outside_of(self.room[0]):
                                 # no overlap so move down_left
                                 # new_direction = down_left
                                 vel_new = [-vel[0], vel[1]]
@@ -306,7 +307,7 @@ class Environment(OptiChild, PlotLayer):
                             # new direction may be down_right or up_left
                             # test new direction down_right by shifting obstacle
                             obstacle.signals['position'][:,-1] += [0.15,-0.15]
-                            if not obstacle.is_outside_of(self.rooms[0]):
+                            if not obstacle.is_outside_of(self.room[0]):
                                 # no overlap so move down_right
                                 # new_direction = down_right
                                 vel_new = [-vel[0], vel[1]]
@@ -323,7 +324,7 @@ class Environment(OptiChild, PlotLayer):
 
     def draw(self, t=-1):
         surfaces, lines = [], []
-        for room in self.rooms:
+        for room in self.room:
             if room['draw']:
                 s, l = room['shape'].draw(pose = np.r_[room['position'], room['orientation']])
                 surfaces += s
@@ -336,7 +337,7 @@ class Environment(OptiChild, PlotLayer):
 
     def get_canvas_limits(self):
         limits = []
-        for room in self.rooms:
+        for room in self.room:
             lims = room['shape'].get_canvas_limits()
             limits += [[lims[k]+room['position'][k] for k in range(self.n_dim)]]
         return limits
@@ -352,7 +353,7 @@ class Environment(OptiChild, PlotLayer):
         lines = [{'color': 'black', 'linewidth': 1.2} for _ in l]
 
         s_, l_ = [], []
-        for room in self.rooms:
+        for room in self.room:
             if room['draw']:
                 shape, line = room['shape'].draw()
                 s_.append(shape)

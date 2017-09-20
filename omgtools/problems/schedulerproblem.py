@@ -81,12 +81,12 @@ class SchedulerProblem(Problem):
         self.frame_type = kwargs['frame_type'] if 'frame_type' in kwargs else 'shift'
         # set frame size for frame_type shift
         if self.frame_type is 'shift':
-            self.frame_size = kwargs['frame_size'] if 'frame_size' in kwargs else environment.rooms[0]['shape'].width*0.2
+            self.frame_size = kwargs['frame_size'] if 'frame_size' in kwargs else environment.room[0]['shape'].width*0.2
 
         # check if vehicle size is larger than the cell size
         n_cells = self.global_planner.grid.n_cells
-        if (size_to_check >= (min(environment.rooms[0]['shape'].width/float(n_cells[0]), \
-                                  environment.rooms[0]['shape'].height/float(n_cells[1])))
+        if (size_to_check >= (min(environment.room[0]['shape'].width/float(n_cells[0]), \
+                                  environment.room[0]['shape'].height/float(n_cells[1])))
            and self.frame_type == 'min_nobs'):
             warnings.warn('Vehicle is bigger than one cell, this may cause problems' +
                           ' when switching frames. Consider reducing the amount of cells or reducing' +
@@ -1175,7 +1175,7 @@ class SchedulerProblem(Problem):
 
         # enlarge in positive x-direction
         # first try to put xmax = frame border
-        xmax_new = self.environment.rooms[0]['shape'].get_canvas_limits()[0][1] + self.environment.rooms[0]['position'][0]
+        xmax_new = self.environment.room[0]['shape'].get_canvas_limits()[0][1] + self.environment.room[0]['position'][0]
         scaled_frame['border'] = self.make_border(xmin,ymin,xmax_new,ymax)
 
         # Note: updating with self.veh_size*self.scale_factor may be too big
@@ -1188,11 +1188,11 @@ class SchedulerProblem(Problem):
             while True:
                     xmax_new = xmax + 0.1  # self.veh_size*self.scale_factor
                     scaled_frame['border'] = self.make_border(xmin,ymin,xmax_new,ymax)
-                    if xmax_new > self.environment.rooms[0]['shape'].get_canvas_limits()[0][1] + self.environment.rooms[0]['position'][0]:
+                    if xmax_new > self.environment.room[0]['shape'].get_canvas_limits()[0][1] + self.environment.room[0]['position'][0]:
                         # the frame hit the borders, this is the maximum size in this direction
 
                         # Todo: the next line is not necessary, already tried this above, and this frame contained obstacles
-                        # xmax = self.environment.rooms[0]['shape'].get_canvas_limits()[0][1] + self.environment.rooms[0]['position'][0]
+                        # xmax = self.environment.room[0]['shape'].get_canvas_limits()[0][1] + self.environment.room[0]['position'][0]
                         break
                     if not self.get_stationary_obstacles_in_frame(scaled_frame):
                         # there is no obstacle in the enlarged frame, so enlarge it
@@ -1204,7 +1204,7 @@ class SchedulerProblem(Problem):
 
         # enlarge in negative x-direction
         # first try to put xmin = frame border
-        xmin_new = self.environment.rooms[0]['shape'].get_canvas_limits()[0][0] + self.environment.rooms[0]['position'][0]
+        xmin_new = self.environment.room[0]['shape'].get_canvas_limits()[0][0] + self.environment.room[0]['position'][0]
         scaled_frame['border'] = self.make_border(xmin_new,ymin,xmax,ymax)
         if not self.get_stationary_obstacles_in_frame(scaled_frame):
             xmin = xmin_new  # assign new xmin
@@ -1212,10 +1212,10 @@ class SchedulerProblem(Problem):
             while True:
                 xmin_new = xmin - 0.1 # self.veh_size*self.scale_factor
                 scaled_frame['border'] = self.make_border(xmin_new,ymin,xmax,ymax)
-                if xmin_new < self.environment.rooms[0]['shape'].get_canvas_limits()[0][0] + self.environment.rooms[0]['position'][0]:
+                if xmin_new < self.environment.room[0]['shape'].get_canvas_limits()[0][0] + self.environment.room[0]['position'][0]:
 
                     # Todo: the next line is not necessary, already tried this above, and this frame contained obstacles
-                    # xmin = self.environment.rooms[0]['shape'].get_canvas_limits()[0][0] + self.environment.rooms[0]['position'][0]
+                    # xmin = self.environment.room[0]['shape'].get_canvas_limits()[0][0] + self.environment.room[0]['position'][0]
                     break
                 if not self.get_stationary_obstacles_in_frame(scaled_frame):
                     xmin = xmin_new
@@ -1225,7 +1225,7 @@ class SchedulerProblem(Problem):
 
         # enlarge in positive y-direction
         # first try to put ymax = frame border
-        ymax_new = self.environment.rooms[0]['shape'].get_canvas_limits()[1][1] + self.environment.rooms[0]['position'][1]
+        ymax_new = self.environment.room[0]['shape'].get_canvas_limits()[1][1] + self.environment.room[0]['position'][1]
         scaled_frame['border'] = self.make_border(xmin,ymin,xmax,ymax_new)
         if not self.get_stationary_obstacles_in_frame(scaled_frame):
             ymax = ymax_new  # assign new ymax
@@ -1233,10 +1233,10 @@ class SchedulerProblem(Problem):
             while True:
                 ymax_new = ymax + 0.1  # self.veh_size*self.scale_factor
                 scaled_frame['border'] = self.make_border(xmin,ymin,xmax,ymax_new)
-                if ymax_new > self.environment.rooms[0]['shape'].get_canvas_limits()[1][1] + self.environment.rooms[0]['position'][1]:
+                if ymax_new > self.environment.room[0]['shape'].get_canvas_limits()[1][1] + self.environment.room[0]['position'][1]:
 
                     # Todo: the next line is not necessary, already tried this above, and this frame contained obstacles
-                    # ymax = self.environment.rooms[0]['shape'].get_canvas_limits()[1][1] + self.environment.rooms[0]['position'][1]
+                    # ymax = self.environment.room[0]['shape'].get_canvas_limits()[1][1] + self.environment.room[0]['position'][1]
                     break
                 if not self.get_stationary_obstacles_in_frame(scaled_frame):
                     ymax = ymax_new
@@ -1246,7 +1246,7 @@ class SchedulerProblem(Problem):
 
         # enlarge in negative y-direction
         # first try to put ymin = frame border
-        ymin_new = self.environment.rooms[0]['shape'].get_canvas_limits()[1][0] + self.environment.rooms[0]['position'][1]
+        ymin_new = self.environment.room[0]['shape'].get_canvas_limits()[1][0] + self.environment.room[0]['position'][1]
         scaled_frame['border'] = self.make_border(xmin,ymin_new,xmax,ymax)
         if not self.get_stationary_obstacles_in_frame(scaled_frame):
             ymin = ymin_new  # assign new ymin
@@ -1254,10 +1254,10 @@ class SchedulerProblem(Problem):
             while True:
                 ymin_new = ymin - 0.1 # self.veh_size*self.scale_factor
                 scaled_frame['border'] = self.make_border(xmin,ymin_new,xmax,ymax)
-                if ymin_new < self.environment.rooms[0]['shape'].get_canvas_limits()[1][0] + self.environment.rooms[0]['position'][1]:
+                if ymin_new < self.environment.room[0]['shape'].get_canvas_limits()[1][0] + self.environment.room[0]['position'][1]:
 
                     # Todo: the next line is not necessary, already tried this above, and this frame contained obstacles
-                    # ymin = self.environment.rooms[0]['shape'].get_canvas_limits()[1][0] + self.environment.rooms[0]['position'][1]
+                    # ymin = self.environment.room[0]['shape'].get_canvas_limits()[1][0] + self.environment.room[0]['position'][1]
                     break
                 if not self.get_stationary_obstacles_in_frame(scaled_frame):
                     ymin = ymin_new
@@ -1479,7 +1479,7 @@ class SchedulerProblem(Problem):
 
         # only consider the waypoints past 'position' = the current vehicle position or a certain waypoint
         # so find the waypoint which is closest to position
-        dist = max(self.environment.rooms[0]['shape'].width, self.environment.rooms[0]['shape'].height)
+        dist = max(self.environment.room[0]['shape'].width, self.environment.room[0]['shape'].height)
         closest_waypoint = waypoints[0]
         index = 0
         for idx, point in enumerate(waypoints):
@@ -1493,18 +1493,18 @@ class SchedulerProblem(Problem):
     def generate_problem(self):
         # transform frames into a multiframe problem
 
-        rooms = []
+        room = []
         for k in range(self.n_frames):
-            room = {}
-            room['shape'] = self.frames[k]['border']['shape']
-            room['position'] = self.frames[k]['border']['position']
-            room['draw'] = True
-            rooms.append(room)
-        environment = Environment(rooms=rooms)
+            new_room = {}
+            new_room['shape'] = self.frames[k]['border']['shape']
+            new_room['position'] = self.frames[k]['border']['position']
+            new_room['draw'] = True
+            room.append(new_room)
+        environment = Environment(room=room)
 
         for k in range(self.n_frames):
             obstacles = self.frames[k]['stationary_obstacles']+self.frames[k]['moving_obstacles']
-            environment.fill_room(rooms[k], obstacles)
+            environment.fill_room(room[k], obstacles)
 
         # create problem
         problem_options = {}

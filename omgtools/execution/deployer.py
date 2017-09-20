@@ -192,7 +192,7 @@ class Deployer:
                 # plot trajectory
                 plt.plot(state_traj[0, :], state_traj[1, :])
                 # plot environment
-                for room in self.problem.environment.rooms:
+                for room in self.problem.environment.room:
                     points = room['shape'].draw(room['pose'][:3])[0][0]
                     # add first point again to close shape
                     points = np.c_[points, [points[0,0], points[1,0]]]

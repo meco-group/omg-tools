@@ -73,14 +73,14 @@ class GCodeSchedulerProblem(Problem):
         # select the next blocks of GCode that will be handled
         # if less than self.n_segments are left, only the remaining blocks
         # will be selected
-        self.segments = self.environment.rooms[
+        self.segments = self.environment.room[
                            self.n_current_block:self.n_current_block+self.n_segments]
         # if there is only one segment, save the next one to check when the tool enters the next segment
         if self.n_segments == 1:
-            self.next_segment = self.environment.rooms[self.n_current_block+1]
+            self.next_segment = self.environment.room[self.n_current_block+1]
 
         # total number of considered segments in the provided GCode
-        self.cnt = len(self.environment.rooms)-1
+        self.cnt = len(self.environment.room)-1
 
         # get initial guess for trajectories (based on central line) and motion times, for all segments
         init_guess, self.motion_times = self.get_init_guess()
@@ -232,7 +232,7 @@ class GCodeSchedulerProblem(Problem):
         # has to stay
 
         number = 0  # each room has a number
-        rooms = []
+        room = []
 
         for block in GCode:
             # convert block to room
@@ -276,11 +276,11 @@ class GCodeSchedulerProblem(Problem):
                 pose = block.center
                 pose.extend([0.,0.,0.])  # [x,y,z,orientation], ring always has orientation 0
             # save original GCode block in the room description
-            rooms.append({'shape': shape, 'pose': pose, 'position': pose[:2], 'draw':True,
+            room.append({'shape': shape, 'pose': pose, 'position': pose[:2], 'draw':True,
                           'start': block.start, 'end': block.end, 'number':number})
             # Todo: is it weird that room has a start and end field?
             number += 1
-        return Environment(rooms=rooms)
+        return Environment(room=room)
 
     def check_segments(self):
 
@@ -291,7 +291,7 @@ class GCodeSchedulerProblem(Problem):
 
         # if final goal is not on the current segment, check if current state overlaps with the next segment
         if (self.segments[0]['end'] == self.goal_state and
-            self.segments[0]['start'] == self.environment.rooms[-1]['start']):
+            self.segments[0]['start'] == self.environment.room[-1]['start']):
             # this is the last segment, keep it until arrival
             valid = True
             return valid
@@ -327,11 +327,11 @@ class GCodeSchedulerProblem(Problem):
         if self.segments[-1]['number'] < self.cnt:
             # last segment is not yet in self.segments, so there are some segments left,
             # create segment for next block
-            new_segment = self.environment.rooms[self.n_current_block+(self.n_segments-1)]
+            new_segment = self.environment.room[self.n_current_block+(self.n_segments-1)]
             self.segments.append(new_segment)  # add next segment
 
             if self.n_segments == 1:
-                self.next_segment = self.environment.rooms[self.n_current_block+1]
+                self.next_segment = self.environment.room[self.n_current_block+1]
         else:
             # all segments are currently in self.segments, don't add a new one
             # and lower the amount of segments that are combined
@@ -391,8 +391,8 @@ class GCodeSchedulerProblem(Problem):
 
     def generate_problem(self):
 
-        local_rooms = self.environment.rooms[self.n_current_block:self.n_current_block+self.n_segments]
-        local_environment = Environment(rooms=local_rooms)
+        local_rooms = self.environment.room[self.n_current_block:self.n_current_block+self.n_segments]
+        local_environment = Environment(room=local_rooms)
         problem = GCodeProblem(self.vehicles[0], local_environment, self.n_segments, motion_time_guess=self.motion_times)
 
         problem.set_options({'solver_options': self.options['solver_options']})
@@ -679,7 +679,7 @@ class GCodeSchedulerProblem(Problem):
 
     def get_init_guess_total_motion_time(self):
         guess_total_time = 0
-        for segment in self.environment.rooms:
+        for segment in self.environment.room:
             time = self.get_init_guess_motion_time(segment)
             guess_total_time += time
         return guess_total_time

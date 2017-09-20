@@ -35,7 +35,7 @@ class MultiFrameProblem(Problem):
     def __init__(self, fleet, environment, n_frames, options=None):
         Problem.__init__(self, fleet, environment, options, label='multiframeproblem')
         self.n_frames = n_frames
-        if self.n_frames > len(self.environment.rooms):
+        if self.n_frames > len(self.environment.room):
             raise RuntimeError('Number of frames you want to consider at once is larger' +
                                'than the amount of rooms provided in environment')
         self.init_time = None
@@ -137,8 +137,8 @@ class MultiFrameProblem(Problem):
             # compute initial guess for all spline values
             subgoals = []
             for k in range(self.n_frames-1):
-                room1 = self.environment.rooms[k]
-                room2 = self.environment.rooms[k+1]
+                room1 = self.environment.room[k]
+                room2 = self.environment.room[k+1]
                 # subgoals is given as initial position, center of overlap of regions and overall goal
                 # compute center of overlap region of rooms
                 subgoals.append(compute_rectangle_overlap_center(room1['shape'], room1['position'], room2['shape'], room2['position']))

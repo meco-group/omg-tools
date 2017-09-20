@@ -31,7 +31,7 @@ vehicle.set_terminal_conditions(goal)
 
 room1 = {'shape': Rectangle(width=60, height=30), 'position': [30, 10], 'draw':True}
 
-environment = Environment(rooms=[room1])
+environment = Environment(room=room1)
 
 # create stationary obstacles
 

@@ -32,7 +32,7 @@ class GCodeProblem(Problem):
     def __init__(self, fleet, environment, n_segments, options=None, **kwargs):
         Problem.__init__(self, fleet, environment, options, label='gcodeproblem')
         self.n_segments = n_segments  # amount of GCode commands to connect
-        if self.n_segments > len(self.environment.rooms):
+        if self.n_segments > len(self.environment.room):
             raise RuntimeError('Number of segments is larger than the amount of ' +
                                'GCode segments/rooms provided')
         self.init_time = None
@@ -73,7 +73,7 @@ class GCodeProblem(Problem):
         for idx in range(self.n_segments):
             self.vehicles[0].define_trajectory_constraints(total_splines[idx], self.motion_times[idx])
             # set up room constraints
-            self.vehicles[0].define_collision_constraints(self.environment.rooms[idx], total_splines[idx], self.motion_times[idx])
+            self.vehicles[0].define_collision_constraints(self.environment.room[idx], total_splines[idx], self.motion_times[idx])
 
         # constrain spline segments
         self.define_init_constraints()
@@ -137,8 +137,8 @@ class GCodeProblem(Problem):
         # compute initial guess for all spline values
         subgoals = []
         for k in range(self.n_segments-1):
-            room1 = self.environment.rooms[k]
-            room2 = self.environment.rooms[k+1]
+            room1 = self.environment.room[k]
+            room2 = self.environment.room[k+1]
             # subgoals is given as [initial position, center(!) of overlap of regions, overall goal]
             # compute center of overlap region of the area that is shared by two subsequent rooms
             # (after taking tolerance into account)
