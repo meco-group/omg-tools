@@ -273,13 +273,14 @@ class Tool(Vehicle):
         # must stay inside the inifinite line segment or complete circle, this can lead to problems if you don't constrain
         # the end position to a box (e.g. a trajectory going outside of the overlap region between segments)
 
-        # Todo: combining this constraint with the fact that the spline must lie inside the tolerance band around the line/ring
-        # should give good results?
+        # Todo: below the overlap region is roughly approximated by a scaled rectangle around segment['end'], this
+        # could be improved?
         # build in a margin to take into account that the overlap region is not a rectangle
         # with orientation 0, this effect has a maximum when orientation is 45 degrees, and has effect of sqrt(2)~1.42
 
         # depending on the tightness of the tolerance, you may have to change the factor in self.tolerance*factor
         # for tight tolerances, make 'factor' smaller, for larger tolerances, make it bigger
+        # Warning: the value of this parameter may have a big influence on the total machining time!
         self.define_constraint(position[0](1.) - segment['end'][0] - self.tolerance*0.9, -inf, 0.)
         self.define_constraint(-position[0](1.) + segment['end'][0] - self.tolerance*0.9, -inf, 0.)
         self.define_constraint(position[1](1.) - segment['end'][1] - self.tolerance*0.9, -inf, 0.)
