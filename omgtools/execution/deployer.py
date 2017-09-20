@@ -185,7 +185,7 @@ class Deployer:
                 plt.pause(0.1)
 
                 # check if target is reached
-                if (np.linalg.norm(self.problem.goal_state-state_traj[:, -1]) < 1e-2 and np.linalg.norm(input_traj[:, -1]) < 1e-2):
+                if (np.linalg.norm(self.problem.segments[0]['end']-state_traj[:, -1]) < 1e-2 and np.linalg.norm(input_traj[:, -1]) < 1e-2):
                     target_reached = True
 
         # target reached, print final information
