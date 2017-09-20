@@ -96,7 +96,7 @@ class MultiFrameProblem(Problem):
         # place final constraints only on last spline segment
         for vehicle in self.vehicles:
             term_con, term_con_der = vehicle.get_terminal_constraints(
-                vehicle.splines[-1])  # select last spline segment
+                vehicle.splines[-1], horizon_time=self.motion_times[-1])  # select last spline segment
             if ('no_term_con_der' in self.options and self.options['no_term_con_der']):
                 term_con_der = []
             for con in (term_con + term_con_der):

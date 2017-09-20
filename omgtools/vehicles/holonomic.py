@@ -100,7 +100,7 @@ class Holonomic(Vehicle):
                 (dx, horizon_time*input0[0]), (dy, horizon_time*input0[1])]#,
                 # (ddx, horizon_time**2*dinput0[0]), (ddy, horizon_time**2*dinput0[1])]
 
-    def get_terminal_constraints(self, splines):
+    def get_terminal_constraints(self, splines, horizon_time=None):
         position = self.define_parameter('poseT', 2)
         x, y = splines
         term_con = [(x, position[0]), (y, position[1])]
