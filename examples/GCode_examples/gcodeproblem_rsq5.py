@@ -22,6 +22,7 @@ from omgtools import *
 # make GCode reader and run it to obtain an object-oriented description of the GCode
 reader = GCodeReader()
 # this opens a file dialog in which you can select your GCode as an .nc-file
+# the settings in this file are made specifically for the rsq5.nc file
 GCode = reader.run()
 
 n_blocks = 3  # amount of GCode blocks to combine
