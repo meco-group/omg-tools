@@ -366,8 +366,8 @@ class Environment(OptiChild, PlotLayer):
         else:
             # find minimum and maximum x and y values over all rooms
             lims = np.r_[self.get_canvas_limits()]  # gives limits for all rooms
-            x_val, y_val = lims[:,0], lims[:,1]  # gather all x-values and y-values
-            limits = [[np.amin(x_val), np.amax(x_val)],[np.amin(y_val), np.amax(y_val)]]
+            values = [lims[:,k] for k in range(self.n_dim)]  # gather values over all dimensions
+            limits = [[np.amin(values[k]), np.amax(values[k])] for k in range(self.n_dim)]
         labels = ['' for k in range(self.n_dim)]
         if self.n_dim == 2:
             return [[{'labels': labels,'surfaces': surfaces, 'lines': lines, 'aspect_equal': True,
