@@ -83,7 +83,7 @@ class Point2pointProblem(Problem):
         for vehicle in self.vehicles:
             init = vehicle.get_init_spline_value()
             for k in range(vehicle.n_seg):
-                father.set_variables(init[k], vehicle, 'splines_seg0')
+                father.set_variables(init[k], vehicle, 'splines_seg'+str(k))
 
     def set_init_time(self, time):
         self.init_time = time
