@@ -113,7 +113,7 @@ class Simulator:
         else:
             hard_stop = None
         self.deployer.reset()
-        self.deployer.update(self.current_time, None, np.inf)
+        self.deployer.update(self.current_time, None, update_time=np.inf)
         if not simulate:
             return None
         if hard_stop:
