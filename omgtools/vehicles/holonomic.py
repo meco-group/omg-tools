@@ -163,9 +163,9 @@ class Holonomic(Vehicle):
         parameters[self]['poseT'] = self.poseT
         return parameters
 
-    def define_collision_constraints(self, hyperplanes, room_limits, splines, horizon_time):
+    def define_collision_constraints(self, hyperplanes, room, splines, horizon_time):
         x, y = splines[0], splines[1]
-        self.define_collision_constraints_2d(hyperplanes, room_limits, [x, y], horizon_time)
+        self.define_collision_constraints_2d(hyperplanes, room, [x, y], horizon_time)
 
     def splines2signals(self, splines, time):
         signals = {}
