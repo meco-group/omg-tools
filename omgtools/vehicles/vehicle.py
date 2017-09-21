@@ -169,7 +169,7 @@ class Vehicle(OptiChild, PlotLayer):
                      shape.orientation == 0)) and
                     (isinstance(tg_ha, (int, float, long)) and tg_ha == 0.)):
                     for chck in checkpoints:
-                        for k in range(2):
+                        for k in range(self.n_dim):
                             self.define_constraint(-(chck[k]+position[k]) + room_limits[k][0] + rad[0], -inf, 0.)
                             self.define_constraint((chck[k]+position[k]) - room_limits[k][1] + rad[0], -inf, 0.)
                 else:
@@ -186,10 +186,9 @@ class Vehicle(OptiChild, PlotLayer):
                             con += (-hpp['b']+rad[l])*(1+tg_ha**2)
                             self.define_constraint(con, -inf, 0)
 
-    def define_collision_constraints_3d(self, hyperplanes, environment, positions):
+    def define_collision_constraints_3d(self, hyperplanes, room, positions, horizon_time):
         # orientation for 3d not yet implemented!
         t = self.define_symbol('t')
-        T = self.define_symbol('T')
         safety_distance = self.options['safety_distance']
         safety_weight = self.options['safety_weight']
         positions = [positions] if not isinstance(
@@ -206,10 +205,9 @@ class Vehicle(OptiChild, PlotLayer):
                     if safety_distance > 0.:
                         # Todo: remove?
                         t = self.define_symbol('t')
-                        T = self.define_symbol('T')
                         eps = self.define_spline_variable(
                             'eps_'+str(s)+str(k))[0]
-                        obj = safety_weight*definite_integral(eps, t/T, 1.)
+                        obj = safety_weight*definite_integral(eps, t/horizon_time, 1.)
                         self.define_objective(obj)
                         self.define_constraint(eps - safety_distance, -inf, 0.)
                         self.define_constraint(-eps, -inf, 0.)
@@ -220,14 +218,13 @@ class Vehicle(OptiChild, PlotLayer):
                             sum([a[k]*(chck[k]+position[k]) for k in range(3)])-b+rad[l], -inf, 0)
             # room constraints
             if self.options['room_constraints']:
-                room_lim = environment.get_canvas_limits()
-                for idx, room in enumerate(environment.rooms):
-                    for chck in checkpoints:
-                        for k in range(3):
-                            self.define_constraint(-
-                                                   (chck[k]+position[k]) + room_lim[idx][k][0], -inf, 0.)
-                            self.define_constraint(
-                                (chck[k]+position[k]) - room_lim[idx][k][1], -inf, 0.)
+                room_lim = room['shape'].get_canvas_limits()
+                for chck in checkpoints:
+                    for k in range(3):
+                        self.define_constraint(-
+                                               (chck[k]+position[k]) + room_lim[k][0], -inf, 0.)
+                        self.define_constraint(
+                            (chck[k]+position[k]) - room_lim[k][1], -inf, 0.)
 
     def get_fleet_center(self, splines, rel_pos, substitute=True):
         if substitute:
