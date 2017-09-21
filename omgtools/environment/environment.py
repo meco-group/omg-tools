@@ -104,9 +104,7 @@ class Environment(OptiChild, PlotLayer):
                           vehicle.degree:-vehicle.degree],
                       np.ones(degree)]
         basis = BSplineBasis(knots, degree)
-        shift_time = 0
         for idx in range(vehicle.n_seg):
-            shift_time += horizon_times[idx]
             # loop over vehicle segments, not over rooms since number of considered segments
             # may be different from total number of rooms
             room = self.room[idx]  # select current room
