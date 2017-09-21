@@ -137,10 +137,10 @@ class Environment(OptiChild, PlotLayer):
                         obstacle.define_collision_constraints(hyp_obs[obstacle])
             vehicle.define_collision_constraints(hyp_veh, room, splines[idx], horizon_times[idx])
 
-    def define_intervehicle_collision_constraints(self, vehicles):
-        # Todo: added for segment ... loop, okay?
+    def define_intervehicle_collision_constraints(self, vehicles, horizon_times):
+        # Todo: added for idx in range(vehicles[0].n_seg) loop, okay?
         # For now supposed that all vehicles have the same amount of segments
-        for segment in range(vehicles[0].n_seg):
+        for idx in range(vehicles[0].n_seg):
             hyp_veh = {veh: {sh: [] for sh in veh.shapes} for veh in vehicles}
             for k in range(len(vehicles)):
                 for l in range(k+1, len(vehicles)):
@@ -164,8 +164,8 @@ class Environment(OptiChild, PlotLayer):
                                 hyp_veh[veh1][shape1].append({'a': a, 'b': b})
                                 hyp_veh[veh2][shape2].append({'a': [-a_i for a_i in a], 'b': -b})
             for vehicle in vehicles:
-                for spline in vehicle.splines[segment]:
-                    vehicle.define_collision_constraints(hyp_veh[vehicle], self, spline)
+                splines = vehicle.splines[idx]
+                vehicle.define_collision_constraints(hyp_veh[vehicle], self.room[idx], splines, horizon_times[idx])
 
     # ========================================================================
     # Optimization modelling related functions
