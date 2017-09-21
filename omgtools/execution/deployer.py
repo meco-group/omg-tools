@@ -75,7 +75,7 @@ class Deployer:
                 trajectories[str(vehicle)] = vehicle.trajectories
         return trajectories
 
-    def run_segment(self):
+    def update_segment(self):
         self.reset()
 
         # create figures
