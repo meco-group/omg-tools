@@ -95,6 +95,7 @@ class Quadrotor(Vehicle):
         for k in range(2):
             init_value[:, k] = np.r_[pos0[k]*np.ones(self.degree), np.linspace(
                 pos0[k], posT[k], len(self.basis) - 2*self.degree), posT[k]*np.ones(self.degree)]
+        init_value = [init_value]
         return init_value
 
     def check_terminal_conditions(self):
