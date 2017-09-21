@@ -43,24 +43,27 @@ class Quadrotor(Vehicle):
 
 
     def init(self):
-        # time horizon
-        self.T = self.define_symbol('T')
+        pass
 
-    def define_trajectory_constraints(self, splines):
+    def define_trajectory_constraints(self, splines, horizon_time=None):
+        if horizon_time is None:
+            horizon_time = self.define_symbol('T')  # motion time
         x, y = splines
         ddx, ddy = x.derivative(2), y.derivative(2)
         dddx, dddy = x.derivative(3), y.derivative(3)
-        g_tf = self.g*(self.T**2)
+        g_tf = self.g*(horizon_time**2)
         self.define_constraint(-(ddx**2 + (ddy+g_tf)**2) +
-                               (self.T**4)*self.u1min**2, -inf, 0.)
+                               (horizon_time**4)*self.u1min**2, -inf, 0.)
         self.define_constraint(
-            (ddx**2 + (ddy+g_tf)**2) - (self.T**4)*self.u1max**2, -inf, 0.)
+            (ddx**2 + (ddy+g_tf)**2) - (horizon_time**4)*self.u1max**2, -inf, 0.)
         self.define_constraint(-(dddx*(ddy+g_tf) - ddx*dddy) +
-                               (ddx**2 + (ddy + g_tf)**2)*(self.T*self.u2min), -inf, 0.)
+                               (ddx**2 + (ddy + g_tf)**2)*(horizon_time*self.u2min), -inf, 0.)
         self.define_constraint(
-            (dddx*(ddy+g_tf) - ddx*dddy) - (ddx**2 + (ddy + g_tf)**2)*(self.T*self.u2max), -inf, 0.)
+            (dddx*(ddy+g_tf) - ddx*dddy) - (ddx**2 + (ddy + g_tf)**2)*(horizon_time*self.u2max), -inf, 0.)
 
-    def get_initial_constraints(self, splines):
+    def get_initial_constraints(self, splines, horizon_time=None):
+        if horizon_time is None:
+            horizon_time = self.define_symbol('T')  # motion time
         spl0 = self.define_parameter('spl0', 2)
         dspl0 = self.define_parameter('dspl0', 2)
         ddspl0 = self.define_parameter('ddspl0', 2)
@@ -68,8 +71,8 @@ class Quadrotor(Vehicle):
         dx, dy = x.derivative(), y.derivative()
         ddx, ddy = x.derivative(2), y.derivative(2)
         return [(x, spl0[0]), (y, spl0[1]),
-                (dx, self.T*dspl0[0]), (dy, self.T*dspl0[1]),
-                (ddx, (self.T**2)*ddspl0[0]), (ddy, (self.T**2)*ddspl0[1])]
+                (dx, horizon_time*dspl0[0]), (dy, horizon_time*dspl0[1]),
+                (ddx, (horizon_time**2)*ddspl0[0]), (ddy, (horizon_time**2)*ddspl0[1])]
 
     def get_terminal_constraints(self, splines):
         position = self.define_parameter('poseT', 2)
@@ -114,9 +117,9 @@ class Quadrotor(Vehicle):
         parameters[self]['poseT'] = self.poseT
         return parameters
 
-    def define_collision_constraints(self, hyperplanes, environment, splines):
+    def define_collision_constraints(self, hyperplanes, environment, splines, horizon_time=None):
         x, y = splines[0], splines[1]
-        self.define_collision_constraints_2d(hyperplanes, environment, [x, y])
+        self.define_collision_constraints_2d(hyperplanes, environment, [x, y], horizon_time)
 
     def splines2signals(self, splines, time):
         signals = {}
