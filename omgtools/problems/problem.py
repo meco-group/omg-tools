@@ -192,10 +192,10 @@ class Problem(OptiChild, PlotLayer):
         # update vehicles
         for vehicle in self.vehicles:
             spline_segments = [self.father.get_variables(
-                vehicle, 'splines'+str(k)) for k in range(vehicle.n_seg)]
+                vehicle, 'splines_seg'+str(k)) for k in range(vehicle.n_seg)]
             spline_values = vehicle.signals['splines'][:, -1]
             spline_values = [self.father.get_variables(
-                vehicle, 'splines'+str(k), spline=False)[-1, :] for k in range(vehicle.n_seg)]
+                vehicle, 'splines_seg'+str(k), spline=False)[-1, :] for k in range(vehicle.n_seg)]
             for segment, values in zip(spline_segments, spline_values):
                 for spl, value in zip(segment, values):
                     spl.coeffs = value*np.ones(len(spl.basis))

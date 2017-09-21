@@ -55,7 +55,7 @@ simulator = Simulator(problem)
 simulator.run_once(simulate=False)
 var_central = np.zeros((0, 1))
 for vehicle in vehicles:
-    splines = problem.father.get_variables(vehicle, 'splines0')
+    splines = problem.father.get_variables(vehicle, 'splines_seg0')
     pos_c = vehicle.get_fleet_center(
         splines, vehicle.rel_pos_c, substitute=False)
     pos_c = np.hstack([c.coeffs for c in pos_c])
