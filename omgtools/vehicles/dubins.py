@@ -129,7 +129,7 @@ class Dubins(Vehicle):
 
 
     def get_fleet_center(self, splines, rel_pos, substitute=True):
-        T = self.define_symbol('T')
+        horizon_time = self.define_symbol('T')
         t = self.define_symbol('t')
         pos0 = self.define_parameter('pos0', 2)
         v_til, tg_ha = splines
@@ -139,8 +139,8 @@ class Dubins(Vehicle):
         else:
             dx = v_til*(1-tg_ha**2)
             dy = v_til*(2*tg_ha)
-            x = self.integrate_once(dx, pos0[0], t, T)
-            y = self.integrate_once(dy, pos0[1], t, T)
+            x = self.integrate_once(dx, pos0[0], t, horizon_time)
+            y = self.integrate_once(dy, pos0[1], t, horizon_time)
         eps = 1.e-2
         center = self.define_spline_variable('formation_center', self.n_dim)
         # self.define_constraint((x-center[0])*(1+tg_ha**2) + rel_pos[0]*2*tg_ha + rel_pos[1]*(1-tg_ha**2), -eps, eps)
@@ -351,7 +351,7 @@ class Dubins(Vehicle):
         return surfaces, []
 
     def get_pos_splines(self, splines):
-        T = self.define_symbol('T')  # motion time
+        horizon_time = self.define_symbol('T')  # motion time
         t = self.define_symbol('t')  # current time of first knot
         pos0 = self.define_parameter('pos0', 2)  # current position
         v_til, tg_ha = splines
@@ -360,8 +360,8 @@ class Dubins(Vehicle):
         else:
             dx = v_til*(1-tg_ha**2)
             dy = v_til*(2*tg_ha)
-            x = self.integrate_once(dx, pos0[0], t, T)
-            y = self.integrate_once(dy, pos0[1], t, T)
+            x = self.integrate_once(dx, pos0[0], t, horizon_time)
+            y = self.integrate_once(dy, pos0[1], t, horizon_time)
         return [x, y]
 
     # Next two functions are required if vehicle is not passed to problem, but is still used in the optimization
