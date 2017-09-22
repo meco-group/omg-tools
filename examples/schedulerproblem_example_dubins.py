@@ -22,7 +22,7 @@ from omgtools import *
 
 # create vehicle
 vehicle = Dubins(shapes=Circle(radius=0.3), bounds={'vmax': 0.7, 'wmax': np.pi/3., 'wmin': -np.pi/3.}, # in rad/s
-                 options={'substitution': False, 'stop_tol': 1e-1})
+                 options={'substitution': False})
 vehicle.define_knots(knot_intervals=10)
 
 # create environment
