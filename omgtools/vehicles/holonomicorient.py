@@ -157,7 +157,7 @@ class HolonomicOrient(Vehicle):
 
     def define_collision_constraints(self, hyperplanes, environment, splines, horizon_time=None):
         x, y, tg_ha = splines[0], splines[1], splines[2]
-        self.define_collision_constraints_2d(hyperplanes, environment, [x, y], tg_ha, horizon_time)
+        self.define_collision_constraints_2d(hyperplanes, environment, [x, y], horizon_time, tg_ha=tg_ha)
 
     def splines2signals(self, splines, time):
         # for plotting and logging

@@ -232,7 +232,7 @@ class AGV(Vehicle):
         x_int, y_int = horizon_time*running_integral(dx), horizon_time*running_integral(dy)
         x = x_int-evalspline(x_int, self.t/horizon_time) + self.pos0[0]
         y = y_int-evalspline(y_int, self.t/horizon_time) + self.pos0[1]
-        self.define_collision_constraints_2d(hyperplanes, environment, [x, y], tg_ha)
+        self.define_collision_constraints_2d(hyperplanes, environment, [x, y], horizon_time, tg_ha=tg_ha)
 
     def splines2signals(self, splines, time):
         # for plotting and logging

@@ -165,7 +165,7 @@ class Trailer(Vehicle):
         x_veh, y_veh = self.lead_veh.get_pos_splines(splines[1: ])
         # pass on vehicle position and trailer offset to determine anti-collision constraints
         # -self.l_hitch because trailer is behind the vehicle
-        self.define_collision_constraints_2d(hyperplanes, environment, [x_veh, y_veh], tg_ha_tr, -self.l_hitch, horizon_time)
+        self.define_collision_constraints_2d(hyperplanes, environment, [x_veh, y_veh], horizon_time, tg_ha=tg_ha_tr, offset=-self.l_hitch)
         self.lead_veh.define_collision_constraints(hyperplanes, environment, splines[1: ], horizon_time)
 
     def splines2signals(self, splines, time):
