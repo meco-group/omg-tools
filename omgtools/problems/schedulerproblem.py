@@ -862,7 +862,6 @@ class SchedulerProblem(Problem):
             init_spl, motion_time = self.get_init_guess_new_frame(self.frames[k])
             init_splines.append(init_spl)
             motion_times.append(motion_time)
-
         # pass on initial guess
         self.vehicles[0].set_init_spline_values(init_splines, n_seg = self.n_frames)
 
@@ -875,9 +874,16 @@ class SchedulerProblem(Problem):
         # if Dubins vehicle, add orientation 0
         # Todo: would want to check if vehicle is Dubins here, but for some reason can't import Dubins at top of file??
         if not isinstance(self.vehicles[0], Holonomic):
-            pose = self.frames[-1]['waypoints'][-1]
-            pose.extend([0])
-            self.vehicles[0].set_terminal_conditions(pose)
+            if self.frames[-1]['waypoints'][-1] == self.goal_state[:2]:
+                self.vehicles[0].set_terminal_conditions(self.goal_state)  # setting goal for final frame
+            else:
+                # Todo: use last waypoint inside frame and first waypoint in next frame?
+                # compute angle between last and second last waypoint inside frame
+                # to use as a desired orientation
+                x1,y1 = self.frames[-1]['waypoints'][-2]
+                x2,y2 = self.frames[-1]['waypoints'][-1]
+                pose = [x2,y2,np.arctan2((y2-y1),(x2-x1))]
+                self.vehicles[0].set_terminal_conditions(pose)
         else:
             self.vehicles[0].set_terminal_conditions(self.frames[-1]['waypoints'][-1])
 
@@ -907,67 +913,78 @@ class SchedulerProblem(Problem):
         for i in range(len(waypoints)-1):
             l_x += waypoints[i+1][0] - waypoints[i][0]
             l_y += waypoints[i+1][1] - waypoints[i][1]
-        # calculate distance in x and y between each 2 waypoints
-        # and use it as a relative measure to build time vector
-        time_x = [0.]
-        time_y = [0.]
-
-        for i in range(len(waypoints)-1):
-            if (l_x == 0. and l_y !=0.):
-                time_x.append(0.)
-                time_y.append(time_y[-1] + float(waypoints[i+1][1] - waypoints[i][1])/l_y)
-            elif (l_x != 0. and l_y == 0.):
-                time_x.append(time_x[-1] + float(waypoints[i+1][0] - waypoints[i][0])/l_x)
-                time_y.append(0.)
-            elif (l_x == 0. and l_y == 0.):
-                time_x.append(0.)
-                time_y.append(0.)
-            else:
-                time_x.append(time_x[-1] + float(waypoints[i+1][0] - waypoints[i][0])/l_x)
-                time_y.append(time_y[-1] + float(waypoints[i+1][1] - waypoints[i][1])/l_y)  # gives time 0...1
-
-        # make approximate one an exact one
-        # otherwise fx(1) = 1
-        for idx, t in enumerate(time_x):
-            if (1 - t < 1e-5):
-                time_x[idx] = 1
-        for idx, t in enumerate(time_y):
-            if (1 - t < 1e-5):
-                time_y[idx] = 1
-
-        # make interpolation functions
-        if (all( t == 0 for t in time_x) and all(t == 0 for t in time_y)):
-            # motion_times.append(0.1)
-            # coeffs_x = x[0]*np.ones(len(self.vehicles[0].knots[self.vehicles[0].degree-1:-(self.vehicles[0].degree-1)]))
-            # coeffs_y = y[0]*np.ones(len(self.vehicles[0].knots[self.vehicles[0].degree-1:-(self.vehicles[0].degree-1)]))
-            # init_splines.append(np.c_[coeffs_x, coeffs_y])
-            # break
-            raise RuntimeError('Trying to make a prediction for goal = current position. This may' +
-                ' be because vehicle is larger than one cell, this may cause problems when switching frames.'
-                ' Consider reducing the amount of cells, or scale your vehicle.')
-        elif all(t == 0 for t in time_x):
-            # if you don't do this, f evaluates to NaN for f(0)
-            time_x = time_y
-        elif all(t == 0 for t in time_y):
-            # if you don't do this, f evaluates to NaN for f(0)
-            time_y = time_x
-        # kind='cubic' requires a minimum of 4 waypoints
-        fx = interp1d(time_x, x, kind='linear', bounds_error=False, fill_value=1.)
-        fy = interp1d(time_y, y, kind='linear', bounds_error=False, fill_value=1.)
-
-        # evaluate resulting splines to get evaluations at knots = coeffs-guess
-        # Note: conservatism is neglected here (spline value = coeff value)
-        coeffs_x = fx(self.vehicles[0].basis.greville())
-        coeffs_y = fy(self.vehicles[0].basis.greville())
-        init_guess = np.c_[coeffs_x, coeffs_y]
 
         # suppose vehicle is moving at half of vmax to calculate motion time,
         # instead of building and solving the problem
         length_to_travel = np.sqrt((l_x**2+l_y**2))
         max_vel = self.vehicles[0].vmax if hasattr(self.vehicles[0], 'vmax') else (self.vehicles[0].vxmax+self.vehicles[0].vymax)*0.5
         motion_time = length_to_travel/(max_vel*0.5)
-        init_guess[-3] = init_guess[-1]  # final acceleration is also 0 normally
-        init_guess[-4] = init_guess[-1]  # final acceleration is also 0 normally
+
+        # Todo: should change to isinstance(..., Dubins), but gave import error before...
+        if not isinstance(self.vehicles[0], Holonomic):
+            # initialize splines as zeros, since due to the change of variables it is not possible
+            # to easily generate a meaningfull initial guess for r and v_tilde
+            coeffs = 0*self.vehicles[0].knots[self.vehicles[0].degree-1:-(self.vehicles[0].degree-1)]
+            init_guess = np.c_[coeffs, coeffs]
+        elif isinstance(self.vehicles[0], Holonomic):
+            # calculate distance in x and y between each 2 waypoints
+            # and use it as a relative measure to build time vector
+            time_x = [0.]
+            time_y = [0.]
+
+            for i in range(len(waypoints)-1):
+                if (l_x == 0. and l_y !=0.):
+                    time_x.append(0.)
+                    time_y.append(time_y[-1] + float(waypoints[i+1][1] - waypoints[i][1])/l_y)
+                elif (l_x != 0. and l_y == 0.):
+                    time_x.append(time_x[-1] + float(waypoints[i+1][0] - waypoints[i][0])/l_x)
+                    time_y.append(0.)
+                elif (l_x == 0. and l_y == 0.):
+                    time_x.append(0.)
+                    time_y.append(0.)
+                else:
+                    time_x.append(time_x[-1] + float(waypoints[i+1][0] - waypoints[i][0])/l_x)
+                    time_y.append(time_y[-1] + float(waypoints[i+1][1] - waypoints[i][1])/l_y)  # gives time 0...1
+
+            # make approximate one an exact one
+            # otherwise fx(1) = 1
+            for idx, t in enumerate(time_x):
+                if (1 - t < 1e-5):
+                    time_x[idx] = 1
+            for idx, t in enumerate(time_y):
+                if (1 - t < 1e-5):
+                    time_y[idx] = 1
+
+            # make interpolation functions
+            if (all( t == 0 for t in time_x) and all(t == 0 for t in time_y)):
+                # motion_times.append(0.1)
+                # coeffs_x = x[0]*np.ones(len(self.vehicles[0].knots[self.vehicles[0].degree-1:-(self.vehicles[0].degree-1)]))
+                # coeffs_y = y[0]*np.ones(len(self.vehicles[0].knots[self.vehicles[0].degree-1:-(self.vehicles[0].degree-1)]))
+                # init_splines.append(np.c_[coeffs_x, coeffs_y])
+                # break
+                raise RuntimeError('Trying to make a prediction for goal = current position. This may' +
+                    ' be because vehicle is larger than one cell, this may cause problems when switching frames.'
+                    ' Consider reducing the amount of cells, or scale your vehicle.')
+            elif all(t == 0 for t in time_x):
+                # if you don't do this, f evaluates to NaN for f(0)
+                time_x = time_y
+            elif all(t == 0 for t in time_y):
+                # if you don't do this, f evaluates to NaN for f(0)
+                time_y = time_x
+            # kind='cubic' requires a minimum of 4 waypoints
+            fx = interp1d(time_x, x, kind='linear', bounds_error=False, fill_value=1.)
+            fy = interp1d(time_y, y, kind='linear', bounds_error=False, fill_value=1.)
+
+            # evaluate resulting splines to get evaluations at knots = coeffs-guess
+            # Note: conservatism is neglected here (spline value = coeff value)
+            coeffs_x = fx(self.vehicles[0].basis.greville())
+            coeffs_y = fy(self.vehicles[0].basis.greville())
+            init_guess = np.c_[coeffs_x, coeffs_y]
+
+            init_guess[-3] = init_guess[-1]  # final acceleration is also 0 normally
+            init_guess[-4] = init_guess[-1]  # final acceleration is also 0 normally
+        else:
+            raise RuntimeError('You selected an unsupported vehicle type, choose Holonomic or Dubins')
 
         return init_guess, motion_time
 
