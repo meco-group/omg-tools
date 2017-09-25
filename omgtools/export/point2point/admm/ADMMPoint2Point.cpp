@@ -356,7 +356,7 @@ void ADMMPoint2Point::fillParameterDict(vector<obstacle_t>& obstacles, map<strin
 void ADMMPoint2Point::extractData(){
     map<string, map<string, vector<double>>> var_dict;
     getVariableDict(variables, var_dict);
-    vector<double> spline_coeffs_vec(var_dict[VEHICLELBL]["splines0"]);
+    vector<double> spline_coeffs_vec(var_dict[VEHICLELBL]["splines_seg0"]);
     vehicle->setKnotHorizon(horizon_time);
     int n_spl = vehicle->getNSplines();
     int len_basis = vehicle->getLenBasis();
