@@ -29,6 +29,9 @@
 # In the beginning, the first two frames are computed. When the vehicles enters the second frame (which
 # overlaps with the first one), the third frame is computed, and so the method continues.
 
+# When computing the trajectory, only one frame is taken into account. This means that sometimes problems
+# can arise when obstacles are moving behind the corner.
+
 from omgtools import *
 
 # create vehicle
@@ -90,16 +93,16 @@ options={'freeT': True}
 
 # Note: When 'min_nobs' is selected and your vehicle size is larger than the cell size,
 # shifting frames sometimes causes problems
-multiproblem=MultiFrameProblem(vehicle, environment, globalplanner,
+schedulerproblem=SchedulerProblem(vehicle, environment, globalplanner,
                                options=options, frame_type='min_nobs')
 # multiproblem=MultiFrameProblem(vehicle, environment, globalplanner,
                                # options=options, frame_size=150, frame_type='shift')
 
 # simulate the problem
-simulator = Simulator(multiproblem)
+simulator = Simulator(schedulerproblem)
 
 # define what you want to plot
-multiproblem.plot('scene')
+schedulerproblem.plot('scene')
 vehicle.plot('input', knots=True, prediction=True, labels=['v_x (m/s)', 'v_y (m/s)'])
 
 # run it!

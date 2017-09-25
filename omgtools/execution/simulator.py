@@ -21,6 +21,7 @@ import numpy as np
 from deployer import Deployer
 from plotlayer import PlotLayer
 
+
 class Simulator:
 
     def __init__(self, problem, sample_time=0.01, update_time=0.1):
@@ -112,7 +113,7 @@ class Simulator:
         else:
             hard_stop = None
         self.deployer.reset()
-        self.deployer.update(self.current_time, None, np.inf)
+        self.deployer.update(self.current_time, None, update_time=np.inf)
         if not simulate:
             return None
         if hard_stop:
@@ -131,6 +132,58 @@ class Simulator:
             for vehicle in self.problem.vehicles:
                 trajectories[str(vehicle)] = vehicle.trajectories
         return trajectories
+
+    def run_segment(self, simulate=True, **kwargs):
+        self.deployer.reset()
+        stop = False
+        while not stop:
+            if isinstance(self.problem.motion_times[0], (int,float)):
+                self.update_time = self.problem.motion_times[0]
+
+                # Todo: use self.problem.motion_times[1] here? then in deployer.update you can predict with the right time
+                # in first iteration the used update time is just a guess
+                # in second iteration, self.problem.motion_times has the two calculated values, but the first one is already used,
+                # so actually you want to use the second one
+                # in the end this update time is only used for state prediction, so not really used in our case, since we know
+                # the state at end of segment
+                # downside: now in the first iteration you will use the guess for the second segment...
+            else:
+                self.update_time = 0.1  # in first iteration make small step
+            # update deployer
+            self.deployer.update(self.current_time, None, self.update_time)
+            self.update_time = self.problem.motion_times[0]
+            # simulate problem
+            self.problem.simulate(self.current_time, self.update_time, self.sample_time)
+
+            # adapt state and input to the values at the beginning of the next trajectory, this is necessary because
+            # the simulation can only reach points in time that are multiples of the sample time, such that a gap mostly
+            # between the end position of the simulation and the point in which segments are connected, leading to problems
+            # when constraints are active at the connection point between segments
+            pos_splines = self.problem.vehicles[0].result_splines
+            input_splines = [s.derivative(1) for s in pos_splines]
+            dinput_splines = [s.derivative(2) for s in pos_splines]
+            self.problem.vehicles[0].overrule_state(np.hstack([s(self.problem.motion_times[0]) for s in pos_splines]))
+            self.problem.vehicles[0].overrule_input(np.hstack([s(self.problem.motion_times[0]) for s in input_splines]),
+                                             dinput=np.hstack([s(self.problem.motion_times[0]) for s in dinput_splines]))
+
+            # check stop condition
+            stop = self.problem.stop_criterium(self.current_time, self.update_time)
+            ### adapted ###
+            if (stop or self.update_time - float(self.problem.vehicles[0].signals['time'][:, -1] - self.current_time)) > self.sample_time:
+                update_time = float(self.problem.vehicles[0].signals['time'][:, -1] - self.current_time)
+                self.update_timing(update_time-self.sample_time) #correcting for first time
+            else:
+                self.update_timing()
+        self.problem.final()
+        # return trajectories and signals
+        trajectories, signals = {}, {}
+        if len(self.problem.vehicles) == 1:
+            return self.problem.vehicles[0].traj_storage, self.problem.vehicles[0].signals
+        else:
+            for vehicle in self.problem.vehicles:
+                trajectories[str(vehicle)] = vehicle.traj_storage
+                signals[str(vehicle)] = vehicle.signals
+        return trajectories, signals
 
     def hard_stop(self, current_time, stop_time, perturbation):
         self.problem.simulate(current_time, stop_time, self.sample_time)

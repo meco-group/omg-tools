@@ -55,15 +55,15 @@ class Point2pointProblem(Problem):
         self.t0 = self.t/self.T
         Problem.construct(self)
         for vehicle in self.vehicles:
-            splines = vehicle.define_splines(n_seg=1)[0]
-            vehicle.define_trajectory_constraints(splines)
-            self.environment.define_collision_constraints(vehicle, splines)
+            splines = vehicle.define_splines(n_seg=1)
+            vehicle.define_trajectory_constraints(splines[0], self.T)
+            self.environment.define_collision_constraints(vehicle, splines, self.T)
         if len(self.vehicles) > 1 and self.options['inter_vehicle_avoidance']:
-            self.environment.define_intervehicle_collision_constraints(self.vehicles)
+            self.environment.define_intervehicle_collision_constraints(self.vehicles, self.T)
 
     def define_init_constraints(self):
         for vehicle in self.vehicles:
-            init_con = vehicle.get_initial_constraints(vehicle.splines[0])
+            init_con = vehicle.get_initial_constraints(vehicle.splines[0], self.T)
             for con in init_con:
                 spline, condition = con[0], con[1]
                 self.define_constraint(
@@ -82,7 +82,8 @@ class Point2pointProblem(Problem):
         Problem.reinitialize(self)
         for vehicle in self.vehicles:
             init = vehicle.get_init_spline_value()
-            father.set_variables(init, vehicle, 'splines0')
+            for k in range(vehicle.n_seg):
+                father.set_variables(init[k], vehicle, 'splines_seg'+str(k))
 
     def set_init_time(self, time):
         self.init_time = time
@@ -224,7 +225,7 @@ class FixedTPoint2point(Point2pointProblem):
             n_samp = int(
                 round((horizon_time-rel_current_time)/sample_time, 6)) + 1
             time_axis = np.linspace(rel_current_time, rel_current_time + (n_samp-1)*sample_time, n_samp)
-            spline_segments = [self.father.get_variables(vehicle, 'splines'+str(k)) for k in range(vehicle.n_seg)]
+            spline_segments = [self.father.get_variables(vehicle, 'splines_seg'+str(k)) for k in range(vehicle.n_seg)]
             vehicle.store(current_time, sample_time, spline_segments, horizon_time, time_axis)
 
     # ========================================================================
@@ -322,7 +323,7 @@ class FreeTPoint2point(Point2pointProblem):
             n_samp = int(
                 round((horizon_time-rel_current_time)/sample_time, 6)) + 1
             time_axis = np.linspace(rel_current_time, rel_current_time + (n_samp-1)*sample_time, n_samp)
-            spline_segments = [self.father.get_variables(vehicle, 'splines'+str(k)) for k in range(vehicle.n_seg)]
+            spline_segments = [self.father.get_variables(vehicle, 'splines_seg'+str(k)) for k in range(vehicle.n_seg)]
             vehicle.store(current_time, sample_time, spline_segments, horizon_time, time_axis)
 
     # ========================================================================

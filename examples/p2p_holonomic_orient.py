@@ -33,7 +33,7 @@ vehicle.set_terminal_conditions([2., 2., np.pi/2.])
 environment = Environment(room={'shape': Square(5.)})
 rectangle = Rectangle(width=3., height=0.2)
 
-environment.add_obstacle(Obstacle({'position': [-2.1, -0.5]}, shape=rectangle))
+environment.add_obstacle(Obstacle({'position': [-1.8, -0.5]}, shape=rectangle))
 environment.add_obstacle(Obstacle({'position': [1.7, -0.5]}, shape=rectangle))
 trajectories = {'velocity': {'time': [3., 4.],
                              'values': [[-0.15, 0.0], [0., 0.15]]}}

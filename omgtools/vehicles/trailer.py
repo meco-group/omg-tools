@@ -44,8 +44,9 @@ class Trailer(Vehicle):
     def init(self):
         self.lead_veh.init()
 
-    def define_trajectory_constraints(self, splines):
-        T = self.define_symbol('T')
+    def define_trajectory_constraints(self, splines, horizon_time=None):
+        if horizon_time is None:
+            horizon_time = self.define_symbol('T')  # motion time
         tg_ha_tr = splines[0]
         dtg_ha_tr = tg_ha_tr.derivative()
         v_til_veh, tg_ha_veh = splines[1:]
@@ -53,10 +54,10 @@ class Trailer(Vehicle):
         # relaxed this equality constraint with eps
         eps = 1e-3
         self.define_constraint(2*dtg_ha_tr*self.l_hitch -
-                               T*v_til_veh*(2*tg_ha_veh*(1-tg_ha_tr**2)-(1-tg_ha_veh**2)*2*tg_ha_tr) - T*eps,
+                               horizon_time*v_til_veh*(2*tg_ha_veh*(1-tg_ha_tr**2)-(1-tg_ha_veh**2)*2*tg_ha_tr) - horizon_time*eps,
                                -inf, 0.)
         self.define_constraint(-2*dtg_ha_tr*self.l_hitch +
-                               T*v_til_veh*(2*tg_ha_veh*(1-tg_ha_tr**2)-(1-tg_ha_veh**2)*2*tg_ha_tr) - T*eps,
+                               horizon_time*v_til_veh*(2*tg_ha_veh*(1-tg_ha_tr**2)-(1-tg_ha_veh**2)*2*tg_ha_tr) - horizon_time*eps,
                                -inf, 0.)
         # limit angle between vehicle and trailer
         self.define_constraint(tg_ha_veh - tg_ha_tr - np.tan(self.tmax/2.), -inf, 0.)
@@ -64,18 +65,19 @@ class Trailer(Vehicle):
         # call lead_veh trajectory constraints
         self.lead_veh.define_trajectory_constraints(splines[1: ])
 
-    def get_initial_constraints(self, splines):
+    def get_initial_constraints(self, splines, horizon_time=None):
         # trailer has a certain theta0 --> trailer position follows from this
-        T = self.define_symbol('T')
+        if horizon_time is None:
+            horizon_time = self.define_symbol('T')  # motion time
         tg_ha_tr0 = self.define_parameter('tg_ha_tr0', 1)
         dtg_ha_tr0 = self.define_parameter('dtg_ha_tr0', 1)
         tg_ha_tr = splines[0]
         dtg_ha_tr = tg_ha_tr.derivative()
-        con_tr = [(tg_ha_tr, tg_ha_tr0, dtg_ha_tr, T*dtg_ha_tr0)]
+        con_tr = [(tg_ha_tr, tg_ha_tr0, dtg_ha_tr, horizon_time*dtg_ha_tr0)]
         con_veh = self.lead_veh.get_initial_constraints(splines[1:])
         return con_tr + con_veh  # put in one list
 
-    def get_terminal_constraints(self, splines):
+    def get_terminal_constraints(self, splines, horizon_time=None):
         # Only impose if self.theta_trT exists, e.g. if parking a trailer
         if hasattr(self, 'theta_trT'):
             tg_ha_tr = splines[0]
@@ -120,6 +122,7 @@ class Trailer(Vehicle):
         else:
             tg_ha_trT = tg_ha_tr0
         init_value_tr[:, 0] = np.linspace(tg_ha_tr0, tg_ha_trT, len(self.basis))
+        init_value_tr = [init_value_tr]
         init_value_veh = self.lead_veh.get_init_spline_value()
         init_value = np.c_[init_value_tr, init_value_veh]
         return init_value
@@ -156,14 +159,14 @@ class Trailer(Vehicle):
         parameters[self].update(parameters_veh[self.lead_veh])
         return parameters
 
-    def define_collision_constraints(self, hyperplanes, environment, splines):
+    def define_collision_constraints(self, hyperplanes, environment, splines, horizon_time=None):
         tg_ha_tr = splines[0]
         # get position of vehicle
         x_veh, y_veh = self.lead_veh.get_pos_splines(splines[1: ])
         # pass on vehicle position and trailer offset to determine anti-collision constraints
         # -self.l_hitch because trailer is behind the vehicle
-        self.define_collision_constraints_2d(hyperplanes, environment, [x_veh, y_veh], tg_ha_tr, -self.l_hitch)
-        self.lead_veh.define_collision_constraints(hyperplanes, environment, splines[1: ])
+        self.define_collision_constraints_2d(hyperplanes, environment, [x_veh, y_veh], horizon_time, tg_ha=tg_ha_tr, offset=-self.l_hitch)
+        self.lead_veh.define_collision_constraints(hyperplanes, environment, splines[1: ], horizon_time)
 
     def splines2signals(self, splines, time):
         signals = {}

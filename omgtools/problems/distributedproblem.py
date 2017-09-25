@@ -193,7 +193,7 @@ class DistributedProblem(Problem):
         for problem in self.problems:
             problem.store(current_time, update_time, sample_time)
 
-    def predict(self, current_time, predict_time, sample_time, states=None, delay=0):
+    def predict(self, current_time, predict_time, sample_time, states=None, inputs=None, dinputs=None, delay=0, enforce_states=False, enforce_inputs=False):
         if states is None:
             states = [None for k in range(len(self.problems))]
         for problem, state in zip(self.problems, states):

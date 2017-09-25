@@ -35,24 +35,27 @@ class Holonomic1D(Vehicle):
         self.amax = bounds['amax'] if 'amax' in bounds else 1.
 
     def init(self):
-        # time horizon
-        self.T = self.define_symbol('T')
+        pass
 
-    def define_trajectory_constraints(self, splines):
+    def define_trajectory_constraints(self, splines, horizon_time=None):
+        if horizon_time is None:
+            horizon_time = self.define_symbol('T')  # motion time
         x = splines[0]
         dx, ddx = x.derivative(), x.derivative(2)
-        self.define_constraint(-dx + self.T*self.vmin, -inf, 0.)
-        self.define_constraint(dx - self.T*self.vmax, -inf, 0.)
-        self.define_constraint(-ddx + (self.T**2)*self.amin, -inf, 0.)
-        self.define_constraint(ddx - (self.T**2)*self.amax, -inf, 0.)
+        self.define_constraint(-dx + horizon_time*self.vmin, -inf, 0.)
+        self.define_constraint(dx - horizon_time*self.vmax, -inf, 0.)
+        self.define_constraint(-ddx + (horizon_time**2)*self.amin, -inf, 0.)
+        self.define_constraint(ddx - (horizon_time**2)*self.amax, -inf, 0.)
 
-    def get_initial_constraints(self, splines):
+    def get_initial_constraints(self, splines, horizon_time=None):
+        if horizon_time is None:
+            horizon_time = self.define_symbol('T')  # motion time
         state0 = self.define_parameter('state0')
         input0 = self.define_parameter('input0')
         x, dx = splines[0], splines[0].derivative()
-        return [(x, state0[0]), (dx, self.T*input0[0])]
+        return [(x, state0[0]), (dx, horizon_time*input0[0])]
 
-    def get_terminal_constraints(self, splines):
+    def get_terminal_constraints(self, splines, horizon_time=None):
         position = self.define_parameter('poseT')
         x = splines[0]
         term_con = [(x, position[0])]
@@ -76,6 +79,7 @@ class Holonomic1D(Vehicle):
         posT = self.poseT[0]
         # init_value = np.r_[pos0[0]*np.ones(self.degree), np.linspace(pos0[0], posT[0], len(self.basis) - 2*self.degree), posT[0]*np.ones(self.degree)]
         init_value = np.linspace(pos0, posT, len(self.basis))
+        init_value = [init_value]
         return init_value
 
     def check_terminal_conditions(self):
@@ -93,7 +97,7 @@ class Holonomic1D(Vehicle):
         parameters[self]['poseT'] = self.poseT
         return parameters
 
-    def define_collision_constraints(self, hyperplanes, environment, splines):
+    def define_collision_constraints(self, hyperplanes, environment, splines, horizon_time=None):
         pass
 
     def splines2signals(self, splines, time):

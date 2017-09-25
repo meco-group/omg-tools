@@ -101,8 +101,8 @@ class Problem(OptiChild, PlotLayer):
         father.init_parameters()
 
     def solve(self, current_time, update_time):
-        current_time -= self.start_time # start_time: the point in time where you start solving
-        self.init_step(current_time, update_time)
+        current_time -= self.start_time  # start_time: the point in time where you start solving
+        self.init_step(current_time, update_time)  # pass on update_time to make initial guess
         # set initial guess, parameters, lb & ub
         var = self.father.get_variables()
         par = self.father.set_parameters(current_time)
@@ -132,17 +132,32 @@ class Problem(OptiChild, PlotLayer):
             print "%3d | %.4e | %.4e " % (self.iteration, t_upd, current_time)
         self.update_times.append(t_upd)
 
-    def predict(self, current_time, predict_time, sample_time, states=None, delay=0):
+    def predict(self, current_time, predict_time, sample_time, states=None, inputs=None, dinputs=None, delay=0, enforce_states=False, enforce_inputs=False):
         if states is None:
             states = [None for k in range(len(self.vehicles))]
+        if inputs is None:
+            inputs = [None for k in range(len(self.vehicles))]
+        if dinputs is None:
+            dinputs = [None for k in range(len(self.vehicles))]
         if len(self.vehicles) == 1:
             if not isinstance(states, list):
                 states = [states]
             elif isinstance(states[0], float):
                 states = [states]
-        enforce = True if (current_time == self.start_time) else False
+        if len(self.vehicles) == 1:
+            if not isinstance(inputs, list):
+                inputs = [inputs]
+            elif isinstance(inputs[0], float):
+                inputs = [inputs]
+        if len(self.vehicles) == 1:
+            if not isinstance(dinputs, list):
+                dinputs = [dinputs]
+            elif isinstance(dinputs[0], float):
+                dinputs = [dinputs]
+        if current_time == self.start_time:
+            enforce_states = True
         for k, vehicle in enumerate(self.vehicles):
-            vehicle.predict(current_time, predict_time, sample_time, states[k], delay, enforce)
+            vehicle.predict(current_time, predict_time, sample_time, states[k], inputs[k], dinputs[k], delay, enforce_states, enforce_inputs)
 
     def reset_init_guess(self, init_guess=None):
             if init_guess is None:  # no user provided initial guess
@@ -160,7 +175,7 @@ class Problem(OptiChild, PlotLayer):
                         if init_guess[l].shape[1] != vehicle.n_spl:
                             raise ValueError('Each vehicle spline should receive an initial guess.')
                         else:
-                            self.father.set_variables(init_guess[l].tolist(),child=vehicle, name='splines'+str(l))
+                            self.father.set_variables(init_guess[l].tolist(),child=vehicle, name='splines_seg'+str(l))
 
     # ========================================================================
     # Simulation related functions
@@ -177,10 +192,10 @@ class Problem(OptiChild, PlotLayer):
         # update vehicles
         for vehicle in self.vehicles:
             spline_segments = [self.father.get_variables(
-                vehicle, 'splines'+str(k)) for k in range(vehicle.n_seg)]
+                vehicle, 'splines_seg'+str(k)) for k in range(vehicle.n_seg)]
             spline_values = vehicle.signals['splines'][:, -1]
             spline_values = [self.father.get_variables(
-                vehicle, 'splines'+str(k), spline=False)[-1, :] for k in range(vehicle.n_seg)]
+                vehicle, 'splines_seg'+str(k), spline=False)[-1, :] for k in range(vehicle.n_seg)]
             for segment, values in zip(spline_segments, spline_values):
                 for spl, value in zip(segment, values):
                     spl.coeffs = value*np.ones(len(spl.basis))

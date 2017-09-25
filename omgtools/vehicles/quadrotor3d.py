@@ -72,12 +72,13 @@ class Quadrotor3D(Vehicle):
 
     def init(self):
         # time horizon
-        self.T = self.define_symbol('T')
         self.t = self.define_symbol('t')  # current time of first knot
         self.pos0 = self.define_parameter('pos0', 3)  # current position
         self.dpos0 = self.define_parameter('dpos0', 3)  # current velocity
 
-    def define_trajectory_constraints(self, splines):
+    def define_trajectory_constraints(self, splines, horizon_time=None):
+        if horizon_time is None:
+            horizon_time = self.define_symbol('T')  # motion time
         f_til, q_phi, q_theta = splines
         dq_phi = q_phi.derivative()
         dq_theta = q_theta.derivative()
@@ -85,11 +86,11 @@ class Quadrotor3D(Vehicle):
         self.define_constraint(f_til*(1+q_phi**2)*(1+q_theta**2) - self.u1max, -inf, 0)
         self.define_constraint(-f_til*(1+q_phi**2)*(1+q_theta**2) + self.u1min, -inf, 0)
         # constraints on u2
-        self.define_constraint(2*dq_phi - (1+q_phi**2)*self.T*self.u2max, -inf, 0.)
-        self.define_constraint(-2*dq_phi + (1+q_phi**2)*self.T*self.u2min, -inf, 0.)
+        self.define_constraint(2*dq_phi - (1+q_phi**2)*horizon_time*self.u2max, -inf, 0.)
+        self.define_constraint(-2*dq_phi + (1+q_phi**2)*horizon_time*self.u2min, -inf, 0.)
         # constraints on u3
-        self.define_constraint(2*dq_theta - (1+q_theta**2)*self.T*self.u3max, -inf, 0.)
-        self.define_constraint(-2*dq_theta + (1+q_theta**2)*self.T*self.u3min, -inf, 0.)
+        self.define_constraint(2*dq_theta - (1+q_theta**2)*horizon_time*self.u3max, -inf, 0.)
+        self.define_constraint(-2*dq_theta + (1+q_theta**2)*horizon_time*self.u3min, -inf, 0.)
         # constraints on phi
         self.define_constraint(q_phi - np.tan(0.5*self.phimax), -inf, 0)
         self.define_constraint(-q_phi + np.tan(0.5*self.phimin), -inf, 0)
@@ -105,9 +106,9 @@ class Quadrotor3D(Vehicle):
                 self.ddx = self.define_spline_variable('ddx', 1, 1, basis=ddx.basis)[0]
                 self.ddy = self.define_spline_variable('ddy', 1, 1, basis=ddy.basis)[0]
                 self.ddz = self.define_spline_variable('ddz', 1, 1, basis=ddz.basis)[0]
-                self.x, self.dx = self.integrate_twice(self.ddx, self.dpos0[0], self.pos0[0], self.t, self.T)
-                self.y, self.dy = self.integrate_twice(self.ddy, self.dpos0[1], self.pos0[1], self.t, self.T)
-                self.z, self.dz = self.integrate_twice(self.ddz, self.dpos0[2], self.pos0[2], self.t, self.T)
+                self.x, self.dx = self.integrate_twice(self.ddx, self.dpos0[0], self.pos0[0], self.t, horizon_time)
+                self.y, self.dy = self.integrate_twice(self.ddy, self.dpos0[1], self.pos0[1], self.t, horizon_time)
+                self.z, self.dz = self.integrate_twice(self.ddz, self.dpos0[2], self.pos0[2], self.t, horizon_time)
                 self.define_constraint(self.ddx - ddx, 0, 0)
                 self.define_constraint(self.ddy - ddy, 0, 0)
                 self.define_constraint(self.ddz - ddz, 0, 0)
@@ -118,12 +119,12 @@ class Quadrotor3D(Vehicle):
                 self.ddx = self.define_spline_variable('ddx', 1, 1, basis=basis)[0]
                 self.ddy = self.define_spline_variable('ddy', 1, 1, basis=basis)[0]
                 self.ddz = self.define_spline_variable('ddz', 1, 1, basis=basis)[0]
-                self.x, self.dx = self.integrate_twice(self.ddx, self.dpos0[0], self.pos0[0], self.t, self.T)
-                self.y, self.dy = self.integrate_twice(self.ddy, self.dpos0[1], self.pos0[1], self.t, self.T)
-                self.z, self.dz = self.integrate_twice(self.ddz, self.dpos0[2], self.pos0[2], self.t, self.T)
-                x, dx = self.integrate_twice(ddx, self.dpos0[0], self.pos0[0], self.t, self.T)
-                y, dy = self.integrate_twice(ddy, self.dpos0[1], self.pos0[1], self.t, self.T)
-                z, dz = self.integrate_twice(ddz, self.dpos0[2], self.pos0[2], self.t, self.T)
+                self.x, self.dx = self.integrate_twice(self.ddx, self.dpos0[0], self.pos0[0], self.t, horizon_time)
+                self.y, self.dy = self.integrate_twice(self.ddy, self.dpos0[1], self.pos0[1], self.t, horizon_time)
+                self.z, self.dz = self.integrate_twice(self.ddz, self.dpos0[2], self.pos0[2], self.t, horizon_time)
+                x, dx = self.integrate_twice(ddx, self.dpos0[0], self.pos0[0], self.t, horizon_time)
+                y, dy = self.integrate_twice(ddy, self.dpos0[1], self.pos0[1], self.t, horizon_time)
+                z, dz = self.integrate_twice(ddz, self.dpos0[2], self.pos0[2], self.t, horizon_time)
                 # eps = 5e-2
                 # self.define_constraint(definite_integral(self.ddx - ddx, 0, 1), 0, 0)
                 # self.define_constraint(definite_integral(self.ddy - ddy, 0, 1), 0, 0)
@@ -133,7 +134,9 @@ class Quadrotor3D(Vehicle):
                 self.define_constraint(self.y-y, -eps, eps)
                 self.define_constraint(self.z-z, -eps, eps)
 
-    def get_initial_constraints(self, splines):
+    def get_initial_constraints(self, splines, horizon_time=None):
+        if horizon_time is None:
+            horizon_time = self.define_symbol('T')  # motion time
         # inputs are function of f_til, q_phi, dq_phi, q_theta and dq_theta -> impose constraints on these
         f_til0 = self.define_parameter('f_til0', 1)
         q_phi0 = self.define_parameter('q_phi0', 1)
@@ -144,9 +147,11 @@ class Quadrotor3D(Vehicle):
         f_til, q_phi, q_theta = splines
         dq_phi, dq_theta = q_phi.derivative(), q_theta.derivative()
         return [(f_til, f_til0), (q_phi, q_phi0), (q_theta, q_theta0),
-                (dq_phi, self.T*dq_phi0), (dq_theta, self.T*dq_theta0)]
+                (dq_phi, horizon_time*dq_phi0), (dq_theta, horizon_time*dq_theta0)]
 
-    def get_terminal_constraints(self, splines):
+    def get_terminal_constraints(self, splines, horizon_time=None):
+        if horizon_time is None:
+            horizon_time = self.define_symbol('T')  # motion time
         posT = self.define_parameter('posT', 3)
         q_phiT = self.define_parameter('q_phiT', 1)
         q_thetaT = self.define_parameter('q_thetaT', 1)
@@ -158,9 +163,9 @@ class Quadrotor3D(Vehicle):
             ddx = f_til*(1-q_phi**2)*(2*q_theta)
             ddy = -f_til*(1+q_theta**2)*(2*q_phi)
             ddz = f_til*(1-q_phi**2)*(1-q_theta**2) - self.g
-            x, dx = self.integrate_twice(ddx, self.dpos0[0], self.pos0[0], self.t, self.T)
-            y, dy = self.integrate_twice(ddy, self.dpos0[1], self.pos0[1], self.t, self.T)
-            z, dz = self.integrate_twice(ddz, self.dpos0[2], self.pos0[2], self.t, self.T)
+            x, dx = self.integrate_twice(ddx, self.dpos0[0], self.pos0[0], self.t, horizon_time)
+            y, dy = self.integrate_twice(ddy, self.dpos0[1], self.pos0[1], self.t, horizon_time)
+            z, dz = self.integrate_twice(ddz, self.dpos0[2], self.pos0[2], self.t, horizon_time)
         # soft constraint on position and hard constraint on orientation
         term_con = [(x, posT[0]), (y, posT[1]), (z, posT[2])]
         term_con_der = [(q_phi, q_phiT), (q_theta, q_thetaT), (f_til, self.g),
@@ -188,6 +193,7 @@ class Quadrotor3D(Vehicle):
         init_value[:, 0] = f_til0
         init_value[:, 1] = np.linspace(q_phi0, q_phiT, len(self.basis))
         init_value[:, 2] = np.linspace(q_theta0, q_thetaT, len(self.basis))
+        init_value = [init_value]
         return init_value
 
     def check_terminal_conditions(self):
@@ -212,7 +218,9 @@ class Quadrotor3D(Vehicle):
         parameters[self]['q_thetaT'] = np.tan(self.poseT[4]/2.)
         return parameters
 
-    def define_collision_constraints(self, hyperplanes, environment, splines):
+    def define_collision_constraints(self, hyperplanes, room, splines, horizon_time=None):
+        if horizon_time is None:
+            horizon_time = self.define_symbol('T')  # motion time
         f_til, q_phi, q_theta = splines
         if self.options['substitution']:
             x, y, z = self.x, self.y, self.z
@@ -220,11 +228,11 @@ class Quadrotor3D(Vehicle):
             ddx = f_til*(1-q_phi**2)*(2*q_theta)
             ddy = -f_til*(1+q_theta**2)*(2*q_phi)
             ddz = f_til*(1-q_phi**2)*(1-q_theta**2) - self.g
-            x, _ = self.integrate_twice(ddx, self.dpos0[0], self.pos0[0], self.t, self.T)
-            y, _ = self.integrate_twice(ddy, self.dpos0[1], self.pos0[1], self.t, self.T)
-            z, _ = self.integrate_twice(ddz, self.dpos0[2], self.pos0[2], self.t, self.T)
+            x, _ = self.integrate_twice(ddx, self.dpos0[0], self.pos0[0], self.t, horizon_time)
+            y, _ = self.integrate_twice(ddy, self.dpos0[1], self.pos0[1], self.t, horizon_time)
+            z, _ = self.integrate_twice(ddz, self.dpos0[2], self.pos0[2], self.t, horizon_time)
 
-        self.define_collision_constraints_3d(hyperplanes, environment, [x, y, z])
+        self.define_collision_constraints_3d(hyperplanes, room, [x, y, z], horizon_time)
 
     def integrate_twice(self, ddx, dx0, x0, t, T=1.):
         # first integration

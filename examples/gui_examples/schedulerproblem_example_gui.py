@@ -18,19 +18,18 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 
-# This example is very similar to p2p_multiframeproblem.py, and uses the same principles
-# The difference is that in the current example, a GUI is used to assist the user in building up
-# the desired environment. For an explanation about how to use the GUI, see below.
+# This code shows an expansion of a normal multiframeproblem, in which a large environment is split over
+# several frames. In a multiframeproblem we only consider one room/frame at a time.
+# Using a schedulerproblem, you can combine frames, i.e. a trajectory is computed through multiple frames at a
+# time. The advantage is that e.g. moving obstacles around the corner can immediately be taken into account.
 
 from omgtools import *
 
 # create vehicle
-vehicle = Holonomic(shapes = Circle(radius=0.6), options={'syslimit': 'norm_2'},
+vehicle = Holonomic(shapes = Circle(radius=0.4), options={'syslimit': 'norm_2'},
                     bounds={'vmax': 1.2, 'vmin':-1.2, 'amax':10, 'amin':-10})
 
 # create environment with the help of a GUI
-
-# Note: to run this example just click Load in the GUI and select ICRA_example1.pickle
 
 import Tkinter as tk
 root = tk.Tk()
@@ -50,22 +49,21 @@ start, goal = clicked[0], clicked[1]
 # the amount of cells are extracted from the GUI and were either passed by the user to the GUI, or kept at default values
 globalplanner = AStarPlanner(environment, gui.n_cells, start, goal)
 
-# make coordinator
-options={'freeT': True, 'horizon_time': 10, 'no_term_con_der': False}
+# make problem
+options = {}
+schedulerproblem = SchedulerProblem(vehicle, environment, globalplanner, options=options,
+                                    frame_type='min_nobs', n_frames=2)
 
-# Note: When 'min_nobs' is selected as frame_type and your vehicle size is larger than the cell size,
-# shifting frames sometimes causes problems
-schedulerproblem=SchedulerProblem(vehicle, environment, globalplanner, options=options, frame_size= 9, frame_type='min_nobs')
-
-# Note: using linear solver ma57 is optional, normally it reduces the solving time
-# multiproblem.set_options({'solver_options':
-#     {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
-
+# simulate the problem
 simulator = Simulator(schedulerproblem)
+
+# define what you want to plot
 schedulerproblem.plot('scene')
 vehicle.plot('input', knots=True, prediction=True, labels=['v_x (m/s)', 'v_y (m/s)'])
 
 # run it!
 simulator.run()
-# multiproblem.save_movie('scene', format='gif', name='example1_minobs', number_of_frames=300, movie_time=30, axis=False)
-# multiproblem.save_movie('scene', format='tikz', name='example1_minobs', number_of_frames=100, movie_time=10, axis=False)
+
+schedulerproblem.plot_movie('scene', number_of_frames=100, repeat=False)
+schedulerproblem.save_movie('scene', format='gif', name='schedulergif', number_of_frames=100, movie_time=10, axis=False)
+# schedulerproblem.save_movie('scene', number_of_frames=50, name='scheduler', axis=False)
