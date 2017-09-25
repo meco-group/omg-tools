@@ -59,11 +59,6 @@ class Holonomic(Vehicle):
         Vehicle.set_default_options(self)
         self.options.update({'syslimit': 'norm_inf'})
 
-    # def init(self):
-    #     pass
-    #     # time horizon
-    #     # self.T = self.define_symbol('T')
-
     def define_trajectory_constraints(self, splines, horizon_time):
         x, y = splines
         dx, dy = x.derivative(), y.derivative()
@@ -92,7 +87,7 @@ class Holonomic(Vehicle):
     def get_initial_constraints(self, splines, horizon_time):
         state0 = self.define_parameter('state0', 2)
         input0 = self.define_parameter('input0', 2)
-        dinput0 = self.define_parameter('dinput0', 2)
+        # dinput0 = self.define_parameter('dinput0', 2)
         x, y = splines
         dx, dy = x.derivative(), y.derivative()
         ddx, ddy = x.derivative(2), y.derivative(2)
@@ -159,7 +154,7 @@ class Holonomic(Vehicle):
         parameters = Vehicle.set_parameters(self, current_time)
         parameters[self]['state0'] = self.prediction['state']
         parameters[self]['input0'] = self.prediction['input']
-        parameters[self]['dinput0'] = self.prediction['dinput']
+        # parameters[self]['dinput0'] = self.prediction['dinput']
         parameters[self]['poseT'] = self.poseT
         return parameters
 
