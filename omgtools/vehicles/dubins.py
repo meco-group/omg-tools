@@ -252,10 +252,12 @@ class Dubins(Vehicle):
             dy = v_til*(2*tg_ha)
             x = self.integrate_once(dx, self.pos0[0], self.t, horizon_time)
             y = self.integrate_once(dy, self.pos0[1], self.t, horizon_time)
-        # for circular vehicle, no tg_ha needs to be taken into account in collision avoidance constraints
-        # if isinstance(self.shapes[0], Circle):
-        #     tg_ha = 0
-        self.define_collision_constraints_2d(hyperplanes, environment, [x, y], horizon_time, tg_ha=tg_ha)
+        # for circular vehicle, no tg_ha needs to be taken into account in collision avoidance constraints.
+        # so don't pass it on then
+        if isinstance(self.shapes[0], Circle):
+            self.define_collision_constraints_2d(hyperplanes, environment, [x, y], horizon_time)
+        else:  # tg_ha is required for collision avoidance
+            self.define_collision_constraints_2d(hyperplanes, environment, [x, y], horizon_time, tg_ha=tg_ha)
 
     def integrate_once(self, dx, x0, t, T=1.):
         dx_int = T*running_integral(dx)
