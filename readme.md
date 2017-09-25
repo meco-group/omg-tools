@@ -9,7 +9,10 @@ Optimal Motion Generation-tools is a Python software toolbox facilitating the mo
 This toolbox focuses on receding horizon control for single-agent systems as well as on distributed control for multi-agent systems. The approaches implemented in OMG-tools are described in the following publications:
 * Mercy T., Van Loock W., Pipeleers G. (2016). Real-time motion planning in the presence of moving obstacles. Proceedings of the 2016 European Control Conference. European Control Conference. Aalborg, 29 June - 1 July 2016 (pp. 1586-1591). ([pdf](https://lirias.kuleuven.be/bitstream/123456789/538718/1/TimMercy_2016_ECC.pdf))
 * Van Parys R., Pipeleers G. (2016). Online distributed motion planning for multi-vehicle systems. Proceedings of the 2016 European Control Conference. European Control Conference. Aalborg, 29 June - 1 July 2016 (pp. 1580-1585). ([pdf](https://lirias.kuleuven.be/bitstream/123456789/526758/3/RubenVanParys_2016_ECC.pdf))
-* Van Parys R., Pipeleers G. (2017). Spline-Based Motion Planning in an Obstructed 3D environment. Proceedings of the 20th IFAC World Congress. IFAC World Congress. Toulouse, France, 9-14 July 2017. ([pdf](https://lirias.kuleuven.be/bitstream/123456789/575111/3/RubenVanParys_2017_IFAC_lirias.pdf))
+* Van Parys R., Pipeleers G. (2017). Spline-Based Motion Planning in an Obstructed 3D environment. Proceedings of the 20th IFAC World Congress. IFAC World Congress. Toulouse, France, 9-14 July 2017 (pp. 8998-9003). ([pdf](https://lirias.kuleuven.be/bitstream/123456789/575111/3/RubenVanParys_2017_IFAC_lirias.pdf))
+* Mercy T., Van Parys R., Pipeleers G. (2017), Spline-based motion planning for autonomous guided
+vehicles in a dynamic environment, Transactions on Control systems Technology. ([pdf](https://lirias.kuleuven.be/bitstream/123456789/592031/1/FINAL+VERSION.pdf))
+* Van Parys R., Pipeleers G. (2017), Distributed MPC for multi-vehicle systems moving in formation, Robotics and Autonomous Systems, vol. 97C (pp. 144-152). ([pdf](https://lirias.kuleuven.be/bitstream/123456789/590813/3/Distributed+MPC+for+multi-vehicle+systems+moving+in+formation.pdf))
 
 If these methods help you with your research, please cite us!
 
