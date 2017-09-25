@@ -18,7 +18,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from vehicle import Vehicle
-from ..basics.shape import Rectangle
+from ..basics.shape import Rectangle, Circle
 from ..basics.spline_extra import sample_splines, evalspline
 from ..basics.spline_extra import running_integral
 from casadi import inf
@@ -232,7 +232,12 @@ class AGV(Vehicle):
         x_int, y_int = horizon_time*running_integral(dx), horizon_time*running_integral(dy)
         x = x_int-evalspline(x_int, self.t/horizon_time) + self.pos0[0]
         y = y_int-evalspline(y_int, self.t/horizon_time) + self.pos0[1]
-        self.define_collision_constraints_2d(hyperplanes, environment, [x, y], horizon_time, tg_ha=tg_ha)
+        # for circular vehicle, no tg_ha needs to be taken into account in collision avoidance constraints.
+        # so don't pass it on then
+        if isinstance(self.shapes[0], Circle):
+            self.define_collision_constraints_2d(hyperplanes, environment, [x, y], horizon_time)
+        else:  # tg_ha is required for collision avoidance
+            self.define_collision_constraints_2d(hyperplanes, environment, [x, y], horizon_time, tg_ha=tg_ha)
 
     def splines2signals(self, splines, time):
         # for plotting and logging
