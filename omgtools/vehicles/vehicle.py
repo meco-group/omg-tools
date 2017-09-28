@@ -250,72 +250,8 @@ class Vehicle(OptiChild, PlotLayer):
             n_insert = kwargs['continuity'] - (self.degree-1)
         else:
             n_insert = None
-        ###############################
-        ###############################
-        # states = []
-        # inputs = []
-        # dinputs = []
-        # ddinputs = []
-
-        # for spl in spline_segments[0]:
-        #     states.extend(spl(1.))
-
-        # v_spline = []
-        # a_spline = []
-        # j_spline = []
-        # for spl in spline_segments[0]:
-        #     v_spline.append(spl.derivative(1))
-        #     a_spline.append(spl.derivative(2))
-        #     j_spline.append(spl.derivative(3))
-
-        # for k in range(len(spline_segments[0])):
-        #     inputs.extend(v_spline[k](1.)/segment_times[0])
-        #     dinputs.extend(a_spline[k](1.)/segment_times[0]**2)
-        #     ddinputs.extend(j_spline[k](1.)/segment_times[0]**3)
-
-        # print states
-        # print inputs
-        # print dinputs
-        # print ddinputs
-
-        ###############################
-        ###############################
-
 
         splines = concat_splines(spline_segments, segment_times, n_insert=n_insert)
-
-
-        ###############################
-        ###############################
-        # states = []
-        # inputs = []
-        # dinputs = []
-        # ddinputs = []
-
-        # for spl in splines:
-        #     states.append(spl(segment_times[0]))
-
-        # v_spline = []
-        # a_spline = []
-        # j_spline = []
-        # for spl in splines:
-        #     v_spline.append(spl.derivative(1))
-        #     a_spline.append(spl.derivative(2))
-        #     j_spline.append(spl.derivative(3))
-
-        # for k in range(len(splines)):
-        #     inputs.append(v_spline[k](segment_times[0]))
-        #     dinputs.append(a_spline[k](segment_times[0]))
-        #     ddinputs.append(j_spline[k](segment_times[0]))
-
-        # # print states
-        # # print inputs
-        # # print dinputs
-        # # print ddinputs
-        ###############################
-        ###############################
-
-
 
         # save individual spline segments
         self.result_spline_segments = spline_segments
