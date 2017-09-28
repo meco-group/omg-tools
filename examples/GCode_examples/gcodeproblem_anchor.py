@@ -44,7 +44,9 @@ tool.set_terminal_conditions(GCode[-1].end)  # goal position of last GCode block
 # each block will be converted to a room, that is put inside the total environment
 # there are two room shapes: Rectangle and Ring (circle segment with inner and outer diameter)
 # if you want to compute trajectories by using the deployer, put with_deployer=True
-schedulerproblem = GCodeSchedulerProblem(tool, GCode, n_segments=n_blocks, with_deployer=True)
+# if the trajectory takes the wrong side of a ring segment with large arc angle,
+# you can split ring segments with an arc_angle >3*pi/4 by putting splitting=True
+schedulerproblem = GCodeSchedulerProblem(tool, GCode, n_segments=n_blocks, with_deployer=True, splitting=True)
 schedulerproblem.set_options({'solver_options': {'ipopt': {'ipopt.tol': 1e-8}}})#,
 														   # 'ipopt.linear_solver': 'ma57'}}})#,
                                                            # 'ipopt.hessian_approximation': 'limited-memory'}}})
