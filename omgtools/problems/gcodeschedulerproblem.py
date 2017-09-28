@@ -372,15 +372,18 @@ class GCodeSchedulerProblem(Problem):
             return valid
         else:
             if (self.n_segments == 1 and hasattr(self, 'next_segment')):
-                if self.point_in_segment(self.next_segment, self.curr_state[:2], distance=self.vehicles[0].shapes[0].radius):
+                if self.point_in_extended_shape(self.next_segment, self.curr_state[:2], distance=self.vehicles[0].shapes[0].radius):
+                    # if point in extended shape of next segment (=complete ring, or segment with infinite length),
+                    # we can move to this next segment
                     # only called if self.n_segments = 1,
                     # then self.segments[1] doesn't exist and self.next_segment does exist
                     valid = False
                 else:
                     valid = True
                 return valid
-            elif self.point_in_segment(self.segments[1], self.curr_state[:2], distance=self.vehicles[0].shapes[0].radius):
-                # if vehicle is in overlap region between current and next segment
+            elif self.point_in_extended_shape(self.segments[1], self.curr_state[:2], distance=self.vehicles[0].shapes[0].radius):
+                # if point in extended shape of next segment (=complete ring, or segment with infinite length),
+                # we can move to this next segment
                 valid = False
                 return valid
             else:
@@ -464,6 +467,79 @@ class GCodeSchedulerProblem(Problem):
             #                       segment['shape'].radius_in**2, -inf, 0.)
             # self.define_constraint((position[0] - center[0])**2 + (position[1] - center[1])**2 -
             #                       segment['shape'].radius_out**2, -inf, 0.)
+
+    def point_in_extended_shape(self, segment, point, distance=0):
+        # check if the provided point is inside the extended/infinite version of the shape, meaning
+        # that we check if the point is in the complete ring (instead of in the ring segment), or if
+        # the point is inside the rectangle with infinite width (meaning that it is inside the GCode segment
+        # with infinite length)
+        # this is to check if the current state (probably = the connection point between spline segments),
+        # is valid to continue to the next segment (= the segment provided to this function)
+
+        # difference with point_in_segment: checks if point is in the finite/normal version of the shape
+
+        # distance is the margin to take into account (due to the tool size)
+
+        if (isinstance(segment['shape'], (Rectangle, Square))):
+            if (segment['shape'].orientation%(np.pi) == 0):
+                # horizontal line segment
+                if (point[1] < max(segment['shape'].vertices[1,:]+segment['position'][1]) and
+                    point[1] > min(segment['shape'].vertices[1,:]+segment['position'][1])):
+                    return True
+                else:
+                    return False
+            elif (segment['shape'].orientation%(np.pi/2.) == 0):
+                # vertical line segment
+                # note: also a shape with orientation 0 would pass this test, but this was
+                # already captured in first if-test
+                if (point[0] < max(segment['shape'].vertices[0,:]+segment['position'][0]) and
+                    point[0] > min(segment['shape'].vertices[0,:]+segment['position'][0])):
+                    return True
+                else:
+                    return False
+            else:
+                # we have a diagonal line GCode segment
+                # find the lines of the rectangle representing the line GCode segment with tolerances,
+                # that have the length of the segment length
+                couples = []
+                for k in range(len(segment['shape'].vertices[0])-1):
+                    point1 = segment['shape'].vertices[:,k]+segment['position']
+                    point2 = segment['shape'].vertices[:,k+1]+segment['position']
+                    dist = distance_between_points(point1,point2)
+                    if abs(dist - segment['shape'].width) < 1e-3:
+                        # the connection between the points gives a side of length = width of the shape
+                        couples.append([point1,point2])
+                if len(couples) != 2:
+                    # not yet found two couples, so the distance between last vertex and first must also be = width
+                    couples.append([segment['shape'].vertices[:,-1]+segment['position'],segment['shape'].vertices[:,0]+segment['position']])
+                # compute the equations for these two lines, to check if the point is at the right side of them,
+                # i.e. inside the rectangle with infinite width = the segment with infinite length
+                # note: suppose that the vertices are stored in clockwise order here
+
+                side = []
+                for couple in couples:
+                    x1, y1 = couple[0]  # point1
+                    x2, y2 = couple[1]  # point2
+                    vector = [x2-x1, y2-y1]  # vector from point2 to point1
+                    a = np.array([-vector[1],vector[0]])*(1/np.sqrt(vector[0]**2+vector[1]**2))  # normal vector
+                    b = np.dot(a,np.array([x1,y1]))  # offset
+                    side.append(np.dot(a, point) - b)  # fill in point
+                if all(s<-distance for s in side):
+                    # point is inside the shape and a distance tolerance away from border
+                    return True
+                else:
+                    return False
+        elif (isinstance(segment['shape'], (Ring))):
+            # we have a ring/circle segment, check if distance from point to center lies between
+            # the inner and outer radius
+
+            center = segment['pose']
+            r = np.sqrt((point[0]-center[0])**2+(point[1]-center[1])**2)
+
+            if (r >= segment['shape'].radius_in+distance and r <= segment['shape'].radius_out-distance):
+                return True
+            else:
+                return False
 
     def generate_problem(self):
 
