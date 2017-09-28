@@ -314,6 +314,12 @@ class Vehicle(OptiChild, PlotLayer):
         # # print ddinputs
         ###############################
         ###############################
+
+
+
+        # save individual spline segments
+        self.result_spline_segments = spline_segments
+        # save concatenated splines
         self.result_splines = splines
         horizon_time = sum(segment_times)
         if time_axis is None:
