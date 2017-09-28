@@ -185,10 +185,10 @@ class Deployer:
             if trajectories is not None:
 
                 # save old values
-                state_traj_old = state_traj[:]
-                input_traj_old = input_traj[:]
-                dinput_traj_old = dinput_traj[:]
-                ddinput_traj_old = ddinput_traj[:]
+                state_traj_old = np.array(state_traj)
+                input_traj_old = np.array(input_traj[:])
+                dinput_traj_old = np.array(dinput_traj[:])
+                ddinput_traj_old = np.array(ddinput_traj[:])
 
                 # state trajectory, append current state because this is not reached at a multiple of sample_time
                 state_traj = np.c_[state_traj, trajectories['state'][:, 1:n_samp+1], states]
@@ -256,10 +256,11 @@ class Deployer:
                 # 2) automatically re-solve a slightly adapted version of the problem when no optimal solution was found
                 if not self.problem.local_problem.problem.stats()['return_status'] == 'Solve_Succeeded':
                     # reset saved trajectories
-                    state_traj = state_traj_old[:]
-                    input_traj = input_traj_old[:]
-                    dinput_traj = dinput_traj_old[:]
-                    ddinput_traj = ddinput_traj_old[:]
+                    import pdb; pdb.set_trace()  # breakpoint 657e78d6 //
+                    state_traj = np.array(state_traj_old)
+                    input_traj = np.array(input_traj_old)
+                    dinput_traj = np.array(dinput_traj_old)
+                    ddinput_traj = np.array(ddinput_traj_old)
 
                     # reset states and inputs
                     states = states_old  # + np.random.rand(3,)*1e-5  # perturb initial state randomly
