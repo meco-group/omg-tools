@@ -110,11 +110,7 @@ class Deployer:
                 current_time += self.problem.motion_times[0]
                 enforce_inputs = True
 
-                ###############################
-                # try to get the real state, input, dinput and ddinput here, by taking the original spline values, not
-                # the ones after concat splines
-                ###############################
-
+                # use original splines here, not the ones from concat_splines, since they are less accurate
                 spline_segment0 = self.problem.vehicles[0].result_spline_segments[0]
                 segment_time0 = self.problem.motion_times[0]
 
@@ -138,24 +134,6 @@ class Deployer:
                     inputs.extend(v_spline[k](1.)/segment_time0)
                     dinputs.extend(a_spline[k](1.)/segment_time0**2)
                     ddinputs.extend(j_spline[k](1.)/segment_time0**3)
-
-                # states = np.concatenate(self.problem.vehicles[0].s_states)
-                # inputs = np.concatenate(self.problem.vehicles[0].s_inputs)
-                # dinputs = np.concatenate(self.problem.vehicles[0].s_dinputs)
-                # ddinputs = np.concatenate(self.problem.vehicles[0].s_ddinputs)
-
-
-                # print states
-                # print inputs
-                # print dinputs
-                # print ddinputs
-                ###############################
-                ###############################
-
-                # states = np.array([ 49.63140066, 49.69020035, 2.66982953e-22])
-                # inputs = np.array([-6.03588152, 30.03858852, -7.72190946e-20])
-                # dinputs = np.array([-16266.10310017, -7969.15560742, -1.12945996e-17])
-                # ddinputs = np.array([-79154.42303601, 790178.71508018, -2.17112683e-16])
 
                 trajectories = self.update(current_time, states=states, inputs=inputs, dinputs=dinputs, update_time=update_time, enforce_states=True, enforce_inputs=enforce_inputs)
                 self.current_time = current_time + self.problem.motion_times[0]
