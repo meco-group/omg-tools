@@ -210,8 +210,8 @@ class Tool(Vehicle):
         # check vehicle shape and orientation
         # these determine the formulation of the collision avoidance constraints
         shape = self.shapes[0]  # tool shape
-        shape_size = shape.radius  # tool size
-        checkpoints, rad = shape.get_checkpoints()  # tool checkpoints
+        checkpoints, rad = shape.get_checkpoints()  # tool checkpoints, rad = shape_size
+        # used 2*rad[0] below to get a larger margin and avoid numerical errors when checking if tool is inside shape
         if ((isinstance(segment['shape'], (Rectangle, Square)) and
             segment['shape'].orientation in [0.0, np.pi/2, np.pi, 2*np.pi, -np.pi/2, -np.pi, -2*np.pi]) and
             (isinstance(shape, Circle) or
@@ -225,8 +225,8 @@ class Tool(Vehicle):
             room_limits += [lims[k]+segment['pose'][k] for k in range(self.n_dim)]
             for chck in checkpoints:
                 for k in range(2):
-                    self.define_constraint(-(chck[k]+position[k]) + room_limits[k][0] + rad[0], -inf, 0.)
-                    self.define_constraint((chck[k]+position[k]) - room_limits[k][1] + rad[0], -inf, 0.)
+                    self.define_constraint(-(chck[k]+position[k]) + room_limits[k][0] + 2*rad[0], -inf, 0.)
+                    self.define_constraint((chck[k]+position[k]) - room_limits[k][1] + 2*rad[0], -inf, 0.)
         elif (isinstance(segment['shape'], (Rectangle, Square)) and
             (isinstance(shape, Circle))):
             # we have a diagonal line segment
@@ -251,8 +251,8 @@ class Tool(Vehicle):
                                + ' impose constraints with alternative formulation')
             b = y1 - x1*a
 
-            self.define_constraint(a*position[0] + b - position[1] - self.tolerance + shape_size, -inf, 0.)
-            self.define_constraint(-a*position[0] - b + position[1] - self.tolerance + shape_size, -inf, 0.)
+            self.define_constraint(a*position[0] + b - position[1] - self.tolerance + 2*rad[0], -inf, 0.)
+            self.define_constraint(-a*position[0] - b + position[1] - self.tolerance + 2*rad[0], -inf, 0.)
         elif (isinstance(segment['shape'], (Ring)) and
             (isinstance(shape, Circle))):
             # we have a ring/circle segment
@@ -263,9 +263,9 @@ class Tool(Vehicle):
 
             center = segment['pose']
             self.define_constraint(-(position[0] - center[0])**2 - (position[1] - center[1])**2 +
-                                  (segment['shape'].radius_in + shape_size)**2, -inf, 0.)
+                                  (segment['shape'].radius_in + 2*rad[0])**2, -inf, 0.)
             self.define_constraint((position[0] - center[0])**2 + (position[1] - center[1])**2 -
-                                  (segment['shape'].radius_out - shape_size)**2, -inf, 0.)
+                                  (segment['shape'].radius_out - 2*rad[0])**2, -inf, 0.)
         else:
             raise RuntimeError('Invalid segment obtained when setting up collision avoidance constraints')
 
