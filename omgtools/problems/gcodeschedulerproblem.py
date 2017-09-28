@@ -459,10 +459,11 @@ class GCodeSchedulerProblem(Problem):
             else:
                 return False
 
-            self.define_constraint(-(position[0] - center[0])**2 - (position[1] - center[1])**2 +
-                                  segment['shape'].radius_in**2, -inf, 0.)
-            self.define_constraint((position[0] - center[0])**2 + (position[1] - center[1])**2 -
-                                  segment['shape'].radius_out**2, -inf, 0.)
+            # Todo: why was this here?
+            # self.define_constraint(-(position[0] - center[0])**2 - (position[1] - center[1])**2 +
+            #                       segment['shape'].radius_in**2, -inf, 0.)
+            # self.define_constraint((position[0] - center[0])**2 + (position[1] - center[1])**2 -
+            #                       segment['shape'].radius_out**2, -inf, 0.)
 
     def generate_problem(self):
 
