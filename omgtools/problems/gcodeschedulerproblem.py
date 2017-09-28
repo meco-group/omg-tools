@@ -405,6 +405,7 @@ class GCodeSchedulerProblem(Problem):
         if self.segments[-1]['number'] < self.cnt:
             # last segment is not yet in self.segments, so there are some segments left,
             # create segment for next block
+            # self.n_segments -= 1
             new_segment = self.environment.room[self.n_current_block+(self.n_segments-1)]
             self.segments.append(new_segment)  # add next segment
 
@@ -461,12 +462,6 @@ class GCodeSchedulerProblem(Problem):
                 return False
             else:
                 return False
-
-            # Todo: why was this here?
-            # self.define_constraint(-(position[0] - center[0])**2 - (position[1] - center[1])**2 +
-            #                       segment['shape'].radius_in**2, -inf, 0.)
-            # self.define_constraint((position[0] - center[0])**2 + (position[1] - center[1])**2 -
-            #                       segment['shape'].radius_out**2, -inf, 0.)
 
     def point_in_extended_shape(self, segment, point, distance=0):
         # check if the provided point is inside the extended/infinite version of the shape, meaning
@@ -590,7 +585,7 @@ class GCodeSchedulerProblem(Problem):
             # local_problem was not solved yet, make guess using center line for all segments
             guess_idx = range(self.n_segments)
 
-        # make guesses based on global path
+        # make guesses based on center line of GCode
         for k in guess_idx:
             init_spl, motion_time = self.get_init_guess_new_segment(self.segments[k])
             init_splines.append(init_spl)
