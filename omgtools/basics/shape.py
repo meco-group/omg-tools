@@ -79,7 +79,7 @@ class Ring(Shape2D):
     def get_surfaces(self):
         if (self.start == self.end).all():
             # full ring, placed in the origin
-            s = linspace(0,2*np.pi,50)
+            s = np.linspace(0,2*np.pi,50)
         else:
             # part of a ring, placed in the origin
             self.start_angle = np.arctan2(self.start[1],self.start[0])
