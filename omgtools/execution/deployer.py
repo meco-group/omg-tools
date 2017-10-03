@@ -292,7 +292,7 @@ class Deployer:
                     self.cnt = 0
 
                 # check if target is reached
-                if (np.linalg.norm(self.problem.segments[0]['end']-state_traj[:, -1]) < 1e-2 and np.linalg.norm(input_traj[:, -1]) < 1e-2):
+                if (np.linalg.norm(self.problem.segments[-1]['end']-state_traj[:, -1]) < 1e-2 and np.linalg.norm(input_traj[:, -1]) < 1e-2):
                     target_reached = True
 
         # target reached, print final information
