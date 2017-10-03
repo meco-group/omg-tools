@@ -801,7 +801,7 @@ class GCodeSchedulerProblem(Problem):
             guess_x = self.constant_jerk(x0, x1, n_knots)
             guess_y = self.constant_jerk(y0, y1, n_knots)
             length = np.sqrt((x1-x0)**2+(y1-y0)**2)
-            motion_time = (32*length/j_lim)**(1/3.) * 1.3
+            motion_time = (32*length/j_lim)**(1/3.) * 3
         guess_z = 0*guess_x
         init_guess = np.c_[guess_x, guess_y, guess_z]
         return init_guess, motion_time
