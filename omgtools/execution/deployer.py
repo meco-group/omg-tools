@@ -225,6 +225,18 @@ class Deployer:
                     plt.plot(points[0,:], points[1,:], color='red', linestyle = '--', linewidth= 1.2)
                 plt.pause(0.1)
 
+                # Neglect bad segment:
+                # if the latest computation step gave worse results than before, don't use it
+                # reset time to the lowest calculated time for this segment
+                # reset coefficients of spline to those of the corresponding segment
+                # add this trajectory to states, inputs,...
+                # motion_time_log = np.array([np.zeros(1,self.problem.cnt), np.zeros(self.problem.n_segments)])
+                # motion_time_log[1,:] = self.problem.motion_times
+                # what about the initial guess? make new one, or re-use the one of the 'bad' segment?
+
+
+
+                # Try to improve solution for last segment:
                 # If the latest segment was not what you liked, there are two options:
                 # 1) let the user decide about each segment if it is good or not
                 # user_input = ''
