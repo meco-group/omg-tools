@@ -75,66 +75,51 @@ class Tool(Vehicle):
     def set_default_options(self):
         Vehicle.set_default_options(self)
 
-    def define_trajectory_constraints(self, splines, horizon_time):
+    def define_trajectory_constraints(self, splines, horizon_time, tolerance=None):
         x, y, z = splines
         dx, dy, dz = x.derivative(), y.derivative(), z.derivative()  # velocity
         ddx, ddy, ddz = x.derivative(2), y.derivative(2), z.derivative(2)  # acceleration
         dddx, dddy, dddz = x.derivative(3), y.derivative(3), z.derivative(3)  # jerk
         # constrain local velocity
-        self.define_constraint(-dx + horizon_time*self.vxmin, -inf, 0.)
-        self.define_constraint(-dy + horizon_time*self.vymin, -inf, 0.)
+        self.define_constraint(-dx*tolerance[0] + horizon_time*self.vxmin, -inf, 0.)
+        self.define_constraint(-dy*tolerance[1] + horizon_time*self.vymin, -inf, 0.)
         # self.define_constraint(-dz + horizon_time*self.vzmin, -inf, 0.)
-        self.define_constraint(dx - horizon_time*self.vxmax, -inf, 0.)
-        self.define_constraint(dy - horizon_time*self.vymax, -inf, 0.)
+        self.define_constraint(dx*tolerance[0] - horizon_time*self.vxmax, -inf, 0.)
+        self.define_constraint(dy*tolerance[1] - horizon_time*self.vymax, -inf, 0.)
         # self.define_constraint(dz - horizon_time*self.vzmax, -inf, 0.)
 
-        self.define_constraint(-ddx + (horizon_time**2)*self.axmin, -inf, 0.)
-        self.define_constraint(-ddy + (horizon_time**2)*self.aymin, -inf, 0.)
+        self.define_constraint(-ddx*tolerance[0] + (horizon_time**2)*self.axmin, -inf, 0.)
+        self.define_constraint(-ddy*tolerance[1] + (horizon_time**2)*self.aymin, -inf, 0.)
         # self.define_constraint(-ddz + (horizon_time**2)*self.azmin, -inf, 0.)
-        self.define_constraint(ddx - (horizon_time**2)*self.axmax, -inf, 0.)
-        self.define_constraint(ddy - (horizon_time**2)*self.aymax, -inf, 0.)
+        self.define_constraint(ddx*tolerance[0] - (horizon_time**2)*self.axmax, -inf, 0.)
+        self.define_constraint(ddy*tolerance[1] - (horizon_time**2)*self.aymax, -inf, 0.)
         # self.define_constraint(ddz - (horizon_time**2)*self.azmax, -inf, 0.)
 
-        self.define_constraint(-dddx + (horizon_time**3)*self.jxmin, -inf, 0.)
-        self.define_constraint(-dddy + (horizon_time**3)*self.jymin, -inf, 0.)
+        self.define_constraint(-dddx*tolerance[0] + (horizon_time**3)*self.jxmin, -inf, 0.)
+        self.define_constraint(-dddy*tolerance[1] + (horizon_time**3)*self.jymin, -inf, 0.)
         # self.define_constraint(-dddz + (horizon_time**3)*self.jzmin, -inf, 0.)
-        self.define_constraint(dddx - (horizon_time**3)*self.jxmax, -inf, 0.)
-        self.define_constraint(dddy - (horizon_time**3)*self.jymax, -inf, 0.)
+        self.define_constraint(dddx*tolerance[0] - (horizon_time**3)*self.jxmax, -inf, 0.)
+        self.define_constraint(dddy*tolerance[1] - (horizon_time**3)*self.jymax, -inf, 0.)
         # self.define_constraint(dddz - (horizon_time**3)*self.jzmax, -inf, 0.)
 
         self.define_constraint(z-1e-5, -inf,0.)
         self.define_constraint(-z-1e-5, -inf,0.)
 
-        # don't reach maximum velocity at end of a segment, to get a more safe transition
-        # self.define_constraint(-dx(1.) + 0.95*horizon_time*self.vxmin, -inf, 0.)
-        # self.define_constraint(-dy(1.) + 0.95*horizon_time*self.vymin, -inf, 0.)
-        # self.define_constraint(-dz(1.) + 0.95*horizon_time*self.vzmin, -inf, 0.)
-        # self.define_constraint(dx(1.) - 0.95*horizon_time*self.vxmax, -inf, 0.)
-        # self.define_constraint(dy(1.) - 0.95*horizon_time*self.vymax, -inf, 0.)
-        # self.define_constraint(dz(1.) - 0.95*horizon_time*self.vzmax, -inf, 0.)
-
-        # self.define_constraint(-ddx(1.) + 0.95*(horizon_time**2)*self.axmin, -inf, 0.)
-        # self.define_constraint(-ddy(1.) + 0.95*(horizon_time**2)*self.aymin, -inf, 0.)
-        # self.define_constraint(-ddz(1.) + 0.95*(horizon_time**2)*self.azmin, -inf, 0.)
-        # self.define_constraint(ddx(1.) - 0.95*(horizon_time**2)*self.axmax, -inf, 0.)
-        # self.define_constraint(ddy(1.) - 0.95*(horizon_time**2)*self.aymax, -inf, 0.)
-        # self.define_constraint(ddz(1.) - 0.95*(horizon_time**2)*self.azmax, -inf, 0.)
-
-    def get_initial_constraints(self, splines, horizon_time):
+    def get_initial_constraints(self, splines, horizon_time, offset=None, tolerance=None):
         state0 = self.define_parameter('state0', 3)
         input0 = self.define_parameter('input0', 3)
         dinput0 = self.define_parameter('dinput0', 3)
         x, y, z = splines
         dx, dy, dz = x.derivative(), y.derivative(), z.derivative()
         ddx, ddy, ddz = x.derivative(2), y.derivative(2), z.derivative(2)
-        return [(x, state0[0]), (y, state0[1]), (z, state0[2]),
-                (dx, horizon_time*input0[0]), (dy, horizon_time*input0[1]), (dz, horizon_time*input0[2]),
-                (ddx, horizon_time**2*dinput0[0]), (ddy, horizon_time**2*dinput0[1]), (ddz, horizon_time**2*dinput0[2])]
+        return [(x, (state0[0]-offset[0])/(tolerance[0])), (y, (state0[1]-offset[1])/(tolerance[1])), (z, state0[2]),
+                (dx, horizon_time*input0[0]/tolerance[0]), (dy, horizon_time*input0[1]/tolerance[1]), (dz, horizon_time*input0[2]),
+                (ddx, horizon_time**2*dinput0[0]/tolerance[0]), (ddy, horizon_time**2*dinput0[1]/tolerance[1]), (ddz, horizon_time**2*dinput0[2])]
 
-    def get_terminal_constraints(self, splines):
+    def get_terminal_constraints(self, splines, offset=None, tolerance=None):
         position = self.define_parameter('poseT', 3)
         x, y, z = splines
-        term_con = [(x, position[0]), (y, position[1]), (z, position[2])]
+        term_con = [(x, (position[0]-offset[0])/(tolerance[0])), (y, (position[1]-offset[1])/(tolerance[1])), (z, position[2])]
         term_con_der = []
         for d in range(1, self.degree+1):
             term_con_der.extend([(x.derivative(d), 0.), (y.derivative(d), 0.), (z.derivative(d), 0.)])
@@ -157,6 +142,8 @@ class Tool(Vehicle):
         self.poseT = position
 
     def get_init_spline_value(self, subgoals=None):
+        raise RuntimeError('Is this used?')
+        tolerance = [0,0]
         pos0 = self.prediction['state']
         posT = self.poseT
         if self.n_seg == 1:  # default
@@ -164,7 +151,7 @@ class Tool(Vehicle):
             for k in range(3):
                 # init_value[:, k] = np.r_[pos0[k]*np.ones(self.degree), np.linspace(
                 #     pos0[k], posT[k], len(self.basis) - 2*self.degree), posT[k]*np.ones(self.degree)]
-                init_value[:, k] = np.linspace(pos0[k], posT[k], len(self.basis))
+                init_value[:, k] = np.linspace((pos0[k]-self.offset[0])/(tolerance[0]), (posT[k]-self.offset[0])/(tolerance[1]), len(self.basis))
             init_value = [init_value]  # use same format as in n_seg > 1
         else:  # multiple segments
             if subgoals is None:
@@ -213,11 +200,11 @@ class Tool(Vehicle):
         checkpoints, rad = shape.get_checkpoints()  # tool checkpoints, rad = shape_size
         # used 2*rad[0] below to get a larger margin and avoid numerical errors when checking if tool is inside shape
         if ((isinstance(segment['shape'], (Rectangle, Square)) and
-            segment['shape'].orientation in [0.0, np.pi/2, np.pi, 2*np.pi, -np.pi/2, -np.pi, -2*np.pi]) and
+            segment['shape'].orientation in [0.0, np.pi, 2*np.pi, -np.pi, -2*np.pi]) and
             (isinstance(shape, Circle) or
             (isinstance(shape, (Rectangle, Square)) and
              shape.orientation == 0))):
-            # we have a horizontal or vertical straight line segment and
+            # horizontal straight line segment and
             # a Circular or rectangular tool
 
             lims = segment['shape'].get_canvas_limits()
@@ -225,8 +212,29 @@ class Tool(Vehicle):
             room_limits += [lims[k]+segment['pose'][k] for k in range(self.n_dim)]
             for chck in checkpoints:
                 for k in range(2):
-                    self.define_constraint(-(chck[k]+position[k]) + room_limits[k][0] + 2*rad[0], -inf, 0.)
-                    self.define_constraint((chck[k]+position[k]) - room_limits[k][1] + 2*rad[0], -inf, 0.)
+                # k = 1  # only y-direction
+                    self.define_constraint(-position[k] -1, -inf, 0.)
+                    self.define_constraint(position[k] -1, -inf, 0.)
+                # self.define_constraint(-(chck[k]+position[k]) + room_limits[k][0] + 2*rad[0], -inf, 0.)
+                # self.define_constraint((chck[k]+position[k]) - room_limits[k][1] + 2*rad[0], -inf, 0.)
+        elif ((isinstance(segment['shape'], (Rectangle, Square)) and
+            segment['shape'].orientation in [np.pi/2, -np.pi/2, 3*np.pi/2, -3*np.pi/2]) and
+            (isinstance(shape, Circle) or
+            (isinstance(shape, (Rectangle, Square)) and
+             shape.orientation == 0))):
+            # we have a vertical straight line segment and
+            # a Circular or rectangular tool
+
+            lims = segment['shape'].get_canvas_limits()
+            room_limits = []
+            room_limits += [lims[k]+segment['pose'][k] for k in range(self.n_dim)]
+            for chck in checkpoints:
+                for k in range(2):
+                # k = 0  # only x-direction
+                    self.define_constraint(-position[k] -1, -inf, 0.)
+                    self.define_constraint(position[k] -1, -inf, 0.)
+                # self.define_constraint(-(chck[k]+position[k]) + room_limits[k][0] + 2*rad[0], -inf, 0.)
+                # self.define_constraint((chck[k]+position[k]) - room_limits[k][1] + 2*rad[0], -inf, 0.)
         elif (isinstance(segment['shape'], (Rectangle, Square)) and
             (isinstance(shape, Circle))):
             # we have a diagonal line segment

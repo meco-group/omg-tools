@@ -305,11 +305,21 @@ def crop_spline(spline, min_value, max_value):
     return BSpline(basis2, coeffs2)
 
 
-def concat_splines(segments, segment_times, n_insert=None):
+def concat_splines(segments, segment_times, n_insert=None, **kwargs):
     # While concatenating check continuity of segments, this determines
     # the required amount of knots to insert. If segments are continuous
     # up to degree, no extra knots are required. If they are not continuous
     # at all, degree+1 knots are inserted in between the splines.
+
+    options = kwargs['options'] if 'options' in kwargs else None
+
+    if options is not None:
+        for idx, seg in enumerate(segments):
+            offset_seg = options['offset'][idx]
+            tol_seg = options['tolerance'][idx]
+            for k in range(len(seg)-1):
+                seg[k] = seg[k]*tol_seg[k]+offset_seg[k]-options['margin']
+
     spl0 = segments[0]
     knots = [s.basis.knots*segment_times[0] for s in spl0]  # give dimensions
     degree = [s.basis.degree for s in spl0]

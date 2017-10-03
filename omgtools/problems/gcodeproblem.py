@@ -71,7 +71,13 @@ class GCodeProblem(Problem):
         # create splines with correct amount of segments, i.e. equal to n_segments
         total_splines = self.vehicles[0].define_splines(n_seg=self.n_segments)
         for idx in range(self.n_segments):
-            self.vehicles[0].define_trajectory_constraints(total_splines[idx], self.motion_times[idx])
+            tol = self.vehicles[0].tolerance
+            seg = self.environment.room[idx]
+            if seg['shape'].orientation in [0, np.pi, 2*np.pi]:
+                tolerance = [tol+seg['shape'].width*0.5,tol]
+            elif seg['shape'].orientation in [np.pi/2, -np.pi/2, 3*np.pi/2, -3*np.pi/2]:
+                tolerance = [tol,tol+seg['shape'].width*0.5]
+            self.vehicles[0].define_trajectory_constraints(total_splines[idx], self.motion_times[idx], tolerance=tolerance)
             # set up room constraints
             self.vehicles[0].define_collision_constraints(self.environment.room[idx], total_splines[idx], self.motion_times[idx])
 
@@ -82,7 +88,16 @@ class GCodeProblem(Problem):
 
     def define_init_constraints(self):
         # place initial constraints only on first spline segment
-        init_con = self.vehicles[0].get_initial_constraints(self.vehicles[0].splines[0], self.motion_times[0])
+        seg = self.environment.room[0]
+        if seg['shape'].orientation in [0, np.pi, 2*np.pi]:
+            offset = [seg['position'][0],seg['position'][1]]
+            tolerance = [self.vehicles[0].tolerance+seg['shape'].width*0.5,self.vehicles[0].tolerance]
+        elif seg['shape'].orientation in [np.pi/2, -np.pi/2, 3*np.pi/2, -3*np.pi/2]:
+            offset = [seg['position'][0], seg['position'][1]]
+            tolerance = [self.vehicles[0].tolerance,self.vehicles[0].tolerance+seg['shape'].width*0.5]
+        else:
+            raise RuntimeError('Not implemented yet')
+        init_con = self.vehicles[0].get_initial_constraints(self.vehicles[0].splines[0], self.motion_times[0], offset=offset, tolerance=tolerance)
         for con in init_con:
             spline, condition = con[0], con[1]
             # use dimensionless time for first segment
@@ -91,8 +106,17 @@ class GCodeProblem(Problem):
 
     def define_terminal_constraints(self):
         # place final constraints only on last spline segment
+        seg =  self.environment.room[-1]
+        if seg['shape'].orientation in [0, np.pi, 2*np.pi]:
+            offset = [seg['position'][0],seg['position'][1]]
+            tolerance = [self.vehicles[0].tolerance+seg['shape'].width*0.5,self.vehicles[0].tolerance]
+        elif seg['shape'].orientation in [np.pi/2, -np.pi/2, 3*np.pi/2, -3*np.pi/2]:
+            offset = [seg['position'][0], seg['position'][1]]
+            tolerance = [self.vehicles[0].tolerance,self.vehicles[0].tolerance+seg['shape'].width*0.5]
+        else:
+            raise RuntimeError('Not implemented yet')
         term_con, term_con_der = self.vehicles[0].get_terminal_constraints(
-            self.vehicles[0].splines[-1])  # select last spline segment
+            self.vehicles[0].splines[-1], offset=offset, tolerance=tolerance)  # select last spline segment
         if ('no_term_con_der' in self.options and self.options['no_term_con_der']):
             term_con_der = []
         for con in (term_con + term_con_der):
@@ -107,12 +131,40 @@ class GCodeProblem(Problem):
         # suppose that all splines have the same degree
         self.continuity = self.vehicles[0].splines[0][0].basis.degree  # save desired continuity
         for j in range(self.n_segments-1):
+            cnt = 0
             for spline1, spline2 in zip(self.vehicles[0].splines[j], self.vehicles[0].splines[j+1]):
-                for d in range(self.continuity):
+                margin = 0
+                seg1 =  self.environment.room[j]
+                if seg1['shape'].orientation in [0, np.pi, 2*np.pi]:
+                    offset1 = [seg1['position'][0],seg1['position'][1]]
+                    tolerance1 = [self.vehicles[0].tolerance+seg1['shape'].width*0.5,self.vehicles[0].tolerance]
+                elif seg1['shape'].orientation in [np.pi/2, -np.pi/2, 3*np.pi/2, -3*np.pi/2]:
+                    offset1 = [seg1['position'][0], seg1['position'][1]]
+                    tolerance1 = [self.vehicles[0].tolerance,self.vehicles[0].tolerance+seg1['shape'].width*0.5]
+                else:
+                    raise RuntimeError('Not implemented yet')
+                seg2 =  self.environment.room[j+1]
+                if seg2['shape'].orientation in [0, np.pi, 2*np.pi]:
+                    offset2 = [seg2['position'][0],seg2['position'][1]]
+                    tolerance2 = [self.vehicles[0].tolerance+seg2['shape'].width*0.5,self.vehicles[0].tolerance]
+                elif seg2['shape'].orientation in [np.pi/2, -np.pi/2, 3*np.pi/2, -3*np.pi/2]:
+                    offset2 = [seg2['position'][0], seg2['position'][1]]
+                    tolerance2 = [self.vehicles[0].tolerance,self.vehicles[0].tolerance+seg2['shape'].width*0.5]
+                else:
+                    raise RuntimeError('Not implemented yet')
+                if cnt == 2:
+                    cnt = 0
+                    offset1 = [0,0]
+                    offset2 = [0,0]
+                self.define_constraint(
+                    evalspline(spline1*tolerance1[cnt]+offset1[cnt], 1) -
+                    evalspline(spline2*tolerance2[cnt]+offset2[cnt], 0), 0., 0.)
+                for d in range(1,self.continuity):
                     # give dimensions by multiplication with the motion time
                     self.define_constraint(
-                        evalspline(spline1.derivative(d), 1)*self.motion_times[j+1]**d -
-                        evalspline(spline2.derivative(d), 0)*self.motion_times[j]**d, 0., 0.)
+                        evalspline(spline1.derivative(d), 1)*tolerance1[cnt]*self.motion_times[j+1]**d -
+                        evalspline(spline2.derivative(d), 0)*tolerance2[cnt]*self.motion_times[j]**d, 0., 0.)
+                cnt+=1
 
     def set_parameters(self, current_time):
         parameters = Problem.set_parameters(self, current_time)
@@ -168,7 +220,21 @@ class GCodeProblem(Problem):
             round((horizon_time-rel_current_time)/sample_time, 6)) + 1
         time_axis = np.linspace(rel_current_time, rel_current_time + (n_samp-1)*sample_time, n_samp)
         spline_segments = [self.father.get_variables(self.vehicles[0], 'splines_seg'+str(k)) for k in range(self.vehicles[0].n_seg)]
-        self.vehicles[0].store(current_time, sample_time, spline_segments, segment_times, time_axis, continuity=self.continuity)
+        offsets = []
+        tolerances = []
+        for seg in self.environment.room:
+            if seg['shape'].orientation in [0, np.pi, 2*np.pi]:
+                offset = [seg['position'][0],seg['position'][1]]
+                tolerance = [self.vehicles[0].tolerance+seg['shape'].width*0.5,self.vehicles[0].tolerance]
+            elif seg['shape'].orientation in [np.pi/2, -np.pi/2, 3*np.pi/2, -3*np.pi/2]:
+                offset = [seg['position'][0], seg['position'][1]]
+                tolerance = [self.vehicles[0].tolerance,self.vehicles[0].tolerance+seg['shape'].width*0.5]
+            else:
+                raise RuntimeError('Not implemented yet')
+            offsets.append(offset)
+            tolerances.append(tolerance)
+        concat_options={'offset': offsets , 'margin': 0. , 'tolerance': tolerances}
+        self.vehicles[0].store(current_time, sample_time, spline_segments, segment_times, time_axis, continuity=self.continuity, concat_options=concat_options)
 
     def reset_init_time(self):
         self.init_time = None

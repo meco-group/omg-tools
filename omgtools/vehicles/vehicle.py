@@ -250,9 +250,14 @@ class Vehicle(OptiChild, PlotLayer):
             n_insert = kwargs['continuity'] - (self.degree-1)
         else:
             n_insert = None
+        if 'concat_options' in kwargs:
+            concat_options = kwargs['concat_options']
+        else:
+            concat_options=None
 
-        splines = concat_splines(spline_segments, segment_times, n_insert=n_insert)
+        splines = concat_splines(spline_segments, segment_times, n_insert=n_insert, options=concat_options)
 
+        # BEWARE: spline_segments is also changed inside concat_splines! so has dimensions now, but not yet time dimension
         # save individual spline segments
         self.result_spline_segments = spline_segments
         # save concatenated splines
