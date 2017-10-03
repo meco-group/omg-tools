@@ -238,7 +238,6 @@ class SchedulerProblem(Problem):
 
     def stop_criterium(self, current_time, update_time):
         # check if the current frame is the last one
-        # Todo: check on self.frames[-1], or self.frames[0]?
         if self.frames[-1]['endpoint_frame'] == self.goal_state[:2]:  # remove orientation info
             # if we now reach the goal, the vehicle has arrived
             if self.local_problem.stop_criterium(current_time, update_time):
