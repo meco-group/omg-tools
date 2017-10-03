@@ -78,6 +78,9 @@ class Deployer:
     def update_segment(self):
         self.reset()
 
+        # boolean to select if we want to go to next segment
+        self.problem.no_update = False
+
         # create figures
         plt.figure(2)  # state
         plt.figure(3)  # input
@@ -106,34 +109,15 @@ class Deployer:
                 current_time = 0.
                 trajectories = self.update(current_time, states=states, inputs=inputs, dinputs=dinputs, update_time=update_time, enforce_states=True, enforce_inputs=enforce_inputs)
             else:
-                update_time = 0.  # not used, and if used it would be wrong
+                update_time = 0.  # this input to the function is not used, and if used it would be wrong
                 current_time += self.problem.motion_times[0]
                 enforce_inputs = True
 
-                # use original splines here, not the ones from concat_splines, since they are less accurate
-                spline_segment0 = self.problem.vehicles[0].result_spline_segments[0]
-                segment_time0 = self.problem.motion_times[0]
-
-                states = []
-                inputs = []
-                dinputs = []
-                ddinputs = []
-
-                for spl in spline_segment0:
-                    states.extend(spl(1.))
-
-                v_spline = []
-                a_spline = []
-                j_spline = []
-                for spl in spline_segment0:
-                    v_spline.append(spl.derivative(1))
-                    a_spline.append(spl.derivative(2))
-                    j_spline.append(spl.derivative(3))
-
-                for k in range(len(spline_segment0)):
-                    inputs.extend(v_spline[k](1.)/segment_time0)
-                    dinputs.extend(a_spline[k](1.)/segment_time0**2)
-                    ddinputs.extend(j_spline[k](1.)/segment_time0**3)
+                # set new values at end values of previous iteration
+                states = np.array(states_end)
+                inputs = np.array(inputs_end)
+                dinputs = np.array(dinputs_end)
+                ddinputs = np.array(ddinputs_end)
 
                 trajectories = self.update(current_time, states=states, inputs=inputs, dinputs=dinputs, update_time=update_time, enforce_states=True, enforce_inputs=enforce_inputs)
                 self.current_time = current_time + self.problem.motion_times[0]
@@ -143,37 +127,34 @@ class Deployer:
             # required amount of samples to take from trajectories to reach connection point between segments
             n_samp = int(np.round(update_time/self.sample_time, 6))
 
-            # save old values
-            states_old = states
-            inputs_old = inputs
-            dinputs_old = dinputs
-            ddinputs_old = ddinputs
-
-            # update values
-            pos_splines = self.problem.vehicles[0].result_splines
-            input_splines = [s.derivative(1) for s in pos_splines]
-            dinput_splines = [s.derivative(2) for s in pos_splines]
-            ddinput_splines = [s.derivative(3) for s in pos_splines]
-            states = np.hstack([s(update_time) for s in pos_splines])  # state at end of first segment
-            inputs = np.hstack([s(update_time) for s in input_splines])  # input at end of first segment
-            dinputs = np.hstack([s(update_time) for s in dinput_splines])
-            ddinputs = np.hstack([s(update_time) for s in ddinput_splines])
-
             # save and plot results
             if trajectories is not None:
 
+                # update values
+                # use original splines here, not the ones from concat_splines, since they are less accurate
+                pos_splines = self.problem.vehicles[0].result_spline_segments[0]
+                input_splines = [s.derivative(1) for s in pos_splines]
+                dinput_splines = [s.derivative(2) for s in pos_splines]
+                ddinput_splines = [s.derivative(3) for s in pos_splines]
+                # compute values at end of first segment = start of the next iteration
+                states_end = np.hstack([s(1.) for s in pos_splines])
+                inputs_end = np.hstack([s(1.) for s in input_splines])
+                dinputs_end = np.hstack([s(1.) for s in dinput_splines])
+                ddinputs_end = np.hstack([s(1.) for s in ddinput_splines])
+
                 # save old values
+                # these are the ones that end at the starting state of current iteration
                 state_traj_old = np.array(state_traj)
                 input_traj_old = np.array(input_traj[:])
                 dinput_traj_old = np.array(dinput_traj[:])
                 ddinput_traj_old = np.array(ddinput_traj[:])
 
-                # state trajectory, append current state because this is not reached at a multiple of sample_time
-                state_traj = np.c_[state_traj, trajectories['state'][:, 1:n_samp+1], states]
+                # state trajectory, append current state because this is not necessarily reached at a multiple of sample_time
+                state_traj = np.c_[state_traj, trajectories['state'][:, 1:n_samp+1], states_end]
                 # input trajectory, append current input
-                input_traj = np.c_[input_traj, trajectories['input'][:, 1:n_samp+1], inputs]
-                dinput_traj = np.c_[dinput_traj, trajectories['dinput'][:, 1:n_samp+1], dinputs]
-                ddinput_traj = np.c_[ddinput_traj, trajectories['ddinput'][:, 1:n_samp+1], ddinputs]
+                input_traj = np.c_[input_traj, trajectories['input'][:, 1:n_samp+1], inputs_end]
+                dinput_traj = np.c_[dinput_traj, trajectories['dinput'][:, 1:n_samp+1], dinputs_end]
+                ddinput_traj = np.c_[ddinput_traj, trajectories['ddinput'][:, 1:n_samp+1], ddinputs_end]
                 n_t = state_traj.shape[1]  # amount of points in trajectory
                 time = np.linspace(0, current_time+update_time, n_t)  # make time vector
 
@@ -235,7 +216,6 @@ class Deployer:
                 # what about the initial guess? make new one, or re-use the one of the 'bad' segment?
 
 
-
                 # Try to improve solution for last segment:
                 # If the latest segment was not what you liked, there are two options:
                 # 1) let the user decide about each segment if it is good or not
@@ -244,23 +224,27 @@ class Deployer:
                 #     user_input = raw_input("Are you happy with the latest computed segment (yes/no): ")
                 # if user_input == 'no':
                 # 2) automatically re-solve a slightly adapted version of the problem when no optimal solution was found
-                if not self.problem.local_problem.problem.stats()['return_status'] == 'Solve_Succeeded':
+                if self.problem.no_update and self.problem.local_problem.problem.stats()['return_status'] == 'Solve_Succeeded':
+                    self.problem.no_update = False
+                elif not self.problem.local_problem.problem.stats()['return_status'] == 'Solve_Succeeded':
+                    self.problem.no_update = True
                     # reset saved trajectories
-                    import pdb; pdb.set_trace()  # breakpoint 657e78d6 //
+                    # i.e. trajectories starting at the starting point of trajectory that was not successfully computed
+                    import pdb; pdb.set_trace()  # breakpoint 66421d01 //
                     state_traj = np.array(state_traj_old)
                     input_traj = np.array(input_traj_old)
                     dinput_traj = np.array(dinput_traj_old)
                     ddinput_traj = np.array(ddinput_traj_old)
 
                     # reset states and inputs
-                    states = states_old  # + np.random.rand(3,)*1e-5  # perturb initial state randomly
+                    states_end = states  # + np.random.rand(3,)*1e-5  # perturb initial state randomly
 
                     # compute perturbed input, that lies on the line between the last two inputs of the input traj
                     inputs = [0, 0, 0]  # initialize
                     # draw line between last and second last input to compute the y-coordinate of
                     # the slightly changed initial point, that is right outside the connection of these two points
-                    x1, y1, z1 = input_traj_old[:,-2]  # second last point
-                    x2, y2, z2 = input_traj_old[:,-1]  # last point
+                    x1, y1, z1 = input_traj[:,-2]  # second last point
+                    x2, y2, z2 = input_traj[:,-1]  # last point
                     inputs[0] = x2+(x2-x1)*0.01  # perturb
                     if (abs(y2 - y1) > 1e-3):  # line is not vertical
                         a = (y2-y1)/(x2-x1)  # slope
@@ -271,10 +255,10 @@ class Deployer:
                     input_traj[:,-1] = inputs  # replace the old 'last point'
 
                     # inputs = inputs_old + np.random.rand(3,)*1e-4  # perturb initial input randomly
-                    dinputs = dinputs_old
-                    ddinputs = ddinputs_old
+                    dinputs_end = dinputs
+                    ddinputs_end = ddinputs
 
-                    # reset time
+                    # reset time to previous value
                     if self.current_time != 0.:
                         self.current_time -= self.problem.motion_times[0]
                     if current_time != 0.:

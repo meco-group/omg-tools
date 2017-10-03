@@ -109,8 +109,14 @@ class GCodeSchedulerProblem(Problem):
         segments_valid = self.check_segments()
         if not segments_valid:
             # add new segment and remove first one
-            self.n_current_block += 1
-            self.update_segments()
+            if hasattr(self, 'no_update') and self.no_update:
+                # don't update number or segments, because the deployer wants to
+                # re-compute the same segment, that e.g. was infeasible
+                # this boolean is set by the deployer in deployer.update_segment()
+                pass
+            else:
+                self.n_current_block += 1
+                self.update_segments()
 
             # transform segments into local_problem
             self.local_problem = self.generate_problem()
