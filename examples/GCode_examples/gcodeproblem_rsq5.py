@@ -63,7 +63,7 @@ tool.plot('dinput', knots=True, prediction=True, labels=['a_x (m/s^2)', 'a_y (m/
 tool.plot('ddinput', knots=True, prediction=True, labels=['j_x (m/s^3)', 'j_y (m/s^3)', 'j_z (m/s^3)'])
 
 # run using a receding horizon of one segment
-deployer.run_segment()
+deployer.update_segment()
 # simulator.run_segment()
 
 # plotting and saving afterwards is only available when using the simulator
