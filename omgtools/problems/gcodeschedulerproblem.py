@@ -794,25 +794,25 @@ class GCodeSchedulerProblem(Problem):
 
     def get_init_guess_constant_jerk(self, segment):
 
-        j_lim = self.vehicles[0].jxmax
+        j_lim = self.vehicles[0].jxmax  # jerk limit
         n_knots = len(self.vehicles[0].basis.greville())
         x0 = segment['start'][0]
         y0 = segment['start'][1]
         x1 = segment['end'][0]
         y1 = segment['end'][1]
         if isinstance(segment['shape'], Ring):
-            guess_x, guess_y, length = self.constant_jerk_circle(x0, y0, segment, n_knots)
-            motion_time = (32*length/j_lim)**(1/3.)*2
+            guess_x, guess_y, arc_length = self.constant_jerk_circle(segment, n_knots)
+            motion_time = (32*arc_length/j_lim)**(1/3.)*2  # Todo: where does this come from?
         else:
-            guess_x = self.constant_jerk(x0, x1, n_knots)
-            guess_y = self.constant_jerk(y0, y1, n_knots)
+            guess_x = self.constant_jerk_line(x0, x1, n_knots)
+            guess_y = self.constant_jerk_line(y0, y1, n_knots)
             length = np.sqrt((x1-x0)**2+(y1-y0)**2)
-            motion_time = (32*length/j_lim)**(1/3.) * 3
+            motion_time = (32*length/j_lim)**(1/3.) * 3  # Todo: where does this come from?
         guess_z = 0*guess_x
         init_guess = np.c_[guess_x, guess_y, guess_z]
         return init_guess, motion_time
 
-    def constant_jerk(self, x0, x1, n_knots):
+    def constant_jerk_line(self, x0, x1, n_knots):
         guess  = np.zeros((n_knots,1))
         guess[0] = x0
         guess[1] = x0
@@ -824,7 +824,7 @@ class GCodeSchedulerProblem(Problem):
         x_end = x[-1]
         x = (x1-x0)/x_end * x  # scale
         x = x + x0
-        x_vals = x[np.arange(4*points,len(x), 4*points)]
+        x_vals = x[np.arange(4*points,len(x), 4*points)]  # 4*points because 4*n*points inside, so you get n values out if you pick 4*points
         for k in range(len(x_vals)):
             guess[k+3] = x_vals[k]
         guess[n_knots-3] = x1  # add this here, instead of getting it from x_vals, originally x_vals also contained this value
@@ -837,36 +837,36 @@ class GCodeSchedulerProblem(Problem):
         if (hasattr(self, 'n_prev') and n == self.n_prev):
             x = self.x_prev
         else:
-            tel = n*points  # subsample each interval
+            tel = n*points  # subsample each interval to get more accurate integration
 
+            # bang-bang jerk profile
             j = np.r_[np.ones((tel,1)), -np.ones((tel*2, 1)), np.ones((tel,1))]  # jerk profile
             a = self.running_integral(j,0)  # numerical integration
             v = self.running_integral(a,0)
             x = self.running_integral(v,0)
             self.x_prev = x  # coefficients of position spline with desired jerk profile
             self.n_prev = n
-
         return x
 
     def running_integral(self, coeffs, x0, dt=None):
         # running integral
         if dt is None:
-            dt = 0.01
-        out = 0*coeffs
+            dt = 0.01  # Todo: why 0.01?
         coeffs_int = np.array([])
         coeffs_int = np.r_[coeffs_int, x0]
         for i in range(1,coeffs.shape[0]):
             coeffs_int = np.r_[coeffs_int, (coeffs[i-1] + coeffs[i])/2 * dt + coeffs_int[i-1]]
         return coeffs_int
 
-    def constant_jerk_circle(self, x0, y0, segment, n_knots):
+    def constant_jerk_circle(self, segment, n_knots):
         points = 2000
+        # start point
+        x0 = segment['start'][0]
+        y0 = segment['start'][1]
+        # circle center
         center = segment['position']
         # calculate circle radius
         r = np.sqrt((center[0] - x0)**2 + (center[1] - y0)**2)
-        # end point
-        x1 = segment['end'][0]
-        y1 = segment['end'][1]
 
         # start angle
         theta0 = segment['shape'].start_angle
@@ -879,11 +879,11 @@ class GCodeSchedulerProblem(Problem):
         if segment['shape'].direction == 'CW':  # draw clockwise, theta decreases
             if (theta0 < theta1):  # theta0 has to be the largest
                 theta0 += 2*np.pi
-            length = r*(theta0 - theta1)  # arc length
+            arc_length = r*(theta0 - theta1)
         else:  # counter-clockwise, theta increases
             if (theta0 > theta1):  # theta1 has to be the largest
                 theta1 += 2*np.pi
-            length = r*(theta1 - theta0) # arc length
+            arc_length = r*(theta1 - theta0)
 
         x_tmp = x[-1]
         x = (theta1-theta0)/x_tmp * x  # scale with theta range
@@ -893,20 +893,20 @@ class GCodeSchedulerProblem(Problem):
         guess  = np.zeros((n_knots,1))
         guess[0] = theta0
         guess[1] = theta0
-        guess[2] = theta0
+        guess[2] = theta0  # to get start velocity and acceleration = 0
 
-        theta_vals = x[np.arange(4*points,len(x), 4*points)]
+        theta_vals = x[np.arange(4*points,len(x), 4*points)]  # Todo: why 4*points?n
         for k in range(len(theta_vals)):
             guess[k+3] = theta_vals[k]
         guess[n_knots-3] = theta1
         guess[n_knots-2] = theta1
-        guess[n_knots-1] = theta1
+        guess[n_knots-1] = theta1  # to get final velocity and acceleration = 0
 
         # evaluate to get x and y values
         guess_x = r*np.cos(guess) + center[0]
         guess_y = r*np.sin(guess) + center[1]
 
-        return guess_x, guess_y, length
+        return guess_x, guess_y, arc_length
 
     def get_init_guess_combined_segment(self):
         # combines the splines of the first two segments into a single one, forming the guess
