@@ -138,9 +138,9 @@ class Deployer:
                 ddinput_splines = [s.derivative(3) for s in pos_splines]
                 # compute values at end of first segment = start of the next iteration
                 states_end = np.hstack([s(1.) for s in pos_splines])
-                inputs_end = np.hstack([s(1.) for s in input_splines])
-                dinputs_end = np.hstack([s(1.) for s in dinput_splines])
-                ddinputs_end = np.hstack([s(1.) for s in ddinput_splines])
+                inputs_end = np.hstack([s(1.) for s in input_splines])*1/self.problem.motion_times[0]
+                dinputs_end = np.hstack([s(1.) for s in dinput_splines])*1/self.problem.motion_times[0]**2
+                ddinputs_end = np.hstack([s(1.) for s in ddinput_splines])*1/self.problem.motion_times[0]**3
 
                 # save old values
                 # these are the ones that end at the starting state of current iteration
