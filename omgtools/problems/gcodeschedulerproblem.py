@@ -24,8 +24,8 @@ from ..basics.shape import Rectangle, Square, Circle
 from ..environment.environment import Environment
 from ..basics.shape import Rectangle, Ring
 from ..basics.geometry import distance_between_points, point_in_polyhedron
-from ..basics.spline import BSplineBasis
-from ..basics.spline_extra import concat_splines
+from ..basics.spline import BSplineBasis, BSpline
+from ..basics.spline_extra import concat_splines, running_integral
 
 from scipy.interpolate import interp1d
 import scipy.linalg as la
@@ -620,14 +620,13 @@ class GCodeSchedulerProblem(Problem):
         return init_splines, motion_times
 
     def get_init_guess_new_segment(self, segment):
-        # generate initial guess for new segment, based on center line
-
-        init_guess, motion_time = self.get_init_guess_constant_jerk(segment)
 
         option = 1
 
         if option == 1:
-            from ..basics.spline import BSpline
+            # generate a feasible initial guess with a bang-bang jerk profile
+            init_guess, motion_time = self.get_init_guess_bangbang_jerk(segment)
+
             testx = BSpline(self.vehicles[0].basis, init_guess[:,0])
             testy = BSpline(self.vehicles[0].basis, init_guess[:,1])
 
@@ -647,8 +646,18 @@ class GCodeSchedulerProblem(Problem):
             maxjx = max(dddtestx(eval)/motion_time**3)
             maxjy = max(dddtesty(eval)/motion_time**3)
 
-            print maxvx
-            print maxvy
+            # from matplotlib import pyplot as plt
+            # plt.figure(10)
+            # plt.plot(eval, dtestx(eval)/motion_time)
+            # plt.plot(eval, dtesty(eval)/motion_time)
+            # plt.figure(11)
+            # plt.plot(eval, ddtestx(eval)/motion_time)
+            # plt.plot(eval, ddtesty(eval)/motion_time)
+            # plt.figure(12)
+            # plt.plot(eval, dddtestx(eval)/motion_time)
+            # plt.plot(eval, dddtesty(eval)/motion_time)
+
+            # plt.show()
 
             if maxvx > self.vehicles[0].vxmax:
                 print maxvx
@@ -670,6 +679,8 @@ class GCodeSchedulerProblem(Problem):
                 raise RuntimeError('Jerky guess too high')
 
         elif option == 2:
+            # generate initial guess for new segment, based on center line
+
             if isinstance(segment['shape'], Rectangle):
                 points = np.c_[segment['start'], segment['end']]
             elif isinstance(segment['shape'], Ring):
@@ -789,6 +800,126 @@ class GCodeSchedulerProblem(Problem):
             init_guess[-2] = init_guess[-1]  # final velocity is zero
             init_guess[-3] = init_guess[-1]  # final acceleration is also 0 normally
             init_guess[-4] = init_guess[-1]  # final acceleration is also 0 normally
+
+        return init_guess, motion_time
+
+    def get_init_guess_bangbang_jerk(self, segment):
+        x0 = segment['start'][0]
+        y0 = segment['start'][1]
+        x1 = segment['end'][0]
+        y1 = segment['end'][1]
+
+        j_lim = self.vehicles[0].jxmax  # jerk limit
+        if j_lim != self.vehicles[0].jymax:
+            raise RuntimeError('Generating initial guess only possible for x-value = y-value')
+        if j_lim != -self.vehicles[0].jxmin:
+            raise RuntimeError('Generating initial guess only possible for upper and lower bounds of equal size')
+
+        # self.vehicles[0].basis is for position, take third derivative to obtain the basis for the jerk spline
+        # length of this basis determines amount of coeffs that are required
+        n_coeffs = len(self.vehicles[0].basis.derivative(3)[0])
+        multiple, rest = divmod(n_coeffs, 4)
+        # check on amount of coeffs that are required to make desired jerk profile
+        # the basic options to obtain a profile with an average of zero are:
+        # 4 coeffs: [1, -1, -1, 1] * j_lim
+        # 5 coeffs: [1, -1, 0 -1, 1] * j_lim
+        # 6 coeffs: [1, 0, -1, -1, 0, 1] * j_lim
+        # 7 coeffs: [1, 0, -1, 0, -1, 0, 1] * j_lim
+        # for 8 coeffs or more, all non-zero values are copied, with 'multiple'
+        # 8 coeffs: [1, 1, -1, -1, -1, -1, 1, 1] * j_lim
+        if rest == 0:
+            coeffs_j = np.r_[j_lim*np.ones((multiple,1)),-j_lim*np.ones((2*multiple,1)),j_lim*np.ones((multiple,1))]
+        elif rest == 1:
+            coeffs_j = np.r_[j_lim*np.ones((multiple,1)),-j_lim*np.ones((multiple,1)),0*np.ones((1,1)),-j_lim*np.ones((multiple,1)),j_lim*np.ones((multiple,1))]
+        elif rest == 2:
+            coeffs_j = np.r_[j_lim*np.ones((multiple,1)), 0*np.ones((1,1)),-j_lim*np.ones((2*multiple,1)), 0*np.ones((1,1)),j_lim*np.ones((multiple,1))]
+        elif rest == 3:
+            coeffs_j = np.r_[j_lim*np.ones((multiple,1)), 0*np.ones((1,1)),-j_lim*np.ones((multiple,1)), 0*np.ones((1,1)),-j_lim*np.ones((multiple,1)),0*np.ones((1,1)),j_lim*np.ones((multiple,1))]
+        else:
+            raise RuntimeError('Something wrong with n_coeffs, it was not an int: ', n_coeffs)
+
+        # make jerk spline and integrate to obtain corresponding position spline
+        jerk = BSpline(self.vehicles[0].basis.derivative(3)[0], coeffs_j)
+        acc = running_integral(jerk)
+        vel = running_integral(acc)
+        pos = running_integral(vel)
+        guess = pos.coeffs  # coefficients guess
+
+        if isinstance(segment['shape'], Rectangle):
+            # shift and scale to obtain trajectory from x0 to x1
+            guess_x = [g/pos.coeffs[-1]*(x1-x0)+x0 for g in guess]
+            guess_y = [g/pos.coeffs[-1]*(y1-y0)+y0 for g in guess]
+        elif isinstance(segment['shape'], Ring):
+            # Note: guess contains angle (theta) values for this case
+            theta0 = segment['shape'].start_angle
+            theta1 = segment['shape'].end_angle
+            center = segment['position']
+            # calculate circle radius
+            r = np.sqrt((center[0] - x0)**2 + (center[1] - y0)**2)
+            # scale with theta range, and shift with start angle
+            guess = [g*(theta1-theta0)/pos.coeffs[-1]+theta0 for g in guess]
+            # convert angles to position
+            guess_x = r*np.cos(guess) + center[0]
+            guess_y = r*np.sin(guess) + center[1]
+        else:
+            raise RuntimeError('Segment with invalid (not Rectangle or Ring) shape: ', segment['shape'])
+
+        # initial and final velocity and acceleration are 0
+        guess_x[0] = x0
+        guess_x[1] = x0
+        guess_x[2] = x0
+        guess_x[-3] = x1
+        guess_x[-2] = x1
+        guess_x[-1] = x1
+
+        # initial and final velocity and acceleration are 0
+        guess_y[0] = y0
+        guess_y[1] = y0
+        guess_y[2] = y0
+        guess_y[-3] = y1
+        guess_y[-2] = y1
+        guess_y[-1] = y1
+
+        guess_z = 0*np.array(guess_x)
+        init_guess = np.c_[guess_x, guess_y, guess_z]
+
+        # construct corresponding splines
+        pos_x = BSpline(self.vehicles[0].basis, guess_x)
+        vel_x = pos_x.derivative(1)
+        acc_x = pos_x.derivative(2)
+        jerk_x = pos_x.derivative(3)
+
+        pos_y = BSpline(self.vehicles[0].basis, guess_y)
+        vel_y = pos_y.derivative(1)
+        acc_y = pos_y.derivative(2)
+        jerk_y = pos_y.derivative(3)
+
+        # determine which limit is the most strict, and therefore determines the motion_time
+        eval = np.linspace(0,1,100)
+        motion_time_j = (max(np.r_[abs(jerk_x(eval)), abs(jerk_y(eval))])/float(j_lim))**(1/3.)
+        a_lim = self.vehicles[0].axmax  # jerk limit
+        motion_time_a = np.sqrt(max(np.r_[abs(acc_x(eval)), abs(acc_y(eval))])/float(a_lim))
+        v_lim = self.vehicles[0].vxmax  # jerk limit
+        motion_time_v = max(np.r_[abs(vel_x(eval)), abs(vel_y(eval))])/float(v_lim)
+        motion_time = max(motion_time_j, motion_time_a, motion_time_v)
+
+        # from matplotlib import pyplot as plt
+        # plt.figure(20)
+        # plt.plot(eval, jerk_x(eval)/motion_time**3)
+        # plt.figure(21)
+        # plt.plot(eval, acc_x(eval)/motion_time**2)
+        # plt.figure(22)
+        # plt.plot(eval, vel_x(eval)/motion_time)
+        # plt.figure(23)
+        # plt.plot(eval, pos_x(eval))
+        # plt.figure(24)
+        # plt.plot(eval, jerk_y(eval)/motion_time**3)
+        # plt.figure(25)
+        # plt.plot(eval, acc_y(eval)/motion_time**2)
+        # plt.figure(26)
+        # plt.plot(eval, vel_y(eval)/motion_time)
+        # plt.figure(27)
+        # plt.plot(eval, pos_y(eval))
 
         return init_guess, motion_time
 
