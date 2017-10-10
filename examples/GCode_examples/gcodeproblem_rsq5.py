@@ -29,7 +29,7 @@ reader = GCodeReader()
 # the settings in this file are made specifically for the rsq5.nc file
 GCode = reader.run()
 
-n_blocks = 2  # amount of GCode blocks to combine
+n_blocks = 3  # amount of GCode blocks to combine
 tol = 5e-3  # required tolerance of the machined part [mm]
 bounds = {'vmin':-0.3e3, 'vmax':0.3e3,
           'amin':-20e3, 'amax':20e3,
