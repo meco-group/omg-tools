@@ -967,11 +967,24 @@ class GCodeSchedulerProblem(Problem):
             guess_y = [g/pos.coeffs[-1]*(y1-y0)+y0 for g in guess]
         elif isinstance(segment['shape'], Ring):
             # Note: guess contains angle (theta) values for this case
-            theta0 = segment['shape'].start_angle
-            theta1 = segment['shape'].end_angle
+
+            # don't use these ones, the start and end angle include the extension of the shape
+            # theta0 = segment['shape'].start_angle
+            # theta1 = segment['shape'].end_angle
             center = segment['position']
+
+            theta0 = np.arctan2(y0 - center[1], x0 - center[0])  # start angle
+            theta1 = np.arctan2(y1 - center[1], x1 - center[0])  # end angle
+            if segment['shape'].direction == 'CW':  # theta must decrease
+                if theta0 < theta1:  # theta0 needs to be bigger
+                    theta0 += 2*np.pi
+            else:  # counter-clockwise, theta must increase
+                if theta0 > theta1:  # theta1 needs to be bigger
+                    theta1 += 2*np.pi
+
             # calculate circle radius
             r = np.sqrt((center[0] - x0)**2 + (center[1] - y0)**2)
+            # r += self.vehicles[0].tolerance  # shift outwards
             # scale with theta range, and shift with start angle
             guess = [g*(theta1-theta0)/pos.coeffs[-1]+theta0 for g in guess]
             # convert angles to position
