@@ -29,7 +29,7 @@ reader = GCodeReader()
 # the settings inside this example are made specifically for the anchor2D.nc file
 GCode = reader.run()
 
-n_blocks = 3  # amount of GCode blocks to combine
+n_blocks = 5  # amount of GCode blocks to combine
 tol = 5e-3  # required tolerance of the machined part [mm]
 bounds = {'vmin':-5e3, 'vmax':5e3,
           'amin':-20e3, 'amax':20e3,
