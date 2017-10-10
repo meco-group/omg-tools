@@ -30,10 +30,10 @@ reader = GCodeReader()
 GCode = reader.run()
 
 n_blocks = 3  # amount of GCode blocks to combine
-tol = 5e-1  # required tolerance of the machined part [mm]
-bounds = {'vmin':-1e3, 'vmax':1e3,
+tol = 5e-3  # required tolerance of the machined part [mm]
+bounds = {'vmin':-5e3, 'vmax':5e3,
           'amin':-20e3, 'amax':20e3,
-          'jmin':-850e3, 'jmax':850e3}  # [mm]
+          'jmin':-200e3, 'jmax':200e3}  # [mm]
 tool = Tool(tol, bounds = bounds)  # tool to follow the GCode
 tool.define_knots(knot_intervals=10)
 tool.set_initial_conditions(GCode[0].start)  # start position of first GCode block
@@ -47,13 +47,14 @@ tool.set_terminal_conditions(GCode[-1].end)  # goal position of last GCode block
 # if the trajectory takes the wrong side of a ring segment with large arc angle,
 # you can split ring segments with an arc_angle >3*pi/4 by putting splitting=True
 schedulerproblem = GCodeSchedulerProblem(tool, GCode, n_segments=n_blocks, with_deployer=True, splitting=True)
-schedulerproblem.set_options({'solver_options': {'ipopt': {'ipopt.tol': 1e-8}}})#,
-														   # 'ipopt.linear_solver': 'ma57'}}})#,
-                                                           # 'ipopt.hessian_approximation': 'limited-memory'}}})
+schedulerproblem.set_options({'solver_options': {'ipopt': {'ipopt.tol': 1e-5,
+														   'ipopt.linear_solver': 'ma57',
+                                                           'ipopt.hessian_approximation': 'limited-memory',
+														   'ipopt.max_iter': 20000}}})#,
 # put problem in deployer: choose this if you just want to obtain the trajectories for the tool
-deployer = Deployer(schedulerproblem, sample_time=0.001)
+deployer = Deployer(schedulerproblem, sample_time=0.0001)
 # put problem in simulator: choose this if you want to simulate step by step
-simulator = Simulator(schedulerproblem, sample_time=0.001)
+simulator = Simulator(schedulerproblem, sample_time=0.0001)
 
 # define what you want to plot
 schedulerproblem.plot('scene')
