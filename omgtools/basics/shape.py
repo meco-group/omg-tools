@@ -79,7 +79,7 @@ class Ring(Shape2D):
     def get_surfaces(self):
         if (self.start == self.end).all():
             # full ring, placed in the origin
-            s = np.linspace(0,2*np.pi,50)
+            s = np.linspace(0,2*np.pi,1000)
         else:
             # part of a ring, placed in the origin
             self.start_angle = np.arctan2(self.start[1],self.start[0])
@@ -90,7 +90,7 @@ class Ring(Shape2D):
             elif self.direction == 'CCW':
                 if self.start_angle > self.end_angle:  # arctan2 returned a negative end_angle, make positive
                     self.end_angle += 2*np.pi
-            s = np.linspace(self.start_angle, self.end_angle, 50)
+            s = np.linspace(self.start_angle, self.end_angle, 1000)
         # inner radius
         points_in = np.vstack(
             (self.radius_in*np.cos(s), self.radius_in*np.sin(s)))
@@ -106,7 +106,7 @@ class Ring(Shape2D):
     def get_canvas_limits(self):
         # take into account the ring-shape in computation, by computing points on
         # outer side of the ring
-        s = np.linspace(self.start_angle, self.end_angle, 50)
+        s = np.linspace(self.start_angle, self.end_angle, 1000)
         points_out = np.vstack((
             (self.radius_out*np.cos(s), self.radius_out*np.sin(s)), 0*s))
         points = np.c_[self.start, self.end, points_out]
