@@ -194,10 +194,17 @@ class Deployer:
                 plt.plot(time, ddinput_traj[1, :])
                 plt.pause(0.1)
 
+
                 plt.figure(6)
                 plt.cla()
                 # plot trajectory
                 plt.plot(state_traj[0, :], state_traj[1, :])
+                # plot future trajectory
+                eval = np.linspace(0,1,100)
+                future_splines = self.problem.vehicles[0].result_spline_segments[1:]
+                for spline in future_splines:
+                    plt.figure(6)
+                    plt.plot(spline[0](eval),spline[1](eval),color='gray')
                 # plot environment
                 for room in self.problem.environment.room:
                     points = room['shape'].draw(room['pose'][:3])[0][0]
