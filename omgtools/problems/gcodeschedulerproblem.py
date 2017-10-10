@@ -896,12 +896,14 @@ class GCodeSchedulerProblem(Problem):
 
         # determine which limit is the most strict, and therefore determines the motion_time
         eval = np.linspace(0,1,100)
+        # take into account scaling factor, with appropriate power
         motion_time_j = (max(np.r_[abs(jerk_x(eval)), abs(jerk_y(eval))])/float(j_lim))**(1/3.)
         a_lim = self.vehicles[0].axmax  # jerk limit
         motion_time_a = np.sqrt(max(np.r_[abs(acc_x(eval)), abs(acc_y(eval))])/float(a_lim))
         v_lim = self.vehicles[0].vxmax  # jerk limit
         motion_time_v = max(np.r_[abs(vel_x(eval)), abs(vel_y(eval))])/float(v_lim)
         motion_time = max(motion_time_j, motion_time_a, motion_time_v)
+        motion_time = 1.05*motion_time  # take some margin to avoid numerical errors
 
         # from matplotlib import pyplot as plt
         # plt.figure(20)
