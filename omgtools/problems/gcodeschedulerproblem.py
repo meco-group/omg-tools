@@ -597,6 +597,122 @@ class GCodeSchedulerProblem(Problem):
             init_splines.append(init_spl)
             motion_times.append(motion_time)
 
+
+        # # plot init guess to see if it is feasible
+        # if self.n_segments == 3:
+        #     from matplotlib import pyplot as plt
+        #     eval1 = np.linspace(0,motion_times[0],100)
+        #     eval2 = np.linspace(motion_times[0],motion_times[0]+motion_times[1],100)
+        #     eval3 = np.linspace(motion_times[0]+motion_times[1],sum(motion_times),100)
+        #     s_basis = self.vehicles[0].basis
+        #     pos_guess1 = BSpline(s_basis,init_splines[0])
+        #     pos_guess1 = pos_guess1.scale(motion_times[0], shift = 0)
+        #     pos_guess2 = BSpline(s_basis,init_splines[1])
+        #     pos_guess2 = pos_guess2.scale(motion_times[1], shift = motion_times[0])
+        #     pos_guess3 = BSpline(s_basis,init_splines[2])
+        #     pos_guess3 = pos_guess3.scale(motion_times[2], shift = motion_times[0]+motion_times[1])
+        #     plt.figure(20)
+        #     plt.ylabel('pos_x')
+        #     plt.plot(eval1, pos_guess1(eval1)[:,0])
+        #     plt.plot(eval2, pos_guess2(eval2)[:,0])
+        #     plt.plot(eval3, pos_guess3(eval3)[:,0])
+
+        #     plt.figure(30)
+        #     plt.ylabel('pos_y')
+        #     plt.plot(eval1, pos_guess1(eval1)[:,1])
+        #     plt.plot(eval2, pos_guess2(eval2)[:,1])
+        #     plt.plot(eval3, pos_guess3(eval3)[:,1])
+
+        #     vel_guess1 = pos_guess1.derivative(1)
+        #     vel_guess2 = pos_guess2.derivative(1)
+        #     vel_guess3 = pos_guess3.derivative(1)
+        #     plt.figure(40)
+        #     plt.ylabel('vel_x')
+        #     plt.plot(eval1, vel_guess1(eval1)[:,0])
+        #     plt.plot(eval2, vel_guess2(eval2)[:,0])
+        #     plt.plot(eval3, vel_guess3(eval3)[:,0])
+
+        #     plt.figure(50)
+        #     plt.ylabel('vel_y')
+        #     plt.plot(eval1, vel_guess1(eval1)[:,1])
+        #     plt.plot(eval2, vel_guess2(eval2)[:,1])
+        #     plt.plot(eval3, vel_guess3(eval3)[:,1])
+
+        #     acc_guess1 = pos_guess1.derivative(2)
+        #     acc_guess2 = pos_guess2.derivative(2)
+        #     acc_guess3 = pos_guess3.derivative(2)
+        #     plt.figure(60)
+        #     plt.ylabel('acc_x')
+        #     plt.plot(eval1, acc_guess1(eval1)[:,0])
+        #     plt.plot(eval2, acc_guess2(eval2)[:,0])
+        #     plt.plot(eval3, acc_guess3(eval3)[:,0])
+
+        #     plt.figure(70)
+        #     plt.ylabel('acc_y')
+        #     plt.plot(eval1, acc_guess1(eval1)[:,1])
+        #     plt.plot(eval2, acc_guess2(eval2)[:,1])
+        #     plt.plot(eval3, acc_guess3(eval3)[:,1])
+
+        #     jerk_guess1 = pos_guess1.derivative(3)
+        #     jerk_guess2 = pos_guess2.derivative(3)
+        #     jerk_guess3 = pos_guess3.derivative(3)
+        #     plt.figure(80)
+        #     plt.ylabel('j_x')
+        #     plt.plot(eval1, jerk_guess1(eval1)[:,0])
+        #     plt.plot(eval2, jerk_guess2(eval2)[:,0])
+        #     plt.plot(eval3, jerk_guess3(eval3)[:,0])
+
+        #     plt.figure(90)
+        #     plt.ylabel('j_y')
+        #     plt.plot(eval1, jerk_guess1(eval1)[:,1])
+        #     plt.plot(eval2, jerk_guess2(eval2)[:,1])
+        #     plt.plot(eval3, jerk_guess3(eval3)[:,1])
+
+        #     maxvx = max(max(abs(vel_guess1(eval1)[:,0])), max(abs(vel_guess2(eval1)[:,0])), max(abs(vel_guess3(eval1)[:,0])))
+        #     maxvy = max(max(abs(vel_guess1(eval1)[:,1])), max(abs(vel_guess2(eval1)[:,1])), max(abs(vel_guess3(eval1)[:,1])))
+        #     maxax = max(max(abs(acc_guess1(eval1)[:,0])), max(abs(acc_guess2(eval1)[:,0])), max(abs(acc_guess3(eval1)[:,0])))
+        #     maxay = max(max(abs(acc_guess1(eval1)[:,1])), max(abs(acc_guess2(eval1)[:,1])), max(abs(acc_guess3(eval1)[:,1])))
+        #     maxjx = max(max(abs(jerk_guess1(eval1)[:,0])), max(abs(jerk_guess2(eval1)[:,0])), max(abs(jerk_guess3(eval1)[:,0])))
+        #     maxjy = max(max(abs(jerk_guess1(eval1)[:,1])), max(abs(jerk_guess2(eval1)[:,1])), max(abs(jerk_guess3(eval1)[:,1])))
+
+        #     # if maxvx > self.vehicles[0].vxmax:
+        #     #     print maxvx
+        #     #     raise RuntimeError('Velx guess too high')
+        #     # if maxvy > self.vehicles[0].vymax:
+        #     #     print maxvy
+        #     #     raise RuntimeError('Vely guess too high')
+        #     # if maxax > self.vehicles[0].axmax:
+        #     #     print maxax
+        #     #     raise RuntimeError('Accx guess too high')
+        #     # if maxay > self.vehicles[0].aymax:
+        #     #     print maxay
+        #     #     raise RuntimeError('Accy guess too high')
+        #     # if maxjx > self.vehicles[0].jxmax:
+        #     #     print maxjx
+        #     #     raise RuntimeError('Jerkx guess too high')
+        #     # if maxjy > self.vehicles[0].jymax:
+        #     #     print maxjy
+        #     #     raise RuntimeError('Jerky guess too high')
+
+
+        #     plt.figure(6)
+        #     plt.plot(pos_guess1(eval1)[:,0], pos_guess1(eval1)[:,1], 'g')
+        #     plt.plot(pos_guess2(eval2)[:,0], pos_guess2(eval2)[:,1], 'g')
+        #     plt.plot(pos_guess3(eval3)[:,0], pos_guess3(eval3)[:,1], 'g')
+        #     plt.plot(pos_guess1.coeffs[:,0], pos_guess1.coeffs[:,1], 'gx')
+        #     plt.plot()
+
+        #     # plot environment
+        #     for room in self.environment.room:
+        #         points = room['shape'].draw(room['pose'][:3])[0][0]
+        #         # add first point again to close shape
+        #         points = np.c_[points, [points[0,0], points[1,0]]]
+        #         plt.plot(points[0,:], points[1,:], color='red', linestyle = '--', linewidth= 1.2)
+        #     plt.pause(0.1)
+
+        #     plt.close('all')
+
+
         # pass on initial guess
         self.vehicles[0].set_init_spline_values(init_splines, n_seg = self.n_segments)
 
