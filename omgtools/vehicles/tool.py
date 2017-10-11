@@ -75,24 +75,24 @@ class Tool(Vehicle):
     def set_default_options(self):
         Vehicle.set_default_options(self)
 
-    def define_trajectory_constraints(self, splines, horizon_time):
+    def define_trajectory_constraints(self, splines, horizon_time, skip=[]):
         x, y, z = splines
         dx, dy, dz = x.derivative(), y.derivative(), z.derivative()  # velocity
         ddx, ddy, ddz = x.derivative(2), y.derivative(2), z.derivative(2)  # acceleration
         dddx, dddy, dddz = x.derivative(3), y.derivative(3), z.derivative(3)  # jerk
         # constrain local velocity
-        self.define_constraint(-dx + horizon_time*self.vxmin, -inf, 0.)
-        self.define_constraint(-dy + horizon_time*self.vymin, -inf, 0.)
+        self.define_constraint(-dx + horizon_time*self.vxmin, -inf, 0., skip=skip)
+        self.define_constraint(-dy + horizon_time*self.vymin, -inf, 0., skip=skip)
         # self.define_constraint(-dz + horizon_time*self.vzmin, -inf, 0.)
-        self.define_constraint(dx - horizon_time*self.vxmax, -inf, 0.)
-        self.define_constraint(dy - horizon_time*self.vymax, -inf, 0.)
+        self.define_constraint(dx - horizon_time*self.vxmax, -inf, 0., skip=skip)
+        self.define_constraint(dy - horizon_time*self.vymax, -inf, 0., skip=skip)
         # self.define_constraint(dz - horizon_time*self.vzmax, -inf, 0.)
 
-        self.define_constraint(-ddx + (horizon_time**2)*self.axmin, -inf, 0.)
-        self.define_constraint(-ddy + (horizon_time**2)*self.aymin, -inf, 0.)
+        self.define_constraint(-ddx + (horizon_time**2)*self.axmin, -inf, 0., skip=skip)
+        self.define_constraint(-ddy + (horizon_time**2)*self.aymin, -inf, 0., skip=skip)
         # self.define_constraint(-ddz + (horizon_time**2)*self.azmin, -inf, 0.)
-        self.define_constraint(ddx - (horizon_time**2)*self.axmax, -inf, 0.)
-        self.define_constraint(ddy - (horizon_time**2)*self.aymax, -inf, 0.)
+        self.define_constraint(ddx - (horizon_time**2)*self.axmax, -inf, 0., skip=skip)
+        self.define_constraint(ddy - (horizon_time**2)*self.aymax, -inf, 0., skip=skip)
         # self.define_constraint(ddz - (horizon_time**2)*self.azmax, -inf, 0.)
 
         self.define_constraint(-dddx + (horizon_time**3)*self.jxmin, -inf, 0.)
