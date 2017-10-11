@@ -81,6 +81,10 @@ class Deployer:
         # boolean to select if we want to go to next segment
         self.problem.no_update = False
 
+        # create variables to save all data
+        self.motion_times = []
+        self.result_coeffs = []
+
         # create figures
         plt.figure(2)  # state
         plt.figure(3)  # input
@@ -194,7 +198,6 @@ class Deployer:
                 plt.plot(time, ddinput_traj[1, :])
                 plt.pause(0.1)
 
-
                 plt.figure(6)
                 plt.cla()
                 # plot trajectory
@@ -212,6 +215,10 @@ class Deployer:
                     points = np.c_[points, [points[0,0], points[1,0]]]
                     plt.plot(points[0,:], points[1,:], color='red', linestyle = '--', linewidth= 1.2)
                 plt.pause(0.1)
+
+                # save results in big list
+                self.result_coeffs.append([s.coeffs for s in self.problem.vehicles[0].result_spline_segments[0]])
+                self.motion_times.append(self.problem.motion_times[0])
 
                 # Neglect bad segment:
                 # if the latest computation step gave worse results than before, don't use it
@@ -279,6 +286,9 @@ class Deployer:
 
                     # remove the motion time that was computed for the segment that was not accepted
                     self.problem.motion_time_log.pop()
+                    # remove data that was saved for segment that was not accepted
+                    self.result_coeffs.pop()
+                    self.motion_times.pop()
                 else:  # user was happy or optimal solution found, just continue
                     self.cnt = 0
 
