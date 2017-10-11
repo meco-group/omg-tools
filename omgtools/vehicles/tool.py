@@ -151,7 +151,7 @@ class Tool(Vehicle):
         self.prediction['state'] = state
         self.prediction['input'] = input
         self.prediction['dinput'] = dinput
-        self.prediction['ddinput'] = ddinput
+        # self.prediction['ddinput'] = ddinput
 
     def set_terminal_conditions(self, position):
         self.poseT = position
@@ -196,7 +196,7 @@ class Tool(Vehicle):
         parameters[self]['state0'] = self.prediction['state']
         parameters[self]['input0'] = self.prediction['input']
         parameters[self]['dinput0'] = self.prediction['dinput']
-        parameters[self]['ddinput0'] = self.prediction['ddinput']
+        # parameters[self]['ddinput0'] = self.prediction['ddinput']
         parameters[self]['poseT'] = self.poseT
         return parameters
 
