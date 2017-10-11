@@ -30,6 +30,7 @@ from ..basics.spline_extra import concat_splines, running_integral
 from scipy.interpolate import interp1d
 import scipy.linalg as la
 import numpy as np
+import pickle
 import time
 import warnings
 
@@ -56,6 +57,15 @@ class GCodeSchedulerProblem(Problem):
         self.segments = []
         # are we running over the GCode using the deployer
         self.with_deployer = kwargs['with_deployer'] if 'with_deployer' in kwargs else False
+
+        if ('use_prev_solution' in kwargs and kwargs['use_prev_solution']):
+            file = open('result_coeffs.pickle','r')
+            # load the object from the file into var b
+            self.guess_coeffs = pickle.load(file)
+            file.close()
+            file = open('result_times.pickle', 'r')
+            self.guess_times = pickle.load(file)
+            file.close()
 
         if not isinstance(self.vehicles[0].shapes[0], Circle):
             raise RuntimeError('Vehicle shape can only be a Circle when solving a GCodeSchedulerProblem')
@@ -567,36 +577,42 @@ class GCodeSchedulerProblem(Problem):
         init_splines = []
         motion_times = []
 
-        if hasattr(self, 'local_problem') and hasattr(self.local_problem.father, '_var_result'):
-            # local_problem was already solved, re-use previous solutions to form initial guess
-            if self.n_segments > 1:
-                # if updating in receding horizon with small steps:
-                # combine first two spline segments into a new spline = guess for new current segment
-                # init_spl, motion_time = self.get_init_guess_combined_segment()
-
-                # if updating per segment:
-                # the first segment disappears and the guess is given by data of next segment
-                # spline through next segment and its motion time
-                init_splines.append(np.array(self.local_problem.father.get_variables()[self.vehicles[0].label,'splines_seg1']))
-                motion_times.append(self.local_problem.father.get_variables(self.local_problem, 'T1',)[0][0])
-
-            if self.n_segments > 2:
-                # use old solutions for segment 2 until second last segment, these don't change
-                for k in range(2, self.n_segments):
-                    # Todo: strange notation required, why not the same as in schedulerproblem.py?
-                    init_splines.append(np.array(self.local_problem.father.get_variables()[self.vehicles[0].label,'splines_seg'+str(k)]))
-                    motion_times.append(self.local_problem.father.get_variables(self.local_problem, 'T'+str(k),)[0][0])
-            # only make guess using center line for last segment
-            guess_idx = [self.n_segments-1]
+        if hasattr(self, 'guess_coeffs'):
+            # guess provided from a previous run
+            for k in range(self.n_segments):
+                init_splines.append(np.transpose(self.guess_coeffs[self.n_current_block + k]))
+                motion_times.append(np.transpose(self.guess_times[self.n_current_block + k]))
         else:
-            # local_problem was not solved yet, make guess using center line for all segments
-            guess_idx = range(self.n_segments)
+            if hasattr(self, 'local_problem') and hasattr(self.local_problem.father, '_var_result'):
+                # local_problem was already solved, re-use previous solutions to form initial guess
+                if self.n_segments > 1:
+                    # if updating in receding horizon with small steps:
+                    # combine first two spline segments into a new spline = guess for new current segment
+                    # init_spl, motion_time = self.get_init_guess_combined_segment()
 
-        # make guesses based on center line of GCode
-        for k in guess_idx:
-            init_spl, motion_time = self.get_init_guess_new_segment(self.segments[k])
-            init_splines.append(init_spl)
-            motion_times.append(motion_time)
+                    # if updating per segment:
+                    # the first segment disappears and the guess is given by data of next segment
+                    # spline through next segment and its motion time
+                    init_splines.append(np.array(self.local_problem.father.get_variables()[self.vehicles[0].label,'splines_seg1']))
+                    motion_times.append(self.local_problem.father.get_variables(self.local_problem, 'T1',)[0][0])
+
+                if self.n_segments > 2:
+                    # use old solutions for segment 2 until second last segment, these don't change
+                    for k in range(2, self.n_segments):
+                        # Todo: strange notation required, why not the same as in schedulerproblem.py?
+                        init_splines.append(np.array(self.local_problem.father.get_variables()[self.vehicles[0].label,'splines_seg'+str(k)]))
+                        motion_times.append(self.local_problem.father.get_variables(self.local_problem, 'T'+str(k),)[0][0])
+                # only make guess using center line for last segment
+                guess_idx = [self.n_segments-1]
+            else:
+                # local_problem was not solved yet, make guess using center line for all segments
+                guess_idx = range(self.n_segments)
+
+            # make guesses based on center line of GCode
+            for k in guess_idx:
+                init_spl, motion_time = self.get_init_guess_new_segment(self.segments[k])
+                init_splines.append(init_spl)
+                motion_times.append(motion_time)
 
 
         # # plot init guess to see if it is feasible
