@@ -676,24 +676,24 @@ class GCodeSchedulerProblem(Problem):
         #     maxjx = max(max(abs(jerk_guess1(eval1)[:,0])), max(abs(jerk_guess2(eval1)[:,0])), max(abs(jerk_guess3(eval1)[:,0])))
         #     maxjy = max(max(abs(jerk_guess1(eval1)[:,1])), max(abs(jerk_guess2(eval1)[:,1])), max(abs(jerk_guess3(eval1)[:,1])))
 
-        #     # if maxvx > self.vehicles[0].vxmax:
-        #     #     print maxvx
-        #     #     raise RuntimeError('Velx guess too high')
-        #     # if maxvy > self.vehicles[0].vymax:
-        #     #     print maxvy
-        #     #     raise RuntimeError('Vely guess too high')
-        #     # if maxax > self.vehicles[0].axmax:
-        #     #     print maxax
-        #     #     raise RuntimeError('Accx guess too high')
-        #     # if maxay > self.vehicles[0].aymax:
-        #     #     print maxay
-        #     #     raise RuntimeError('Accy guess too high')
-        #     # if maxjx > self.vehicles[0].jxmax:
-        #     #     print maxjx
-        #     #     raise RuntimeError('Jerkx guess too high')
-        #     # if maxjy > self.vehicles[0].jymax:
-        #     #     print maxjy
-        #     #     raise RuntimeError('Jerky guess too high')
+        #     if maxvx > self.vehicles[0].vxmax:
+        #         print maxvx
+        #         raise RuntimeError('Velx guess too high')
+        #     if maxvy > self.vehicles[0].vymax:
+        #         print maxvy
+        #         raise RuntimeError('Vely guess too high')
+        #     if maxax > self.vehicles[0].axmax:
+        #         print maxax
+        #         raise RuntimeError('Accx guess too high')
+        #     if maxay > self.vehicles[0].aymax:
+        #         print maxay
+        #         raise RuntimeError('Accy guess too high')
+        #     if maxjx > self.vehicles[0].jxmax:
+        #         print maxjx
+        #         raise RuntimeError('Jerkx guess too high')
+        #     if maxjy > self.vehicles[0].jymax:
+        #         print maxjy
+        #         raise RuntimeError('Jerky guess too high')
 
 
         #     plt.figure(6)
