@@ -113,16 +113,17 @@ class GCodeSchedulerProblem(Problem):
                 # don't update number or segments, because the deployer wants to
                 # re-compute the same segment, that e.g. was infeasible
                 # this boolean is set by the deployer in deployer.update_segment()
+                self.local_problem = self.generate_problem()
                 pass
             else:
                 self.n_current_block += 1
                 self.update_segments()
 
-            # transform segments into local_problem
-            self.local_problem = self.generate_problem()
-            # self.init_guess is filled in by update_segments()
-            # this also updates self.motion_time
-            self.local_problem.reset_init_guess(self.init_guess)
+                # transform segments into local_problem
+                self.local_problem = self.generate_problem()
+                # self.init_guess is filled in by update_segments()
+                # this also updates self.motion_time
+                self.local_problem.reset_init_guess(self.init_guess)
 
         # solve local problem
         self.local_problem.solve(current_time, update_time)
