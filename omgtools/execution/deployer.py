@@ -19,6 +19,9 @@
 
 import numpy as np
 from matplotlib import pyplot as plt
+import pickle
+
+from ..basics.spline import BSpline
 
 
 class Deployer:
@@ -298,3 +301,74 @@ class Deployer:
 
         # target reached, print final information
         self.problem.final()
+
+        # save results:
+        ## 1) save state_traj
+        # self.state_traj = state_traj
+        # self.input_traj = input_traj
+        # self.dinput_traj = dinput_traj
+        ## 2) rebuild
+        self.save_splines()
+
+    def save_splines(self):
+        # save coefficients of splines, such that you can rebuild them later
+        file = open('result_coeffs.pickle','wb')
+        pickle.dump(self.result_coeffs,file, protocol=pickle.HIGHEST_PROTOCOL)
+        file.close()
+
+        file = open('result_times.pickle','wb')
+        pickle.dump(self.motion_times,file, protocol=pickle.HIGHEST_PROTOCOL)
+        file.close()
+
+    def generate_setpoints(self, sample_time=None, type='pos'):
+
+        if sample_time is None:
+            sample_time = self.sample_time
+
+        basis = self.problem.vehicles[0].basis
+
+        # read in coeffs, make splines of it and evaluate them to obtain the setpoints with the required sampling frequency
+
+        # we open the file for reading
+        file = open('result_coeffs.pickle','r')
+        # load the object from the file into var b
+        result_coeffs = pickle.load(file)
+        file.close()
+        file = open('result_times.pickle', 'r')
+        motion_times = pickle.load(file)
+
+        pos_splines = np.array([[],[]])
+        vel_splines = np.array([[],[]])
+        acc_splines = np.array([[],[]])
+
+        for idx, coeffs in enumerate(result_coeffs):
+            # don't include last point, since this would give a double evaluation: end of spline1 = begin of spline2
+            n_samp = int(np.round(motion_times[idx]/self.sample_time, 6))
+            eval = np.linspace(0,1-sample_time,n_samp)
+
+            spline1 = BSpline(basis, coeffs[0])
+            dspline1 = spline1.derivative(1)*(1./motion_times[idx])
+            ddspline1 = spline1.derivative(2)*(1./motion_times[idx]**2)
+
+            spline2 = BSpline(basis, coeffs[1])
+            dspline2 = spline2.derivative(1)*(1./motion_times[idx])
+            ddspline2 = spline2.derivative(2)*(1./motion_times[idx]**2)
+
+            pos_splines = np.c_[pos_splines, np.array([spline1, spline2])]
+            vel_splines = np.c_[vel_splines, np.array([dspline1, dspline2])]
+            acc_splines = np.c_[acc_splines, np.array([ddspline1, ddspline2])]
+
+        if type == 'pos':
+            pos_x = [p(eval) for p in pos_splines[0,:]]
+            pos_y = [p(eval) for p in pos_splines[1,:]]
+            return np.r_[pos_x, pos_y]
+        elif type == 'vel':
+            vel_x = [p(eval) for p in vel_splines[0,:]]
+            vel_y = [p(eval) for p in vel_splines[:,1]]
+            return np.r_[vel_x, vel_y]
+        elif type == 'acc':
+            acc_x = [p(eval) for p in acc_splines[0,:]]
+            acc_y = [p(eval) for p in acc_splines[:,1]]
+            return np.r_[acc_x, acc_y]
+        else:
+            raise RuntimeError('Invalid type selected: ', type)
