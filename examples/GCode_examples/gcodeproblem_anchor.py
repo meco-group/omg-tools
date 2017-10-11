@@ -29,7 +29,7 @@ reader = GCodeReader()
 # the settings inside this example are made specifically for the anchor2D.nc file
 GCode = reader.run()
 
-n_blocks = 5  # amount of GCode blocks to combine
+n_blocks = 3  # amount of GCode blocks to combine
 tol = 5e-3  # required tolerance of the machined part [mm]
 bounds = {'vmin':-5e3, 'vmax':5e3,
           'amin':-20e3, 'amax':20e3,
@@ -46,10 +46,14 @@ tool.set_terminal_conditions(GCode[-1].end)  # goal position of last GCode block
 # if you want to compute trajectories by using the deployer, put with_deployer=True
 # if the trajectory takes the wrong side of a ring segment with large arc angle,
 # you can split ring segments with an arc_angle >3*pi/4 by putting splitting=True
-schedulerproblem = GCodeSchedulerProblem(tool, GCode, n_segments=n_blocks, with_deployer=True, splitting=True)
+schedulerproblem = GCodeSchedulerProblem(tool, GCode, n_segments=n_blocks, with_deployer=True, splitting=True, use_prev_solution=False)
 schedulerproblem.set_options({'solver_options': {'ipopt': {'ipopt.tol': 1e-5,
 														   'ipopt.linear_solver': 'ma57',
-                                                           'ipopt.hessian_approximation': 'limited-memory',
+														   'ipopt.warm_start_bound_push': 1e-6,
+														   'ipopt.warm_start_mult_bound_push': 1e-6,
+														   'ipopt.warm_start_mult_bound_push': 1e-6,
+														   'ipopt.mu_init': 1e-5,
+                                                           # 'ipopt.hessian_approximation': 'limited-memory',
 														   'ipopt.max_iter': 20000}}})#,
 # put problem in deployer: choose this if you just want to obtain the trajectories for the tool
 deployer = Deployer(schedulerproblem, sample_time=0.0001)
