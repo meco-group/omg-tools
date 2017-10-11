@@ -247,7 +247,6 @@ class Deployer:
                     self.problem.no_update = True
                     # reset saved trajectories
                     # i.e. trajectories starting at the starting point of trajectory that was not successfully computed
-                    import pdb; pdb.set_trace()  # breakpoint 66421d01 //
                     state_traj = np.array(state_traj_old)
                     input_traj = np.array(input_traj_old)
                     dinput_traj = np.array(dinput_traj_old)
