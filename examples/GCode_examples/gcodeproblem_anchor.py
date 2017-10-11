@@ -67,6 +67,14 @@ tool.plot('ddinput', knots=True, prediction=True, labels=['j_x (m/s^3)', 'j_y (m
 deployer.update_segment()
 # simulator.run_segment()
 
+# obtain setpoints
+results = deployer.generate_setpoints()  # sample_time = 0.0001
+
+# write to file
+file = open('result_pos.pickle','wb')
+pickle.dump(results,file, protocol=pickle.HIGHEST_PROTOCOL)
+file.close()
+
 # plotting afterwards, and saving is only available when using the simulator
 # schedulerproblem.plot_movie('scene', number_of_frames=100, repeat=False)
 # schedulerproblem.save_movie('scene', format='gif', name='gcodegif', number_of_frames=100, movie_time=10, axis=False)
