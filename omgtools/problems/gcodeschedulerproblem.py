@@ -322,11 +322,11 @@ class GCodeSchedulerProblem(Problem):
                     start3 = end2
 
                     new_room = [{'shape': shape1, 'pose': pose1, 'position': pose1[:2], 'draw':True,
-                                'start': block.start, 'end': end1, 'number':number, 'tolerance': tolerance},
+                                'start': block.start, 'end': end1, 'number':number},
                                 {'shape': shape2, 'pose': pose2, 'position': pose2[:2], 'draw':True,
                                 'start': start2 , 'end': end2, 'number':number+1, 'tolerance': 0.1*tolerance},
                                 {'shape': shape3, 'pose': pose3, 'position': pose3[:2], 'draw':True,
-                                'start': start3, 'end': block.end, 'number':number+2, 'tolerance': tolerance}]
+                                'start': start3, 'end': block.end, 'number':number+2}]
 
             elif block.type in ['G02', 'G03']:
                 radius_in = block.radius - tolerance
@@ -420,16 +420,16 @@ class GCodeSchedulerProblem(Problem):
             mid1_shift = list(mid1 + np.array(block.center))  # move from origin to real position
             mid2_shift = list(mid2 + np.array(block.center))
             new_room = [{'shape': shape1, 'pose': pose, 'position': pose[:2], 'draw':True,
-                         'start': block.start, 'end': mid1_shift, 'number':number, 'tolerance': tolerance},
+                         'start': block.start, 'end': mid1_shift, 'number':number},
                         {'shape': shape2, 'pose': pose, 'position': pose[:2], 'draw':True,
-                         'start': mid2_shift, 'end': block.end, 'number':number+1, 'tolerance': tolerance}]
+                         'start': mid2_shift, 'end': block.end, 'number':number+1}]
         else:
             shape = Ring(radius_in = radius_in, radius_out = radius_out,
                          start = start, end = end, direction = direction)
             pose = block.center
             pose.extend([0.,0.,0.])  # [x,y,z,orientation], ring always has orientation 0
             new_room = [{'shape': shape, 'pose': pose, 'position': pose[:2], 'draw':True,
-                        'start': block.start, 'end': block.end, 'number':number, 'tolerance': tolerance}]
+                        'start': block.start, 'end': block.end, 'number':number}]
         return new_room
 
     def check_segments(self):
