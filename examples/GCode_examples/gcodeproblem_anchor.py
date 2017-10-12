@@ -46,7 +46,7 @@ tool.set_terminal_conditions(GCode[-1].end)  # goal position of last GCode block
 # if you want to compute trajectories by using the deployer, put with_deployer=True
 # if the trajectory takes the wrong side of a ring segment with large arc angle,
 # you can split ring segments with an arc_angle >3*pi/4 by putting splitting=True
-schedulerproblem = GCodeSchedulerProblem(tool, GCode, n_segments=n_blocks, with_deployer=True, splitting=True, use_prev_solution=False)
+schedulerproblem = GCodeSchedulerProblem(tool, GCode, n_segments=n_blocks, with_deployer=True, split_circle = True, variable_tolerance=True, use_prev_solution=False)
 schedulerproblem.set_options({'solver_options': {'ipopt': {'ipopt.tol': 1e-5,
 														   'ipopt.linear_solver': 'ma57',
 														   'ipopt.warm_start_bound_push': 1e-6,
