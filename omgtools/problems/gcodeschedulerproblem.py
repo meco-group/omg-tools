@@ -381,7 +381,7 @@ class GCodeSchedulerProblem(Problem):
         return Environment(room=room)
 
     def split_ring_segment(self, block, arc_angle, start, end, radius_in, radius_out, direction, tolerance, number):
-        if (self.splitting and arc_angle > 3*np.pi/4):
+        if (self.split_circle and arc_angle > 3*np.pi/4):
             # compute middle of ring segment
             arc = arc_angle*0.5
             # adapt start and end to include tolerance, i.e. make ring a little wider, such that
