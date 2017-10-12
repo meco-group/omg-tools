@@ -72,6 +72,8 @@ class Tool(Vehicle):
         if 'jmax' in bounds:
             self.jxmax = self.jymax = self.jzmax = bounds['jmax']
 
+        self.stop_distance = self.compute_stop_distance()
+
     def set_default_options(self):
         Vehicle.set_default_options(self)
 
@@ -309,3 +311,57 @@ class Tool(Vehicle):
 
     def ode(self, state, input):
         return input
+
+    def compute_stop_distance(self):
+        # This function computes the distance that is required to stop when moving at
+        # the maximum velocity. This determines the minimum distance of the segment
+        # to allow for splitting it in several parts, and applying different tolerances
+        # depending on which part of the segment we are looking at.
+        # If length of segment > 2*stop distance, we can cut it into three pieces:
+        # start, middle, end
+        # start has a length required to reach vmax from standstill = length of end,
+        # since it is also the length required to reach standstill from vmax
+        # this handles the 'worst case': need to stop and end of segment, and starting
+        # segment from standstill
+        j_lim = self.jxmax
+        a_lim = self.axmax
+        v_lim = self.vxmax
+
+        T1_acc = float(a_lim/j_lim)  # apply max jerk, when is amax reached
+        T1_vel = np.sqrt(float(v_lim/(2.*j_lim)))  # apply max jerk, when is half of vmax reached
+        T1 = min([T1_acc, T1_vel])
+        T3 = T1  # symmetric
+
+        # use:
+        # a(t) = a0 + j*t
+        # v(t) = v0 + a0*t + j*t**2/2.
+        # x(t) = x0 + v0*t + a0*t**2/2. + j*t**3/6.
+        # to determine the travelled distance corresponding to the computed times
+
+        if T1 == T1_vel:
+            # apply max jerk until vmax is reached and keep vmax until d/2 reached
+            T2 = 0.
+            d1 = j_lim*T1**3/6.  # distance travelled when applying max jerk for T1
+            v_1 = v_lim*0.5  # velocity at T1
+            a_1 = j_lim*T1  # acceleration at T1
+
+            d2 = 0.  # no part with maximum acceleration
+            d3 = v_1*T1 + a_1*T1**2/2. - j_lim*T1**3/6.
+        else:
+            d1 = j_lim*T1**3/6.  # distance travelled while applying max jerk for T1
+            v_1 = j_lim*T1**2/2.  # velocity after applying max jerk for T1
+            a_1 = a_lim  # acceleration at T1
+            # time to reach vmax when applying amax
+            # using v_max = 2*v0 + a_lim*T, use 2*v0 because we still need to repeat phase1
+            T2 = float(v_lim - 2*v_1)/a_lim
+            d2 = v_1*T2 + a_lim*T2**2/2.  # distance travelled during phase 2(a_lim phase)
+
+            v_2 = v_1 + a_lim*T2  # velocity at end of phase 2
+            a_2 = a_lim  # acceleration at end of phase 2
+
+            # distance travelled during phase 3
+            d3 = v_2*T1 + a_2*T1**2/2. - j_lim*T1**3/6.
+
+        stop_distance = d1 + d2 + d3  # symmetric
+
+        return stop_distance
