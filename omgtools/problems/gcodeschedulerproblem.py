@@ -1143,10 +1143,10 @@ class GCodeSchedulerProblem(Problem):
         T1_pos = (32 * distance/j_lim)**(1/3.)/4  # apply max jerk, when is distance reached
         T1 = min([T1_acc, T1_vel, T1_pos])
         T3 = T1
-        if T1 == T1_pos:
+        if T1 == T1_pos:  # apply max jerk, until half distance is reached
             T2 = 0.
             T4 = 0.
-        elif T1 == T1_vel:
+        elif T1 == T1_vel:  # apply max jerk until vmax is reached and keep vmax until d/2 reached
             T2 = 0.
             T4 = float(distance/2.-(j_lim*T1**3))/v_lim
         else:
