@@ -38,8 +38,9 @@ class GCodeSchedulerProblem(Problem):
 
     def __init__(self, tool, GCode, options=None, **kwargs):
         options = options or {}
-        self.splitting = kwargs['splitting'] if 'splitting' in kwargs else False
-        environment = self.get_environment(GCode, tool.tolerance)
+        self.split_circle = kwargs['split_circle'] if 'split_circle' in kwargs else False
+        self.variable_tolerance = kwargs['variable_tolerance'] if 'variable_tolerance' in kwargs else False
+        environment = self.get_environment(GCode, tool)
         # pass on environment and tool to Problem constructor,
         # generates self.vehicles and self.environment
         # self.vehicles[0] = tool
