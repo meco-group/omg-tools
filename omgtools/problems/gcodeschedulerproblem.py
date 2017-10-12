@@ -246,7 +246,7 @@ class GCodeSchedulerProblem(Problem):
     # GCodeSchedulerProblem specific functions
     # ========================================================================
 
-    def get_environment(self, GCode, tolerance):
+    def get_environment(self, GCode, tool):
         # convert the list of GCode blocks into an environment object
         # each GCode block is represented as a room in which the trajectory
         # has to stay
@@ -255,6 +255,7 @@ class GCodeSchedulerProblem(Problem):
 
         number = 0  # each room has a number
         room = []
+        tolerance = tool.tolerance
 
         for block in GCode:
             # convert block to room
@@ -419,16 +420,16 @@ class GCodeSchedulerProblem(Problem):
             mid1_shift = list(mid1 + np.array(block.center))  # move from origin to real position
             mid2_shift = list(mid2 + np.array(block.center))
             new_room = [{'shape': shape1, 'pose': pose, 'position': pose[:2], 'draw':True,
-                         'start': block.start, 'end': mid1_shift, 'number':number},
+                         'start': block.start, 'end': mid1_shift, 'number':number, 'tolerance': tolerance},
                         {'shape': shape2, 'pose': pose, 'position': pose[:2], 'draw':True,
-                         'start': mid2_shift, 'end': block.end, 'number':number+1}]
+                         'start': mid2_shift, 'end': block.end, 'number':number+1, 'tolerance': tolerance}]
         else:
             shape = Ring(radius_in = radius_in, radius_out = radius_out,
                          start = start, end = end, direction = direction)
             pose = block.center
             pose.extend([0.,0.,0.])  # [x,y,z,orientation], ring always has orientation 0
             new_room = [{'shape': shape, 'pose': pose, 'position': pose[:2], 'draw':True,
-                        'start': block.start, 'end': block.end, 'number':number}]
+                        'start': block.start, 'end': block.end, 'number':number, 'tolerance': tolerance}]
         return new_room
 
     def check_segments(self):
