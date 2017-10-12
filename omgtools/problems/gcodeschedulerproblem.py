@@ -259,18 +259,74 @@ class GCodeSchedulerProblem(Problem):
         for block in GCode:
             # convert block to room
             if block.type in ['G00', 'G01']:
-                # add tolerance to width to obtain the complete reachable region
-                width = distance_between_points(block.start, block.end) + 2*tolerance
-                height = 2*tolerance
-                orientation = np.arctan2(block.end[1]-block.start[1], block.end[0]-block.start[0])
-                shape = Rectangle(width = width,  height = height, orientation = orientation)
-                pose = [block.start[0] + (block.end[0]-block.start[0])*0.5,
-                        block.start[1] + (block.end[1]-block.start[1])*0.5,
-                        block.start[2] + (block.end[2]-block.start[2])*0.5,
-                        orientation,0.,0.]
-                # Todo: for now orientation is only taken into account as if it were a 2D segment
-                new_room = [{'shape': shape, 'pose': pose, 'position': pose[:2], 'draw':True,
-                            'start': block.start, 'end': block.end, 'number':number}]
+                if not self.variable_tolerance:
+                    # add tolerance to width to obtain the complete reachable region
+                    width = distance_between_points(block.start, block.end) + 2*tolerance
+                    height = 2*tolerance
+                    orientation = np.arctan2(block.end[1]-block.start[1], block.end[0]-block.start[0])
+                    shape = Rectangle(width = width,  height = height, orientation = orientation)
+                    pose = [block.start[0] + (block.end[0]-block.start[0])*0.5,
+                            block.start[1] + (block.end[1]-block.start[1])*0.5,
+                            block.start[2] + (block.end[2]-block.start[2])*0.5,
+                            orientation,0.,0.]
+                    # Todo: for now orientation is only taken into account as if it were a 2D segment
+                    new_room = [{'shape': shape, 'pose': pose, 'position': pose[:2], 'draw':True,
+                                'start': block.start, 'end': block.end, 'number':number}]
+                else:
+                    # divide segment in three parts, with variable tolerance:
+                    # large tolerances in the first and last parts, tight tolerance in the middle part
+
+                    # Todo: for now always divided in 0.1,0.8,0.1*length and 0.2*tol and 2*tol -->
+                    # make it a parameter?
+
+                    orientation = np.arctan2(block.end[1]-block.start[1], block.end[0]-block.start[0])
+                    width = distance_between_points(block.start, block.end)  # default width
+
+                    ## part 1
+                    l1 = 0.1*width
+                    width1 = l1 + 2*tolerance
+                    height1 = 2*tolerance
+                    shape1 = Rectangle(width = width1,  height = height1, orientation = orientation)
+                    pose1 = [block.start[0] + 0.5*l1*np.cos(orientation),
+                             block.start[1] + 0.5*l1*np.sin(orientation),
+                             block.start[2] + (block.end[2]-block.start[2])*0.5,
+                             orientation,0.,0.]
+                    end1 = [block.start[0] + l1*np.cos(orientation),
+                            block.start[1] + l1*np.sin(orientation),
+                            block.start[2] + (block.end[2]-block.start[2])]
+
+                    ## part 2, tolerance = 10 times tighter
+                    l2 = 0.8*width
+                    width2 = l2 + 0.2*tolerance
+                    height2 = 0.2*tolerance
+                    shape2 = Rectangle(width = width2,  height = height2, orientation = orientation)
+                    pose2 = [block.start[0] + (l1+0.5*l2)*np.cos(orientation),
+                             block.start[1] + (l1+0.5*l2)*np.sin(orientation),
+                             block.start[2] + (block.end[2]-block.start[2])*0.5,
+                             orientation,0.,0.]
+                    start2 = end1
+                    end2 = [block.start[0] + (l1+l2)*np.cos(orientation),
+                            block.start[1] + (l1+l2)*np.sin(orientation),
+                            block.start[2] + (block.end[2]-block.start[2])]
+
+                    ## part 3
+                    l3 = l1
+                    width3 = width1
+                    height3 = height1
+                    shape3 = Rectangle(width = width3,  height = height3, orientation = orientation)
+                    pose3 = [block.end[0] - 0.5*l3*np.cos(orientation),
+                             block.end[1] - 0.5*l3*np.sin(orientation),
+                             block.start[2] + (block.end[2]-block.start[2])*0.5,
+                             orientation,0.,0.]
+                    start3 = end2
+
+                    new_room = [{'shape': shape1, 'pose': pose1, 'position': pose1[:2], 'draw':True,
+                                'start': block.start, 'end': end1, 'number':number, 'tolerance': tolerance},
+                                {'shape': shape2, 'pose': pose2, 'position': pose2[:2], 'draw':True,
+                                'start': start2 , 'end': end2, 'number':number+1, 'tolerance': 0.1*tolerance},
+                                {'shape': shape3, 'pose': pose3, 'position': pose3[:2], 'draw':True,
+                                'start': start3, 'end': block.end, 'number':number+2, 'tolerance': tolerance}]
+
             elif block.type in ['G02', 'G03']:
                 radius_in = block.radius - tolerance
                 radius_out = block.radius + tolerance
