@@ -246,6 +246,7 @@ class Tool(Vehicle):
 
             x1, y1, z1 = segment['start']
             x2, y2, z2 = segment['end']
+            tolerance = segment['shape'].height*0.5
             if x1 != x2:
                 a = (y2-y1)/(x2-x1)
             else:
@@ -253,8 +254,8 @@ class Tool(Vehicle):
                                + ' impose constraints with alternative formulation')
             b = y1 - x1*a
 
-            self.define_constraint(a*position[0] + b - position[1] - self.tolerance + 2*rad[0], -inf, 0.)
-            self.define_constraint(-a*position[0] - b + position[1] - self.tolerance + 2*rad[0], -inf, 0.)
+            self.define_constraint(a*position[0] + b - position[1] - tolerance + 2*rad[0], -inf, 0.)
+            self.define_constraint(-a*position[0] - b + position[1] - tolerance + 2*rad[0], -inf, 0.)
         elif (isinstance(segment['shape'], (Ring)) and
             (isinstance(shape, Circle))):
             # we have a ring/circle segment
