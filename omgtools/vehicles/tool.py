@@ -82,13 +82,16 @@ class Tool(Vehicle):
         dx, dy, dz = x.derivative(), y.derivative(), z.derivative()  # velocity
         ddx, ddy, ddz = x.derivative(2), y.derivative(2), z.derivative(2)  # acceleration
         dddx, dddy, dddz = x.derivative(3), y.derivative(3), z.derivative(3)  # jerk
-        # constrain local velocity
-        self.define_constraint(-dx + horizon_time*self.vxmin, -inf, 0., skip=skip)
-        self.define_constraint(-dy + horizon_time*self.vymin, -inf, 0., skip=skip)
-        # self.define_constraint(-dz + horizon_time*self.vzmin, -inf, 0.)
-        self.define_constraint(dx - horizon_time*self.vxmax, -inf, 0., skip=skip)
-        self.define_constraint(dy - horizon_time*self.vymax, -inf, 0., skip=skip)
-        # self.define_constraint(dz - horizon_time*self.vzmax, -inf, 0.)
+
+        self.define_constraint(
+            (dx**2+dy**2) - (horizon_time**2)*self.vxmax**2, -inf, 0., skip=skip)
+        # # constrain local velocity
+        # self.define_constraint(-dx + horizon_time*self.vxmin, -inf, 0., skip=skip)
+        # self.define_constraint(-dy + horizon_time*self.vymin, -inf, 0., skip=skip)
+        # # self.define_constraint(-dz + horizon_time*self.vzmin, -inf, 0.)
+        # self.define_constraint(dx - horizon_time*self.vxmax, -inf, 0., skip=skip)
+        # self.define_constraint(dy - horizon_time*self.vymax, -inf, 0., skip=skip)
+        # # self.define_constraint(dz - horizon_time*self.vzmax, -inf, 0.)
 
         self.define_constraint(-ddx + (horizon_time**2)*self.axmin, -inf, 0., skip=skip)
         self.define_constraint(-ddy + (horizon_time**2)*self.aymin, -inf, 0., skip=skip)
