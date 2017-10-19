@@ -306,11 +306,19 @@ class Deployer:
 
         # save results:
         ## 1) save state_traj
-        # self.state_traj = state_traj
-        # self.input_traj = input_traj
-        # self.dinput_traj = dinput_traj
+        self.state_traj = state_traj
+        self.input_traj = input_traj
+        self.dinput_traj = dinput_traj
         ## 2) rebuild
-        self.save_splines()
+        # self.save_splines()
+
+    def save_results(self):
+        data = np.c_[self.state_traj[0,:], self.input_traj[0,:], self.dinput_traj[0,:],
+                     self.state_traj[1,:], self.input_traj[1,:], self.dinput_traj[1,:],
+                     self.state_traj[2,:], self.input_traj[2,:], self.dinput_traj[2,:]]  # pos, vel, acc in xyz
+        park = np.c_[0, 0, 0, 0, 0, 0, -2, 0, 0]  # where to park the tool before machining
+        data = np.r_[park, data]  # place parking spot before data
+        np.savetxt('trajmat.csv', data , delimiter=',')
 
     def save_splines(self):
         # save coefficients of splines, such that you can rebuild them later
