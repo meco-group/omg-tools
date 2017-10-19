@@ -217,6 +217,9 @@ class Deployer:
                     # add first point again to close shape
                     points = np.c_[points, [points[0,0], points[1,0]]]
                     plt.plot(points[0,:], points[1,:], color='red', linestyle = '--', linewidth= 1.2)
+                plt.figure(7)
+                plt.cla()
+                plt.plot(time, np.sqrt(input_traj[0, :]**2+input_traj[1, :]**2))
                 plt.pause(0.1)
 
                 # save results in big list
