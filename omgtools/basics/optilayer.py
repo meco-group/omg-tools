@@ -632,7 +632,14 @@ class OptiChild(object):
                 self._splines_dual[name] = {'basis': expr.basis}
             else:
                 new_coeffs = expr.coeffs
-                new_coeffs = new_coeffs[skip[0]:-skip[1]]
+                if skip[0] == 0:
+                    # don't skip anything at the beginning
+                    new_coeffs = new_coeffs[:-skip[1]]
+                elif skip[1] == 0:
+                    # don't skip anything at the end
+                    new_coeffs = new_coeffs[skip[0]:]
+                else:
+                    new_coeffs = new_coeffs[skip[0]:-skip[1]]
                 self._constraints[name] = (
                     new_coeffs, lb*np.ones(new_coeffs.shape[0]),
                     ub*np.ones(new_coeffs.shape[0]), shutdown)
