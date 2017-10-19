@@ -71,13 +71,9 @@ tool.plot('ddinput', knots=True, prediction=True, labels=['j_x (m/s^3)', 'j_y (m
 deployer.update_segment()
 # simulator.run_segment()
 
-# obtain setpoints
-results = deployer.generate_setpoints()  # sample_time = 0.0001
-
-# write to file
-file = open('result_pos.pickle','wb')
-pickle.dump(results,file, protocol=pickle.HIGHEST_PROTOCOL)
-file.close()
+# save results in csv file
+import pdb; pdb.set_trace()  # breakpoint 6b26714f //
+deployer.save_results()  # sample_time = 0.0001
 
 # plotting afterwards, and saving is only available when using the simulator
 # schedulerproblem.plot_movie('scene', number_of_frames=100, repeat=False)
