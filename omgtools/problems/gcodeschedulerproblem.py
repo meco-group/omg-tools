@@ -89,7 +89,8 @@ class GCodeSchedulerProblem(Problem):
                            self.n_current_block:self.n_current_block+self.n_segments]
         # if there is only one segment, save the next one to check when the tool enters the next segment
         if self.n_segments == 1:
-            self.next_segment = self.environment.room[self.n_current_block+1]
+            if len(self.environment.room) > 1:
+                self.next_segment = self.environment.room[self.n_current_block+1]
 
         # total number of considered segments in the provided GCode
         self.cnt = len(self.environment.room)-1
