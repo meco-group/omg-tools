@@ -213,7 +213,7 @@ class Deployer:
                     plt.plot(spline[0](eval),spline[1](eval),color='gray')
                 # plot environment
                 for room in self.problem.environment.room:
-                    points = room['shape'].draw(room['pose'][:3])[0][0]
+                    points = room['shape'].draw(room['pose'][:2]+[0])[0][0]  # don't draw z
                     # add first point again to close shape
                     points = np.c_[points, [points[0,0], points[1,0]]]
                     plt.plot(points[0,:], points[1,:], color='red', linestyle = '--', linewidth= 1.2)
@@ -316,13 +316,15 @@ class Deployer:
         ## 2) rebuild
         # self.save_splines()
 
-    def save_results(self):
+    def save_results(self, count=0, first=False):
         data = np.c_[self.state_traj[0,:], self.input_traj[0,:], self.dinput_traj[0,:],
                      self.state_traj[1,:], self.input_traj[1,:], self.dinput_traj[1,:],
                      self.state_traj[2,:], self.input_traj[2,:], self.dinput_traj[2,:]]  # pos, vel, acc in xyz
-        park = np.c_[0, 0, 0, 0, 0, 0, -2, 0, 0]  # where to park the tool before machining
-        data = np.r_[park, data]  # place parking spot before data
-        np.savetxt('trajmat.csv', data , delimiter=',')
+        if first:
+            # first segment, add a spot where to start and to end
+            park = np.c_[0, 0, 0, 0, 0, 0, -2, 0, 0]  # where to park the tool before machining
+            data = np.r_[park, data]  # place parking spot before data
+        np.savetxt('trajmat'+str(count)+'.csv', data , delimiter=',')
 
     def save_splines(self):
         # save coefficients of splines, such that you can rebuild them later

@@ -107,8 +107,9 @@ class Tool(Vehicle):
         self.define_constraint(dddy - (horizon_time**3)*self.jymax, -inf, 0.)
         # self.define_constraint(dddz - (horizon_time**3)*self.jzmax, -inf, 0.)
 
-        self.define_constraint(z-1e-5, -inf,0.)
-        self.define_constraint(-z-1e-5, -inf,0.)
+        # when machining star: during retracting or engaging don't move in z
+        self.define_constraint(dz-1e-10, -inf,0.)
+        self.define_constraint(-dz-1e-10, -inf,0.)
 
         # don't reach maximum velocity at end of a segment, to get a more safe transition
         # self.define_constraint(-dx(1.) + 0.95*horizon_time*self.vxmin, -inf, 0.)
