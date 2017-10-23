@@ -77,7 +77,7 @@ The animations below give an overview of typical problems that OMG-tools can han
 </tr>
 <tr>
 <td align="center" valign="center" style="background-color:rgba(0, 0, 0, 0);">
-<img width=100% src="./doc/gifs/bicycle.gif" alt="Point-to-point motion of bicycle model"/>
+<img width=100% src="./doc/gifs/anchor2D.gif" alt="Trajectory generation for GCode of 2D anchor"/>
 </td>
 <td align="center" valign="center" style="background-color:rgba(0, 0, 0, 0);">
 <img width=100% src="./doc/gifs/formation_quad_rotatingwall.gif" alt="Formation of quadrotor with rotating wall"/>
