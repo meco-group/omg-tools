@@ -41,5 +41,5 @@ before_install:
   - sudo apt-get install -y python-pip python-numpy python-scipy python-matplotlib
   - sudo apt-get install imagemagick
   - sudo pip install nosexcover coveralls
-  - sudo pip install six
+  - sudo pip install 'six==1.10.0'
   - sudo apt-get install -y valgrind xvfb
