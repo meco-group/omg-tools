@@ -77,7 +77,8 @@ class GCodeSchedulerProblem(Problem):
                            self.n_current_block:self.n_current_block+self.n_segments]
         # if there is only one segment, save the next one to check when the tool enters the next segment
         if self.n_segments == 1:
-            self.next_segment = self.environment.room[self.n_current_block+1]
+            if len(self.environment.room) > 1:
+                self.next_segment = self.environment.room[self.n_current_block+1]
 
         # total number of considered segments in the provided GCode
         self.cnt = len(self.environment.room)-1
@@ -323,7 +324,6 @@ class GCodeSchedulerProblem(Problem):
 
         # update the considered segments: remove first one, and add a new one
 
-        self.segments = self.segments[1:]  # drop first segment
         if self.segments[-1]['number'] < self.cnt:
             # last segment is not yet in self.segments, so there are some segments left,
             # create segment for next block
@@ -331,11 +331,14 @@ class GCodeSchedulerProblem(Problem):
             self.segments.append(new_segment)  # add next segment
 
             if self.n_segments == 1:
-                self.next_segment = self.environment.room[self.n_current_block+1]
+                if self.n_current_block+1 < len(self.environment.room):
+                    self.next_segment = self.environment.room[self.n_current_block+1]
         else:
             # all segments are currently in self.segments, don't add a new one
             # and lower the amount of segments that are combined
             self.n_segments -= 1
+
+        self.segments = self.segments[1:]  # drop first segment
 
         # self.get_init_guess() uses previous solution to get an initial guess for
         # all segments except the last one,
