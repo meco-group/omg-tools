@@ -246,7 +246,7 @@ class GCodeSchedulerProblem(Problem):
     # GCodeSchedulerProblem specific functions
     # ========================================================================
 
-    def get_environment(self, GCode, tolerance):
+    def get_environment(self, GCode, tool):
         # convert the list of GCode blocks into an environment object
         # each GCode block is represented as a room in which the trajectory
         # has to stay
@@ -630,21 +630,20 @@ class GCodeSchedulerProblem(Problem):
 
         # update the considered segments: remove first one, and add a new one
 
+        self.segments = self.segments[1:]  # drop first segment
         if self.segments[-1]['number'] < self.cnt:
             # last segment is not yet in self.segments, so there are some segments left,
             # create segment for next block
+            # self.n_segments -= 1
             new_segment = self.environment.room[self.n_current_block+(self.n_segments-1)]
             self.segments.append(new_segment)  # add next segment
 
             if self.n_segments == 1:
-                if self.n_current_block+1 < len(self.environment.room):
-                    self.next_segment = self.environment.room[self.n_current_block+1]
+                self.next_segment = self.environment.room[self.n_current_block+1]
         else:
             # all segments are currently in self.segments, don't add a new one
             # and lower the amount of segments that are combined
             self.n_segments -= 1
-
-        self.segments = self.segments[1:]  # drop first segment
 
         # self.get_init_guess() uses previous solution to get an initial guess for
         # all segments except the last one,
@@ -693,10 +692,6 @@ class GCodeSchedulerProblem(Problem):
             else:
                 return False
 
-            self.define_constraint(-(position[0] - center[0])**2 - (position[1] - center[1])**2 +
-                                  segment['shape'].radius_in**2, -inf, 0.)
-            self.define_constraint((position[0] - center[0])**2 + (position[1] - center[1])**2 -
-                                  segment['shape'].radius_out**2, -inf, 0.)
     def point_in_extended_shape(self, segment, point, distance=0):
         # check if the provided point is inside the extended/infinite version of the shape, meaning
         # that we check if the point is in the complete ring (instead of in the ring segment), or if
@@ -1337,9 +1332,9 @@ class GCodeSchedulerProblem(Problem):
         # 6: -j_lim
         # 7: -a_lim
         # 8: j_lim
-        j_lim = self.vehicles[0].vxmax
+        j_lim = self.vehicles[0].jxmax
         a_lim = self.vehicles[0].axmax
-        v_lim = self.vehicles[0].jxmax
+        v_lim = self.vehicles[0].vxmax
 
         if isinstance(segment['shape'], Rectangle):
             distance = 0
