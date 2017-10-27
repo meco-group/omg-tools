@@ -284,10 +284,10 @@ class Tool(Vehicle):
         # point has to lie within the overlap region
         # for now, the overlap region is approximated by setting the 'factor' below
         # Warning: the value of this parameter may have a big influence on the total machining time!
-        self.define_constraint(position[0](1.) - segment['end'][0] - self.tolerance*0.9, -inf, 0.)
-        self.define_constraint(-position[0](1.) + segment['end'][0] - self.tolerance*0.9, -inf, 0.)
-        self.define_constraint(position[1](1.) - segment['end'][1] - self.tolerance*0.9, -inf, 0.)
-        self.define_constraint(-position[1](1.) + segment['end'][1] - self.tolerance*0.9, -inf, 0.)
+        # self.define_constraint(position[0](1.) - segment['end'][0] - self.tolerance*0.9, -inf, 0.)
+        # self.define_constraint(-position[0](1.) + segment['end'][0] - self.tolerance*0.9, -inf, 0.)
+        # self.define_constraint(position[1](1.) - segment['end'][1] - self.tolerance*0.9, -inf, 0.)
+        # self.define_constraint(-position[1](1.) + segment['end'][1] - self.tolerance*0.9, -inf, 0.)
 
     def splines2signals(self, splines, time):
         signals = {}
