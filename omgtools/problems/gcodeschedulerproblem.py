@@ -37,8 +37,9 @@ class GCodeSchedulerProblem(Problem):
 
     def __init__(self, tool, GCode, options=None, **kwargs):
         options = options or {}
-        environment = self.get_environment(GCode, tool.tolerance)
         self.split_circle = kwargs['split_circle'] if 'split_circle' in kwargs else False
+        self.variable_tolerance = kwargs['variable_tolerance'] if 'variable_tolerance' in kwargs else False
+        environment = self.get_environment(GCode, tool)
         # pass on environment and tool to Problem constructor,
         # generates self.vehicles and self.environment
         # self.vehicles[0] = tool
@@ -237,20 +238,79 @@ class GCodeSchedulerProblem(Problem):
 
         number = 0  # each room has a number
         room = []
+        tolerance = tool.tolerance
 
         for block in GCode:
             # convert block to room
             if block.type in ['G00', 'G01']:
-                # add tolerance to width to obtain the complete reachable region
-                width = distance_between_points(block.start, block.end) + 2*tolerance
-                height = 2*tolerance
-                orientation = np.arctan2(block.end[1]-block.start[1], block.end[0]-block.start[0])
-                shape = Rectangle(width = width,  height = height, orientation = orientation)
-                pose = [block.start[0] + (block.end[0]-block.start[0])*0.5,
-                        block.start[1] + (block.end[1]-block.start[1])*0.5,
-                        block.start[2] + (block.end[2]-block.start[2])*0.5,
-                        orientation,0.,0.]
-                # Todo: for now orientation is only taken into account as if it were a 2D segment
+                if not self.variable_tolerance:
+                    # add tolerance to width to obtain the complete reachable region
+                    width = distance_between_points(block.start, block.end) + 2*tolerance
+                    height = 2*tolerance
+                    orientation = np.arctan2(block.end[1]-block.start[1], block.end[0]-block.start[0])
+                    shape = Rectangle(width = width,  height = height, orientation = orientation)
+                    pose = [block.start[0] + (block.end[0]-block.start[0])*0.5,
+                            block.start[1] + (block.end[1]-block.start[1])*0.5,
+                            block.start[2] + (block.end[2]-block.start[2])*0.5,
+                            orientation,0.,0.]
+                    # Todo: for now orientation is only taken into account as if it were a 2D segment
+                    new_room = [{'shape': shape, 'pose': pose, 'position': pose[:2], 'draw':True,
+                                'start': block.start, 'end': block.end, 'number':number}]
+                else:
+                    # divide segment in three parts, with variable tolerance:
+                    # large tolerances in the first and last parts, tight tolerance in the middle part
+
+                    # Todo: for now always divided in 0.1,0.8,0.1*length and 0.2*tol and 2*tol -->
+                    # make it a parameter?
+
+                    orientation = np.arctan2(block.end[1]-block.start[1], block.end[0]-block.start[0])
+                    width = distance_between_points(block.start, block.end)  # default width
+
+                    ## part 1
+                    l1 = 0.1*width
+                    width1 = l1 + 2*tolerance
+                    height1 = 2*tolerance
+                    shape1 = Rectangle(width = width1,  height = height1, orientation = orientation)
+                    pose1 = [block.start[0] + 0.5*l1*np.cos(orientation),
+                             block.start[1] + 0.5*l1*np.sin(orientation),
+                             block.start[2] + (block.end[2]-block.start[2])*0.5,
+                             orientation,0.,0.]
+                    end1 = [block.start[0] + l1*np.cos(orientation),
+                            block.start[1] + l1*np.sin(orientation),
+                            block.start[2] + (block.end[2]-block.start[2])]
+
+                    ## part 2, tolerance = 10 times tighter
+                    l2 = 0.8*width
+                    width2 = l2 + 0.2*tolerance
+                    height2 = 0.2*tolerance
+                    shape2 = Rectangle(width = width2,  height = height2, orientation = orientation)
+                    pose2 = [block.start[0] + (l1+0.5*l2)*np.cos(orientation),
+                             block.start[1] + (l1+0.5*l2)*np.sin(orientation),
+                             block.start[2] + (block.end[2]-block.start[2])*0.5,
+                             orientation,0.,0.]
+                    start2 = end1
+                    end2 = [block.start[0] + (l1+l2)*np.cos(orientation),
+                            block.start[1] + (l1+l2)*np.sin(orientation),
+                            block.start[2] + (block.end[2]-block.start[2])]
+
+                    ## part 3
+                    l3 = l1
+                    width3 = width1
+                    height3 = height1
+                    shape3 = Rectangle(width = width3,  height = height3, orientation = orientation)
+                    pose3 = [block.end[0] - 0.5*l3*np.cos(orientation),
+                             block.end[1] - 0.5*l3*np.sin(orientation),
+                             block.start[2] + (block.end[2]-block.start[2])*0.5,
+                             orientation,0.,0.]
+                    start3 = end2
+
+                    new_room = [{'shape': shape1, 'pose': pose1, 'position': pose1[:2], 'draw':True,
+                                'start': block.start, 'end': end1, 'number':number},
+                                {'shape': shape2, 'pose': pose2, 'position': pose2[:2], 'draw':True,
+                                'start': start2 , 'end': end2, 'number':number+1, 'tolerance': 0.1*tolerance},
+                                {'shape': shape3, 'pose': pose3, 'position': pose3[:2], 'draw':True,
+                                'start': start3, 'end': block.end, 'number':number+2}]
+
             elif block.type in ['G02', 'G03']:
                 radius_in = block.radius - tolerance
                 radius_out = block.radius + tolerance
@@ -298,6 +358,160 @@ class GCodeSchedulerProblem(Problem):
 
                 new_room = self.split_ring_segment(block, arc_angle, start, end, radius_in, radius_out, direction, tolerance, number)
 
+                if self.variable_tolerance:
+                    divided_rooms = []
+                    for r in new_room:
+                        # following parameters are the same for all segments
+                        pose = r['pose']
+                        radius_in = r['shape'].radius_in
+                        radius_out = r['shape'].radius_out
+                        direction = r['shape'].direction
+
+                        # arc angle of ring, without including tolerance
+                        # must be positive, sign of angle is determined by CW or CCW
+
+                        start = np.array(r['start'])-np.array(r['pose'][:3])
+                        end = np.array(r['end'])-np.array(r['pose'][:3])
+                        angle1 = np.arctan2(start[1], start[0])
+                        angle2 = np.arctan2(end[1], end[0])
+
+                        if direction == 'CW':
+                            if angle1 < angle2:
+                                # clockwise so angle2 must be < angle1
+                                # probably angle2 is smaller, but arctan2 returned a negative angle
+                                angle1 += 2*np.pi
+                            arc_angle = angle1 - angle2
+                        else:
+                            if angle1 > angle2:
+                                # counter-clockwise so angle2 must be > angle1
+                                # probably angle2 is bigger, but arctan2 returned a negative angle
+                                angle2 += 2*np.pi
+                            arc_angle = angle2 - angle1
+                        arc_angle = np.abs(arc_angle)
+                        # arc_angle = np.abs(r['shape'].end_angle - r['shape'].start_angle)
+
+                        arc1 = 0.1*arc_angle  # = arc3
+                        arc2 = 0.8*arc_angle
+
+                        ## part 1
+                        # adapt start to include tolerance, i.e. make ring start a little earlier, such that
+                        # perpendicular distance from start to border of ring = tolerance
+                        seg_start1 = np.array(r['start'])-np.array(r['pose'][:3])  # without including tolerance = start of segment
+                        start1 = np.array(seg_start1)  # with including tolerance = start of shape
+                        end1 = np.array(seg_start1)  # initialize
+                        # angle over which to rotate to account for large tolerance
+                        delta_arc_big = np.arctan2(tolerance,((radius_in+radius_out)*0.5))
+                        if direction == 'CW':
+                            R_delta = np.array([[np.cos(delta_arc_big), -np.sin(delta_arc_big)],[np.sin(delta_arc_big), np.cos(delta_arc_big)]])
+                            start1[:2] = np.dot(R_delta, seg_start1[:2])  # slightly rotated start point
+
+                            theta = arc1 + delta_arc_big
+                            R = np.array([[np.cos(-theta), -np.sin(-theta)],[np.sin(-theta), np.cos(-theta)]])
+                            end1[:2] = np.dot(R, seg_start1[:2])  # rotate start point to end + a bit further
+                        else:
+                            R_delta = np.array([[np.cos(-delta_arc_big), -np.sin(-delta_arc_big)],[np.sin(-delta_arc_big), np.cos(-delta_arc_big)]])
+                            start1[:2] = np.dot(R_delta, seg_start1[:2])  # slightly rotated start point
+
+                            theta = arc1 + delta_arc_big
+                            R = np.array([[np.cos(theta), -np.sin(theta)],[np.sin(theta), np.cos(theta)]])
+                            end1[:2] = np.dot(R, seg_start1[:2])  # rotate start point to end
+
+                        shape1 = Ring(radius_in = radius_in, radius_out = radius_out,
+                                      start = start1, end = end1, direction = direction)
+
+                        seg_end1 = np.array(seg_start1)  # initialize
+                        if direction == 'CW':
+                            R = np.array([[np.cos(-arc1), -np.sin(-arc1)],[np.sin(-arc1), np.cos(-arc1)]])
+                            seg_end1[:2] = np.dot(R, seg_start1[:2])  # slightly rotated start point
+                        else:
+                            R = np.array([[np.cos(arc1), -np.sin(arc1)],[np.sin(arc1), np.cos(arc1)]])
+                            seg_end1[:2] = np.dot(R, seg_start1[:2])  # slightly rotated start point
+
+                        ## part 2, tolerance = 10 times tighter
+
+                        # adapt start to include tolerance, i.e. make ring start a little earlier, such that
+                        # perpendicular distance from start to border of ring = tolerance
+                        seg_start2 = np.array(seg_end1)
+                        start2 = np.array(seg_end1)
+                        end2 = np.array(seg_end1)  # initialize
+                        # angle over which to rotate to account for large tolerance
+                        delta_arc_small = np.arctan2(0.1*tolerance,((radius_in+radius_out)*0.5))
+                        if direction == 'CW':
+                            R_delta = np.array([[np.cos(delta_arc_small), -np.sin(delta_arc_small)],[np.sin(delta_arc_small), np.cos(delta_arc_small)]])
+                            start2[:2] = np.dot(R_delta, seg_start2[:2])  # slightly rotated start point
+
+                            theta = arc2 + delta_arc_small
+                            R = np.array([[np.cos(-theta), -np.sin(-theta)],[np.sin(-theta), np.cos(-theta)]])
+                            end2[:2] = np.dot(R, seg_start2[:2])  # rotate start point to end
+                        else:
+                            R_delta = np.array([[np.cos(-delta_arc_small), -np.sin(-delta_arc_small)],[np.sin(-delta_arc_small), np.cos(-delta_arc_small)]])
+                            start2[:2] = np.dot(R_delta, seg_start2[:2])  # slightly rotated start point
+
+                            theta = arc2 + delta_arc_small
+                            R = np.array([[np.cos(theta), -np.sin(theta)],[np.sin(theta), np.cos(theta)]])
+                            end2[:2] = np.dot(R, seg_start2[:2])  # rotate start point to end
+
+                        shape2 = Ring(radius_in = radius_in + 0.9*tolerance, radius_out = radius_out-0.9*tolerance,
+                                      start = start2, end = end2, direction = direction)
+
+                        seg_end2 = np.array(seg_start2)  # initialize
+                        if direction == 'CW':
+                            R = np.array([[np.cos(-arc2), -np.sin(-arc2)],[np.sin(-arc2), np.cos(-arc2)]])
+                            seg_end2[:2] = np.dot(R, seg_start2[:2])  # slightly rotated start point
+                        else:
+                            R = np.array([[np.cos(arc2), -np.sin(arc2)],[np.sin(arc2), np.cos(arc2)]])
+                            seg_end2[:2] = np.dot(R, seg_start2[:2])  # slightly rotated start point
+
+                        ## part 3
+                        # adapt start to include tolerance, i.e. make ring start a little earlier, such that
+                        # perpendicular distance from start to border of ring = tolerance
+                        seg_start3 = np.array(seg_end2)
+                        start3 = np.array(seg_start3)
+                        end3 = np.array(seg_start3)  # initialize
+                        # angle over which to rotate to account for large tolerance
+                        delta_arc_big = np.arctan2(tolerance,((radius_in+radius_out)*0.5))
+                        if direction == 'CW':
+                            R_delta = np.array([[np.cos(delta_arc_big), -np.sin(delta_arc_big)],[np.sin(delta_arc_big), np.cos(delta_arc_big)]])
+                            start3[:2] = np.dot(R_delta, seg_start3[:2])  # slightly rotated start point
+
+                            theta = arc1 + delta_arc_big
+                            R = np.array([[np.cos(-theta), -np.sin(-theta)],[np.sin(-theta), np.cos(-theta)]])
+                            end3[:2] = np.dot(R, seg_start3[:2])  # rotate start point to end
+                        else:
+                            R_delta = np.array([[np.cos(-delta_arc_big), -np.sin(-delta_arc_big)],[np.sin(-delta_arc_big), np.cos(-delta_arc_big)]])
+                            start3[:2] = np.dot(R_delta, seg_start3[:2])  # slightly rotated start point
+
+                            theta = arc1 + delta_arc_big
+                            R = np.array([[np.cos(theta), -np.sin(theta)],[np.sin(theta), np.cos(theta)]])
+                            end3[:2] = np.dot(R, seg_start3[:2])  # rotate start point to end
+
+                        shape3 = Ring(radius_in = radius_in, radius_out = radius_out,
+                                      start = start3, end = end3, direction = direction)
+
+                        # start and end of ring shape is for a shape centered in the origin,
+                        # room start and end are shifted away from origin
+                        seg_end1 = (seg_end1 + np.array(r['pose'][:3])).tolist()  # move from origin to real position
+                        seg_start2 = seg_end1
+                        seg_end2 = (seg_end2 + np.array(r['pose'][:3])).tolist()
+                        seg_start3 = seg_end2
+
+                        # bla = False some segment is added double at the top?
+                        if bla:
+                            divided_rooms.extend([
+                                            {'shape': shape2, 'pose': pose, 'position': pose[:2], 'draw':True,
+                                            'start': seg_start2 , 'end': seg_end2, 'number':number+1},
+                                            {'shape': shape3, 'pose': pose, 'position': pose[:2], 'draw':True,
+                                            'start': seg_start3, 'end': block.end, 'number':number+2}])
+                        else:
+                            divided_rooms.extend([
+                                            {'shape': shape1, 'pose': pose, 'position': pose[:2], 'draw':True,
+                                            'start': block.start, 'end': seg_end1, 'number':number},
+                                            {'shape': shape2, 'pose': pose, 'position': pose[:2], 'draw':True,
+                                            'start': seg_start2 , 'end': seg_end2, 'number':number+1},
+                                            {'shape': shape3, 'pose': pose, 'position': pose[:2], 'draw':True,
+                                            'start': seg_start3, 'end': block.end, 'number':number+2}])
+                    # assign divided rooms to old variable
+                    new_room = divided_rooms
             # save original GCode block in the room description
             for r in new_room:
                 room.append(r)
