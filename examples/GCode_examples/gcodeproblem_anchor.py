@@ -30,7 +30,7 @@ reader = GCodeReader()
 GCode = reader.run()
 
 n_blocks = 3  # amount of GCode blocks to combine
-tol = 5e-1  # required tolerance of the machined part [mm]
+tol = 0.01  # required tolerance of the machined part [mm]
 bounds = {'vmin':-1e3, 'vmax':1e3,
           'amin':-20e3, 'amax':20e3,
           'jmin':-850e3, 'jmax':850e3}  # [mm]
@@ -45,9 +45,16 @@ tool.set_terminal_conditions(GCode[-1].end)  # goal position of last GCode block
 # there are two room shapes: Rectangle and Ring (circle segment with inner and outer diameter)
 # if you want to compute trajectories by using the deployer, put with_deployer=True
 schedulerproblem = GCodeSchedulerProblem(tool, GCode, n_segments=n_blocks, with_deployer=True)
-schedulerproblem.set_options({'solver_options': {'ipopt': {'ipopt.tol': 1e-8}}})#,
-														   # 'ipopt.linear_solver': 'ma57'}}})#,
-                                                           # 'ipopt.hessian_approximation': 'limited-memory'}}})
+
+schedulerproblem.set_options({'solver_options': {'ipopt': {'ipopt.tol': 1e-5,
+                                                           'ipopt.linear_solver': 'ma57',
+                                                           'ipopt.warm_start_bound_push': 1e-6,
+                                                           'ipopt.warm_start_mult_bound_push': 1e-6,
+                                                           'ipopt.warm_start_mult_bound_push': 1e-6,
+                                                           'ipopt.mu_init': 1e-5,
+                                                           # 'ipopt.hessian_approximation': 'limited-memory',
+                                                           'ipopt.max_iter': 20000}}})#,
+
 # put problem in deployer: choose this if you just want to obtain the trajectories for the tool
 deployer = Deployer(schedulerproblem, sample_time=0.001)
 # put problem in simulator: choose this if you want to simulate step by step
