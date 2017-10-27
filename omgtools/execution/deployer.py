@@ -221,6 +221,7 @@ class Deployer:
                     # plt.plot(room['end'][0], room['end'][1], 'gx')
                 plt.pause(0.1)
 
+                # Try to improve solution for last segment:
                 # If the latest segment was not what you liked, there are two options:
                 # 1) let the user decide about each segment if it is good or not
                 # user_input = ''
