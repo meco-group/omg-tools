@@ -294,3 +294,12 @@ class Deployer:
         self.state_traj = state_traj
         self.input_traj = input_traj
         self.dinput_traj = dinput_traj
+    def save_results(self, count=0, first=False):
+        data = np.c_[self.state_traj[0,:], self.input_traj[0,:], self.dinput_traj[0,:],
+                     self.state_traj[1,:], self.input_traj[1,:], self.dinput_traj[1,:],
+                     self.state_traj[2,:], self.input_traj[2,:], self.dinput_traj[2,:]]  # pos, vel, acc in xyz
+        if first:
+            # first segment, add a spot where to start and to end
+            park = np.c_[0, 0, 0, 0, 0, 0, -2, 0, 0]  # where to park the tool before machining
+            data = np.r_[park, data]  # place parking spot before data
+        np.savetxt('trajmat'+str(count)+'.csv', data , delimiter=',')
