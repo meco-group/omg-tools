@@ -794,36 +794,42 @@ class GCodeSchedulerProblem(Problem):
         init_splines = []
         motion_times = []
 
-        if hasattr(self, 'local_problem') and hasattr(self.local_problem.father, '_var_result'):
-            # local_problem was already solved, re-use previous solutions to form initial guess
-            if self.n_segments > 1:
-                # if updating in receding horizon with small steps:
-                # combine first two spline segments into a new spline = guess for new current segment
-                # init_spl, motion_time = self.get_init_guess_combined_segment()
-
-                # if updating per segment:
-                # the first segment disappears and the guess is given by data of next segment
-                # spline through next segment and its motion time
-                init_splines.append(np.array(self.local_problem.father.get_variables()[self.vehicles[0].label,'splines_seg1']))
-                motion_times.append(self.local_problem.father.get_variables(self.local_problem, 'T1',)[0][0])
-
-            if self.n_segments > 2:
-                # use old solutions for segment 2 until second last segment, these don't change
-                for k in range(2, self.n_segments):
-                    # Todo: strange notation required, why not the same as in schedulerproblem.py?
-                    init_splines.append(np.array(self.local_problem.father.get_variables()[self.vehicles[0].label,'splines_seg'+str(k)]))
-                    motion_times.append(self.local_problem.father.get_variables(self.local_problem, 'T'+str(k),)[0][0])
-            # only make guess using center line for last segment
-            guess_idx = [self.n_segments-1]
+        if hasattr(self, 'guess_coeffs'):
+            # guess provided from a previous run
+            for k in range(self.n_segments):
+                init_splines.append(np.transpose(self.guess_coeffs[self.n_current_block + k]))
+                motion_times.append(np.transpose(self.guess_times[self.n_current_block + k]))
         else:
-            # local_problem was not solved yet, make guess using center line for all segments
-            guess_idx = range(self.n_segments)
+            if hasattr(self, 'local_problem') and hasattr(self.local_problem.father, '_var_result'):
+                # local_problem was already solved, re-use previous solutions to form initial guess
+                if self.n_segments > 1:
+                    # if updating in receding horizon with small steps:
+                    # combine first two spline segments into a new spline = guess for new current segment
+                    # init_spl, motion_time = self.get_init_guess_combined_segment()
 
-        # make guesses based on global path
-        for k in guess_idx:
-            init_spl, motion_time = self.get_init_guess_new_segment(self.segments[k])
-            init_splines.append(init_spl)
-            motion_times.append(motion_time)
+                    # if updating per segment:
+                    # the first segment disappears and the guess is given by data of next segment
+                    # spline through next segment and its motion time
+                    init_splines.append(np.array(self.local_problem.father.get_variables()[self.vehicles[0].label,'splines_seg1']))
+                    motion_times.append(self.local_problem.father.get_variables(self.local_problem, 'T1',)[0][0])
+
+                if self.n_segments > 2:
+                    # use old solutions for segment 2 until second last segment, these don't change
+                    for k in range(2, self.n_segments):
+                        # Todo: strange notation required, why not the same as in schedulerproblem.py?
+                        init_splines.append(np.array(self.local_problem.father.get_variables()[self.vehicles[0].label,'splines_seg'+str(k)]))
+                        motion_times.append(self.local_problem.father.get_variables(self.local_problem, 'T'+str(k),)[0][0])
+                # only make guess using center line for last segment
+                guess_idx = [self.n_segments-1]
+            else:
+                # local_problem was not solved yet, make guess using center line for all segments
+                guess_idx = range(self.n_segments)
+
+            # make guesses based on center line of GCode
+            for k in guess_idx:
+                init_spl, motion_time = self.get_init_guess_new_segment(self.segments[k])
+                init_splines.append(init_spl)
+                motion_times.append(motion_time)
 
         # pass on initial guess
         self.vehicles[0].set_init_spline_values(init_splines, n_seg = self.n_segments)
@@ -848,123 +854,321 @@ class GCodeSchedulerProblem(Problem):
         return init_splines, motion_times
 
     def get_init_guess_new_segment(self, segment):
-        # generate initial guess for new segment, based on center line
+
+        option = 1
+
+        if option == 1:
+            # generate a feasible initial guess with a bang-bang jerk profile
+            init_guess, motion_time = self.get_init_guess_bangbang_jerk(segment)
+
+            testx = BSpline(self.vehicles[0].basis, init_guess[:,0])
+            testy = BSpline(self.vehicles[0].basis, init_guess[:,1])
+
+            dtestx = testx.derivative(1)
+            ddtestx = testx.derivative(2)
+            dddtestx = testx.derivative(3)
+            dtesty = testy.derivative(1)
+            ddtesty = testy.derivative(2)
+            dddtesty = testy.derivative(3)
+
+            eval = np.linspace(0,1,100)
+
+            maxvx = max(dtestx(eval)/motion_time)
+            maxvy = max(dtesty(eval)/motion_time)
+            maxax = max(ddtestx(eval)/motion_time**2)
+            maxay = max(ddtesty(eval)/motion_time**2)
+            maxjx = max(dddtestx(eval)/motion_time**3)
+            maxjy = max(dddtesty(eval)/motion_time**3)
+
+            # from matplotlib import pyplot as plt
+            # plt.figure(10)
+            # plt.plot(eval, dtestx(eval)/motion_time)
+            # plt.plot(eval, dtesty(eval)/motion_time)
+            # plt.figure(11)
+            # plt.plot(eval, ddtestx(eval)/motion_time)
+            # plt.plot(eval, ddtesty(eval)/motion_time)
+            # plt.figure(12)
+            # plt.plot(eval, dddtestx(eval)/motion_time)
+            # plt.plot(eval, dddtesty(eval)/motion_time)
+
+            # plt.show()
+
+            if maxvx > self.vehicles[0].vxmax:
+                print maxvx
+                raise RuntimeError('Velx guess too high')
+            if maxvy > self.vehicles[0].vymax:
+                print maxvy
+                raise RuntimeError('Vely guess too high')
+            if maxax > self.vehicles[0].axmax:
+                print maxax
+                raise RuntimeError('Accx guess too high')
+            if maxay > self.vehicles[0].aymax:
+                print maxay
+                raise RuntimeError('Accy guess too high')
+            if maxjx > self.vehicles[0].jxmax:
+                print maxjx
+                raise RuntimeError('Jerkx guess too high')
+            if maxjy > self.vehicles[0].jymax:
+                print maxjy
+                raise RuntimeError('Jerky guess too high')
+
+        elif option == 2:
+            # generate initial guess for new segment, based on center line
+
+            if isinstance(segment['shape'], Rectangle):
+                points = np.c_[segment['start'], segment['end']]
+            elif isinstance(segment['shape'], Ring):
+                # start_angle and end_angle are defined based on shape.start and shape.end, which is moved
+                # to make the ring a little larger to take into account the tolerance, so better use the segment start
+                # and end points to make a guess
+
+                # part of a ring, placed in the origin
+                start_angle = np.arctan2(segment['start'][1]-segment['position'][1],segment['start'][0]-segment['position'][0])
+                end_angle = np.arctan2(segment['end'][1]-segment['position'][1],segment['end'][0]-segment['position'][0])
+                if segment['shape'].direction == 'CW':
+                    if start_angle < end_angle:
+                        start_angle += 2*np.pi  # arctan2 returned a negative start_angle, make positive
+                elif segment['shape'] == 'CCW':
+                    if start_angle > end_angle:  # arctan2 returned a negative end_angle, make positive
+                        end_angle += 2*np.pi
+
+                s = np.linspace(start_angle, end_angle, 50)
+                # instead of:
+                # s = np.linspace(segment['shape'].start_angle, segment['shape'].end_angle, 50)
+
+
+                # calculate radius
+                radius = (segment['shape'].radius_in+segment['shape'].radius_out)*0.5
+                points = np.vstack((segment['pose'][0] + radius*np.cos(s), segment['pose'][1] + radius*np.sin(s)))
+                points = np.vstack((points, 0*points[0,:]))  # add guess of all 0 in z-direction
+                # Todo: for now only arcs in the XY-plane are considered
+
+            # construct x and y vectors
+            x, y, z = [], [], []
+            x = np.r_[x, points[0,:]]
+            y = np.r_[y, points[1,:]]
+            z = np.r_[z, points[2,:]]
+            # calculate total length in x-, y- and z-direction
+            l_x, l_y, l_z = 0., 0., 0.
+            for i in range(len(points[0])-1):
+                l_x += points[0,i+1] - points[0,i]
+                l_y += points[1,i+1] - points[1,i]
+                l_z += points[2,i+1] - points[2,i]
+            # calculate distance in x, y and z between each 2 waypoints
+            # and use it as a relative measure to build time vector
+            time_x, time_y, time_z = [0.], [0.], [0.]
+
+            for i in range(len(points[0])-1):
+                if l_x != 0:
+                    time_x.append(time_x[-1] + float(points[0,i+1] - points[0,i])/l_x)
+                else:
+                    time_x.append(0.)
+                if l_y != 0:
+                    time_y.append(time_y[-1] + float(points[1,i+1] - points[1,i])/l_y)
+                else:
+                    time_y.append(0.)
+                if l_z != 0:
+                    time_z.append(time_z[-1] + float(points[2,i+1] - points[2,i])/l_z)
+                else:
+                    time_z.append(0.)
+                # gives time 0...1
+
+            # make approximate one an exact one
+            # otherwise fx(1) = 1
+            for idx, t in enumerate(time_x):
+                if (1 - t < 1e-5):
+                    time_x[idx] = 1
+            for idx, t in enumerate(time_y):
+                if (1 - t < 1e-5):
+                    time_y[idx] = 1
+            for idx, t in enumerate(time_z):
+                if (1 - t < 1e-5):
+                    time_z[idx] = 1
+
+            # make interpolation functions
+            if (all( t == 0 for t in time_x) and all(t == 0 for t in time_y) and all(t == 0 for t in time_z)):
+                # motion_times.append(0.1)
+                # coeffs_x = x[0]*np.ones(len(self.vehicles[0].knots[self.vehicles[0].degree-1:-(self.vehicles[0].degree-1)]))
+                # coeffs_y = y[0]*np.ones(len(self.vehicles[0].knots[self.vehicles[0].degree-1:-(self.vehicles[0].degree-1)]))
+                # init_splines.append(np.c_[coeffs_x, coeffs_y])
+                # break
+                raise RuntimeError('Trying to make a prediction for goal = current position.')
+            if all(t == 0 for t in time_x):
+                # if you don't do this, f evaluates to NaN for f(0)
+                if not all(t == 0 for t in time_y):
+                    time_x = time_y
+                else:
+                    time_x = time_z
+            if all(t == 0 for t in time_y):
+                # if you don't do this, f evaluates to NaN for f(0)
+                if not all(t == 0 for t in time_x):
+                    time_y = time_x
+                else:
+                    time_y = time_z
+            if all(t == 0 for t in time_z):
+                # if you don't do this, f evaluates to NaN for f(0)
+                if not all(t == 0 for t in time_x):
+                    time_z = time_x
+                else:
+                    time_z = time_y
+            # kind='cubic' requires a minimum of 4 waypoints
+            fx = interp1d(time_x, x, kind='linear', bounds_error=False, fill_value=1.)
+            fy = interp1d(time_y, y, kind='linear', bounds_error=False, fill_value=1.)
+            fz = interp1d(time_z, z, kind='linear', bounds_error=False, fill_value=1.)
+
+            # evaluate resulting splines to get evaluations at knots = coeffs-guess
+            # Note: conservatism is neglected here (spline value = coeff value)
+            coeffs_x = fx(self.vehicles[0].basis.greville())
+            coeffs_y = fy(self.vehicles[0].basis.greville())
+            coeffs_z = fz(self.vehicles[0].basis.greville())
+            init_guess = np.c_[coeffs_x, coeffs_y, coeffs_z]
+
+            # suppose vehicle is moving at half of vmax to calculate motion time
+            length_to_travel = np.sqrt((l_x**2+l_y**2+l_z**2))
+            max_vel = min(self.vehicles[0].vxmax,self.vehicles[0].vymax)
+            motion_time = length_to_travel/(max_vel*0.5)
+            init_guess[0] = 0  # initial velocity is zero
+            init_guess[1] = 0
+            init_guess[2] = 0
+            init_guess[3] = 0
+            init_guess[-2] = init_guess[-1]  # final velocity is zero
+            init_guess[-3] = init_guess[-1]  # final acceleration is also 0 normally
+            init_guess[-4] = init_guess[-1]  # final acceleration is also 0 normally
+
+        return init_guess, motion_time
+
+    def get_init_guess_bangbang_jerk(self, segment):
+        x0 = segment['start'][0]
+        y0 = segment['start'][1]
+        x1 = segment['end'][0]
+        y1 = segment['end'][1]
+
+        j_lim = self.vehicles[0].jxmax  # jerk limit
+        if j_lim != self.vehicles[0].jymax:
+            raise RuntimeError('Generating initial guess only possible for x-value = y-value')
+        if j_lim != -self.vehicles[0].jxmin:
+            raise RuntimeError('Generating initial guess only possible for upper and lower bounds of equal size')
+
+        # self.vehicles[0].basis is for position, take third derivative to obtain the basis for the jerk spline
+        # length of this basis determines amount of coeffs that are required
+        n_coeffs = len(self.vehicles[0].basis.derivative(3)[0])
+        multiple, rest = divmod(n_coeffs, 4)
+        # check on amount of coeffs that are required to make desired jerk profile
+        # the basic options to obtain a profile with an average of zero are:
+        # 4 coeffs: [1, -1, -1, 1] * j_lim
+        # 5 coeffs: [1, -1, 0 -1, 1] * j_lim
+        # 6 coeffs: [1, 0, -1, -1, 0, 1] * j_lim
+        # 7 coeffs: [1, 0, -1, 0, -1, 0, 1] * j_lim
+        # for 8 coeffs or more, all non-zero values are copied, with 'multiple'
+        # 8 coeffs: [1, 1, -1, -1, -1, -1, 1, 1] * j_lim
+        if rest == 0:
+            coeffs_j = np.r_[j_lim*np.ones((multiple,1)),-j_lim*np.ones((2*multiple,1)),j_lim*np.ones((multiple,1))]
+        elif rest == 1:
+            coeffs_j = np.r_[j_lim*np.ones((multiple,1)),-j_lim*np.ones((multiple,1)),0*np.ones((1,1)),-j_lim*np.ones((multiple,1)),j_lim*np.ones((multiple,1))]
+        elif rest == 2:
+            coeffs_j = np.r_[j_lim*np.ones((multiple,1)), 0*np.ones((1,1)),-j_lim*np.ones((2*multiple,1)), 0*np.ones((1,1)),j_lim*np.ones((multiple,1))]
+        elif rest == 3:
+            coeffs_j = np.r_[j_lim*np.ones((multiple,1)), 0*np.ones((1,1)),-j_lim*np.ones((multiple,1)), 0*np.ones((1,1)),-j_lim*np.ones((multiple,1)),0*np.ones((1,1)),j_lim*np.ones((multiple,1))]
+        else:
+            raise RuntimeError('Something wrong with n_coeffs, it was not an int: ', n_coeffs)
+
+        # make jerk spline and integrate to obtain corresponding position spline
+        jerk = BSpline(self.vehicles[0].basis.derivative(3)[0], coeffs_j)
+        acc = running_integral(jerk)
+        vel = running_integral(acc)
+        pos = running_integral(vel)
+        guess = pos.coeffs  # coefficients guess
 
         if isinstance(segment['shape'], Rectangle):
-            points = np.c_[segment['start'], segment['end']]
+            # shift and scale to obtain trajectory from x0 to x1
+            guess_x = [g/pos.coeffs[-1]*(x1-x0)+x0 for g in guess]
+            guess_y = [g/pos.coeffs[-1]*(y1-y0)+y0 for g in guess]
         elif isinstance(segment['shape'], Ring):
-            # start_angle and end_angle are defined based on shape.start and shape.end, which is moved
-            # to make the ring a little larger to take into account the tolerance, so better use the segment start
-            # and end points to make a guess
+            # Note: guess contains angle (theta) values for this case
 
-            # part of a ring, placed in the origin
-            start_angle = np.arctan2(segment['start'][1]-segment['position'][1],segment['start'][0]-segment['position'][0])
-            end_angle = np.arctan2(segment['end'][1]-segment['position'][1],segment['end'][0]-segment['position'][0])
-            if segment['shape'].direction == 'CW':
-                if start_angle < end_angle:
-                    start_angle += 2*np.pi  # arctan2 returned a negative start_angle, make positive
-            elif segment['shape'] == 'CCW':
-                if start_angle > end_angle:  # arctan2 returned a negative end_angle, make positive
-                    end_angle += 2*np.pi
+            # don't use these ones, the start and end angle include the extension of the shape
+            # theta0 = segment['shape'].start_angle
+            # theta1 = segment['shape'].end_angle
+            center = segment['position']
 
-            s = np.linspace(start_angle, end_angle, 50)
-            # instead of:
-            # s = np.linspace(segment['shape'].start_angle, segment['shape'].end_angle, 50)
+            theta0 = np.arctan2(y0 - center[1], x0 - center[0])  # start angle
+            theta1 = np.arctan2(y1 - center[1], x1 - center[0])  # end angle
+            if segment['shape'].direction == 'CW':  # theta must decrease
+                if theta0 < theta1:  # theta0 needs to be bigger
+                    theta0 += 2*np.pi
+            else:  # counter-clockwise, theta must increase
+                if theta0 > theta1:  # theta1 needs to be bigger
+                    theta1 += 2*np.pi
 
+            # calculate circle radius
+            r = np.sqrt((center[0] - x0)**2 + (center[1] - y0)**2)
+            # r += self.vehicles[0].tolerance  # shift outwards
+            # scale with theta range, and shift with start angle
+            guess = [g*(theta1-theta0)/pos.coeffs[-1]+theta0 for g in guess]
+            # convert angles to position
+            guess_x = r*np.cos(guess) + center[0]
+            guess_y = r*np.sin(guess) + center[1]
+        else:
+            raise RuntimeError('Segment with invalid (not Rectangle or Ring) shape: ', segment['shape'])
 
-            # calculate radius
-            radius = (segment['shape'].radius_in+segment['shape'].radius_out)*0.5
-            points = np.vstack((segment['pose'][0] + radius*np.cos(s), segment['pose'][1] + radius*np.sin(s)))
-            points = np.vstack((points, 0*points[0,:]))  # add guess of all 0 in z-direction
-            # Todo: for now only arcs in the XY-plane are considered
+        # initial and final velocity and acceleration are 0
+        guess_x[0] = x0
+        guess_x[1] = x0
+        guess_x[2] = x0
+        guess_x[-3] = x1
+        guess_x[-2] = x1
+        guess_x[-1] = x1
 
-        # construct x and y vectors
-        x, y, z = [], [], []
-        x = np.r_[x, points[0,:]]
-        y = np.r_[y, points[1,:]]
-        z = np.r_[z, points[2,:]]
-        # calculate total length in x-, y- and z-direction
-        l_x, l_y, l_z = 0., 0., 0.
-        for i in range(len(points[0])-1):
-            l_x += points[0,i+1] - points[0,i]
-            l_y += points[1,i+1] - points[1,i]
-            l_z += points[2,i+1] - points[2,i]
-        # calculate distance in x, y and z between each 2 waypoints
-        # and use it as a relative measure to build time vector
-        time_x, time_y, time_z = [0.], [0.], [0.]
+        # initial and final velocity and acceleration are 0
+        guess_y[0] = y0
+        guess_y[1] = y0
+        guess_y[2] = y0
+        guess_y[-3] = y1
+        guess_y[-2] = y1
+        guess_y[-1] = y1
 
-        for i in range(len(points[0])-1):
-            if l_x != 0:
-                time_x.append(time_x[-1] + float(points[0,i+1] - points[0,i])/l_x)
-            else:
-                time_x.append(0.)
-            if l_y != 0:
-                time_y.append(time_y[-1] + float(points[1,i+1] - points[1,i])/l_y)
-            else:
-                time_y.append(0.)
-            if l_z != 0:
-                time_z.append(time_z[-1] + float(points[2,i+1] - points[2,i])/l_z)
-            else:
-                time_z.append(0.)
-            # gives time 0...1
+        guess_z = 0*np.array(guess_x)
+        init_guess = np.c_[guess_x, guess_y, guess_z]
 
-        # make approximate one an exact one
-        # otherwise fx(1) = 1
-        for idx, t in enumerate(time_x):
-            if (1 - t < 1e-5):
-                time_x[idx] = 1
-        for idx, t in enumerate(time_y):
-            if (1 - t < 1e-5):
-                time_y[idx] = 1
-        for idx, t in enumerate(time_z):
-            if (1 - t < 1e-5):
-                time_z[idx] = 1
+        # construct corresponding splines
+        pos_x = BSpline(self.vehicles[0].basis, guess_x)
+        vel_x = pos_x.derivative(1)
+        acc_x = pos_x.derivative(2)
+        jerk_x = pos_x.derivative(3)
 
-        # make interpolation functions
-        if (all( t == 0 for t in time_x) and all(t == 0 for t in time_y) and all(t == 0 for t in time_z)):
-            # motion_times.append(0.1)
-            # coeffs_x = x[0]*np.ones(len(self.vehicles[0].knots[self.vehicles[0].degree-1:-(self.vehicles[0].degree-1)]))
-            # coeffs_y = y[0]*np.ones(len(self.vehicles[0].knots[self.vehicles[0].degree-1:-(self.vehicles[0].degree-1)]))
-            # init_splines.append(np.c_[coeffs_x, coeffs_y])
-            # break
-            raise RuntimeError('Trying to make a prediction for goal = current position.')
-        if all(t == 0 for t in time_x):
-            # if you don't do this, f evaluates to NaN for f(0)
-            if not all(t == 0 for t in time_y):
-                time_x = time_y
-            else:
-                time_x = time_z
-        if all(t == 0 for t in time_y):
-            # if you don't do this, f evaluates to NaN for f(0)
-            if not all(t == 0 for t in time_x):
-                time_y = time_x
-            else:
-                time_y = time_z
-        if all(t == 0 for t in time_z):
-            # if you don't do this, f evaluates to NaN for f(0)
-            if not all(t == 0 for t in time_x):
-                time_z = time_x
-            else:
-                time_z = time_y
-        # kind='cubic' requires a minimum of 4 waypoints
-        fx = interp1d(time_x, x, kind='linear', bounds_error=False, fill_value=1.)
-        fy = interp1d(time_y, y, kind='linear', bounds_error=False, fill_value=1.)
-        fz = interp1d(time_z, z, kind='linear', bounds_error=False, fill_value=1.)
+        pos_y = BSpline(self.vehicles[0].basis, guess_y)
+        vel_y = pos_y.derivative(1)
+        acc_y = pos_y.derivative(2)
+        jerk_y = pos_y.derivative(3)
 
-        # evaluate resulting splines to get evaluations at knots = coeffs-guess
-        # Note: conservatism is neglected here (spline value = coeff value)
-        coeffs_x = fx(self.vehicles[0].basis.greville())
-        coeffs_y = fy(self.vehicles[0].basis.greville())
-        coeffs_z = fz(self.vehicles[0].basis.greville())
-        init_guess = np.c_[coeffs_x, coeffs_y, coeffs_z]
+        # determine which limit is the most strict, and therefore determines the motion_time
+        eval = np.linspace(0,1,100)
+        # take into account scaling factor, with appropriate power
+        motion_time_j = (max(np.r_[abs(jerk_x(eval)), abs(jerk_y(eval))])/float(j_lim))**(1/3.)
+        a_lim = self.vehicles[0].axmax  # jerk limit
+        motion_time_a = np.sqrt(max(np.r_[abs(acc_x(eval)), abs(acc_y(eval))])/float(a_lim))
+        v_lim = self.vehicles[0].vxmax  # jerk limit
+        motion_time_v = max(np.r_[abs(vel_x(eval)), abs(vel_y(eval))])/float(v_lim)
+        motion_time = max(motion_time_j, motion_time_a, motion_time_v)
+        motion_time = 1.05*motion_time  # take some margin to avoid numerical errors
 
-        # suppose vehicle is moving at half of vmax to calculate motion time
-        length_to_travel = np.sqrt((l_x**2+l_y**2+l_z**2))
-        max_vel = self.vehicles[0].vmax if hasattr(self.vehicles[0], 'vmax') else (self.vehicles[0].vxmax+self.vehicles[0].vymax+self.vehicles[0].vzmax)*0.5
-        motion_time = length_to_travel/(max_vel*0.5)
-        init_guess[-2] = init_guess[-1]  # final velocity is zero
-        init_guess[-3] = init_guess[-1]  # final acceleration is also 0 normally
-        init_guess[-4] = init_guess[-1]  # final acceleration is also 0 normally
+        # from matplotlib import pyplot as plt
+        # plt.figure(20)
+        # plt.plot(eval, jerk_x(eval)/motion_time**3)
+        # plt.figure(21)
+        # plt.plot(eval, acc_x(eval)/motion_time**2)
+        # plt.figure(22)
+        # plt.plot(eval, vel_x(eval)/motion_time)
+        # plt.figure(23)
+        # plt.plot(eval, pos_x(eval))
+        # plt.figure(24)
+        # plt.plot(eval, jerk_y(eval)/motion_time**3)
+        # plt.figure(25)
+        # plt.plot(eval, acc_y(eval)/motion_time**2)
+        # plt.figure(26)
+        # plt.plot(eval, vel_y(eval)/motion_time)
+        # plt.figure(27)
+        # plt.plot(eval, pos_y(eval))
 
         return init_guess, motion_time
 
