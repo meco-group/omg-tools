@@ -24,12 +24,13 @@ from ..basics.shape import Rectangle, Square, Circle
 from ..environment.environment import Environment
 from ..basics.shape import Rectangle, Ring
 from ..basics.geometry import distance_between_points, point_in_polyhedron
-from ..basics.spline import BSplineBasis
-from ..basics.spline_extra import concat_splines
+from ..basics.spline import BSplineBasis, BSpline
+from ..basics.spline_extra import concat_splines, running_integral
 
 from scipy.interpolate import interp1d
 import scipy.linalg as la
 import numpy as np
+import pickle
 import time
 import warnings
 
