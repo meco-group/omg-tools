@@ -177,6 +177,12 @@ class Deployer:
                 plt.pause(0.1)
 
                 plt.figure(4)
+                plt.cla()
+                # plot total velocity
+                plt.plot(time, np.sqrt(input_traj[0, :]**2+input_traj[1, :]**2))
+                plt.pause(0.1)
+
+                plt.figure(5)
                 plt.subplot(2, 1, 1)
                 plt.cla()
                 plt.plot(time, dinput_traj[0, :])
@@ -185,7 +191,7 @@ class Deployer:
                 plt.plot(time, dinput_traj[1, :])
                 plt.pause(0.1)
 
-                plt.figure(5)
+                plt.figure(6)
                 plt.subplot(2, 1, 1)
                 plt.cla()
                 plt.plot(time, ddinput_traj[0, :])
@@ -194,7 +200,7 @@ class Deployer:
                 plt.plot(time, ddinput_traj[1, :])
                 plt.pause(0.1)
 
-                plt.figure(6)
+                plt.figure(7)
                 plt.cla()
                 # plot trajectory
                 plt.plot(state_traj[0, :], state_traj[1, :])
@@ -210,6 +216,9 @@ class Deployer:
                     # add first point again to close shape
                     points = np.c_[points, [points[0,0], points[1,0]]]
                     plt.plot(points[0,:], points[1,:], color='red', linestyle = '--', linewidth= 1.2)
+                    # plot GCode center points
+                    # plt.plot(room['start'][0], room['start'][1], 'gx')
+                    # plt.plot(room['end'][0], room['end'][1], 'gx')
                 plt.pause(0.1)
 
                 # If the latest segment was not what you liked, there are two options:
