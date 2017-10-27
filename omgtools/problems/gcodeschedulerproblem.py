@@ -58,6 +58,15 @@ class GCodeSchedulerProblem(Problem):
         # are we running over the GCode using the deployer
         self.with_deployer = kwargs['with_deployer'] if 'with_deployer' in kwargs else False
 
+        if ('use_prev_solution' in kwargs and kwargs['use_prev_solution']):
+            file = open('result_coeffs.pickle','r')
+            # load the object from the file into var b
+            self.guess_coeffs = pickle.load(file)
+            file.close()
+            file = open('result_times.pickle', 'r')
+            self.guess_times = pickle.load(file)
+            file.close()
+
         if not isinstance(self.vehicles[0].shapes[0], Circle):
             raise RuntimeError('Vehicle shape can only be a Circle when solving a GCodeSchedulerProblem')
 
