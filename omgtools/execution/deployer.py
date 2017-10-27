@@ -303,3 +303,4 @@ class Deployer:
             park = np.c_[0, 0, 0, 0, 0, 0, -2, 0, 0]  # where to park the tool before machining
             data = np.r_[park, data]  # place parking spot before data
         np.savetxt('trajmat'+str(count)+'.csv', data , delimiter=',')
+        np.savetxt('trajmat'+str(count)+'.csv', data , delimiter=',')
