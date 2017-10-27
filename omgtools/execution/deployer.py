@@ -288,3 +288,9 @@ class Deployer:
 
         # target reached, print final information
         self.problem.final()
+
+        # save results:
+        ## 1) save state_traj
+        self.state_traj = state_traj
+        self.input_traj = input_traj
+        self.dinput_traj = dinput_traj
