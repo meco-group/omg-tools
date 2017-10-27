@@ -71,7 +71,12 @@ class GCodeProblem(Problem):
         # create splines with correct amount of segments, i.e. equal to n_segments
         total_splines = self.vehicles[0].define_splines(n_seg=self.n_segments)
         for idx in range(self.n_segments):
-            self.vehicles[0].define_trajectory_constraints(total_splines[idx], self.motion_times[idx])
+            if idx == 0:
+                self.vehicles[0].define_trajectory_constraints(total_splines[idx], self.motion_times[idx], skip=[1,0])
+            elif idx == self.n_segments-1:
+                self.vehicles[0].define_trajectory_constraints(total_splines[idx], self.motion_times[idx], skip=[0,1])
+            else:
+                self.vehicles[0].define_trajectory_constraints(total_splines[idx], self.motion_times[idx], skip=[])
             # set up room constraints
             self.vehicles[0].define_collision_constraints(self.environment.room[idx], total_splines[idx], self.motion_times[idx])
 
