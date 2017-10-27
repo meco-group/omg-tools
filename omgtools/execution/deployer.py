@@ -78,6 +78,9 @@ class Deployer:
     def update_segment(self):
         self.reset()
 
+        # boolean to select if we want to go to next segment
+        self.problem.no_update = False
+
         # create figures
         plt.figure(2)  # state
         plt.figure(3)  # input
@@ -216,15 +219,19 @@ class Deployer:
                 #     user_input = raw_input("Are you happy with the latest computed segment (yes/no): ")
                 # if user_input == 'no':
                 # 2) automatically re-solve a slightly adapted version of the problem when no optimal solution was found
-                if not self.problem.local_problem.problem.stats()['return_status'] == 'Solve_Succeeded':
+                if self.problem.no_update and self.problem.local_problem.problem.stats()['return_status'] == 'Solve_Succeeded':
+                    self.problem.no_update = False
+                elif not self.problem.local_problem.problem.stats()['return_status'] == 'Solve_Succeeded':
+                    self.problem.no_update = True
                     # reset saved trajectories
-                    state_traj = state_traj_old[:]
-                    input_traj = input_traj_old[:]
-                    dinput_traj = dinput_traj_old[:]
-                    ddinput_traj = ddinput_traj_old[:]
+                    # i.e. trajectories starting at the starting point of trajectory that was not successfully computed
+                    state_traj = np.array(state_traj_old)
+                    input_traj = np.array(input_traj_old)
+                    dinput_traj = np.array(dinput_traj_old)
+                    ddinput_traj = np.array(ddinput_traj_old)
 
                     # reset states and inputs
-                    states = states_old  # + np.random.rand(3,)*1e-5  # perturb initial state randomly
+                    states_end = states  # + np.random.rand(3,)*1e-5  # perturb initial state randomly
 
                     # compute perturbed input, that lies on the line between the last two inputs of the input traj
                     inputs = [0, 0, 0]  # initialize
@@ -256,6 +263,12 @@ class Deployer:
                     if self.cnt > 20:
                         raise RuntimeError('Couldn\'t find a feasible trajectory for this segment, stopping calculations')
                         return
+
+                    # remove the motion time that was computed for the segment that was not accepted
+                    self.problem.motion_time_log.pop()
+                    # remove data that was saved for segment that was not accepted
+                    self.result_coeffs.pop()
+                    self.motion_times.pop()
                 else:  # user was happy or optimal solution found, just continue
                     self.cnt = 0
 
