@@ -160,6 +160,19 @@ OMG-tools implemented on real-life motion systems. Click on a picture to watch t
 <img src="https://img.youtube.com/vi/dWAzfLd_wec/0.jpg" alt="Spline-based motion planning in a vast environment"/>
 </a>
 </td>
+<td align="center" valign="center" style="background-color:rgba(0, 0, 0, 0);">
+<a href="https://www.youtube.com/watch?v=eE_uTBYYY18">
+<img src="https://img.youtube.com/vi/eE_uTBYYY18/0.jpg" alt="Spline-based CNC trajectory generation"/>
+</a>
+</td>
+</tr>
+
+<tr>
+<td align="center" valign="center" style="background-color:rgba(0, 0, 0, 0);">
+<a href="https://www.youtube.com/watch?v=afmVCCNeqQ4">
+<img src="https://img.youtube.com/vi/afmVCCNeqQ4/0.jpg" alt="Spline-based CNC trajectory generation"/>
+</a>
+</td>
 <td align="center" valign="center" bgcolor="#FFFFFF">
 </td>
 </tr>
