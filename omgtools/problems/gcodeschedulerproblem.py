@@ -38,6 +38,7 @@ class GCodeSchedulerProblem(Problem):
     def __init__(self, tool, GCode, options=None, **kwargs):
         options = options or {}
         environment = self.get_environment(GCode, tool.tolerance)
+        self.split_circle = kwargs['split_circle'] if 'split_circle' in kwargs else False
         # pass on environment and tool to Problem constructor,
         # generates self.vehicles and self.environment
         # self.vehicles[0] = tool
@@ -232,6 +233,8 @@ class GCodeSchedulerProblem(Problem):
         # each GCode block is represented as a room in which the trajectory
         # has to stay
 
+        # split ring segments of more than 135 degrees in two equal parts
+
         number = 0  # each room has a number
         room = []
 
@@ -272,16 +275,85 @@ class GCodeSchedulerProblem(Problem):
                     direction = 'CCW'
                     start[:2] = np.dot(R2, start[:2])  # slightly rotated start point
                     end[:2] = np.dot(R1, end[:2])  # slightly rotated end point
-                shape = Ring(radius_in = radius_in, radius_out = radius_out,
-                             start = start, end = end, direction = direction)
-                pose = block.center
-                pose.extend([0.,0.,0.])  # [x,y,z,orientation], ring always has orientation 0
+
+                # check angle of ring, if >135 degrees split ring in half
+                # use extended version of the ring
+                angle1 = np.arctan2(start[1], start[0])
+                angle2 = np.arctan2(end[1], end[0])
+
+                if block.type == 'G02':
+                    if angle1 < angle2:
+                        # clockwise so angle2 must be < angle1
+                        # probably angle2 is smaller, but arctan2 returned a negative angle
+                        angle1 += 2*np.pi
+                    arc_angle = angle1 - angle2
+                elif block.type == 'G03':
+                    if angle1 > angle2:
+                        # counter-clockwise so angle2 must be > angle1
+                        # probably angle2 is bigger, but arctan2 returned a negative angle
+                        angle2 += 2*np.pi
+                    arc_angle = angle2 - angle1
+                else:
+                    raise RuntimeError('Invalid block type: ', block.type)
+
+                new_room = self.split_ring_segment(block, arc_angle, start, end, radius_in, radius_out, direction, tolerance, number)
+
             # save original GCode block in the room description
-            room.append({'shape': shape, 'pose': pose, 'position': pose[:2], 'draw':True,
-                          'start': block.start, 'end': block.end, 'number':number})
-            # Todo: is it weird that room has a start and end field?
-            number += 1
+            for r in new_room:
+                room.append(r)
+                number += 1
         return Environment(room=room)
+
+    def split_ring_segment(self, block, arc_angle, start, end, radius_in, radius_out, direction, tolerance, number):
+        if (self.split_circle and arc_angle > 3*np.pi/4):
+            # compute middle of ring segment
+            arc = arc_angle*0.5
+            # adapt start and end to include tolerance, i.e. make ring a little wider, such that
+            # perpendicular distance from start (and end) to border of ring = tolerance
+            theta = np.arctan2(tolerance,((radius_in+radius_out)*0.5))  # angle over which to rotate
+            mid1 = np.array(start)  # use np.array() to get a copy of the object
+            mid2 = np.array(start)  # mid of second part of the segment
+            if block.type == 'G02':
+                R1 = np.array([[np.cos(-arc-theta), -np.sin(-arc-theta)],[np.sin(-arc-theta), np.cos(-arc-theta)]])  # rotation matrix
+                R2 = np.array([[np.cos(-arc+theta), -np.sin(-arc+theta)],[np.sin(-arc+theta), np.cos(-arc+theta)]])  # rotation matrix
+                # create overlap region between the two new segments
+                mid1[:2] = np.dot(R1, mid1[:2])  # rotate start point over half arc, and a bit further
+                mid2[:2] = np.dot(R2, mid2[:2])  # rotate start point over half arc, a bit less far
+            else:
+                R1 = np.array([[np.cos(arc+theta), -np.sin(arc+theta)],[np.sin(arc+theta), np.cos(arc+theta)]])  # rotation matrix
+                R2 = np.array([[np.cos(arc-theta), -np.sin(arc-theta)],[np.sin(arc-theta), np.cos(arc-theta)]])  # rotation matrix
+                # create overlap region between the two new segments
+                mid1[:2] = np.dot(R1, mid1[:2])  # rotate start point over half arc, and a bit further
+                mid2[:2] = np.dot(R2, mid2[:2])  # rotate start point over half arc, a bit less far
+            # segment1
+            start1 = np.array(start)  # keep start of segment1
+            end1 = mid1
+            # segment2
+            start2 = mid2
+            end2 = np.array(end)  # keep end of segment2
+
+            # shape is located in the origin
+            shape1 = Ring(radius_in = radius_in, radius_out = radius_out,
+                         start = start1, end = end1, direction = direction)
+            shape2 = Ring(radius_in = radius_in, radius_out = radius_out,
+                         start = start2, end = end2, direction = direction)
+            pose = list(block.center)
+            pose.extend([0.,0.,0.])  # [x,y,z,orientation], ring always has orientation 0
+            # room start and end is shifted away from origin
+            mid1_shift = list(mid1 + np.array(block.center))  # move from origin to real position
+            mid2_shift = list(mid2 + np.array(block.center))
+            new_room = [{'shape': shape1, 'pose': pose, 'position': pose[:2], 'draw':True,
+                         'start': block.start, 'end': mid1_shift, 'number':number},
+                        {'shape': shape2, 'pose': pose, 'position': pose[:2], 'draw':True,
+                         'start': mid2_shift, 'end': block.end, 'number':number+1}]
+        else:
+            shape = Ring(radius_in = radius_in, radius_out = radius_out,
+                         start = start, end = end, direction = direction)
+            pose = block.center
+            pose.extend([0.,0.,0.])  # [x,y,z,orientation], ring always has orientation 0
+            new_room = [{'shape': shape, 'pose': pose, 'position': pose[:2], 'draw':True,
+                        'start': block.start, 'end': block.end, 'number':number}]
+        return new_room
 
     def check_segments(self):
 
