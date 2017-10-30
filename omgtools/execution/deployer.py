@@ -208,7 +208,7 @@ class Deployer:
                 eval = np.linspace(0,1,100)
                 future_splines = self.problem.vehicles[0].result_spline_segments[1:]
                 for spline in future_splines:
-                    plt.figure(6)
+                    plt.figure(7)
                     plt.plot(spline[0](eval),spline[1](eval),color='gray')
                 # plot environment
                 for room in self.problem.environment.room:
@@ -294,6 +294,7 @@ class Deployer:
         self.state_traj = state_traj
         self.input_traj = input_traj
         self.dinput_traj = dinput_traj
+
     def save_results(self, count=0, first=False):
         data = np.c_[self.state_traj[0,:], self.input_traj[0,:], self.dinput_traj[0,:],
                      self.state_traj[1,:], self.input_traj[1,:], self.dinput_traj[1,:],
