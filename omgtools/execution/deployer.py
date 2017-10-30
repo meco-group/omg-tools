@@ -276,9 +276,6 @@ class Deployer:
 
                     # remove the motion time that was computed for the segment that was not accepted
                     self.problem.motion_time_log.pop()
-                    # remove data that was saved for segment that was not accepted
-                    self.result_coeffs.pop()
-                    self.motion_times.pop()
                 else:  # user was happy or optimal solution found, just continue
                     self.cnt = 0
 
