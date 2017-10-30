@@ -26,10 +26,10 @@
 #include <memory.h>
 #include <iostream>
 
-#define inf std::numeric_limits<double>::infinity()
-@defines@
-
 namespace omg{
+
+const double inf = std::numeric_limits<double>::infinity();
+@constants@
 
 typedef struct obstacle {
     std::vector<double> position;
@@ -103,6 +103,7 @@ class Point2Point{
         bool update(std::vector<double>&, std::vector<double>&, std::vector<std::vector<double>>&, std::vector<std::vector<double>>&, std::vector<obstacle_t>&);
         bool update(std::vector<double>&, std::vector<double>&, std::vector<std::vector<double>>&, std::vector<std::vector<double>>&, std::vector<obstacle_t>&, int);
         void getCoefficients(std::vector<double>& coeffs);
+        int getLenBasis();
     };
 }
 

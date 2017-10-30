@@ -234,6 +234,10 @@ void Point2Point::getCoefficients(std::vector<double>& coeffs){
     coeffs = std::vector<double>(spline_coeffs_vec);
 }
 
+int Point2Point::getLenBasis(){
+    return vehicle->getLenBasis();
+}
+
 void Point2Point::initVariables(){
     map<string, map<string, vector<double>>> var_dict;
     int n_spl = vehicle->getNSplines();
