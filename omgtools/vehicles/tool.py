@@ -34,8 +34,8 @@ class Tool(Vehicle):
         self.shapes= [Circle(0.01*tolerance)]
         self.tolerance = tolerance
         bounds = bounds or {}
-        # three movement directions (3 splines)
-        # impose jerk limits (degree 3)
+        # three movement directions --> 3 splines
+        # impose jerk limits --> degree 3
         Vehicle.__init__(
             self, n_spl=3, degree=3, shapes=self.shapes, options=options)
 
@@ -102,6 +102,7 @@ class Tool(Vehicle):
         self.define_constraint(dddy - (horizon_time**3)*self.jymax, -inf, 0.)
         # self.define_constraint(dddz - (horizon_time**3)*self.jzmax, -inf, 0.)
 
+        # keep z at zero
         self.define_constraint(z-1e-5, -inf,0.)
         self.define_constraint(-z-1e-5, -inf,0.)
 
