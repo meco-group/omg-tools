@@ -89,10 +89,10 @@ class Deployer:
         plt.figure(6)  # trajectory
 
         # initialize trajectories
-        state_traj = np.c_[self.problem.curr_state]
-        input_traj = np.c_[[0.,0.,0.]]
-        dinput_traj = np.c_[[0.,0.,0.]]
-        ddinput_traj = np.c_[[0.,0.,0.]]
+        self.state_traj = np.c_[self.problem.curr_state]
+        self.input_traj = np.c_[[0.,0.,0.]]
+        self.dinput_traj = np.c_[[0.,0.,0.]]
+        self.ddinput_traj = np.c_[[0.,0.,0.]]
 
         current_time = 0.
         target_reached = False
@@ -114,10 +114,10 @@ class Deployer:
                 enforce_inputs = True
 
                 # set new values at end values of previous iteration
-                states = np.array(states_end)
-                inputs = np.array(inputs_end)
-                dinputs = np.array(dinputs_end)
-                ddinputs = np.array(ddinputs_end)
+                states = np.array(self.states_end)
+                inputs = np.array(self.inputs_end)
+                dinputs = np.array(self.dinputs_end)
+                ddinputs = np.array(self.ddinputs_end)
 
                 trajectories = self.update(current_time, states=states, inputs=inputs, dinputs=dinputs, update_time=update_time, enforce_states=True, enforce_inputs=enforce_inputs)
                 self.current_time = current_time + self.problem.motion_times[0]
@@ -137,26 +137,25 @@ class Deployer:
                 dinput_splines = [s.derivative(2) for s in pos_splines]
                 ddinput_splines = [s.derivative(3) for s in pos_splines]
                 # compute values at end of first segment = start of the next iteration
-                states_end = np.hstack([s(1.) for s in pos_splines])
-                inputs_end = np.hstack([s(1.) for s in input_splines])*1./self.problem.motion_times[0]
-                dinputs_end = np.hstack([s(1.) for s in dinput_splines])*1./self.problem.motion_times[0]**2
-                ddinputs_end = np.hstack([s(1.) for s in ddinput_splines])*1./self.problem.motion_times[0]**3
+                self.states_end = np.hstack([s(1.) for s in pos_splines])
+                self.inputs_end = np.hstack([s(1.) for s in input_splines])*1./self.problem.motion_times[0]
+                self.dinputs_end = np.hstack([s(1.) for s in dinput_splines])*1./self.problem.motion_times[0]**2
+                self.ddinputs_end = np.hstack([s(1.) for s in ddinput_splines])*1./self.problem.motion_times[0]**3
 
                 # save old values
                 # these are the ones that end at the starting state of current iteration
-                state_traj_old = np.array(state_traj)
-                input_traj_old = np.array(input_traj[:])
-                dinput_traj_old = np.array(dinput_traj[:])
-                ddinput_traj_old = np.array(ddinput_traj[:])
+                state_traj_old = np.array(self.state_traj)
+                input_traj_old = np.array(self.input_traj)
+                dinput_traj_old = np.array(self.dinput_traj)
+                ddinput_traj_old = np.array(self.ddinput_traj)
 
-                # state trajectory, append current state because this is not necessarily reached at a multiple of sample_time
-                state_traj = np.c_[state_traj, trajectories['state'][:, 1:n_samp+1], states_end]
+                # state trajectory, append current state because this is not necessarily
+                # reached at a multiple of sample_time
+                self.state_traj = np.c_[self.state_traj, trajectories['state'][:, 1:n_samp+1], self.states_end]
                 # input trajectory, append current input
-                input_traj = np.c_[input_traj, trajectories['input'][:, 1:n_samp+1], inputs_end]
-                dinput_traj = np.c_[dinput_traj, trajectories['dinput'][:, 1:n_samp+1], dinputs_end]
-                ddinput_traj = np.c_[ddinput_traj, trajectories['ddinput'][:, 1:n_samp+1], ddinputs_end]
-                n_t = state_traj.shape[1]  # amount of points in trajectory
-                time = np.linspace(0, current_time+update_time, n_t)  # make time vector
+                self.input_traj = np.c_[self.input_traj, trajectories['input'][:, 1:n_samp+1], self.inputs_end]
+                self.dinput_traj = np.c_[self.dinput_traj, trajectories['dinput'][:, 1:n_samp+1], self.dinputs_end]
+                self.ddinput_traj = np.c_[self.ddinput_traj, trajectories['ddinput'][:, 1:n_samp+1], self.ddinputs_end]
 
                 # plot trajectories of state, input,...
                 self.plot_results(current_time, update_time)
@@ -166,7 +165,7 @@ class Deployer:
                                    state_traj_old, input_traj_old, dinput_traj_old, ddinput_traj_old)
 
                 # check if target is reached
-                if (np.linalg.norm(self.problem.goal_state-state_traj[:, -1]) < 1e-2 and np.linalg.norm(input_traj[:, -1]) < 1e-2):
+                if (np.linalg.norm(self.problem.goal_state-self.state_traj[:, -1]) < 1e-2 and np.linalg.norm(self.input_traj[:, -1]) < 1e-2):
                     target_reached = True
 
         # target reached, print final information
