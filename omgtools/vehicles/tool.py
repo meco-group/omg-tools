@@ -26,13 +26,14 @@ import numpy as np
 
 class Tool(Vehicle):
 
-    def __init__(self, tolerance, options=None, bounds=None):
+    def __init__(self, tolerance, options=None, bounds=None, **kwargs):
         # Todo: for now tool is a 2D shape, with 3D splines, because
         # locally the movement is all in 2D, but sometimes there is a single
         # 3D movement... Make this more general
         # Don't make tool as large as tolerance, this removes all freedom
         self.shapes= [Circle(0.01*tolerance)]
         self.tolerance = tolerance
+        self.tolerance_small = kwargs['tol_small'] if 'tol_small' in kwargs else 0.
         bounds = bounds or {}
         # three movement directions --> 3 splines
         # impose jerk limits --> degree 3
@@ -46,12 +47,14 @@ class Tool(Vehicle):
         self.vxmax = bounds['vxmax'] if 'vxmax' in bounds else 0.5
         self.vymax = bounds['vymax'] if 'vymax' in bounds else 0.5
         self.vzmax = bounds['vzmax'] if 'vzmax' in bounds else 0.5
+
         self.axmin = bounds['axmin'] if 'axmin' in bounds else -1.
         self.aymin = bounds['aymin'] if 'aymin' in bounds else -1.
         self.azmin = bounds['azmin'] if 'azmin' in bounds else -1.
         self.axmax = bounds['axmax'] if 'axmax' in bounds else 1.
         self.aymax = bounds['aymax'] if 'aymax' in bounds else 1.
         self.azmax = bounds['azmax'] if 'azmax' in bounds else 1.
+
         self.jxmin = bounds['jxmin'] if 'jxmin' in bounds else -2.
         self.jymin = bounds['jymin'] if 'jymin' in bounds else -2.
         self.jzmin = bounds['jzmin'] if 'jzmin' in bounds else -2.
@@ -74,6 +77,7 @@ class Tool(Vehicle):
 
     def set_default_options(self):
         Vehicle.set_default_options(self)
+        self.options.update({'vel_limit':'machining', 'variable_tolerance':False})
 
     def define_trajectory_constraints(self, splines, horizon_time, skip=[]):
         x, y, z = splines
