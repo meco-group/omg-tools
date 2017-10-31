@@ -192,8 +192,8 @@ class Tool(Vehicle):
         shape = self.shapes[0]  # tool shape
         checkpoints, rad = shape.get_checkpoints()  # tool checkpoints, rad = shape_size
         # used 2*rad[0] below to get a larger margin and avoid numerical errors when checking if tool is inside shape
-        if ((isinstance(segment['shape'], (Rectangle, Square)) and
-            segment['shape'].orientation in [0.0, np.pi/2, np.pi, 2*np.pi, -np.pi/2, -np.pi, -2*np.pi]) and
+        if (isinstance(segment['shape'], (Rectangle, Square)) and
+            ((segment['shape'].orientation) % (np.pi/2) == 0) and
             (isinstance(shape, Circle) or
             (isinstance(shape, (Rectangle, Square)) and
              shape.orientation == 0))):
