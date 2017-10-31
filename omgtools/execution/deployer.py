@@ -102,6 +102,7 @@ class Deployer:
             if not hasattr(self.problem.vehicles[0], 'result_splines'):
                 # problem not yet solved before
                 update_time = 0.
+                current_time = 0.
                 states = self.problem.curr_state
                 inputs = None
                 dinputs = None
@@ -110,8 +111,9 @@ class Deployer:
                 trajectories = self.update(current_time, states=states, inputs=inputs, dinputs=dinputs,
                                            update_time=update_time, enforce_states=True, enforce_inputs=enforce_inputs)
             else:
-                update_time = 0.  # this input to the function is not used, and if used it would be wrong
-                current_time += self.problem.motion_times[0]
+                # problem was solved before
+                update_time = 0.  # this value is passed on to update, but is not used
+                current_time += self.problem.motion_times[0]  # step in time
                 enforce_inputs = True
 
                 # set new values at end values of previous iteration
