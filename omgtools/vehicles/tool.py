@@ -156,33 +156,6 @@ class Tool(Vehicle):
     def set_terminal_conditions(self, position):
         self.poseT = position
 
-    def get_init_spline_value(self, subgoals=None):
-        pos0 = self.prediction['state']
-        posT = self.poseT
-        if self.n_seg == 1:  # default
-            init_value = np.zeros((len(self.basis), 3))
-            for k in range(3):
-                # init_value[:, k] = np.r_[pos0[k]*np.ones(self.degree), np.linspace(
-                #     pos0[k], posT[k], len(self.basis) - 2*self.degree), posT[k]*np.ones(self.degree)]
-                init_value[:, k] = np.linspace(pos0[k], posT[k], len(self.basis))
-            init_value = [init_value]  # use same format as in n_seg > 1
-        else:  # multiple segments
-            if subgoals is None:
-                raise AttributeError('No subgoal given, while there are multiple segments, '
-                                    +'cannot compute initial guess')
-            else:
-                init_value = []
-                subgoals.insert(0, pos0)  # add initial pos
-                subgoals.append(posT)  # add goal pos
-                for l in range(len(subgoals)-1):
-                    init_val = np.zeros((len(self.basis), 3))
-                    for k in range(3):
-                        # init_value[:, k] = np.r_[pos0[k]*np.ones(self.degree), np.linspace(
-                        #     pos0[k], posT[k], len(self.basis) - 2*self.degree), posT[k]*np.ones(self.degree)]
-                        init_val[:, k] = np.linspace(subgoals[l][k], subgoals[l+1][k], len(self.basis))
-                    init_value.append(init_val)
-        return init_value
-
     def check_terminal_conditions(self):
         tol = self.options['stop_tol']
         if (np.linalg.norm(self.signals['state'][:, -1] - self.poseT) > tol or
