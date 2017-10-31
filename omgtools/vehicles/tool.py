@@ -248,26 +248,26 @@ class Tool(Vehicle):
         else:
             raise RuntimeError('Invalid segment obtained when setting up collision avoidance constraints')
 
-        # constrain end point of segment[0] to lie inside a box around its desired end position, because the spline
-        # must stay inside the inifinite line segment or complete circle, this can lead to problems if you don't constrain
-        # the end position to a box (e.g. a trajectory going outside of the overlap region between segments)
+        # Constraints above impose that the spline must stay inside the infinite version of the segment: the
+        # complete line, or the complete ring. This can cause a trajectory that is feasible, but still goes outside
+        # of the overlap region between two segments. Therefore, we can constrain the end point of segment[0] to lie
+        # inside a box around its desired end position. If we choose the box small enough, we get the guarantee
+        # that the connection point stays inside the overlap region. However, choosing this box too small may lead to
+        # suboptimal results. The overlap region mostly is a kind of rotated rectangle. When the orientation is
+        # 45 degrees, the effect is sqrt(2)~1.42. To take this into account we do self.tolerance*'factor'.
+        # A good value for 'factor' depends on the tightness of the tolerances: tight tolerance = small 'factor',
+        # larger tolerances = larger 'factor'.
 
-        # Todo: below the overlap region is roughly approximated by a scaled rectangle around segment['end'], this
-        # could be improved?
-        # build in a margin to take into account that the overlap region is not a rectangle
-        # with orientation 0, this effect has a maximum when orientation is 45 degrees, and has effect of sqrt(2)~1.42
+        # Warning: the value of this 'factor' may have a big influence on the total machining time!
 
-        # depending on the tightness of the tolerance, you may have to change the factor in self.tolerance*'factor'
-        # for tight tolerances, make 'factor' smaller, for larger tolerances, make it bigger
-        # the reason is that for tight tolerances and e.g. a sequence of a straight line and a ring, the constraints
-        # impose only that the trajectory must lie inside the ring and the line + its tolerances, not that the connection
-        # point has to lie within the overlap region
-        # for now, the overlap region is approximated by setting the 'factor' below
-        # Warning: the value of this parameter may have a big influence on the total machining time!
-        # self.define_constraint(position[0](1.) - segment['end'][0] - self.tolerance*0.9, -inf, 0.)
-        # self.define_constraint(-position[0](1.) + segment['end'][0] - self.tolerance*0.9, -inf, 0.)
-        # self.define_constraint(position[1](1.) - segment['end'][1] - self.tolerance*0.9, -inf, 0.)
-        # self.define_constraint(-position[1](1.) + segment['end'][1] - self.tolerance*0.9, -inf, 0.)
+        # However, simulations shows that this box constraint is in general only necessary
+        # when using variable tolerances, explaining the if-check below.
+
+        if self.options['variable_tolerance']:
+            self.define_constraint(position[0](1.) - segment['end'][0] - self.tolerance*0.9, -inf, 0.)
+            self.define_constraint(-position[0](1.) + segment['end'][0] - self.tolerance*0.9, -inf, 0.)
+            self.define_constraint(position[1](1.) - segment['end'][1] - self.tolerance*0.9, -inf, 0.)
+            self.define_constraint(-position[1](1.) + segment['end'][1] - self.tolerance*0.9, -inf, 0.)
 
     def splines2signals(self, splines, time):
         signals = {}
