@@ -158,126 +158,12 @@ class Deployer:
                 n_t = state_traj.shape[1]  # amount of points in trajectory
                 time = np.linspace(0, current_time+update_time, n_t)  # make time vector
 
-                plt.figure(2)
-                plt.subplot(2, 1, 1)
-                plt.cla()
-                plt.plot(time, state_traj[0, :])
-                plt.subplot(2, 1, 2)
-                plt.cla()
-                plt.plot(time, state_traj[1, :])
-                plt.pause(0.1)
+                # plot trajectories of state, input,...
+                self.plot_results(current_time, update_time)
 
-                plt.figure(3)
-                plt.subplot(2, 1, 1)
-                plt.cla()
-                plt.plot(time, input_traj[0, :])
-                plt.subplot(2, 1, 2)
-                plt.cla()
-                plt.plot(time, input_traj[1, :])
-                plt.pause(0.1)
-
-                plt.figure(4)
-                plt.cla()
-                # plot total velocity
-                plt.plot(time, np.sqrt(input_traj[0, :]**2+input_traj[1, :]**2))
-                plt.pause(0.1)
-
-                plt.figure(5)
-                plt.subplot(2, 1, 1)
-                plt.cla()
-                plt.plot(time, dinput_traj[0, :])
-                plt.subplot(2, 1, 2)
-                plt.cla()
-                plt.plot(time, dinput_traj[1, :])
-                plt.pause(0.1)
-
-                plt.figure(6)
-                plt.subplot(2, 1, 1)
-                plt.cla()
-                plt.plot(time, ddinput_traj[0, :])
-                plt.subplot(2, 1, 2)
-                plt.cla()
-                plt.plot(time, ddinput_traj[1, :])
-                plt.pause(0.1)
-
-                plt.figure(7)
-                plt.cla()
-                # plot trajectory
-                plt.plot(state_traj[0, :], state_traj[1, :])
-                # plot future trajectory
-                eval = np.linspace(0,1,100)
-                future_splines = self.problem.vehicles[0].result_spline_segments[1:]
-                for spline in future_splines:
-                    plt.figure(7)
-                    plt.plot(spline[0](eval),spline[1](eval),color='gray')
-                # plot environment
-                for room in self.problem.environment.room:
-                    points = room['shape'].draw(room['pose'][:2]+[0])[0][0]  # don't draw z
-                    # add first point again to close shape
-                    points = np.c_[points, [points[0,0], points[1,0]]]
-                    plt.plot(points[0,:], points[1,:], color='red', linestyle = '--', linewidth= 1.2)
-                    # plot GCode center points
-                    # plt.plot(room['start'][0], room['start'][1], 'gx')
-                    # plt.plot(room['end'][0], room['end'][1], 'gx')
-                plt.pause(0.1)
-
-                # Try to improve solution for last segment:
-                # If the latest segment was not what you liked, there are two options:
-                # 1) let the user decide about each segment if it is good or not
-                # user_input = ''
-                # while (not user_input in ['yes', 'no']):
-                #     user_input = raw_input("Are you happy with the latest computed segment (yes/no): ")
-                # if user_input == 'no':
-                # 2) automatically re-solve a slightly adapted version of the problem when no optimal solution was found
-                if self.problem.no_update and self.problem.local_problem.problem.stats()['return_status'] == 'Solve_Succeeded':
-                    self.problem.no_update = False
-                elif not self.problem.local_problem.problem.stats()['return_status'] == 'Solve_Succeeded':
-                    self.problem.no_update = True
-                    # reset saved trajectories
-                    # i.e. trajectories starting at the starting point of trajectory that was not successfully computed
-                    state_traj = np.array(state_traj_old)
-                    input_traj = np.array(input_traj_old)
-                    dinput_traj = np.array(dinput_traj_old)
-                    ddinput_traj = np.array(ddinput_traj_old)
-
-                    # reset states and inputs
-                    states_end = states  # + np.random.rand(3,)*1e-5  # perturb initial state randomly
-
-                    # compute perturbed input, that lies on the line between the last two inputs of the input traj
-                    inputs = [0, 0, 0]  # initialize
-                    # draw line between last and second last input to compute the y-coordinate of
-                    # the slightly changed initial point, that is right outside the connection of these two points
-                    x1, y1, z1 = input_traj[:,-2]  # second last point
-                    x2, y2, z2 = input_traj[:,-1]  # last point
-                    inputs[0] = x2+(x2-x1)*0.01  # perturb
-                    if (abs(y2 - y1) > 1e-3):  # line is not vertical
-                        a = (y2-y1)/(x2-x1)  # slope
-                        b = -x1*a+y1  # offset
-                        inputs[1] = a*inputs[0] + b
-                    else:
-                        inputs[1] = y1
-                    input_traj[:,-1] = inputs  # replace the old 'last point'
-
-                    # inputs = inputs_old + np.random.rand(3,)*1e-4  # perturb initial input randomly
-                    dinputs_end = dinputs
-                    ddinputs_end = ddinputs
-
-                    # reset time to previous value
-                    if self.current_time != 0.:
-                        self.current_time -= self.problem.motion_times[0]
-                    if current_time != 0.:
-                        current_time -= self.problem.motion_times[0]
-
-                    self.cnt += 1
-                    # if it takes too many iterations, stop
-                    if self.cnt > 20:
-                        raise RuntimeError('Couldn\'t find a feasible trajectory for this segment, stopping calculations')
-                        return
-
-                    # remove the motion time that was computed for the segment that was not accepted
-                    self.problem.motion_time_log.pop()
-                else:  # user was happy or optimal solution found, just continue
-                    self.cnt = 0
+                # check if problem was solved successfully
+                self.check_results(states, inputs, dinputs, ddinputs, current_time,
+                                   state_traj_old, input_traj_old, dinput_traj_old, ddinput_traj_old)
 
                 # check if target is reached
                 if (np.linalg.norm(self.problem.goal_state-state_traj[:, -1]) < 1e-2 and np.linalg.norm(input_traj[:, -1]) < 1e-2):
@@ -286,11 +172,144 @@ class Deployer:
         # target reached, print final information
         self.problem.final()
 
-        # save results:
-        ## 1) save state_traj
-        self.state_traj = state_traj
-        self.input_traj = input_traj
-        self.dinput_traj = dinput_traj
+    def check_results(self, states, inputs, dinputs, ddinputs, current_time, state_traj_old, input_traj_old, dinput_traj_old, ddinput_traj_old):
+        # Try to improve solution for last segment:
+        # If the latest segment was not what you liked, there are two options:
+        # 1) let the user decide about each segment if it is good or not
+        # user_input = ''
+        # while (not user_input in ['yes', 'no']):
+        #     user_input = raw_input("Are you happy with the latest computed segment (yes/no): ")
+        # if user_input == 'no':
+        # 2) automatically re-solve a slightly adapted version of the problem when no optimal solution was found
+        if self.problem.no_update and self.problem.local_problem.problem.stats()['return_status'] == 'Solve_Succeeded':
+            self.problem.no_update = False
+        elif not self.problem.local_problem.problem.stats()['return_status'] == 'Solve_Succeeded':
+            # problem was not solved well, don't go to next segment
+            import pdb; pdb.set_trace()  # breakpoint f9e5f88a //
+            self.problem.no_update = True
+            # reset saved trajectories
+            # i.e. trajectories starting at the starting point of trajectory that was not successfully computed
+            self.state_traj = np.array(state_traj_old)
+            self.input_traj = np.array(input_traj_old)
+            self.dinput_traj = np.array(dinput_traj_old)
+            self.ddinput_traj = np.array(ddinput_traj_old)
+
+            # reset states and inputs
+            self.states_end = states  # + np.random.rand(3,)*1e-5  # perturb initial state randomly
+
+            # compute perturbed input, that lies on the line between the last two inputs of the input traj
+            inputs = [0, 0, 0]  # initialize
+            # draw line between last and second last input to compute the y-coordinate of
+            # the slightly changed initial point, that is right outside the connection of these two points
+            x1, y1, z1 = self.input_traj[:,-2]  # second last point
+            x2, y2, z2 = self.input_traj[:,-1]  # last point
+            inputs[0] = x2+(x2-x1)*0.01  # perturb
+            if (abs(y2 - y1) > 1e-3):  # line is not vertical
+                a = (y2-y1)/(x2-x1)  # slope
+                b = -x1*a+y1  # offset
+                inputs[1] = a*inputs[0] + b
+            else:
+                inputs[1] = y1
+            self.input_traj[:,-1] = inputs  # replace the old 'last point'
+
+            # inputs = inputs_old + np.random.rand(3,)*1e-4  # perturb initial input randomly
+            self.dinputs_end = dinputs
+            self.ddinputs_end = ddinputs
+
+            # reset time to previous value
+            if self.current_time != 0.:
+                self.current_time -= self.problem.motion_times[0]
+            if current_time != 0.:
+                current_time -= self.problem.motion_times[0]
+
+            self.cnt += 1
+            # if it takes too many iterations, stop
+            if self.cnt > 20:
+                raise RuntimeError('Couldn\'t find a feasible trajectory for this segment, stopping calculations')
+                return
+
+            # remove the motion time that was computed for the segment that was not accepted
+            self.problem.motion_time_log.pop()
+        else:  # user was happy or optimal solution found, just continue
+            self.cnt = 0
+
+    def plot_results(self, current_time, update_time):
+        n_t = self.state_traj.shape[1]  # amount of points in trajectory
+        time = np.linspace(0, current_time+update_time, n_t)  # make time vector
+
+        plt.figure(2)
+        plt.subplot(2, 1, 1)
+        plt.cla()
+        plt.plot(time, self.state_traj[0, :])
+        plt.ylabel('x[mm]')
+        plt.subplot(2, 1, 2)
+        plt.cla()
+        plt.plot(time, self.state_traj[1, :])
+        plt.ylabel('y[mm]')
+        plt.pause(0.1)
+
+        plt.figure(3)
+        plt.subplot(2, 1, 1)
+        plt.cla()
+        plt.plot(time, self.input_traj[0, :])
+        plt.ylabel('vx[mm/s]')
+        plt.subplot(2, 1, 2)
+        plt.cla()
+        plt.plot(time, self.input_traj[1, :])
+        plt.ylabel('vy[mm/s]')
+        plt.pause(0.1)
+
+        plt.figure(4)
+        plt.cla()
+        # plot total velocity
+        plt.plot(time, np.sqrt(self.input_traj[0, :]**2+self.input_traj[1, :]**2))
+        plt.ylabel('v[mm/s]')
+        plt.pause(0.1)
+
+        plt.figure(5)
+        plt.subplot(2, 1, 1)
+        plt.cla()
+        plt.plot(time, self.dinput_traj[0, :])
+        plt.ylabel('ax[mm/s^2]')
+        plt.subplot(2, 1, 2)
+        plt.cla()
+        plt.plot(time, self.dinput_traj[1, :])
+        plt.ylabel('ay[mm/s^2]')
+        plt.pause(0.1)
+
+        plt.figure(6)
+        plt.subplot(2, 1, 1)
+        plt.cla()
+        plt.plot(time, self.ddinput_traj[0, :])
+        plt.ylabel('jx[mm/s^3]')
+        plt.subplot(2, 1, 2)
+        plt.cla()
+        plt.plot(time, self.ddinput_traj[1, :])
+        plt.ylabel('jy[mm/s^3]')
+        plt.pause(0.1)
+
+        plt.figure(7)
+        plt.cla()
+        # plot trajectory
+        plt.plot(self.state_traj[0, :], self.state_traj[1, :])
+        plt.xlabel('x[mm]')
+        plt.ylabel('y[mm]')
+        # plot future trajectory
+        eval = np.linspace(0,1,100)
+        future_splines = self.problem.vehicles[0].result_spline_segments[1:]
+        plt.figure(7)
+        for spline in future_splines:
+            plt.plot(spline[0](eval),spline[1](eval),color='gray')
+        # plot environment
+        for room in self.problem.environment.room:
+            points = room['shape'].draw(room['pose'][:2]+[0])[0][0]  # don't draw z, always pick 0.
+            # add first point again to close shape
+            points = np.c_[points, [points[0,0], points[1,0]]]
+            plt.plot(points[0,:], points[1,:], color='red', linestyle = '--', linewidth= 1.2)
+            # plot GCode center points
+            # plt.plot(room['start'][0], room['start'][1], 'gx')
+            # plt.plot(room['end'][0], room['end'][1], 'gx')
+        plt.pause(0.1)
 
     def save_results(self, count=0, first=False):
         data = np.c_[self.state_traj[0,:], self.input_traj[0,:], self.dinput_traj[0,:],
