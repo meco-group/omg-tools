@@ -33,7 +33,7 @@ class GCodeProblem(Problem):
         Problem.__init__(self, fleet, environment, options, label='gcodeproblem')
         self.n_segments = n_segments  # amount of GCode commands to connect
         if self.n_segments > len(self.environment.room):
-            raise RuntimeError('Number of segments is larger than the amount of ' +
+            raise RuntimeError('Number of segments to combine is larger than the amount of ' +
                                'GCode segments/rooms provided')
         self.init_time = None
         self.start_time = 0.
@@ -132,30 +132,6 @@ class GCodeProblem(Problem):
     # Deploying related functions
     # ========================================================================
 
-    def reinitialize(self, father=None):
-
-        # Todo: this code is never called?
-
-        if father is None:
-            father = self.father
-        Problem.reinitialize(self)
-        # compute initial guess for all spline values
-        subgoals = []
-        for k in range(self.n_segments-1):
-            room1 = self.environment.room[k]
-            room2 = self.environment.room[k+1]
-            # subgoals is given as [initial position, center(!) of overlap of regions, overall goal]
-            # compute center of overlap region of the area that is shared by two subsequent rooms
-            # (after taking tolerance into account)
-
-            # Todo: change this from rooms to segments: e.g. how handle a circle arc?
-            # Put subgoal on a line between the two segments? (i.e. a line with correct orientation)
-            subgoals.append(compute_rectangle_overlap_center(room1['border']['shape'], room1['border']['position'],
-                                                             room2['border']['shape'], room2['border']['position']))
-        init = vehicle.get_init_spline_value(subgoals = subgoals)
-        for k in range(self.n_segments):
-            father.set_variables(init[k], self.vehicles[0], 'splines_seg'+str(k))
-
     def store(self, current_time, update_time, sample_time):
         segment_times = []
         # compute total remaining motion time
@@ -181,29 +157,6 @@ class GCodeProblem(Problem):
     # ========================================================================
     # Simulation related functions
     # ========================================================================
-
-    def simulate(self, current_time, simulation_time, sample_time):
-
-        # Todo: this code is not called?
-
-        horizon_time = 0
-        # compute total remaining motion time
-        for room in range(self.n_segments):
-            horizon_time += self.father.get_variables(self, 'T'+str(room))[0][0]
-        if self.init_time is None:
-            rel_current_time = 0.0
-        else:
-            rel_current_time = self.init_time
-        if horizon_time < sample_time: # otherwise interp1d() crashes
-            return
-        if horizon_time < simulation_time:
-            simulation_time = horizon_time
-        if horizon_time - rel_current_time < simulation_time:
-            simulation_time = horizon_time - rel_current_time
-        self.compute_partial_objective(current_time+simulation_time-self.start_time)
-        self.vehicles[0].simulate(simulation_time, sample_time)
-        self.vehicles[0].update_plots()
-        self.update_plots()
 
     def stop_criterium(self, current_time, update_time):
         T_tot = 0
@@ -235,9 +188,9 @@ class GCodeProblem(Problem):
         else:
             T_guess = []
             for idx in range(self.n_segments):
-                T_guess.append(self.father.get_variables(self, 'T'+str(idx))[0][0])  # remaining motion time for first room
+                T_guess.append(self.father.get_variables(self, 'T'+str(idx))[0][0])
         for idx in range(self.n_segments):
-            self.father.set_variables(T_guess[idx], self, 'T'+str(idx))  # only change time of first room
+            self.father.set_variables(T_guess[idx], self, 'T'+str(idx))
 
         # since we are simulating per segment, no further shifting of splines is required
         # if you want to simulate with a receding horizon, add:
