@@ -184,8 +184,7 @@ class Tool(Vehicle):
     def define_collision_constraints(self, segment, splines, horizon_time):
         # set up the constraints that ensure that spline stays inside segment shape
         x, y, z = splines
-        position = [x, y]  # 2D for now
-        # Todo: use 3D or 2D collision avoidance?
+        position = [x, y]  # collision avoidance in xy-plane (2D)
 
         # check room shape and orientation,
         # check vehicle shape and orientation
@@ -218,10 +217,8 @@ class Tool(Vehicle):
             # with a = the slope, and b = the offset
             # then we can relax this to <= tol and >= tol
 
-            # Todo: now we impose that position must lie somewhere on the connection, not that it must lie between
-            # start and end. Adapt?
-            # Todo: use hyperplanes?
-            # hyp_room = segment['shape'].get_hyperplanes(position = segment['position'])
+            # Todo: constraint imposes that position must lie somewhere on the connection,
+            # not that it must lie between start and end. Improve by using hyperplanes?
 
             x1, y1, z1 = segment['start']
             x2, y2, z2 = segment['end']
@@ -237,11 +234,11 @@ class Tool(Vehicle):
             self.define_constraint(-a*position[0] - b + position[1] - tolerance + 2*rad[0], -inf, 0.)
         elif (isinstance(segment['shape'], (Ring)) and
             (isinstance(shape, Circle))):
-            # we have a ring/circle segment
+            # we have a Ring/Circle segment
             # we impose that the trajectory/splines must lie within the outside and inside circle
 
-            # Todo: for now we impose that the trajectory must lie inside the complete ring, not that it
-            # must lie inside the ring segment. So not sure that the solver picks the right arc...
+            # Todo: constraint imposes that the trajectory must lie inside the complete ring, not that it
+            # may only lie inside the ring segment. Improve?
 
             center = segment['pose']
             self.define_constraint(-(position[0] - center[0])**2 - (position[1] - center[1])**2 +
