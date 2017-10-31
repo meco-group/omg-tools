@@ -79,6 +79,7 @@ class Deployer:
         self.reset()
 
         # boolean to select if we want to go to next segment
+        # e.g. is True if current solution was infeasible
         self.problem.no_update = False
 
         # create figures
@@ -86,7 +87,7 @@ class Deployer:
         plt.figure(3)  # input
         plt.figure(4)  # dinput
         plt.figure(5)  # ddinput
-        plt.figure(6)  # trajectory
+        plt.figure(6)  # scene
 
         # initialize trajectories
         self.state_traj = np.c_[self.problem.curr_state]
@@ -106,8 +107,8 @@ class Deployer:
                 dinputs = None
                 ddinputs = None
                 enforce_inputs = False  # since there are no inputs yet
-                current_time = 0.
-                trajectories = self.update(current_time, states=states, inputs=inputs, dinputs=dinputs, update_time=update_time, enforce_states=True, enforce_inputs=enforce_inputs)
+                trajectories = self.update(current_time, states=states, inputs=inputs, dinputs=dinputs,
+                                           update_time=update_time, enforce_states=True, enforce_inputs=enforce_inputs)
             else:
                 update_time = 0.  # this input to the function is not used, and if used it would be wrong
                 current_time += self.problem.motion_times[0]
@@ -119,7 +120,8 @@ class Deployer:
                 dinputs = np.array(self.dinputs_end)
                 ddinputs = np.array(self.ddinputs_end)
 
-                trajectories = self.update(current_time, states=states, inputs=inputs, dinputs=dinputs, update_time=update_time, enforce_states=True, enforce_inputs=enforce_inputs)
+                trajectories = self.update(current_time, states=states, inputs=inputs, dinputs=dinputs,
+                                           update_time=update_time, enforce_states=True, enforce_inputs=enforce_inputs)
                 self.current_time = current_time + self.problem.motion_times[0]
 
             # computed motion time for first segment
@@ -311,6 +313,7 @@ class Deployer:
         plt.pause(0.1)
 
     def save_results(self, count=0, first=False):
+        # write results to file
         data = np.c_[self.state_traj[0,:], self.input_traj[0,:], self.dinput_traj[0,:],
                      self.state_traj[1,:], self.input_traj[1,:], self.dinput_traj[1,:],
                      self.state_traj[2,:], self.input_traj[2,:], self.dinput_traj[2,:]]  # pos, vel, acc in xyz
