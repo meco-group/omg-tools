@@ -103,17 +103,13 @@ class Tool(Vehicle):
 
         self.define_constraint(-ddx + (horizon_time**2)*self.axmin, -inf, 0., skip=skip)
         self.define_constraint(-ddy + (horizon_time**2)*self.aymin, -inf, 0., skip=skip)
-        # self.define_constraint(-ddz + (horizon_time**2)*self.azmin, -inf, 0.)
         self.define_constraint(ddx - (horizon_time**2)*self.axmax, -inf, 0., skip=skip)
         self.define_constraint(ddy - (horizon_time**2)*self.aymax, -inf, 0., skip=skip)
-        # self.define_constraint(ddz - (horizon_time**2)*self.azmax, -inf, 0.)
 
         self.define_constraint(-dddx + (horizon_time**3)*self.jxmin, -inf, 0.)
         self.define_constraint(-dddy + (horizon_time**3)*self.jymin, -inf, 0.)
-        # self.define_constraint(-dddz + (horizon_time**3)*self.jzmin, -inf, 0.)
         self.define_constraint(dddx - (horizon_time**3)*self.jxmax, -inf, 0.)
         self.define_constraint(dddy - (horizon_time**3)*self.jymax, -inf, 0.)
-        # self.define_constraint(dddz - (horizon_time**3)*self.jzmax, -inf, 0.)
 
         # keep z at zero
         self.define_constraint(z-1e-5, -inf,0.)
