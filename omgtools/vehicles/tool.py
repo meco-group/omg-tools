@@ -226,6 +226,7 @@ class Tool(Vehicle):
             if x1 != x2:
                 a = (y2-y1)/(x2-x1)
             else:
+                # should never come here, since this case would evaluate to True for the first if-check
                 raise ValueError('Trying to compute the slope of a vertical line,'
                                + ' impose constraints with alternative formulation')
             b = y1 - x1*a
