@@ -756,57 +756,56 @@ class GCodeSchedulerProblem(Problem):
         init_splines = []
         motion_times = []
 
-        if hasattr(self, 'guess_coeffs'):
-            # guess provided from a previous run
-            for k in range(self.n_segments):
-                init_splines.append(np.transpose(self.guess_coeffs[self.n_current_block + k]))
-                motion_times.append(np.transpose(self.guess_times[self.n_current_block + k]))
-        else:
-            if hasattr(self, 'local_problem') and hasattr(self.local_problem.father, '_var_result'):
-                # local_problem was already solved, re-use previous solutions to form initial guess
-                if self.n_segments > 1:
-                    # if updating in receding horizon with small steps:
-                    # combine first two spline segments into a new spline = guess for new current segment
-                    # init_spl, motion_time = self.get_init_guess_combined_segment()
+        if hasattr(self, 'local_problem') and hasattr(self.local_problem.father, '_var_result'):
+            # local_problem was already solved, re-use previous solutions to form initial guess
+            if self.n_segments > 1:
+                # end up here when combining two or more segments --> take solution of segment1
+                # as initial guess
 
-                    # if updating per segment:
-                    # the first segment disappears and the guess is given by data of next segment
-                    # spline through next segment and its motion time
-                    init_splines.append(np.array(self.local_problem.father.get_variables()[self.vehicles[0].label,'splines_seg1']))
-                    motion_times.append(self.local_problem.father.get_variables(self.local_problem, 'T1',)[0][0])
+                # if updating in receding horizon with small steps:
+                # combine first two spline segments into a new spline = guess for new current segment
+                # init_spl, motion_time = self.get_init_guess_combined_segment()
 
-                if self.n_segments > 2:
-                    # use old solutions for segment 2 until second last segment, these don't change
-                    for k in range(2, self.n_segments):
-                        # Todo: strange notation required, why not the same as in schedulerproblem.py?
-                        init_splines.append(np.array(self.local_problem.father.get_variables()[self.vehicles[0].label,'splines_seg'+str(k)]))
-                        motion_times.append(self.local_problem.father.get_variables(self.local_problem, 'T'+str(k),)[0][0])
+                # if updating per segment:
+                # the first segment disappears and the guess is given by data of next segment
+                # spline through next segment and its motion time
+                init_splines.append(np.array(self.local_problem.father.get_variables()[self.vehicles[0].label,'splines_seg1']))
+                motion_times.append(self.local_problem.father.get_variables(self.local_problem, 'T1',)[0][0])
+
                 # only make guess using center line for last segment
                 guess_idx = [self.n_segments-1]
-            else:
-                # local_problem was not solved yet, make guess using center line for all segments
-                guess_idx = range(self.n_segments)
+            if self.n_segments > 2:
+                # use old solutions for segment 2 until second last segment, these don't change
+                for k in range(2, self.n_segments):
+                    # Todo: strange notation required, why not the same as in schedulerproblem.py?
+                    init_splines.append(np.array(self.local_problem.father.get_variables()[self.vehicles[0].label,'splines_seg'+str(k)]))
+                    motion_times.append(self.local_problem.father.get_variables(self.local_problem, 'T'+str(k),)[0][0])
 
-            # make guesses based on center line of GCode
-            for k in guess_idx:
-                init_spl, motion_time = self.get_init_guess_new_segment(self.segments[k])
-                init_splines.append(init_spl)
-                motion_times.append(motion_time)
+                # only make guess using center line for last segment
+                guess_idx = [self.n_segments-1]
+            if (self.n_segments==1 and self._n_segments>1):
+                # looking at last segment when you were originally combining two or more segments -->
+                # take solution of segment1 as initial guess
+                init_splines.append(np.array(self.local_problem.father.get_variables()[self.vehicles[0].label,'splines_seg1']))
+                motion_times.append(self.local_problem.father.get_variables(self.local_problem, 'T1',)[0][0])
+                # unneccessary to make a new guess
+                guess_idx = []
+        else:
+            # local_problem was not solved yet, make guess using center line for all segments
+            guess_idx = range(self.n_segments)
+
+        # make guesses based on center line of GCode
+        for k in guess_idx:
+            init_spl, motion_time = self.get_init_guess_new_segment(self.segments[k])
+            init_splines.append(init_spl)
+            motion_times.append(motion_time)
 
         # pass on initial guess
         self.vehicles[0].set_init_spline_values(init_splines, n_seg = self.n_segments)
 
-        if hasattr (self.vehicles[0], 'signals'):
-            # use current vehicle velocity as starting velocity for next frame
-            self.vehicles[0].set_initial_conditions(self.curr_state, input = self.vehicles[0].signals['input'][:,-1],
-                                                                     dinput = self.vehicles[0].signals['dinput'][:,-1])
-        elif self.with_deployer:
-            # initial conditions are already set by calling problem.predict()
-            # which calls vehicle.predict in deployer.run_segment(),
-            # so don't repeat here since this would erase the input and dinput values
-            pass
-        else:
-            self.vehicles[0].set_initial_conditions(self.curr_state)
+        # deployer.run_segment() calls vehicle.predict(), which calls problem.predict(),
+        # and sets the initial conditions,
+        # so don't repeat here since this would erase the input and dinput values
         self.vehicles[0].set_terminal_conditions(self.segments[-1]['end'])
 
         end_time = time.time()
@@ -820,6 +819,51 @@ class GCodeSchedulerProblem(Problem):
         if isinstance(segment['shape'], Rectangle):
             # generate a feasible initial guess with a bang-bang jerk profile
             init_guess, motion_time = self.get_init_guess_bangbang_jerk(segment)
+        elif isinstance(segment['shape'], Ring):
+            # create feasible initial guess for x and y, meaning that r_in <= x**2+y**2 <= r_out,
+            # Note: this does not mean that all coefficients of x and y lie inside the ring segment when plotting
+            init_guess, motion_time = self.get_init_guess_ring(segment)
+            # Note: initial and final velocity and acceleration are already
+            # forced to zero inside get_init_guess_ring()
+        else:
+            raise RuntimeError('Segment with invalid (not Rectangle or Ring) shape: ', segment['shape'])
+
+        pos_x = BSpline(self.vehicles[0].basis, init_guess[:,0])
+        pos_y = BSpline(self.vehicles[0].basis, init_guess[:,1])
+
+        dpos_x = pos_x.derivative(1)
+        ddpos_x = pos_x.derivative(2)
+        dddpos_x = pos_x.derivative(3)
+        dpos_y = pos_y.derivative(1)
+        ddpos_y = pos_y.derivative(2)
+        dddpos_y = pos_y.derivative(3)
+
+        eval = np.linspace(0,1,100)
+        maxvx = max(dpos_x(eval)/motion_time)
+        maxvy = max(dpos_y(eval)/motion_time)
+        maxax = max(ddpos_x(eval)/motion_time**2)
+        maxay = max(ddpos_y(eval)/motion_time**2)
+        maxjx = max(dddpos_x(eval)/motion_time**3)
+        maxjy = max(dddpos_y(eval)/motion_time**3)
+
+        if maxvx > self.vehicles[0].vxmax:
+            print maxvx
+            raise RuntimeError('Velx guess too high')
+        if maxvy > self.vehicles[0].vymax:
+            print maxvy
+            raise RuntimeError('Vely guess too high')
+        if maxax > self.vehicles[0].axmax:
+            print maxax
+            raise RuntimeError('Accx guess too high')
+        if maxay > self.vehicles[0].aymax:
+            print maxay
+            raise RuntimeError('Accy guess too high')
+        if maxjx > self.vehicles[0].jxmax:
+            print maxjx
+            raise RuntimeError('Jerkx guess too high')
+        if maxjy > self.vehicles[0].jymax:
+            print maxjy
+            raise RuntimeError('Jerky guess too high')
 
         return init_guess, motion_time
 
@@ -831,7 +875,7 @@ class GCodeSchedulerProblem(Problem):
 
         j_lim = self.vehicles[0].jxmax  # jerk limit
         if j_lim != self.vehicles[0].jymax:
-            raise RuntimeError('Generating initial guess only possible for x-value = y-value')
+            raise RuntimeError('Generating initial guess only possible for x-limit = y-limit')
         if j_lim != -self.vehicles[0].jxmin:
             raise RuntimeError('Generating initial guess only possible for upper and lower bounds of equal size')
 
@@ -865,37 +909,9 @@ class GCodeSchedulerProblem(Problem):
         pos = running_integral(vel)
         guess = pos.coeffs  # coefficients guess
 
-        if isinstance(segment['shape'], Rectangle):
-            # shift and scale to obtain trajectory from x0 to x1
-            guess_x = [g/pos.coeffs[-1]*(x1-x0)+x0 for g in guess]
-            guess_y = [g/pos.coeffs[-1]*(y1-y0)+y0 for g in guess]
-        elif isinstance(segment['shape'], Ring):
-            # Note: guess contains angle (theta) values for this case
-
-            # don't use these ones, the start and end angle include the extension of the shape
-            # theta0 = segment['shape'].start_angle
-            # theta1 = segment['shape'].end_angle
-            center = segment['position']
-
-            theta0 = np.arctan2(y0 - center[1], x0 - center[0])  # start angle
-            theta1 = np.arctan2(y1 - center[1], x1 - center[0])  # end angle
-            if segment['shape'].direction == 'CW':  # theta must decrease
-                if theta0 < theta1:  # theta0 needs to be bigger
-                    theta0 += 2*np.pi
-            else:  # counter-clockwise, theta must increase
-                if theta0 > theta1:  # theta1 needs to be bigger
-                    theta1 += 2*np.pi
-
-            # calculate circle radius
-            r = np.sqrt((center[0] - x0)**2 + (center[1] - y0)**2)
-            # r += self.vehicles[0].tolerance  # shift outwards
-            # scale with theta range, and shift with start angle
-            guess = [g*(theta1-theta0)/pos.coeffs[-1]+theta0 for g in guess]
-            # convert angles to position
-            guess_x = r*np.cos(guess) + center[0]
-            guess_y = r*np.sin(guess) + center[1]
-        else:
-            raise RuntimeError('Segment with invalid (not Rectangle or Ring) shape: ', segment['shape'])
+        # shift and scale to obtain trajectory from x0 to x1
+        guess_x = [g/pos.coeffs[-1]*(x1-x0)+x0 for g in guess]
+        guess_y = [g/pos.coeffs[-1]*(y1-y0)+y0 for g in guess]
 
         # initial and final velocity and acceleration are 0
         guess_x[0] = x0
@@ -913,30 +929,10 @@ class GCodeSchedulerProblem(Problem):
         guess_y[-2] = y1
         guess_y[-1] = y1
 
-        guess_z = 0*np.array(guess_x)
+        guess_z = 0*np.array(guess_x)  # z is always zero normally
         init_guess = np.c_[guess_x, guess_y, guess_z]
 
-        # construct corresponding splines
-        pos_x = BSpline(self.vehicles[0].basis, guess_x)
-        vel_x = pos_x.derivative(1)
-        acc_x = pos_x.derivative(2)
-        jerk_x = pos_x.derivative(3)
-
-        pos_y = BSpline(self.vehicles[0].basis, guess_y)
-        vel_y = pos_y.derivative(1)
-        acc_y = pos_y.derivative(2)
-        jerk_y = pos_y.derivative(3)
-
-        # determine which limit is the most strict, and therefore determines the motion_time
-        eval = np.linspace(0,1,100)
-        # take into account scaling factor, with appropriate power
-        motion_time_j = (max(np.r_[abs(jerk_x(eval)), abs(jerk_y(eval))])/float(j_lim))**(1/3.)
-        a_lim = self.vehicles[0].axmax  # jerk limit
-        motion_time_a = np.sqrt(max(np.r_[abs(acc_x(eval)), abs(acc_y(eval))])/float(a_lim))
-        v_lim = self.vehicles[0].vxmax  # jerk limit
-        motion_time_v = max(np.r_[abs(vel_x(eval)), abs(vel_y(eval))])/float(v_lim)
-        motion_time = max(motion_time_j, motion_time_a, motion_time_v)
-        motion_time = 1.05*motion_time  # take some margin to avoid numerical errors
+        motion_time = self.get_init_guess_motion_time(segment, coeff_guess=init_guess)
 
         return init_guess, motion_time
 
@@ -980,44 +976,124 @@ class GCodeSchedulerProblem(Problem):
 
         return init_splines, motion_time
 
-    def get_init_guess_motion_time(self, segment):
-        # predict the time of each of the 8 phases of the guess:
-        # 1: j_lim
-        # 2: a_lim
-        # 3: -j_lim
-        # 4 & 5: v_lim
-        # 6: -j_lim
-        # 7: -a_lim
-        # 8: j_lim
-        j_lim = self.vehicles[0].jxmax
-        a_lim = self.vehicles[0].axmax
-        v_lim = self.vehicles[0].vxmax
+    def get_init_guess_ring(self, segment):
+        # solve optimization problem to get a feasible initial guess for a circle segment
 
-        if isinstance(segment['shape'], Rectangle):
-            distance = 0
-            for l in range(len(segment['start'])):
-                distance += (segment['end'][l] - segment['start'][l])**2
-        elif isinstance(segment['shape'], Ring):
-            # split arc in two lines going from start point, respectively end point to half of the ring
-            radius = (segment['shape'].radius_in + segment['shape'].radius_out)*0.5
-            # arc length
-            distance = radius * abs(segment['shape'].end_angle - segment['shape'].start_angle)
-        else:
-            raise RuntimeError('Invalid shape of segment given in get_init_guess_motion_time: ', segment['shape'])
+        basis = self.vehicles[0].basis
 
-        # determine what the limiting factor is when applying max jerk in phase 1
-        # this factor determines the selected T1
-        T1_acc = (a_lim/j_lim)  # apply max jerk, when is amax reached
-        T1_vel = np.sqrt(v_lim/j_lim)  # apply max jerk, when is vmax reached
-        T1_pos = (32 * distance/j_lim)**(1/3.)/4  # apply max jerk, when is distance reached
-        T1 = min([T1_acc, T1_vel, T1_pos])
-        T3 = T1
-        if T1 == T1_pos:  # apply max jerk, until half distance is reached
-            T2 = 0.
-            T4 = 0.
-        elif T1 == T1_vel:  # apply max jerk until vmax is reached and keep vmax until d/2 reached
-            T2 = 0.
-            T4 = float(distance/2.-(j_lim*T1**3))/v_lim
+        # make variables
+        X = MX.sym("x", 2 * len(basis))
+        cx = X[:len(basis)]
+        cy = X[len(basis):]
+
+        # unknown splines
+        s_x = BSpline(basis,cx)
+        s_y = BSpline(basis,cy)
+
+        # set up constraints
+        con = []
+        # spline needs to lie inside ring segment
+        con.extend([-((s_x-segment['position'][0])**2 + (s_y-segment['position'][1])**2) + segment['shape'].radius_in**2,
+                     ((s_x-segment['position'][0])**2 + (s_y-segment['position'][1])**2) - segment['shape'].radius_out**2])
+        # translate to constraints on the coeffs
+        con = vertcat(*[c.coeffs for c in con])
+        con = vertcat(con,
+                       s_x(0.) - (segment['start'][0]),  # fix initial position
+                       s_y(0.) - (segment['start'][1]),
+                       s_x(1.) - (segment['end'][0]),  # fix final position
+                       s_y(1.) - (segment['end'][1]),
+                       s_x.derivative(1)(0.),  # velocity zero at start
+                       s_y.derivative(1)(0.),
+                       s_x.derivative(1)(1.),  # velocity zero at end
+                       s_y.derivative(1)(1.),
+                       s_x.derivative(2)(0.),  # acceleration zero at start
+                       s_y.derivative(2)(0.),
+                       s_x.derivative(2)(1.),  # acceleration zero at end
+                       s_y.derivative(2)(1.),)
+
+        # set up objective function
+        circ = (s_x-segment['position'][0])**2 + (s_y-segment['position'][1])**2
+        # stay as close to center line of ring as possible
+        obj = ((definite_integral(circ,0,1.) - ((segment['shape'].radius_out+segment['shape'].radius_in)*0.5)**2)**2)
+        # limit the jerk of the trajectory, to avoid nervous solutions
+        # obj += definite_integral(s_x.derivative(3)**2,0,1.) + definite_integral(s_y.derivative(3)**2,0,1.)
+
+        # make nlp
+        nlp = {'x':X, 'f':obj, 'g':con}
+        # set options
+        options = {}
+        # options['ipopt.linear_solver'] = 'ma57'  # must be installed separately
+        options['ipopt.tol'] = 1e-8
+        options['ipopt.print_level'] = 0
+        options['print_time'] = 0
+        options['ipopt.warm_start_init_point'] = 'yes'
+        options['ipopt.max_iter'] = 3000
+        # create solver
+        solver = nlpsol('solver','ipopt', nlp, options)
+
+        # set bounds for constraints
+        lbg = np.r_[-np.inf * np.ones(con.size1()-12), np.zeros(12)]
+        ubg = np.r_[np.zeros(con.size1()-12), np.zeros(12)]
+        # set bounds for variables
+        lbx = -1000 * np.ones(X.size1())
+        ubx = 1000 * np.ones(X.size1())
+
+        # create solver input
+        solver_input = {}
+        solver_input['lbx'] = lbx
+        solver_input['ubx'] = ubx
+        solver_input['lbg'] = lbg
+        solver_input['ubg'] = ubg
+
+        # make initial guess
+        center = segment['position']
+        theta0 = np.arctan2(segment['start'][1] - center[1], segment['start'][0] - center[0])  # start angle
+        theta1 = np.arctan2(segment['end'][1] - center[1], segment['end'][0] - center[0])  # end angle
+        if segment['shape'].direction == 'CW':  # theta must decrease
+            if theta0 < theta1:  # theta0 needs to be bigger
+                theta0 += 2*np.pi
+        else:  # counter-clockwise, theta must increase
+            if theta0 > theta1:  # theta1 needs to be bigger
+                theta1 += 2*np.pi
+        # calculate circle radius
+        r = np.sqrt((center[0] - segment['start'][0])**2 + (center[1] - segment['start'][1])**2)
+        angles = np.linspace(theta0, theta1, len(basis))
+        x0 = r*np.cos(angles) + center[0]
+        y0 = r*np.sin(angles) + center[1]
+        var0 = np.r_[x0, y0] #initial guess
+
+        # add initial guess to solver
+        solver_input['x0'] = var0
+
+        # solve optimization problem
+        solver_output = solver(**solver_input)
+
+        # process ouput
+        X = solver_output['x']
+        init_guess_x = X[:len(basis)]
+        init_guess_y = X[len(basis):2*len(basis)]
+        x = BSpline(basis, init_guess_x)
+        y = BSpline(basis, init_guess_y)
+
+        init_guess_x = np.array(init_guess_x.T)[0]
+        init_guess_y = np.array(init_guess_y.T)[0]
+        init_guess_z = 0*init_guess_x
+        init_guess = np.c_[init_guess_x, init_guess_y, init_guess_z]
+
+        # plot results
+        # eval = np.linspace(0, 1, 100)
+        # plt.figure(20)
+        # plt.plot(x(eval), y(eval), 'g')  # guess
+        # points = segment['shape'].draw(segment['pose'][:2]+[0])[0][0]  # don't draw z, always pick 0.
+        # # add first point again to close shape
+        # points = np.c_[points, [points[0,0], points[1,0]]]
+        # plt.plot(points[0,:], points[1,:], color='red', linestyle = '--', linewidth= 1.2)  # ring segment
+        # plt.plot(x0, y0, 'bx')  # coeffs guess before solving
+        # plt.plot(init_guess_x,init_guess_y, 'gx')  # coeffs from solution
+
+        motion_time = self.get_init_guess_motion_time(segment, coeff_guess=init_guess)
+
+        return init_guess, motion_time
         else:
             T2_pos = (2*np.sqrt((a_lim*(a_lim**3 + 4*distance*j_lim**2))/4.) - 3*a_lim**2)/(2.*a_lim*j_lim)  # distance limit
             T2_vel = (float(-a_lim**2)/j_lim + v_lim)/a_lim
