@@ -46,24 +46,26 @@ class GCodeSchedulerProblem(Problem):
         self.split_length = kwargs['split_length'] if 'split_length' in kwargs else 0.
         # % of total segment length for the length of the start and end part, when using variable tolerance
         self.split_small = kwargs['split_small'] if 'split_small' in kwargs else 0.1
+
+        # amount of segments to combine
+        self.n_segments = kwargs['n_segments'] if 'n_segments' in kwargs else 1
+        self._n_segments = self.n_segments  # save original value (for plotting)
+
         environment = self.get_environment(GCode, tool)
         # pass on environment and tool to Problem constructor,
         # generates self.vehicles and self.environment
         # self.vehicles[0] = tool
         Problem.__init__(self, tool, environment, options, label='schedulerproblem')
-        self.n_current_block = 0  # number of the block that the tool will follow next/now
         self.curr_state = self.vehicles[0].prediction['state'] # initial vehicle position
         self.goal_state = self.vehicles[0].poseT # overall goal
         self.problem_options = options  # e.g. selection of problem type (freeT, fixedT)
         self.problem_options['freeT'] = True  # only this one is available
+
+        self.n_current_block = 0  # number of the block that the tool will follow next/now
         self.start_time = 0.
         self.update_times=[]
         self.motion_time_log = []  # save the required motion times
-        self.n_segments = kwargs['n_segments'] if 'n_segments' in kwargs else 1  # amount of segments to combine
-        self._n_segments = self.n_segments  # save original value (for plotting)
         self.segments = []
-        # are we running over the GCode using the deployer
-        self.with_deployer = kwargs['with_deployer'] if 'with_deployer' in kwargs else False
 
         if not isinstance(self.vehicles[0].shapes[0], Circle):
             raise RuntimeError('Vehicle shape can only be a Circle when solving a GCodeSchedulerProblem')
@@ -92,13 +94,14 @@ class GCodeSchedulerProblem(Problem):
         # total number of considered segments in the provided GCode
         self.cnt = len(self.environment.room)-1
 
-        # get initial guess for trajectories (based on central line) and motion times, for all segments
+        # get initial guess for trajectories (based on central line, with bang-bang jerk)
+        # and motion times, for all segments
         init_guess, self.motion_times = self.get_init_guess()
 
         # get a problem representation of the combination of segments
         # the gcodeschedulerproblem (self) has a local_problem (gcodeproblem) at each moment
         self.local_problem = self.generate_problem()
-        # Todo: is this function doing what we want?
+        # pass on init_guess
         self.local_problem.reset_init_guess(init_guess)
 
     def solve(self, current_time, update_time):
@@ -114,7 +117,7 @@ class GCodeSchedulerProblem(Problem):
             self.curr_state = self.vehicles[0].signals['state'][:,-1]
 
         # did we move far enough over the current segment yet?
-        print self.n_current_block
+        print 'Current GCode block: ', self.n_current_block
         segments_valid = self.check_segments()
         if not segments_valid:
             # add new segment and remove first one
@@ -154,27 +157,6 @@ class GCodeSchedulerProblem(Problem):
     def store(self, current_time, update_time, sample_time):
         # call store of local problem
         self.local_problem.store(current_time, update_time, sample_time)
-
-    def simulate(self, current_time, simulation_time, sample_time):
-        # save segment
-        # store trajectories
-        if not hasattr(self, 'segment_storage'):
-            self.segment_storage = []
-
-        # normally simulate one segment at a time
-        # simulation_time = self.motion_times[0]
-        # simulate in receding horizon with small steps
-        # if simulation_time == np.inf:  # when calling run_once
-        #     simulation_time = sum(self.motion_times)
-        repeat = int(simulation_time/sample_time)
-
-        # copy segments, to avoid problems when removing elements from self.segments
-        segments_to_save = self.segments[:]
-        for k in range(repeat):
-            self._add_to_memory(self.segment_storage, segments_to_save)
-
-        # simulate the multiframe problem
-        Problem.simulate(self, current_time, simulation_time, sample_time)
 
     def _add_to_memory(self, memory, data_to_add, repeat=1):
         memory.extend([data_to_add for k in range(repeat)])
@@ -620,7 +602,6 @@ class GCodeSchedulerProblem(Problem):
         if self.segments[-1]['number'] < self.cnt:
             # last segment is not yet in self.segments, so there are some segments left,
             # create segment for next block
-            # self.n_segments -= 1
             new_segment = self.environment.room[self.n_current_block+(self.n_segments-1)]
             self.segments.append(new_segment)  # add next segment
 
