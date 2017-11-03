@@ -136,9 +136,9 @@ class GCodeReader(object):
             # else: skip line, this is not a G-code block
 
         # loop over all subfiles
-        for file in self.subfiles:
-            file = self.filepath +'/subfiles/'+ file
-            file_data = open(file, 'rb')
+        for f in self.subfiles:
+            f = self.filepath +'/subfiles/'+ f
+            file_data = open(f, 'rb')
             file_str = file_data.readlines()
             for line in file_str:
                 # extract commands
