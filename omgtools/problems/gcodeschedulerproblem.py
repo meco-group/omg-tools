@@ -38,6 +38,7 @@ class GCodeSchedulerProblem(Problem):
 
     def __init__(self, tool, GCode, options=None, **kwargs):
         options = options or {}
+        # split large circle segments in multiple segments
         self.split_circle = kwargs['split_circle'] if 'split_circle' in kwargs else False
         self.variable_tolerance = kwargs['variable_tolerance'] if 'variable_tolerance' in kwargs else False
         environment = self.get_environment(GCode, tool)
@@ -243,8 +244,6 @@ class GCodeSchedulerProblem(Problem):
         # each GCode block is represented as a room in which the trajectory
         # has to stay
 
-        # split ring segments of more than 135 degrees in two equal parts
-
         number = 0  # each room has a number
         room = []
         tolerance = tool.tolerance
@@ -345,11 +344,10 @@ class GCodeSchedulerProblem(Problem):
                     start[:2] = np.dot(R2, start[:2])  # slightly rotated start point
                     end[:2] = np.dot(R1, end[:2])  # slightly rotated end point
 
-                # check angle of ring, if >135 degrees split ring in half
+                # split ring segments of more than 135 degrees in two equal parts
                 # use extended version of the ring
                 angle1 = np.arctan2(start[1], start[0])
                 angle2 = np.arctan2(end[1], end[0])
-
                 if block.type == 'G02':
                     if angle1 < angle2:
                         # clockwise so angle2 must be < angle1
@@ -364,7 +362,6 @@ class GCodeSchedulerProblem(Problem):
                     arc_angle = angle2 - angle1
                 else:
                     raise RuntimeError('Invalid block type: ', block.type)
-
                 new_room = self.split_ring_segment(block, arc_angle, start, end, radius_in, radius_out, direction, tolerance, number)
 
                 if self.variable_tolerance:
