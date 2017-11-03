@@ -186,7 +186,6 @@ class G03(GCodeBlock):
         if 'K' in command:
             self.K = command['K']
             self.center[2] = self.Z0+self.K
-        self.radius = distance_between(self.center, [self.X0, self.Y0,self.Z0])
 
         # Todo: add check if IJ, IK, or JK present, if not throw error
 
@@ -212,6 +211,8 @@ class G03(GCodeBlock):
         if self.plane == 'YZ':
             # arc in YZ-plane
 
+            self.radius = distance_between(self.center[1:], [self.Y0,self.Z0])
+
             # compute angle of both vectors with horizontal axes
             angle1 = np.arctan2(self.Z0-self.center[2], self.Y0-self.center[1])
             angle2 = np.arctan2(self.Z1-self.center[2], self.Y1-self.center[1])
@@ -232,6 +233,8 @@ class G03(GCodeBlock):
                 coords.append([self.X0, self.center[1]+self.radius*np.cos(s),self.center[2]+self.radius*np.sin(s)])
         elif self.plane == 'XZ':
             # arc in XZ-plane
+
+            self.radius = distance_between([self.center[0],self.center[2]], [self.X0,self.Z0])
 
             # compute angle of both vectors with horizontal axes
             angle1 = np.arctan2(self.Z0-self.center[2], self.X0-self.center[0])
@@ -254,6 +257,8 @@ class G03(GCodeBlock):
                 coords.append([self.center[0]+self.radius*np.cos(s), self.Y0, self.center[2]+self.radius*np.sin(s)])
         elif self.plane == 'XY':
             # arc in XY-plane
+
+            self.radius = distance_between(self.center[:2], [self.X0,self.Y0])
 
             # compute angle of both vectors with horizontal axes
             angle1 = np.arctan2(self.Y0-self.center[1], self.X0-self.center[0])
