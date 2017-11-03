@@ -618,46 +618,46 @@ class GCodeSchedulerProblem(Problem):
         # analogously for the motion_times
         self.init_guess, self.motion_times = self.get_init_guess()
 
-    def point_in_segment(self, segment, point, distance=0):
-        # check if the provided point is inside segment
-        # distance is the margin to take into account (due to the tool size)
+    # def point_in_segment(self, segment, point, distance=0):
+    #     # check if the provided point is inside segment
+    #     # distance is the margin to take into account (due to the tool size)
 
-        # for the check, re-use the collision avoidance constraints of tool.py
+    #     # for the check, re-use the collision avoidance constraints of tool.py
 
-        if (isinstance(segment['shape'], (Rectangle, Square))):
-            # we have a diagonal line segment
-            if point_in_polyhedron(point, segment['shape'], segment['position'], margin=distance):
-                return True
-            else:
-                return False
+    #     if (isinstance(segment['shape'], (Rectangle, Square))):
+    #         # we have a diagonal line segment
+    #         if point_in_polyhedron(point, segment['shape'], segment['position'], margin=distance):
+    #             return True
+    #         else:
+    #             return False
 
-        elif (isinstance(segment['shape'], (Ring))):
-            # we have a ring/circle segment
+    #     elif (isinstance(segment['shape'], (Ring))):
+    #         # we have a ring/circle segment
 
-            # use polar coordinates to go from point(x,y) to point(r,theta)
-            # then check if r and theta are inside the ring
+    #         # use polar coordinates to go from point(x,y) to point(r,theta)
+    #         # then check if r and theta are inside the ring
 
-            center = segment['pose']
-            angle1 = np.arctan2(point[1] - center[1], point[0] - center[0])
-            angle2 = angle1 + 2*np.pi
-            r = np.sqrt((point[0]-center[0])**2+(point[1]-center[1])**2)
+    #         center = segment['pose']
+    #         angle1 = np.arctan2(point[1] - center[1], point[0] - center[0])
+    #         angle2 = angle1 + 2*np.pi
+    #         r = np.sqrt((point[0]-center[0])**2+(point[1]-center[1])**2)
 
-            if (r >= segment['shape'].radius_in+distance and r <= segment['shape'].radius_out-distance):
-                # Todo: shift start and end_angle according to distance (i.e. make ring a little smaller) to
-                # account for the tolerance (tool point may not lie infinitely close to the border)
-                if segment['shape'].direction == 'CW':
-                    if (angle1 <= segment['shape'].start_angle and angle1 >= segment['shape'].end_angle):
-                        return True
-                    if (angle2 <= segment['shape'].start_angle and angle2 >= segment['shape'].end_angle):
-                        return True
-                elif segment['shape'].direction == 'CCW':
-                    if (angle1 >= segment['shape'].start_angle and angle1 <= segment['shape'].end_angle):
-                        return True
-                    if (angle2 >= segment['shape'].start_angle and angle2 <= segment['shape'].end_angle):
-                        return True
-                return False
-            else:
-                return False
+    #         if (r >= segment['shape'].radius_in+distance and r <= segment['shape'].radius_out-distance):
+    #             # Todo: shift start and end_angle according to distance (i.e. make ring a little smaller) to
+    #             # account for the tolerance (tool point may not lie infinitely close to the border)
+    #             if segment['shape'].direction == 'CW':
+    #                 if (angle1 <= segment['shape'].start_angle and angle1 >= segment['shape'].end_angle):
+    #                     return True
+    #                 if (angle2 <= segment['shape'].start_angle and angle2 >= segment['shape'].end_angle):
+    #                     return True
+    #             elif segment['shape'].direction == 'CCW':
+    #                 if (angle1 >= segment['shape'].start_angle and angle1 <= segment['shape'].end_angle):
+    #                     return True
+    #                 if (angle2 >= segment['shape'].start_angle and angle2 <= segment['shape'].end_angle):
+    #                     return True
+    #             return False
+    #         else:
+    #             return False
 
     def point_in_extended_shape(self, segment, point, distance=0):
         # check if the provided point is inside the extended/infinite version of the shape, meaning
