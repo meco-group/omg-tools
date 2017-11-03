@@ -16,6 +16,10 @@ class GCodeReader(object):
         self.commands = []
         self.blocks = []
 
+    def reset(self):
+        self.commands = []
+        self.blocks = []
+
     def load_file(self, file=None):
 
         if file is None:
