@@ -305,7 +305,7 @@ class Deployer:
             plt.plot(spline[0](eval),spline[1](eval),color='gray')
         # plot environment
         for room in self.problem.environment.room:
-            points = room['shape'].draw(room['pose'][:2]+[0])[0][0]  # don't draw z, always pick 0.
+            points = room['shape'].draw(room['pose'][:2]+[0])[0][0]  # no extra rotation to plot
             # add first point again to close shape
             points = np.c_[points, [points[0,0], points[1,0]]]
             plt.plot(points[0,:], points[1,:], color='red', linestyle = '--', linewidth= 1.2)
