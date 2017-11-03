@@ -682,7 +682,7 @@ class GCodeSchedulerProblem(Problem):
                     return False
             elif (segment['shape'].orientation%(np.pi/2.) == 0):
                 # vertical line segment
-                # note: also a shape with orientation 0 would pass this test, but this was
+                # Note: also a shape with orientation 0 would pass this test, but this was
                 # already captured in first if-test
                 if (point[0] < max(segment['shape'].vertices[0,:]+segment['position'][0]) and
                     point[0] > min(segment['shape'].vertices[0,:]+segment['position'][0])):
@@ -706,7 +706,7 @@ class GCodeSchedulerProblem(Problem):
                     couples.append([segment['shape'].vertices[:,-1]+segment['position'],segment['shape'].vertices[:,0]+segment['position']])
                 # compute the equations for these two lines, to check if the point is at the right side of them,
                 # i.e. inside the rectangle with infinite width = the segment with infinite length
-                # note: suppose that the vertices are stored in clockwise order here
+                # Note: supposed that the vertices are stored in clockwise order here
 
                 side = []
                 for couple in couples:
