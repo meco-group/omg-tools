@@ -4,7 +4,7 @@ import warnings
 
 class GCodeBlock(object):
 
-    def __init__(self, command, number, prev_block=None):
+    def __init__(self, command, number, prev_block=None, **kwargs):
 
         self.default_F = 444  # default feedrate [mm/min]
         self.default_S = 30000  # default rotation velocity [rev/min]
@@ -14,9 +14,14 @@ class GCodeBlock(object):
             self.Y0 = prev_block.Y1
             self.Z0 = prev_block.Z1
         else:
-            self.X0 = 0.
-            self.Y0 = 0.
-            self.Z0 = 0.
+            if 'start_pos' in kwargs:
+                self.X0 = kwargs['start_pos'][0]
+                self.Y0 = kwargs['start_pos'][1]
+                self.Z0 = kwargs['start_pos'][2]
+            else:
+                self.X0 = 0.
+                self.Y0 = 0.
+                self.Z0 = 0.
 
         self.X1 = command['X'] if 'X' in command else self.X0
         self.Y1 = command['Y'] if 'Y' in command else self.Y0
@@ -35,8 +40,8 @@ class GCodeBlock(object):
             self.S = self.default_S
 
 class G00(GCodeBlock):
-    def __init__(self, command, number, prev_block):
-        GCodeBlock.__init__(self, command, number, prev_block)
+    def __init__(self, command, number, prev_block, **kwargs):
+        GCodeBlock.__init__(self, command, number, prev_block, **kwargs)
         self.type = 'G00'
 
     def get_coordinates(self):
@@ -308,7 +313,16 @@ def generate_gcodeblock(command, number, prev_block):
     if 'type' in command:
         if command['type'] == 'G00':
             # sometimes also used as alternative for G01
-            block = G00(command, number, prev_block)
+            if prev_block is None:
+                # if no prev_block, this is the first block,
+                # use the X0,Y0,Z0 of this block as start position of the tool
+                start_x = command['X'] if 'X' in command else 0.
+                start_y = command['Y'] if 'Y' in command else 0.
+                start_z = command['Z'] if 'Z' in command else 0.
+                start = [start_x, start_y, start_z]
+                block = G00(command, number, prev_block, start_pos=start)
+            else:
+                block = G00(command, number, prev_block)
         elif command['type'] == 'G01':
             block = G01(command, number, prev_block)
         elif command['type'] == 'G02':
