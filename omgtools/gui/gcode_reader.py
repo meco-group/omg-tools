@@ -39,7 +39,6 @@ class GCodeReader(object):
                 return
         self.file = data
 
-    def read(self):
     def convert(self):
         # shift midpoint and scale up or down a certain GCode file
 
@@ -112,8 +111,13 @@ class GCodeReader(object):
             file = open(old_name+'_shift_scale.nc', 'rb')
             self.file = file
         # else: # do nothing
+
+    def read(self, file=None):
         self.subfiles = []
-        file_str = self.file.readlines()
+        if file is None:
+            file_str = self.file.readlines()
+        else:
+            file_str = file.readlines()
         for line in file_str:
             # extract commands
             if line[0] == '(':
