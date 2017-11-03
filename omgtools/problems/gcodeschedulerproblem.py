@@ -25,8 +25,9 @@ from ..environment.environment import Environment
 from ..basics.shape import Rectangle, Ring
 from ..basics.geometry import distance_between_points, point_in_polyhedron
 from ..basics.spline import BSplineBasis, BSpline
-from ..basics.spline_extra import concat_splines, running_integral
+from ..basics.spline_extra import concat_splines, running_integral, definite_integral
 
+from casadi import MX, Function, nlpsol, vertcat
 from scipy.interpolate import interp1d
 import scipy.linalg as la
 import numpy as np
