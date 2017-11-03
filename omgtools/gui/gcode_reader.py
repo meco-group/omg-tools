@@ -40,6 +40,78 @@ class GCodeReader(object):
         self.file = data
 
     def read(self):
+    def convert(self):
+        # shift midpoint and scale up or down a certain GCode file
+
+        # ask the user if he wants to change the GCode file
+        answer = ''
+        while (not answer in ['yes', 'no']):
+            answer = raw_input('Do you want to shift or scale the loaded GCode? (yes/no): ')
+
+        if answer == 'yes':
+            # shift and scale the GCode file
+            lines = self.file.read().splitlines()
+
+            # get user input for offset and scaling factor
+            offset = []
+            scaling = []
+            while (not ((type(offset) == list) and (len(offset) == 2) and (all(isinstance(o, float) for o in offset)))
+                    or not (isinstance(scaling, float))):
+                offset = raw_input('What is the offset?  E.g. a,b to move midpoint from x,y to x-a, y-b: ').split(',')
+                offset = [float(offset[0]), float(offset[1])]
+                scaling = float(raw_input('What is the scaling factor? E.g. 2.1: '))
+
+            # apply offset
+            offset_lines = []
+            for line in lines:
+                if any(type in line for type in ['G00', 'G01', 'G02', 'G03']):
+                    # only look at lines containing a GCode command
+                    split_line = line.split()
+                    for idx, s in enumerate(split_line):
+                        if 'X' in s:
+                            x_val = float(s[1:])
+                            x_val_n = x_val-offset[0]
+                            split_line[idx] = 'X' + str(x_val_n)
+                        if 'Y' in s:
+                            y_val = float(s[1:])
+                            y_val_n = y_val-offset[1]
+                            split_line[idx] = 'Y' + str(y_val_n)
+                    offset_lines.append(' '.join(split_line))
+
+            # apply scaling
+            new_lines = []
+            for line in offset_lines:
+                if any(type in line for type in ['G00', 'G01', 'G02', 'G03']):
+                    # only look at lines containing a GCode command
+                    split_line = line.split()
+                    for idx, s in enumerate(split_line):
+                        if 'X' in s:
+                            x_val = float(s[1:])
+                            x_val_n = x_val*scaling
+                            split_line[idx] = 'X' + str(x_val_n)
+                        if 'Y' in s:
+                            y_val = float(s[1:])
+                            y_val_n = y_val*scaling
+                            split_line[idx] = 'Y' + str(y_val_n)
+                        if 'I' in s:
+                            i_val = float(s[1:])
+                            i_val_n = i_val*scaling
+                            split_line[idx] = 'I' + str(i_val_n)
+                        if 'J' in s:
+                            j_val = float(s[1:])
+                            j_val_n = j_val*scaling
+                            split_line[idx] = 'J' + str(j_val_n)
+                    new_lines.append(' '.join(split_line))
+
+            # get file name and remove extension '.nc'
+            old_name = self.file.name.split('/')[-1][:-3]
+            file = open(old_name + '_shift_scale.nc', 'w')
+            for line in new_lines:
+                file.write(line+'\n')
+            file.close()
+            file = open(old_name+'_shift_scale.nc', 'rb')
+            self.file = file
+        # else: # do nothing
         self.subfiles = []
         file_str = self.file.readlines()
         for line in file_str:
@@ -123,6 +195,7 @@ class GCodeReader(object):
 
     def run(self):
         self.load_file()
+        self.convert()
         self.read()
         self.create_blocks()
         self.plot_gcode()
