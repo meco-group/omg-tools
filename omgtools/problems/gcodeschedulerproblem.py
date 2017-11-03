@@ -873,6 +873,7 @@ class GCodeSchedulerProblem(Problem):
         y0 = segment['start'][1]
         x1 = segment['end'][0]
         y1 = segment['end'][1]
+        z0 = segment['start'][2]
 
         j_lim = self.vehicles[0].jxmax  # jerk limit
         if j_lim != self.vehicles[0].jymax:
@@ -930,7 +931,7 @@ class GCodeSchedulerProblem(Problem):
         guess_y[-2] = y1
         guess_y[-1] = y1
 
-        guess_z = 0*np.array(guess_x)  # z is always zero normally
+        guess_z = z0*np.array(guess_x)
         init_guess = np.c_[guess_x, guess_y, guess_z]
 
         motion_time = self.get_init_guess_motion_time(segment, coeff_guess=init_guess)
