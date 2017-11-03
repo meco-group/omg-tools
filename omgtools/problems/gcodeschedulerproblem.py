@@ -1095,17 +1095,86 @@ class GCodeSchedulerProblem(Problem):
         motion_time = self.get_init_guess_motion_time(segment, coeff_guess=init_guess)
 
         return init_guess, motion_time
+
+    def get_init_guess_motion_time(self, segment, coeff_guess=None):
+        # compute initial guess for the motion time
+
+        if coeff_guess is not None:
+            # spline coefficients were provided
+            guess_x = coeff_guess[:,0]
+            guess_y = coeff_guess[:,1]
+            # construct corresponding splines
+            pos_x = BSpline(self.vehicles[0].basis, guess_x)
+            vel_x = pos_x.derivative(1)
+            acc_x = pos_x.derivative(2)
+            jerk_x = pos_x.derivative(3)
+
+            pos_y = BSpline(self.vehicles[0].basis, guess_y)
+            vel_y = pos_y.derivative(1)
+            acc_y = pos_y.derivative(2)
+            jerk_y = pos_y.derivative(3)
+
+            # determine which limit is the most strict, and therefore determines the motion_time
+            eval = np.linspace(0,1,100)
+            # take into account scaling factor, with appropriate power
+            j_lim = self.vehicles[0].jxmax
+            motion_time_j = (max(np.r_[abs(jerk_x(eval)), abs(jerk_y(eval))])/float(j_lim))**(1/3.)
+            a_lim = self.vehicles[0].axmax  # jerk limit
+            motion_time_a = np.sqrt(max(np.r_[abs(acc_x(eval)), abs(acc_y(eval))])/float(a_lim))
+            v_lim = self.vehicles[0].vxmax  # jerk limit
+            motion_time_v = max(np.r_[abs(vel_x(eval)), abs(vel_y(eval))])/float(v_lim)
+            motion_time = max(motion_time_j, motion_time_a, motion_time_v)
+            motion_time = 1.05*motion_time  # take some margin to avoid numerical errors
         else:
-            T2_pos = (2*np.sqrt((a_lim*(a_lim**3 + 4*distance*j_lim**2))/4.) - 3*a_lim**2)/(2.*a_lim*j_lim)  # distance limit
-            T2_vel = (float(-a_lim**2)/j_lim + v_lim)/a_lim
-            T2 = min([T2_vel, T2_pos])
-            if T2 == T2_vel:
-                T4 = -(a_lim**2*v_lim - j_lim*distance*a_lim + j_lim*v_lim**2)/float(2*a_lim*j_lim*v_lim)
+            # no spline coefficients were provided, make theoretical guess
+            # predict the time of each of the 8 phases of the guess:
+            # 1: j_lim
+            # 2: a_lim
+            # 3: -j_lim
+            # 4 & 5: v_lim
+            # 6: -j_lim
+            # 7: -a_lim
+            # 8: j_lim
+            j_lim = self.vehicles[0].jxmax
+            a_lim = self.vehicles[0].axmax
+            v_lim = self.vehicles[0].vxmax
+
+            if isinstance(segment['shape'], Rectangle):
+                distance = 0
+                for l in range(len(segment['start'])):
+                    distance += (segment['end'][l] - segment['start'][l])**2
+            elif isinstance(segment['shape'], Ring):
+                # split arc in two lines going from start point, respectively end point to half of the ring
+                radius = (segment['shape'].radius_in + segment['shape'].radius_out)*0.5
+                # arc length
+                distance = radius * abs(segment['shape'].end_angle - segment['shape'].start_angle)
             else:
+                raise RuntimeError('Invalid shape of segment given in get_init_guess_motion_time: ', segment['shape'])
+
+            # determine what the limiting factor is when applying max jerk in phase 1
+            # this factor determines the selected T1
+            T1_acc = (a_lim/j_lim)  # apply max jerk, when is amax reached
+            T1_vel = np.sqrt(v_lim/j_lim)  # apply max jerk, when is vmax reached
+            T1_pos = (32 * distance/j_lim)**(1/3.)/4  # apply max jerk, when is distance reached
+            T1 = min([T1_acc, T1_vel, T1_pos])
+            T3 = T1
+            if T1 == T1_pos:  # apply max jerk, until half distance is reached
+                T2 = 0.
                 T4 = 0.
-        T = [T1, T2, T3, T4, T4, T3, T2, T1]
-        T_tot = sum(T)
-        return T_tot
+            elif T1 == T1_vel:  # apply max jerk until vmax is reached and keep vmax until d/2 reached
+                T2 = 0.
+                T4 = float(distance/2.-(j_lim*T1**3))/v_lim
+            else:
+                T2_pos = (2*np.sqrt((a_lim*(a_lim**3 + 4*distance*j_lim**2))/4.) - 3*a_lim**2)/(2.*a_lim*j_lim)  # distance limit
+                T2_vel = (float(-a_lim**2)/j_lim + v_lim)/a_lim
+                T2 = min([T2_vel, T2_pos])
+                if T2 == T2_vel:
+                    T4 = -(a_lim**2*v_lim - j_lim*distance*a_lim + j_lim*v_lim**2)/float(2*a_lim*j_lim*v_lim)
+                else:
+                    T4 = 0.
+            T = [T1, T2, T3, T4, T4, T3, T2, T1]
+            motion_time = sum(T)
+        return motion_time
 
     def get_init_guess_total_motion_time(self):
         guess_total_time = 0
