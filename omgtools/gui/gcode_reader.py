@@ -166,6 +166,8 @@ class GCodeReader(object):
                 # new previous block = last one added
                 self.blocks.append(new_block)
                 prev_block = new_block
+            elif new_block is not None:
+                prev_block = new_block
             # else:  # new block was not valid, don't add it
 
     def get_gcode(self):
