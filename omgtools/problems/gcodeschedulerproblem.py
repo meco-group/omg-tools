@@ -40,7 +40,12 @@ class GCodeSchedulerProblem(Problem):
         options = options or {}
         # split large circle segments in multiple segments
         self.split_circle = kwargs['split_circle'] if 'split_circle' in kwargs else False
+        # use tight tolerance in the middle of a segment and a wider one at the borders
         self.variable_tolerance = kwargs['variable_tolerance'] if 'variable_tolerance' in kwargs else False
+        # minimal required length of the segment to split it in three parts
+        self.split_length = kwargs['split_length'] if 'split_length' in kwargs else 0.
+        # % of total segment length for the length of the start and end part, when using variable tolerance
+        self.split_small = kwargs['split_small'] if 'split_small' in kwargs else 0.1
         environment = self.get_environment(GCode, tool)
         # pass on environment and tool to Problem constructor,
         # generates self.vehicles and self.environment
@@ -248,10 +253,14 @@ class GCodeSchedulerProblem(Problem):
         room = []
         tolerance = tool.tolerance
 
+        if (self.variable_tolerance and tool.tolerance_small == 0):
+            raise RuntimeError('Using variable tolerance, but no small tolerance provided,'+
+                ' add this to the vehicle you constructed.')
         for block in GCode:
             # convert block to room
             if block.type in ['G00', 'G01']:
-                if not self.variable_tolerance:
+                # not using variable tolerance, or segment is too short to split
+                if (not self.variable_tolerance or distance_between_points(block.start, block.end) < self.split_length):
                     # add tolerance to width to obtain the complete reachable region
                     width = distance_between_points(block.start, block.end) + 2*tolerance
                     height = 2*tolerance
@@ -268,14 +277,11 @@ class GCodeSchedulerProblem(Problem):
                     # divide segment in three parts, with variable tolerance:
                     # large tolerances in the first and last parts, tight tolerance in the middle part
 
-                    # Todo: for now always divided in 0.1,0.8,0.1*length and 0.2*tol and 2*tol -->
-                    # make it a parameter?
-
                     orientation = np.arctan2(block.end[1]-block.start[1], block.end[0]-block.start[0])
                     width = distance_between_points(block.start, block.end)  # default width
 
                     ## part 1
-                    l1 = 0.1*width
+                    l1 = self.split_small*width
                     width1 = l1 + 2*tolerance
                     height1 = 2*tolerance
                     shape1 = Rectangle(width = width1,  height = height1, orientation = orientation)
@@ -287,10 +293,10 @@ class GCodeSchedulerProblem(Problem):
                             block.start[1] + l1*np.sin(orientation),
                             block.start[2] + (block.end[2]-block.start[2])]
 
-                    ## part 2, tolerance = 10 times tighter
-                    l2 = 0.8*width
-                    width2 = l2 + 0.2*tolerance
-                    height2 = 0.2*tolerance
+                    ## part 2, tolerance = tolerance_small
+                    l2 = (1-2*self.split_small)*width
+                    width2 = l2 + 2*tool.tolerance_small
+                    height2 = 2*tool.tolerance_small
                     shape2 = Rectangle(width = width2,  height = height2, orientation = orientation)
                     pose2 = [block.start[0] + (l1+0.5*l2)*np.cos(orientation),
                              block.start[1] + (l1+0.5*l2)*np.sin(orientation),
@@ -315,7 +321,7 @@ class GCodeSchedulerProblem(Problem):
                     new_room = [{'shape': shape1, 'pose': pose1, 'position': pose1[:2], 'draw':True,
                                 'start': block.start, 'end': end1, 'number':number},
                                 {'shape': shape2, 'pose': pose2, 'position': pose2[:2], 'draw':True,
-                                'start': start2 , 'end': end2, 'number':number+1, 'tolerance': 0.1*tolerance},
+                                'start': start2 , 'end': end2, 'number':number+1},
                                 {'shape': shape3, 'pose': pose3, 'position': pose3[:2], 'draw':True,
                                 'start': start3, 'end': block.end, 'number':number+2}]
 
@@ -394,10 +400,9 @@ class GCodeSchedulerProblem(Problem):
                                 angle2 += 2*np.pi
                             arc_angle = angle2 - angle1
                         arc_angle = np.abs(arc_angle)
-                        # arc_angle = np.abs(r['shape'].end_angle - r['shape'].start_angle)
 
-                        arc1 = 0.1*arc_angle  # = arc3
-                        arc2 = 0.8*arc_angle
+                        arc1 = self.split_small*arc_angle  # = arc3
+                        arc2 = (1-2*self.split_small)*arc_angle
 
                         ## part 1
                         # adapt start to include tolerance, i.e. make ring start a little earlier, such that
@@ -433,15 +438,14 @@ class GCodeSchedulerProblem(Problem):
                             R = np.array([[np.cos(arc1), -np.sin(arc1)],[np.sin(arc1), np.cos(arc1)]])
                             seg_end1[:2] = np.dot(R, seg_start1[:2])  # slightly rotated start point
 
-                        ## part 2, tolerance = 10 times tighter
-
+                        ## part 2, tolerance = tolerance_small
                         # adapt start to include tolerance, i.e. make ring start a little earlier, such that
                         # perpendicular distance from start to border of ring = tolerance
                         seg_start2 = np.array(seg_end1)
                         start2 = np.array(seg_end1)
                         end2 = np.array(seg_end1)  # initialize
                         # angle over which to rotate to account for large tolerance
-                        delta_arc_small = np.arctan2(0.1*tolerance,((radius_in+radius_out)*0.5))
+                        delta_arc_small = np.arctan2(tool.tolerance_small,((radius_in+radius_out)*0.5))
                         if direction == 'CW':
                             R_delta = np.array([[np.cos(delta_arc_small), -np.sin(delta_arc_small)],[np.sin(delta_arc_small), np.cos(delta_arc_small)]])
                             start2[:2] = np.dot(R_delta, seg_start2[:2])  # slightly rotated start point
@@ -457,7 +461,7 @@ class GCodeSchedulerProblem(Problem):
                             R = np.array([[np.cos(theta), -np.sin(theta)],[np.sin(theta), np.cos(theta)]])
                             end2[:2] = np.dot(R, seg_start2[:2])  # rotate start point to end
 
-                        shape2 = Ring(radius_in = radius_in + 0.9*tolerance, radius_out = radius_out-0.9*tolerance,
+                        shape2 = Ring(radius_in = radius_in + (tolerance-tool.tolerance_small), radius_out = radius_out-(tolerance-tool.tolerance_small),
                                       start = start2, end = end2, direction = direction)
 
                         seg_end2 = np.array(seg_start2)  # initialize
@@ -501,21 +505,13 @@ class GCodeSchedulerProblem(Problem):
                         seg_end2 = (seg_end2 + np.array(r['pose'][:3])).tolist()
                         seg_start3 = seg_end2
 
-                        # bla = False some segment is added double at the top?
-                        if bla:
-                            divided_rooms.extend([
-                                            {'shape': shape2, 'pose': pose, 'position': pose[:2], 'draw':True,
-                                            'start': seg_start2 , 'end': seg_end2, 'number':number+1},
-                                            {'shape': shape3, 'pose': pose, 'position': pose[:2], 'draw':True,
-                                            'start': seg_start3, 'end': block.end, 'number':number+2}])
-                        else:
-                            divided_rooms.extend([
-                                            {'shape': shape1, 'pose': pose, 'position': pose[:2], 'draw':True,
-                                            'start': block.start, 'end': seg_end1, 'number':number},
-                                            {'shape': shape2, 'pose': pose, 'position': pose[:2], 'draw':True,
-                                            'start': seg_start2 , 'end': seg_end2, 'number':number+1},
-                                            {'shape': shape3, 'pose': pose, 'position': pose[:2], 'draw':True,
-                                            'start': seg_start3, 'end': block.end, 'number':number+2}])
+                        divided_rooms.extend([
+                                        {'shape': shape1, 'pose': pose, 'position': pose[:2], 'draw':True,
+                                        'start': block.start, 'end': seg_end1, 'number':number},
+                                        {'shape': shape2, 'pose': pose, 'position': pose[:2], 'draw':True,
+                                        'start': seg_start2 , 'end': seg_end2, 'number':number+1},
+                                        {'shape': shape3, 'pose': pose, 'position': pose[:2], 'draw':True,
+                                        'start': seg_start3, 'end': block.end, 'number':number+2}])
                     # assign divided rooms to old variable
                     new_room = divided_rooms
             # save original GCode block in the room description
@@ -567,6 +563,7 @@ class GCodeSchedulerProblem(Problem):
                         {'shape': shape2, 'pose': pose, 'position': pose[:2], 'draw':True,
                          'start': mid2_shift, 'end': block.end, 'number':number+1}]
         else:
+            # make a single ring segment
             shape = Ring(radius_in = radius_in, radius_out = radius_out,
                          start = start, end = end, direction = direction)
             pose = block.center
