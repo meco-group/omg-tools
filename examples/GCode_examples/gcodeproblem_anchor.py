@@ -29,12 +29,29 @@ reader = GCodeReader()
 # the settings inside this example are made specifically for the anchor2D.nc file
 GCode = reader.run()
 
-n_blocks = 3  # amount of GCode blocks to combine
-tol = 0.01  # required tolerance of the machined part [mm]
+# amount of GCode blocks to combine
+n_blocks = 3
+# variable_tolerance: allow less freedom in the middle of segments, allow more freedom in the area of connection
+# Warning: if you receive a message 'infeasible problem' try increasing the amount of knot_intervals,
+# this gives more freedom
+# it is also possible that segments with variable tolerance are too short, check with required stop distance of tool
+variable_tolerance = False
+# required tolerance of the machined part [mm]
+tol = 0.01
+# reduced tolerance for middle of segments
+tol_small = 0.1*tol
+# how to split segments if using variable tolerance e.g. 0.1 --> 0.1, 0.8, 0.1 * total length
+split_small = 0.1
+# minimal length of segment that you want to split
+split_length = 6.
+# split_circle: split large circle segments in smaller ones to avoid shortcuts in the trajectory
+split_circle = True
 bounds = {'vmin':-1e3, 'vmax':1e3,
           'amin':-20e3, 'amax':20e3,
           'jmin':-850e3, 'jmax':850e3}  # [mm]
-tool = Tool(tol, bounds = bounds)  # tool to follow the GCode
+# vel_limit: if the limiting factor is the machining process, put 'machining'
+# if the limiting factor is the velocity of the axes themselves, put: 'axes'
+tool = Tool(tol, bounds=bounds, options={'vel_limit':'machining','variable_tolerance':variable_tolerance}, tol_small=tol_small)  # tool to follow the GCode
 tool.define_knots(knot_intervals=10)
 tool.set_initial_conditions(GCode[0].start)  # start position of first GCode block
 tool.set_terminal_conditions(GCode[-1].end)  # goal position of last GCode block
@@ -44,7 +61,8 @@ tool.set_terminal_conditions(GCode[-1].end)  # goal position of last GCode block
 # each block will be converted to a room, that is put inside the total environment
 # there are two room shapes: Rectangle and Ring (circle segment with inner and outer diameter)
 # if you want to compute trajectories by using the deployer, put with_deployer=True
-schedulerproblem = GCodeSchedulerProblem(tool, GCode, n_segments=n_blocks, with_deployer=True)
+schedulerproblem = GCodeSchedulerProblem(tool, GCode, n_segments=n_blocks, split_circle=split_circle,
+                                         variable_tolerance=variable_tolerance, split_length=split_length, split_small=split_small)
 
 schedulerproblem.set_options({'solver_options': {'ipopt': {'ipopt.tol': 1e-5,
                                                            'ipopt.linear_solver': 'ma57',
@@ -55,10 +73,8 @@ schedulerproblem.set_options({'solver_options': {'ipopt': {'ipopt.tol': 1e-5,
                                                            # 'ipopt.hessian_approximation': 'limited-memory',
                                                            'ipopt.max_iter': 20000}}})#,
 
-# put problem in deployer: choose this if you just want to obtain the trajectories for the tool
+# put problem in deployer, computes the trajectories for the tool
 deployer = Deployer(schedulerproblem, sample_time=0.001)
-# put problem in simulator: choose this if you want to simulate step by step
-simulator = Simulator(schedulerproblem, sample_time=0.001)
 
 # define what you want to plot
 schedulerproblem.plot('scene')
@@ -69,7 +85,6 @@ tool.plot('ddinput', knots=True, prediction=True, labels=['j_x (m/s^3)', 'j_y (m
 
 # run using a receding horizon of one segment
 deployer.update_segment()
-# simulator.run_segment()
 
 # plotting afterwards, and saving is only available when using the simulator
 # schedulerproblem.plot_movie('scene', number_of_frames=100, repeat=False)
