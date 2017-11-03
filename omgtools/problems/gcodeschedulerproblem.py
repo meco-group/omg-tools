@@ -125,7 +125,7 @@ class GCodeSchedulerProblem(Problem):
                 # don't update number or segments, because the deployer wants to
                 # re-compute the same segment, that e.g. was infeasible
                 # this boolean is set by the deployer in deployer.update_segment()
-                self.local_problem = self.generate_problem()
+                # self.local_problem = self.generate_problem()
                 pass
             else:
                 self.n_current_block += 1
