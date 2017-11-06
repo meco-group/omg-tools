@@ -71,7 +71,7 @@ class Tool(Vehicle):
         if 'amax' in bounds:
             self.axmax = self.aymax = self.azmax = bounds['amax']
         if 'jmin' in bounds:
-            self.jxmin = self.jymin  = self.jzmin = bounds['jmin']
+            self.jxmin = self.jymin = self.jzmin = bounds['jmin']
         if 'jmax' in bounds:
             self.jxmax = self.jymax = self.jzmax = bounds['jmax']
 
