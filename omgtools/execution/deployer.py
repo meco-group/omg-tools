@@ -330,15 +330,9 @@ class Deployer:
             # plt.plot(room['end'][0], room['end'][1], 'gx')
         plt.pause(0.1)
 
-    def save_results(self, count=0, reorder=False):
+    def save_results(self, count=0):
         # write results to file
-        if not reorder:
-            data = np.c_[self.state_traj[0,:], self.input_traj[0,:], self.dinput_traj[0,:],
-                         self.state_traj[1,:], self.input_traj[1,:], self.dinput_traj[1,:],
-                         self.state_traj[2,:], self.input_traj[2,:], self.dinput_traj[2,:]]  # pos, vel, acc in xyz
-        else:
-            # reorder the data, x and z are switched
-            data = np.c_[self.state_traj[2,:], self.input_traj[2,:], self.dinput_traj[2,:],
-                         self.state_traj[1,:], self.input_traj[1,:], self.dinput_traj[1,:],
-                         self.state_traj[0,:], self.input_traj[0,:], self.dinput_traj[0,:]]  # pos, vel, acc in xyz
+        data = np.c_[self.state_traj[0,:], self.input_traj[0,:], self.dinput_traj[0,:],
+                     self.state_traj[1,:], self.input_traj[1,:], self.dinput_traj[1,:],
+                     self.state_traj[2,:], self.input_traj[2,:], self.dinput_traj[2,:]]  # pos, vel, acc in xyz
         np.savetxt('trajectories_'+str(count)+'.csv', data , delimiter=',')
