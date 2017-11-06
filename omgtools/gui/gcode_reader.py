@@ -146,6 +146,7 @@ class GCodeReader(object):
                     self.commands.append(line)
 
     def create_blocks(self):
+        # represents all GCode commands as corresponding GCode block-object
         self.cnt = 0  # reset counter
         if not self.blocks:
             # first block, so add empty block
@@ -172,6 +173,40 @@ class GCodeReader(object):
 
     def get_gcode(self):
         return self.blocks
+
+    def get_block_division(self, GCode):
+        # divide the provided GCode in different collections of blocks:
+        # Z-axis movements and XY-plane movements
+        # this function can handle two possible situations:
+        #   1) machining several layers, with a z-movement at the end of each layer
+        #   2) retracting the tool at some points to e.g. machine a sequence of circles
+        # for both cases the complete GCode is split in different parts
+        # for 1)
+        #   1. machining
+        #   2. move z-axis deeper
+        # for 2)
+        #   1. machining
+        #   2. z-axis retraction (may be done fast)
+        #   3. movement without machining (may be done fast)
+        #   4. z-axis approach (must be done slowly)
+
+        GCode_blocks = []  # contains the different GCode parts in a list of lists
+        blocks = []  # local variable to save the different GCode parts temporarily
+        for block in GCode:
+            if block.type not in ['G00', 'G01'] or (block.Z0 == block.Z1):
+                # arc segment ('G02', 'G03'), or no movement in z-direction
+                blocks.append(block)
+            else:
+                # this is a z-retract/engage block
+                # save the previous blocks
+                if blocks:
+                    GCode_blocks.append(blocks)
+                # clear blocks variable
+                blocks = []
+                # add z-block separately
+                GCode_blocks.append([block])
+        GCode_blocks.append(blocks)
+        return GCode_blocks
 
     def get_connections(self):
         # returns a list of points in which the different GCode trajectories are connected

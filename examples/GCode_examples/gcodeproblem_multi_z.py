@@ -58,34 +58,6 @@ bounds_free = {'vmin':-150, 'vmax':150,  # [mm/s]
 # is the tool inside the material or not?
 tool_free = False
 
-# this example can handle two possible situations:
-#   1) machining several layers, with a z-movement at the end of each layer
-#   2) retracting the tool at some points to e.g. machine a sequence of circles
-# for both cases the complete GCode is split in different parts
-# for 1)
-#   1. machining
-#   2. move z-axis deeper
-# for 2)
-#   1. machining
-#   2. z-axis retraction (may be done fast)
-#   3. movement without machining (may be done faster)
-#   4. z-axis approach (must be slower)
-GCode_blocks = []  # contains the different GCode parts in a list of lists
-blocks = []  # local variable to save the different GCode parts temporarily
-for block in GCode:
-    if block.type not in ['G00', 'G01'] or (block.Z0 == block.Z1):
-        # arc segment (G02, G03), or no movement in z-direction
-        blocks.append(block)
-    else:
-        # this is a z-retract/engage block
-        # save the previous blocks
-        if blocks:
-            GCode_blocks.append(blocks)
-        # clear blocks variable
-        blocks = []
-        # add z-block separately
-        GCode_blocks.append([block])
-GCode_blocks.append(blocks)
 
 # loop over all blocks: sequence of z-engage/retraction blocks and normal XY blocks
 for idx, GCode_block in enumerate(GCode_blocks):
