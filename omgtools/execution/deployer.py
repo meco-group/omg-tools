@@ -34,6 +34,7 @@ class Deployer:
         self.problem = problem
 
     def reset(self):
+        plt.close('all')
         self.iteration0 = True
         self.problem.reinitialize()
 
