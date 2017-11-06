@@ -46,19 +46,26 @@ n_blocks = 3  # amount of GCode blocks to combine
 tol = 0.01  # required tolerance of the machined part [mm]
 # normal bounds
 bounds = {'vmin':-16.6, 'vmax':16.6,  # [mm/s]
+          'vzmin':0., 'vzmax':0.,  # [mm/s]
           'amin':-20e3, 'amax':20e3,  # [mm/s**2]
           'jmin':-1500e3, 'jmax':1500e3}  # [mm/s**3]
 # bounds when engaging the workpiece
-bounds_engage = {'vmin':-1.66, 'vmax':1.66,  # [mm/s]
+bounds_engage = {'vmin':0., 'vmax':0.,  # [mm/s]
+          'vzmin':-1.66, 'vzmax':1.66,  # [mm/s]
+          'amin':-20e3, 'amax':20e3,  # [mm/s**2]
+          'jmin':-1500e3, 'jmax':1500e3}  # [mm/s**3]
+# bounds when retracting tool
+bounds_retract = {'vmin':0., 'vmax':0.,  # [mm/s]
+          'vzmin':-150., 'vzmax':150.,  # [mm/s]
           'amin':-20e3, 'amax':20e3,  # [mm/s**2]
           'jmin':-1500e3, 'jmax':1500e3}  # [mm/s**3]
 # bounds when not machining
 bounds_free = {'vmin':-150, 'vmax':150,  # [mm/s]
+          'vzmin':0., 'vzmax':0.,  # [mm/s]
           'amin':-20e3, 'amax':20e3,  # [mm/s**2]
           'jmin':-1500e3, 'jmax':1500e3}  # [mm/s**3]
 # is the tool inside the material or not?
 tool_free = False
-
 
 # loop over all blocks: sequence of z-engage/retraction blocks and normal xy-plane blocks
 for idx, GCode_block in enumerate(GCode_blocks):
@@ -70,7 +77,7 @@ for idx, GCode_block in enumerate(GCode_blocks):
             tool_free = False
         else:
             # solve optimization problem to retract
-            tool = Tool(tol, bounds=bounds_free)
+            tool = Tool(tol, bounds=bounds_retract)
             # at end of movement, tool is free
             tool_free = True
 
