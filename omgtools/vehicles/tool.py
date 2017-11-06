@@ -115,25 +115,7 @@ class Tool(Vehicle):
         self.define_constraint(-dddz + (horizon_time**3)*self.jzmin, -inf, 0.)
         self.define_constraint(dddx - (horizon_time**3)*self.jxmax, -inf, 0.)
         self.define_constraint(dddy - (horizon_time**3)*self.jymax, -inf, 0.)
-
-        # keep z at zero velocity, we don't whant z-movement while machining in xy-plane
-        self.define_constraint(dz - horizon_time*1e-5, -inf, 0.)
-        self.define_constraint(-dz - horizon_time*1e-5, -inf, 0.)
-
-        # don't reach maximum velocity at end of a segment, to get a more safe transition
-        # self.define_constraint(-dx(1.) + 0.95*horizon_time*self.vxmin, -inf, 0.)
-        # self.define_constraint(-dy(1.) + 0.95*horizon_time*self.vymin, -inf, 0.)
-        # self.define_constraint(-dz(1.) + 0.95*horizon_time*self.vzmin, -inf, 0.)
-        # self.define_constraint(dx(1.) - 0.95*horizon_time*self.vxmax, -inf, 0.)
-        # self.define_constraint(dy(1.) - 0.95*horizon_time*self.vymax, -inf, 0.)
-        # self.define_constraint(dz(1.) - 0.95*horizon_time*self.vzmax, -inf, 0.)
-
-        # self.define_constraint(-ddx(1.) + 0.95*(horizon_time**2)*self.axmin, -inf, 0.)
-        # self.define_constraint(-ddy(1.) + 0.95*(horizon_time**2)*self.aymin, -inf, 0.)
-        # self.define_constraint(-ddz(1.) + 0.95*(horizon_time**2)*self.azmin, -inf, 0.)
-        # self.define_constraint(ddx(1.) - 0.95*(horizon_time**2)*self.axmax, -inf, 0.)
-        # self.define_constraint(ddy(1.) - 0.95*(horizon_time**2)*self.aymax, -inf, 0.)
-        # self.define_constraint(ddz(1.) - 0.95*(horizon_time**2)*self.azmax, -inf, 0.)
+        self.define_constraint(dddz - (horizon_time**3)*self.jzmax, -inf, 0.)
 
     def get_initial_constraints(self, splines, horizon_time):
         state0 = self.define_parameter('state0', 3)
