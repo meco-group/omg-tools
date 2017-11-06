@@ -81,20 +81,6 @@ for idx, GCode_block in enumerate(GCode_blocks):
             # at end of movement, tool is free
             tool_free = True
 
-        # switch x and z position
-        x0 = GCode_block[0].X0
-        x1 = GCode_block[0].X1
-        z0 = GCode_block[0].Z0
-        z1 = GCode_block[0].Z1
-        GCode_block[0].X0 = z0
-        GCode_block[0].X1 = z1
-        GCode_block[0].Z0 = x0
-        GCode_block[0].Z1 = x1
-
-        # assign new start and end
-        GCode_block[0].start = [GCode_block[0].X0, GCode_block[0].Y0, GCode_block[0].Z0]
-        GCode_block[0].end = [GCode_block[0].X1, GCode_block[0].Y1, GCode_block[0].Z1]
-
         tool.define_knots(knot_intervals=10)
         tool.set_initial_conditions(GCode_block[0].start)  # start position of first GCode block
         tool.set_terminal_conditions(GCode_block[0].end)  # goal position of last GCode block
