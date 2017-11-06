@@ -840,6 +840,7 @@ class GCodeSchedulerProblem(Problem):
         dddpos_y = pos_y.derivative(3)
 
         eval = np.linspace(0,1,100)
+
         maxvx = max(dpos_x(eval)/motion_time)
         maxvy = max(dpos_y(eval)/motion_time)
         maxax = max(ddpos_x(eval)/motion_time**2)
@@ -874,6 +875,7 @@ class GCodeSchedulerProblem(Problem):
         x1 = segment['end'][0]
         y1 = segment['end'][1]
         z0 = segment['start'][2]
+        z1 = segment['end'][2]
 
         j_lim = self.vehicles[0].jxmax  # jerk limit
         if j_lim != self.vehicles[0].jymax:
@@ -931,7 +933,8 @@ class GCodeSchedulerProblem(Problem):
         guess_y[-2] = y1
         guess_y[-1] = y1
 
-        guess_z = z0*np.array(guess_x)
+        # linear interpolation between start and end for z-guess
+        guess_z = np.linspace(z0,z1, len(guess_x)).tolist()
         init_guess = np.c_[guess_x, guess_y, guess_z]
 
         motion_time = self.get_init_guess_motion_time(segment, coeff_guess=init_guess)
@@ -1104,6 +1107,7 @@ class GCodeSchedulerProblem(Problem):
             # spline coefficients were provided
             guess_x = coeff_guess[:,0]
             guess_y = coeff_guess[:,1]
+            guess_z = coeff_guess[:,2]
             # construct corresponding splines
             pos_x = BSpline(self.vehicles[0].basis, guess_x)
             vel_x = pos_x.derivative(1)
@@ -1115,15 +1119,38 @@ class GCodeSchedulerProblem(Problem):
             acc_y = pos_y.derivative(2)
             jerk_y = pos_y.derivative(3)
 
+            pos_z = BSpline(self.vehicles[0].basis, guess_z)
+            vel_z = pos_z.derivative(1)
+            acc_z = pos_z.derivative(2)
+            jerk_z = pos_z.derivative(3)
+
             # determine which limit is the most strict, and therefore determines the motion_time
             eval = np.linspace(0,1,100)
             # take into account scaling factor, with appropriate power
             j_lim = self.vehicles[0].jxmax
-            motion_time_j = (max(np.r_[abs(jerk_x(eval)), abs(jerk_y(eval))])/float(j_lim))**(1/3.)
+            if j_lim != 0.:
+                # xy-plane movement
+                motion_time_j = (max(np.r_[abs(jerk_x(eval)), abs(jerk_y(eval))])/float(j_lim))**(1/3.)
+            else:
+                # z-movement
+                j_lim = self.vehicles[0].jzmax
+                motion_time_j = (max(abs(jerk_z(eval)))/float(j_lim))**(1/3.)
             a_lim = self.vehicles[0].axmax  # jerk limit
-            motion_time_a = np.sqrt(max(np.r_[abs(acc_x(eval)), abs(acc_y(eval))])/float(a_lim))
+            if a_lim != 0.:
+                # xy-plane movement
+                motion_time_a = np.sqrt(max(np.r_[abs(acc_x(eval)), abs(acc_y(eval))])/float(a_lim))
+            else:
+                # z-movement
+                a_lim = self.vehicles[0].azmax
+                motion_time_a = np.sqrt(max(abs(acc_z(eval)))/float(a_lim))
             v_lim = self.vehicles[0].vxmax  # jerk limit
-            motion_time_v = max(np.r_[abs(vel_x(eval)), abs(vel_y(eval))])/float(v_lim)
+            if v_lim != 0.:
+                # xy-plane movement
+                motion_time_v = max(np.r_[abs(vel_x(eval)), abs(vel_y(eval))])/float(v_lim)
+            else:
+                # z-movement
+                v_lim = self.vehicles[0].vzmax
+                motion_time_v = max(abs(vel_z(eval)))/float(v_lim)
             motion_time = max(motion_time_j, motion_time_a, motion_time_v)
             motion_time = 1.05*motion_time  # take some margin to avoid numerical errors
         else:
@@ -1136,9 +1163,11 @@ class GCodeSchedulerProblem(Problem):
             # 6: -j_lim
             # 7: -a_lim
             # 8: j_lim
-            j_lim = self.vehicles[0].jxmax
-            a_lim = self.vehicles[0].axmax
-            v_lim = self.vehicles[0].vxmax
+            # for z-movement, the limits in x and y are set to zero, so set the according values for
+            # j_lim, a_lim and v_lim
+            j_lim = self.vehicles[0].jxmax if self.vehicles[0].jxmax != 0. else self.vehicles[0].jzmax
+            a_lim = self.vehicles[0].axmax if self.vehicles[0].axmax != 0. else self.vehicles[0].azmax
+            v_lim = self.vehicles[0].vxmax if self.vehicles[0].vxmax != 0. else self.vehicles[0].vzmax
 
             if isinstance(segment['shape'], Rectangle):
                 distance = 0
