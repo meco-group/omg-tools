@@ -236,6 +236,14 @@ class Tool(Vehicle):
         else:
             raise RuntimeError('Invalid segment obtained when setting up collision avoidance constraints')
 
+        # collision avoidance in z-direction: stay within connection from start to end, with a little margin
+        if segment['start'][2] != segment['end'][2]:
+            z_min = min(segment['start'][2],segment['end'][2])
+            z_max = max(segment['start'][2],segment['end'][2])
+            # movement in z-direction
+            self.define_constraint(-z + z_min - 2*rad[0], -inf, 0.)
+            self.define_constraint(z - z_max  - 2*rad[0], -inf, 0.)
+
         # Constraints above impose that the spline must stay inside the infinite version of the segment: the
         # complete line, or the complete ring. This can cause a trajectory that is feasible, but still goes outside
         # of the overlap region between two segments. Therefore, we can constrain the end point of segment[0] to lie
