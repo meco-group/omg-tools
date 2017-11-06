@@ -89,8 +89,15 @@ class Tool(Vehicle):
         if self.options['vel_limit'] is 'machining':
             # the machining process is the limiting factor, so limit the total velocity
             # in x- and y-axis combined
-            self.define_constraint(
-                (dx**2+dy**2) - (horizon_time**2)*self.vxmax**2, -inf, 0., skip=skip)
+            if self.vxmax != 0.:
+                # xy-plane movement
+                self.define_constraint(
+                    (dx**2+dy**2) - (horizon_time**2)*self.vxmax**2, -inf, 0., skip=skip)
+            else:
+                # z-movement
+                self.define_constraint(
+                    (dz**2) - (horizon_time**2)*self.vzmax**2, -inf, 0., skip=skip)
+
         elif self.options['vel_limit'] is 'axes':
             # the axes themselves are the limiting factor, so limit the x- and y- axis separately
             self.define_constraint(-dx + horizon_time*self.vxmin, -inf, 0., skip=skip)
