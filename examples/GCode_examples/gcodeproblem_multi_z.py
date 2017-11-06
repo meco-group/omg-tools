@@ -39,9 +39,8 @@ import os
 # make GCode reader and run it to obtain an object-oriented description of the GCode,
 # by opening a file dialog in which you can select your GCode as an .nc-file
 reader = GCodeReader()
-# this opens a file dialog in which you can select your GCode as an .nc-file
-# the settings inside this example are made specifically for the anchor2D.nc file
 GCode = reader.run()
+GCode_blocks = reader.get_block_division(GCode)
 
 n_blocks = 3  # amount of GCode blocks to combine
 tol = 0.01  # required tolerance of the machined part [mm]
