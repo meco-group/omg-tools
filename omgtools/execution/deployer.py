@@ -82,12 +82,8 @@ class Deployer:
         # e.g. is True if current solution was infeasible
         self.problem.no_update = False
 
-        # create figures
-        plt.figure(2)  # state
-        plt.figure(3)  # input
-        plt.figure(4)  # dinput
-        plt.figure(5)  # ddinput
-        plt.figure(6)  # scene
+        # initialize the figures
+        self.init_plot()
 
         # initialize trajectories
         self.state_traj = np.c_[self.problem.curr_state]
@@ -161,8 +157,8 @@ class Deployer:
                 self.dinput_traj = np.c_[self.dinput_traj, trajectories['dinput'][:, 1:n_samp+1], self.dinputs_end]
                 self.ddinput_traj = np.c_[self.ddinput_traj, trajectories['ddinput'][:, 1:n_samp+1], self.ddinputs_end]
 
-                # plot trajectories of state, input,...
-                self.plot_results(current_time, update_time)
+                # update plot of trajectories of state, input,...
+                self.update_plot(current_time, update_time)
 
                 # check if problem was solved successfully
                 self.check_results(states, inputs, dinputs, ddinputs, current_time,
@@ -236,99 +232,123 @@ class Deployer:
         else:  # user was happy or optimal solution found, just continue
             self.cnt = 0
 
-    def plot_results(self, current_time, update_time):
+    def init_plot(self):
+        # create figures
+        _, (self.ax2_1, self.ax2_2, self.ax2_3) = plt.subplots(3, 1, sharex=True)  # state
+        self.ax2_1.plot([], [], zorder=0)
+        self.ax2_2.plot([], [], zorder=0)
+        self.ax2_3.plot([], [], zorder=0)
+        self.ax2_1.set_ylabel('x[mm]')
+        self.ax2_2.set_ylabel('y[mm]')
+        self.ax2_3.set_ylabel('z[mm]')
+        _, (self.ax3_1, self.ax3_2, self.ax3_3) = plt.subplots(3, 1, sharex=True)  # input
+        self.ax3_1.plot([], [], zorder=0)
+        self.ax3_2.plot([], [], zorder=0)
+        self.ax3_3.plot([], [], zorder=0)
+        self.ax3_1.set_ylabel('vx[mm/s]')
+        self.ax3_2.set_ylabel('vy[mm/s]')
+        self.ax3_3.set_ylabel('vz[mm/s]')
+        _, self.ax4 = plt.subplots(1,1, sharex=True)  # total velocity
+        self.ax4.plot([], [], zorder=0)
+        self.ax4.set_ylabel('time[s]')
+        self.ax4.set_ylabel('v [mm/s]')
+        _, (self.ax5_1, self.ax5_2, self.ax5_3) = plt.subplots(3, 1, sharex=True)  # dinput
+        self.ax5_1.plot([], [], zorder=0)
+        self.ax5_2.plot([], [], zorder=0)
+        self.ax5_3.plot([], [], zorder=0)
+        self.ax5_1.set_ylabel('ax[mm/s**2]')
+        self.ax5_2.set_ylabel('ay[mm/s**2]')
+        self.ax5_3.set_ylabel('az[mm/s**2]')
+        _, (self.ax6_1, self.ax6_2, self.ax6_3) = plt.subplots(3, 1, sharex=True)  # ddinput
+        self.ax6_1.plot([], [], zorder=0)
+        self.ax6_2.plot([], [], zorder=0)
+        self.ax6_3.plot([], [], zorder=0)
+        self.ax6_1.set_ylabel('jx[mm/s**3]')
+        self.ax6_2.set_ylabel('jy[mm/s**3]')
+        self.ax6_3.set_ylabel('jz[mm/s**3]')
+        _, self.ax7 = plt.subplots(1,1, sharex=True)  # scene
+        self.ax7.plot([], [], zorder=0)
+        for i in range(len(self.problem.environment.room)):
+            # environment
+            self.ax7.plot([], [], zorder=0, color='red', linestyle = '--', linewidth= 1.2)
+        for i in range(self.problem.n_segments):
+            # future spline trajectories
+            self.ax7.plot([], [], zorder=0, color='gray', linewidth=1.2)
+        self.ax7.set_xlabel('x[mm]')
+        self.ax7.set_ylabel('y[mm]')
+
+    def update_plot(self, current_time, update_time):
         n_t = self.state_traj.shape[1]  # amount of points in trajectory
         time = np.linspace(0, current_time+update_time, n_t)  # make time vector
 
-        plt.figure(2)
-        plt.subplot(3, 1, 1)
-        plt.cla()
-        plt.plot(time, self.state_traj[0, :])
-        plt.ylabel('x[mm]')
-        plt.subplot(3, 1, 2)
-        plt.cla()
-        plt.plot(time, self.state_traj[1, :])
-        plt.ylabel('y[mm]')
-        plt.subplot(3, 1, 3)
-        plt.cla()
-        plt.plot(time, self.state_traj[2, :])
-        plt.ylabel('z[mm]')
-        plt.pause(0.1)
+        self.ax2_1.lines[0].set_data(time, self.state_traj[0, :])
+        self.ax2_1.relim()
+        self.ax2_1.autoscale_view()
+        self.ax2_2.lines[0].set_data(time, self.state_traj[1, :])
+        self.ax2_2.relim()
+        self.ax2_2.autoscale_view()
+        self.ax2_3.lines[0].set_data(time, self.state_traj[2, :])
+        self.ax2_3.relim()
+        self.ax2_3.autoscale_view()
+        plt.pause(0.01)
 
-        plt.figure(3)
-        plt.subplot(3, 1, 1)
-        plt.cla()
-        plt.plot(time, self.input_traj[0, :])
-        plt.ylabel('vx[mm/s]')
-        plt.subplot(3, 1, 2)
-        plt.cla()
-        plt.plot(time, self.input_traj[1, :])
-        plt.ylabel('vy[mm/s]')
-        plt.subplot(3, 1, 3)
-        plt.cla()
-        plt.plot(time, self.input_traj[2, :])
-        plt.ylabel('vz[mm/s]')
-        plt.pause(0.1)
+        self.ax3_1.lines[0].set_data(time, self.input_traj[0, :])
+        self.ax3_1.relim()
+        self.ax3_1.autoscale_view()
+        self.ax3_2.lines[0].set_data(time, self.input_traj[1, :])
+        self.ax3_2.relim()
+        self.ax3_2.autoscale_view()
+        self.ax3_3.lines[0].set_data(time, self.input_traj[2, :])
+        self.ax3_3.relim()
+        self.ax3_3.autoscale_view()
+        plt.pause(0.01)
 
-        plt.figure(4)
-        plt.cla()
         # plot total velocity
-        plt.plot(time, np.sqrt(self.input_traj[0, :]**2+self.input_traj[1, :]**2))
-        plt.ylabel('v[mm/s]')
-        plt.pause(0.1)
+        self.ax4.lines[0].set_data(time, np.sqrt(self.input_traj[0, :]**2+self.input_traj[1, :]**2))
+        self.ax4.relim()
+        self.ax4.autoscale_view()
+        plt.pause(0.01)
 
-        plt.figure(5)
-        plt.subplot(3, 1, 1)
-        plt.cla()
-        plt.plot(time, self.dinput_traj[0, :])
-        plt.ylabel('ax[mm/s^2]')
-        plt.subplot(3, 1, 2)
-        plt.cla()
-        plt.plot(time, self.dinput_traj[1, :])
-        plt.ylabel('ay[mm/s^2]')
-        plt.subplot(3, 1, 3)
-        plt.cla()
-        plt.plot(time, self.dinput_traj[2, :])
-        plt.ylabel('az[mm/s^2]')
-        plt.pause(0.1)
+        self.ax5_1.lines[0].set_data(time, self.dinput_traj[0, :])
+        self.ax5_1.relim()
+        self.ax5_1.autoscale_view()
+        self.ax5_2.lines[0].set_data(time, self.dinput_traj[1, :])
+        self.ax5_2.relim()
+        self.ax5_2.autoscale_view()
+        self.ax5_3.lines[0].set_data(time, self.dinput_traj[2, :])
+        self.ax5_3.relim()
+        self.ax5_3.autoscale_view()
+        plt.pause(0.01)
 
-        plt.figure(6)
-        plt.subplot(3, 1, 1)
-        plt.cla()
-        plt.plot(time, self.ddinput_traj[0, :])
-        plt.ylabel('jx[mm/s^3]')
-        plt.subplot(3, 1, 2)
-        plt.cla()
-        plt.plot(time, self.ddinput_traj[1, :])
-        plt.ylabel('jy[mm/s^3]')
-        plt.subplot(3, 1, 3)
-        plt.cla()
-        plt.plot(time, self.ddinput_traj[2, :])
-        plt.ylabel('jz[mm/s^3]')
-        plt.pause(0.1)
+        self.ax6_1.lines[0].set_data(time, self.dinput_traj[0, :])
+        self.ax6_1.relim()
+        self.ax6_1.autoscale_view()
+        self.ax6_2.lines[0].set_data(time, self.dinput_traj[1, :])
+        self.ax6_2.relim()
+        self.ax6_2.autoscale_view()
+        self.ax6_3.lines[0].set_data(time, self.dinput_traj[2, :])
+        self.ax6_3.relim()
+        self.ax6_3.autoscale_view()
+        plt.pause(0.01)
 
-        plt.figure(7)
-        plt.cla()
-        # plot trajectory
-        plt.plot(self.state_traj[0, :], self.state_traj[1, :])
-        plt.xlabel('x[mm]')
-        plt.ylabel('y[mm]')
-        # plot future trajectory
-        eval = np.linspace(0,1,100)
-        future_splines = self.problem.vehicles[0].result_spline_segments[1:]
-        plt.figure(7)
-        for spline in future_splines:
-            plt.plot(spline[0](eval),spline[1](eval),color='gray')
+        self.ax7.lines[0].set_data(self.state_traj[0, :], self.state_traj[1, :])
         # plot environment
-        for room in self.problem.environment.room:
+        for idx, room in enumerate(self.problem.environment.room):
             points = room['shape'].draw(room['pose'][:2]+[0])[0][0]  # no extra rotation to plot
             # add first point again to close shape
             points = np.c_[points, [points[0,0], points[1,0]]]
-            plt.plot(points[0,:], points[1,:], color='red', linestyle = '--', linewidth= 1.2)
+            self.ax7.lines[idx+1].set_data(points[0,:], points[1,:])
             # plot GCode center points
             # plt.plot(room['start'][0], room['start'][1], 'gx')
             # plt.plot(room['end'][0], room['end'][1], 'gx')
-        plt.pause(0.1)
+        # plot future trajectory
+        eval = np.linspace(0,1,100)
+        future_splines = self.problem.vehicles[0].result_spline_segments[1:]
+        for idx, spline in enumerate(future_splines):
+            self.ax7.lines[1+len(self.problem.environment.room)+idx].set_data(spline[0](eval),spline[1](eval))
+        self.ax7.relim()
+        self.ax7.autoscale_view()
+        plt.pause(0.01)
 
     def save_results(self, count=0):
         # write results to file
