@@ -130,13 +130,6 @@ for idx, GCode_block in enumerate(GCode_blocks):
         # put problem in deployer: choose this if you just want to obtain the trajectories for the tool
         deployer = Deployer(schedulerproblem, sample_time=0.0001)
 
-        # define what you want to plot
-        schedulerproblem.plot('scene')
-        tool.plot('state', knots=True, prediction=True, labels=['x (m)', 'y (m)', 'z (m)'])
-        tool.plot('input', knots=True, prediction=True, labels=['v_x (m/s)', 'v_y (m/s)', 'v_z (m/s)'])
-        tool.plot('dinput', knots=True, prediction=True, labels=['a_x (m/s^2)', 'a_y (m/s^2)', 'a_z (m/s^2)'])
-        tool.plot('ddinput', knots=True, prediction=True, labels=['j_x (m/s^3)', 'j_y (m/s^3)', 'j_z (m/s^3)'])
-
         # run using a receding horizon of one segment
         deployer.update_segment()
 
