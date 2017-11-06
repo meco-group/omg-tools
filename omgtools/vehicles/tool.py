@@ -61,11 +61,11 @@ class Tool(Vehicle):
         self.jxmax = bounds['jxmax'] if 'jxmax' in bounds else 2.
         self.jymax = bounds['jymax'] if 'jymax' in bounds else 2.
         self.jzmax = bounds['jzmax'] if 'jzmax' in bounds else 2.
-        # user specified a single velocity for x, y and z
+        # user specified a single velocity for x and y
         if 'vmin' in bounds:
-            self.vxmin = self.vymin  = self.vzmin = bounds['vmin']
+            self.vxmin = self.vymin = bounds['vmin']
         if 'vmax' in bounds:
-            self.vxmax = self.vymax = self.vzmax = bounds['vmax']
+            self.vxmax = self.vymax = bounds['vmax']
         if 'amin' in bounds:
             self.axmin = self.aymin = self.azmin = bounds['amin']
         if 'amax' in bounds:
