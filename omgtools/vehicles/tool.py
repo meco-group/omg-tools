@@ -95,19 +95,24 @@ class Tool(Vehicle):
             # the axes themselves are the limiting factor, so limit the x- and y- axis separately
             self.define_constraint(-dx + horizon_time*self.vxmin, -inf, 0., skip=skip)
             self.define_constraint(-dy + horizon_time*self.vymin, -inf, 0., skip=skip)
+            self.define_constraint(-dz + horizon_time*self.vzmin, -inf, 0., skip=skip)
             self.define_constraint(dx - horizon_time*self.vxmax, -inf, 0., skip=skip)
             self.define_constraint(dy - horizon_time*self.vymax, -inf, 0., skip=skip)
+            self.define_constraint(dz - horizon_time*self.vzmax, -inf, 0., skip=skip)
         else:
             raise ValueError(
                 'Only machining and axes are defined as velocity limit types.')
 
         self.define_constraint(-ddx + (horizon_time**2)*self.axmin, -inf, 0., skip=skip)
         self.define_constraint(-ddy + (horizon_time**2)*self.aymin, -inf, 0., skip=skip)
+        self.define_constraint(-ddz + (horizon_time**2)*self.azmin, -inf, 0., skip=skip)
         self.define_constraint(ddx - (horizon_time**2)*self.axmax, -inf, 0., skip=skip)
         self.define_constraint(ddy - (horizon_time**2)*self.aymax, -inf, 0., skip=skip)
+        self.define_constraint(ddz - (horizon_time**2)*self.azmax, -inf, 0., skip=skip)
 
         self.define_constraint(-dddx + (horizon_time**3)*self.jxmin, -inf, 0.)
         self.define_constraint(-dddy + (horizon_time**3)*self.jymin, -inf, 0.)
+        self.define_constraint(-dddz + (horizon_time**3)*self.jzmin, -inf, 0.)
         self.define_constraint(dddx - (horizon_time**3)*self.jxmax, -inf, 0.)
         self.define_constraint(dddy - (horizon_time**3)*self.jymax, -inf, 0.)
 
