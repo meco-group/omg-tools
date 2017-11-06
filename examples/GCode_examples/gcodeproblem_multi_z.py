@@ -20,22 +20,24 @@
 
 
 # This example computes a trajectory that a tool of e.g. a milling machine has to follow
-# to machine a part, described by GCode in a .nc file, with a certain tolerance.
+# to machine a part, described by GCode (in a .nc file), with a certain tolerance.
 # It can handle GCode files that contain a workpiece, machined in the XY-plane, but also require a
-# movement in the z-axis from time to time. E.g. when maching a workpiece that consists of multiple
-# layers in the XY-plane, followed by a downward movement of the z-axis, and a new layer.
+# movement in the z-axis from time to time. E.g. when maching a workpiece that consists of a layer
+# in the XY-plane, followed by a downward movement of the z-axis, a new layer in the XY-plane etc.
 # Example file: rsq5_multi.nc
 
-# Or a GCode file describing the machining of several circles, after machining each circle,
+# Or a GCode file describing the machining of several circles. After machining each circle,
 # the z-axis is retracted, the tool moves to a new position, the z-axis is again moved to the old position,
-# and the new circle can be machined.
+# and the new circle can be machined. Engaging the material needs to be done with caution, when retracting
+# or moving without machining, the velocity limits can be increased. When machining, the process determines
+# the maximum velocity.
 # Example file: Star_shift_scale.nc
-
 
 from omgtools import *
 import os
 
-# make GCode reader and run it to obtain an object-oriented description of the GCode
+# make GCode reader and run it to obtain an object-oriented description of the GCode,
+# by opening a file dialog in which you can select your GCode as an .nc-file
 reader = GCodeReader()
 # this opens a file dialog in which you can select your GCode as an .nc-file
 # the settings inside this example are made specifically for the anchor2D.nc file
@@ -59,16 +61,18 @@ bounds_free = {'vmin':-150, 'vmax':150,  # [mm/s]
 tool_free = False
 
 
-# loop over all blocks: sequence of z-engage/retraction blocks and normal XY blocks
+# loop over all blocks: sequence of z-engage/retraction blocks and normal xy-plane blocks
 for idx, GCode_block in enumerate(GCode_blocks):
     if (len(GCode_block) == 1 and GCode_block[0].Z0 != GCode_block[0].Z1):
         if GCode_block[0].Z0 < GCode_block[0].Z1:
             # solve optimization problem to engage
             tool = Tool(tol, bounds=bounds_engage)
+            # at end of movement, tool is not free
             tool_free = False
         else:
             # solve optimization problem to retract
             tool = Tool(tol, bounds=bounds_free)
+            # at end of movement, tool is free
             tool_free = True
 
         # switch x and z position
@@ -98,14 +102,15 @@ for idx, GCode_block in enumerate(GCode_blocks):
                                                                'ipopt.mu_init': 1e-5,
                                                                'ipopt.hessian_approximation': 'limited-memory',
                                                                'ipopt.max_iter': 20000}}})#,
+                                                                   'ipopt.max_iter': 20000}}})#,
         # put problem in deployer: choose this if you just want to obtain the trajectories for the tool
         deployer = Deployer(schedulerproblem, sample_time=0.0001)
 
         # run using a receding horizon of one segment
         deployer.update_segment()
 
-        # switch x and z back
-        deployer.save_results(count=idx, reorder=True)
+        # switch x and z back with reorder parameter
+        deployer.save_results(count=idx)
     else:
         if tool_free:
             # tool is not in material, so axis limits are selected
@@ -113,14 +118,11 @@ for idx, GCode_block in enumerate(GCode_blocks):
         else:
             # tool is in material, so process limits velocity
             tool = Tool(tol, bounds = bounds)
+
         tool.define_knots(knot_intervals=10)
         tool.set_initial_conditions(GCode_block[0].start)  # start position of first GCode block
         tool.set_terminal_conditions(GCode_block[-1].end)  # goal position of last GCode block
 
-        # solve with a GCodeSchedulerProblem: this problem will combine n_blocks of GCode
-        # and compute trajectories for the tool
-        # each block will be converted to a room, that is put inside the total environment
-        # there are two room shapes: Rectangle and Ring (circle segment with inner and outer diameter)
         if len(GCode_block) < n_blocks:
             schedulerproblem = GCodeSchedulerProblem(tool, GCode_block, n_segments=len(GCode_block), split_circle = True)
         else:
