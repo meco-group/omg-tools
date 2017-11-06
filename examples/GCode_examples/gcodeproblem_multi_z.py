@@ -87,13 +87,12 @@ for idx, GCode_block in enumerate(GCode_blocks):
 
         schedulerproblem = GCodeSchedulerProblem(tool, GCode_block, n_segments=1)
         schedulerproblem.set_options({'solver_options': {'ipopt': {'ipopt.tol': 1e-5,
-                                                               'ipopt.linear_solver': 'ma57',
-                                                               'ipopt.warm_start_bound_push': 1e-6,
-                                                               'ipopt.warm_start_mult_bound_push': 1e-6,
-                                                               'ipopt.warm_start_mult_bound_push': 1e-6,
-                                                               'ipopt.mu_init': 1e-5,
-                                                               'ipopt.hessian_approximation': 'limited-memory',
-                                                               'ipopt.max_iter': 20000}}})#,
+                                                                   'ipopt.linear_solver': 'ma57',
+                                                                   'ipopt.warm_start_bound_push': 1e-6,
+                                                                   'ipopt.warm_start_mult_bound_push': 1e-6,
+                                                                   'ipopt.warm_start_mult_bound_push': 1e-6,
+                                                                   'ipopt.mu_init': 1e-5,
+                                                                   'ipopt.hessian_approximation': 'limited-memory',
                                                                    'ipopt.max_iter': 20000}}})#,
         # put problem in deployer: choose this if you just want to obtain the trajectories for the tool
         deployer = Deployer(schedulerproblem, sample_time=0.0001)
