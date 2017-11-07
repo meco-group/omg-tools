@@ -55,7 +55,9 @@ options={'freeT': True, 'horizon_time': 10, 'no_term_con_der': False}
 
 # Note: When 'min_nobs' is selected as frame_type and your vehicle size is larger than the cell size,
 # shifting frames sometimes causes problems
-schedulerproblem=SchedulerProblem(vehicle, environment, globalplanner, options=options, frame_size= 9, frame_type='min_nobs')
+# for frame_type='shift', e.g. frame_size = 9
+schedulerproblem=SchedulerProblem(vehicle, environment, globalplanner, options=options,
+                                  frame_type='min_nobs', n_frames=2)
 
 # Note: using linear solver ma57 is optional, normally it reduces the solving time
 # multiproblem.set_options({'solver_options':
