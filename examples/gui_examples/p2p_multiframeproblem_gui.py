@@ -18,7 +18,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 
-# This example is very similar to p2p_multiframeproblem.py, and uses the same principles
+# This example is very similar to schedulerproblem_example1.py, and uses the same principles
 # The difference is that in the current example, a GUI is used to assist the user in building up
 # the desired environment. For an explanation about how to use the GUI, see below.
 
