@@ -29,12 +29,14 @@ class Deployer:
         self.sample_time = sample_time
         self.current_time = 0.
         self.iteration0 = True
+        # handy when making multiple instances of deployer
+        # in one problem, e.g. gcodeproblem_multi_z.py
+        plt.close('all')
 
     def set_problem(self, problem):
         self.problem = problem
 
     def reset(self):
-        plt.close('all')
         self.iteration0 = True
         self.problem.reinitialize()
 
