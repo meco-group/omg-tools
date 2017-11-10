@@ -624,73 +624,30 @@ class SchedulerProblem(Problem):
         return frame
 
     def check_frames(self):
-        if self.frame_type == 'shift':
-            # if travelled over this 'percentage' then get new frame
-            # percentage = 99
-
-            # if final goal is not in the current frame, compare current distance
-            # to the local goal with the initial distance
-            if not self.frames[0]['endpoint_frame'] == self.goal_state[:2]:  # remove orientation info
-                    # init_dist = distance_between_points(self.frames[0]['waypoints'][0], self.frames[0]['endpoint_frame'])
-                    # curr_dist = distance_between_points(self.curr_state[:2], self.frames[0]['endpoint_frame'])
-                    # if curr_dist < init_dist*(1-(percentage/100.)):
-                    #     # if already covered 'percentage' of the distance
-                    #     valid = False
-                    #     return valid
-                    if (self.n_frames == 1 and hasattr(self, 'next_frame')):
-                        if self.point_in_frame(self.next_frame, self.curr_state[:2], distance=self.veh_size):
-                            # only called if self.n_frames = 1,
-                            # then self.frames[1] doesn't exist and self.next_frame does exist
-                            valid = False
-                        else:
-                            valid = True
-                        return valid
-                    elif self.point_in_frame(self.frames[1], self.curr_state[:2], distance=self.veh_size):
-                        # if vehicle is in overlap region between current and next frame
-                        valid = False
-                        return valid
-                    else:
-                        valid = True
-                        return valid
-            else:  # keep frame, until 'percentage' of the distance covered or arrived at last frame
+        # if final goal is not in the current frame, compare current distance
+        # to the local goal with the initial distance
+        if not self.point_in_frame(self.frames[0], self.goal_state[:2]):
+            if (self.n_frames == 1 and hasattr(self, 'next_frame')):
+                if self.point_in_frame(self.next_frame, self.curr_state[:2], distance=self.veh_size):
+                    # only called if self.n_frames = 1,
+                    # then self.frames[1] doesn't exist and self.next_frame does exist
+                    # current state is inside the next frame, so switch
+                    valid = False
+                else:
+                    valid = True
+                return valid
+            elif self.point_in_frame(self.frames[1], self.curr_state[:2], distance=self.veh_size):
+                # vehicle is in overlap region between current and next frame
+                valid = False
+                return valid
+            else:
                 valid = True
                 return valid
-        elif self.frame_type == 'min_nobs':
-            # if travelled over this 'percentage' then get new frame
-            # Note: normally you will automatically shift to the next frame when the vehicle enters it,
-            # without reaching this 'percentage' value
-            # percentage = 99
-
-            # if final goal is not in the current frame, compare current distance
-            # to the local goal with the initial distance
-            if not self.point_in_frame(self.frames[0], self.goal_state):
-                    # init_dist = distance_between_points(self.frames[0]['waypoints'][0], self.frames[0]['endpoint_frame'])
-                    # curr_dist = distance_between_points(self.curr_state[:2], self.frames[0]['endpoint_frame'])
-                    # if curr_dist < init_dist*(1-(percentage/100.)):
-                    #     # if already covered 'percentage' of the distance
-                    #     valid = False
-                    #     return valid
-                    if (self.n_frames == 1 and hasattr(self, 'next_frame')):
-                        if self.point_in_frame(self.next_frame, self.curr_state[:2], distance=self.veh_size):
-                            # only called if self.n_frames = 1,
-                            # then self.frames[1] doesn't exist and self.next_frame does exist
-                            valid = False
-                        else:
-                            valid = True
-                        return valid
-                    elif self.point_in_frame(self.frames[1], self.curr_state[:2], distance=self.veh_size):
-                        # if vehicle is in overlap region between current and next frame
-                        valid = False
-                        return valid
-                    else:
-                        valid = True
-                        return valid
-            else:  # keep frame, until 'percentage' of the distance covered or arrived at last frame
-                valid = True
-                return valid
+        else:  # keep frame, since you arrived at last frame
+            valid = True
+            return valid
 
     def update_frames(self, next_frame=None):
-
         # update global path from current position,
         # since there may be a deviation from original global path
         # and since you moved over the path so a part needs to be removed
