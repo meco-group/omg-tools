@@ -1313,7 +1313,7 @@ class SchedulerProblem(Problem):
             print 'time in scale_up_frame', end_time-start_time
         return scaled_frame['border'], scaled_frame['waypoints']
 
-    def move_frame(self, start_position, delta_x, delta_y, move_limit):
+    def move_frame(self, start_position, delta_x, delta_y):
         # only used for 'frame_type'='shift'
 
         # determine direction we have to move in
@@ -1343,7 +1343,7 @@ class SchedulerProblem(Problem):
                 newy_lower = self.frame_size*0.5 + move
                 newy_upper = self.frame_size*0.5 - move
 
-        # newx_lower = self.frame_size*0.5, meaning that we keep the frame in the center, or adapted with move_limit
+        # move from origin to start position (that may be off-center, after shifting)
         newx_min = start_position[0] - newx_lower
         newy_min = start_position[1] - newy_lower
         newx_max = start_position[0] + newx_upper
