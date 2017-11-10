@@ -1048,8 +1048,7 @@ class SchedulerProblem(Problem):
                 next_frame['border'], next_frame['waypoints'] = self.scale_up_frame(next_frame)
 
                 # possibly the last waypoint is not reachable by the vehicle, fix this
-                method = 2  # 1 = shift frame, 2 = shift waypoint
-                next_frame = self.make_last_waypoint_reachable(next_frame, method)
+                next_frame = self.make_last_waypoint_reachable(next_frame, method='move_point')
 
                 # finish frame description
                 # next_frame['border'] is already determined
