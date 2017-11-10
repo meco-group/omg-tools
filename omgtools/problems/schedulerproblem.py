@@ -382,8 +382,10 @@ class SchedulerProblem(Problem):
                 # determine distance between waypoint outside of frame and current state
                 delta_x = point[0] - start_pos[0]
                 delta_y = point[1] - start_pos[1]
-                if (abs(delta_x) > move_limit+self.frame_size*0.5 or abs(delta_y) > move_limit+self.frame_size*0.5):
-                    waypoint = point  # waypoint outside frame, even after shifting
+                if (abs(delta_x) > self.move_limit+self.frame_size*0.5 or
+                    abs(delta_y) > self.move_limit+self.frame_size*0.5):
+                    # waypoint outside frame, even after shifting
+                    waypoint = point
                     break
                 # point is last point, and no points outside frame were found yet
                 elif point == self.global_path[-1]:
