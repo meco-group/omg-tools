@@ -119,16 +119,13 @@ class SchedulerProblem(Problem):
         # get moving obstacles inside frame, taking into account the calculated motion time
         for k in range(self.n_frames):
             # updates self.frames[:]['moving_obstacles']
-            # Todo: this never gives an output, because velocities are not assigned yet here...
             self.frames[k]['moving_obstacles'] = self.get_moving_obstacles_in_frame(self.frames[k], self.motion_times[k])
 
         # get a problem representation of the frames
         # the schedulerproblem (self) has a local problem (multiframeproblem) at each moment
         self.local_problem = self.generate_problem()
-        # Todo: is this function doing what we want?
+        # pass on initial guess
         self.local_problem.reset_init_guess(init_guess)
-        # Todo: previously we had problem=self.generate_problem, problem.reset_init_guess and then self.problem=problem
-        # is that something different?
 
     def solve(self, current_time, update_time):
         # solve the local problem with a receding horizon,
@@ -148,7 +145,7 @@ class SchedulerProblem(Problem):
 
             # frames were not valid anymore, update based on current position
 
-            # Todo: what if n_frames=1 Then we need self.next_frame
+            # if n_frames=1, we need self.next_frame
             if (self.n_frames == 1 and
                 hasattr(self, 'next_frame')):
                 self.update_frames(next_frame=self.next_frame)
@@ -157,8 +154,7 @@ class SchedulerProblem(Problem):
 
             # transform frames into local_problem and simulate
             self.local_problem = self.generate_problem()
-            # self.init_guess is filled in by update_frames()
-            # this also updates self.motion_time
+            # update_frames() updates self.motion_times and self.init_guess
             self.local_problem.reset_init_guess(self.init_guess)
         else:
             # update remaining motion time
@@ -169,20 +165,18 @@ class SchedulerProblem(Problem):
                                            self.local_problem, 'T'+str(k),)[0][0]
             else:
                 # fixedT: the remaining motion time is always the horizon time
+                # for fixedT, self.n_frames is always = 1
                 self.motion_times = [self.local_problem.options['horizon_time']]
 
             # check if amount of moving obstacles changed
             # if the obstacles just change their trajectory, the simulator takes this into account
             # if moving_obstacles is different from the existing moving_obstacles (new obstacle,
             # or disappeared obstacle) make a new problem
-
-            # Todo: if obstacle is not relevant anymore, place it far away and set hyperplanes accordingly?
-            # Todo: make new problem or place dummy obstacles and overwrite their state?
-            #       for now dummies have influence on solving time...
             new_problem = False
             for k in range(self.n_frames):
                 moving_obs_in_frame = self.get_moving_obstacles_in_frame(self.frames[k], self.motion_times[k])
                 if set(moving_obs_in_frame) != set(self.frames[k]['moving_obstacles']):
+                    # the amount of moving obstacles changed, or there is a new obstacle
                     new_problem = True
                     self.frames[k]['moving_obstacles'] = moving_obs_in_frame
                 else:
@@ -195,7 +189,7 @@ class SchedulerProblem(Problem):
                 for k in range(self.n_frames):
                     init_guess.append(np.array(
                                       self.local_problem.father.get_variables()[self.vehicles[0].label, 'splines_seg'+str(k)]))
-                # make a new local problem
+                # make a new local problem, using self.frames
                 self.local_problem = self.generate_problem()
                 # use solution from previous problem as guess
                 self.local_problem.reset_init_guess(init_guess)
@@ -221,6 +215,7 @@ class SchedulerProblem(Problem):
             self.frame_storage = []
             self.global_path_storage = []
         if simulation_time == np.inf:
+            # using simulator.run_once()
             simulation_time = sum(self.motion_times)
         repeat = int(simulation_time/sample_time)
         # copy frames, to avoid problems when removing elements from self.frames
@@ -321,7 +316,8 @@ class SchedulerProblem(Problem):
             # but only if there is more than one frame
             if self.n_frames != 1:
                 self.frames.pop(0)
-            frame = self.frames[-1]  # start from this frame
+            # compute new frame, using the last frame in the current list
+            frame = self.frames[-1]
             # add one extra frame
             n_frames_to_create = 1
         else:
@@ -388,7 +384,6 @@ class SchedulerProblem(Problem):
         xmax = start_pos[0] + self.frame_size*0.5
         ymax = start_pos[1] + self.frame_size*0.5
         frame['border'] = self.make_border(xmin,ymin,xmax,ymax)
-        move_limit = self.frame_size*0.25  # move frame max over this distance
 
         # determine next waypoint outside frame so we can
         # change the position of the frame if needed
@@ -400,10 +395,11 @@ class SchedulerProblem(Problem):
         _, start_idx = self.find_closest_waypoint(start_pos, self.global_path)
         for idx, point in enumerate(self.global_path[start_idx:]):
             if not self.point_in_frame(frame, point):
-                # Is point also out of frame when moving the frame towards the waypoint?
-                # if so, we move the window over a distance of 'move_limit' extra
+                # is point also out of frame when moving the frame towards the waypoint?
+                # if so, we move the window over a distance of 'move_limit' extra, and we have found
+                # the first waypoint outside the shifted frame
 
-                # determine distance between waypoint out of frame and current state
+                # determine distance between waypoint outside of frame and current state
                 delta_x = point[0] - start_pos[0]
                 delta_y = point[1] - start_pos[1]
                 if (abs(delta_x) > move_limit+self.frame_size*0.5 or abs(delta_y) > move_limit+self.frame_size*0.5):
@@ -413,9 +409,11 @@ class SchedulerProblem(Problem):
                 elif point == self.global_path[-1]:
                     endpoint = point
                 else:
-                    points_in_frame.append(point)  # waypoint inside frame after shifting
+                    # waypoint inside frame after shifting
+                    points_in_frame.append(point)
             else:
-                points_in_frame.append(point)  # waypoint inside frame
+                # waypoint inside frame
+                points_in_frame.append(point)
 
         # optimize frame position based on next waypoint (='waypoint')
         if waypoint is not None:
@@ -439,11 +437,8 @@ class SchedulerProblem(Problem):
             xmin, ymin, xmax, ymax = self.move_frame(start_pos, delta_x, delta_y, move_limit)
             frame['border'] = self.make_border(xmin, ymin, xmax, ymax)
         else:
-            # all waypoints are within frame, even without shifting, so don't shift the frame
+            # all waypoints are within the frame, even without shifting, so don't shift the frame
             endpoint = self.global_path[-1]
-
-        # Todo: more logical to make sure that after shifting everything is fine, not afterwards?
-        # Todo: only needs to be checked in the else, since in other cases the frame was already shifted?
 
         # check if last waypoint is too close to the frame border, move the frame extra in that direction
         dist_to_border = self.distance_to_border(frame, endpoint)
@@ -683,7 +678,7 @@ class SchedulerProblem(Problem):
             new_frame = self.create_next_frame(next_frame)
             # the next frame becomes the current frame
             self.frames[0] = self.next_frame.copy()
-            # the new frame becomes the next frame
+            # new_frame becomes the next frame
             # Note: if the current frame is the last one, new_frame will be None
             if new_frame is not None:
                 self.next_frame = new_frame.copy()
@@ -707,7 +702,7 @@ class SchedulerProblem(Problem):
 
     def get_stationary_obstacles_in_frame(self, frame):
         obstacles_in_frame = []
-        xmin_f, ymin_f, xmax_f, ymax_f= frame['border']['limits']
+        xmin_f, ymin_f, xmax_f, ymax_f = frame['border']['limits']
         shape_f = frame['border']['shape']
         pos_f = np.array(frame['border']['position'][:2])
         # Note: these checkpoints already include pos_f
@@ -722,7 +717,7 @@ class SchedulerProblem(Problem):
                 # now check if frame intersects with the obstacle
 
                 ###############################################
-                ###### Option1: handle circle as circular######
+                ###### Option1: handle circle as circular #####
                 ###############################################
                 # if isinstance(obstacle.shape, Circle):
                 #     if (point_in_polyhedron(obstacle.signals['position'][:,-1], shape_f, pos_f) or
@@ -750,7 +745,7 @@ class SchedulerProblem(Problem):
                 #                         are supported for now')
 
                 #####################################################
-                ###### Option2: approximate circle as as square######
+                ###### Option2: approximate circle as as square #####
                 #####################################################
                 if ((isinstance(obstacle.shape, Rectangle) and obstacle.shape.orientation == 0) or
                     isinstance(obstacle.shape, Circle)):
@@ -779,21 +774,16 @@ class SchedulerProblem(Problem):
         moving_obs_in_frame = []
         for obstacle in self.environment.obstacles:
             # check if obstacle is moving, this is when:
-            # there is an entry trajectories, and there is a velocity,
-            # and not all velocities are 0.
+            # not all velocities, saved in signals, are 0
             if not all(obstacle.signals['velocity'][:,-1] == [0.]*obstacle.n_dim):
                 # get obstacle checkpoints
                 if not isinstance(obstacle.shape, Circle):
                     # element [0] gives vertices, not the corresponding radii
                     obs_chck = obstacle.shape.get_checkpoints()[0]
                 else:
-                # for a circle only the center is returned as a checkpoint
-                # make a square representation of it and use those checkpoints
+                    # for a circle only the center is returned as a checkpoint
+                    # make a square representation of it and use those checkpoints
 
-                # Todo: circle is approximated as a square,
-                # so may be added to frame while not necessary
-                # Improvement: check if distance to frame < radius, by using extra
-                # input to point_in_frame(distance=radius)
                     [[xmin, xmax],[ymin, ymax]] = obstacle.shape.get_canvas_limits()
                     obs_chck = [[xmin, ymin], [xmin, ymax], [xmax, ymax], [xmax, ymin]]
                     # also check center, because vertices of square approximation may be outside
@@ -1060,9 +1050,10 @@ class SchedulerProblem(Problem):
                 # next_frame['border'] is already determined
                 stationary_obstacles = self.get_stationary_obstacles_in_frame(next_frame)
                 next_frame['stationary_obstacles'] = stationary_obstacles
-                # Last waypoint of frame is a point of global_path or the goal_state which was added to self.global_path.
-                # This was necessary because otherwise you will end up on a grid point and not necessarily in the goal
-                # position (which can lie between grid points, anywhere on the map)
+                # Last waypoint of frame is a point of global_path or the goal_state which
+                # was added to self.global_path. This was necessary because otherwise you
+                # will end up on a grid point and not necessarily in the goal position
+                # (which can lie between grid points, anywhere on the map)
                 next_frame['endpoint_frame'] = next_frame['waypoints'][-1]
 
             end = time.time()
@@ -1191,6 +1182,12 @@ class SchedulerProblem(Problem):
         # scale up the current frame in all directions, until it hits the borders
         # or it contains an obstacle
 
+        # Note: when incrementally making the frame larger, we update with a certain size.
+        # Updating with self.veh_size*self.margin may be too big, such that frames are not as
+        # wide/large as they can be. Changing e.g. to xmax_new = xmax + 0.1, is more accurate,
+        # but this takes more time to compute.
+        # the selection is set by the self.scale_up_fine boolean
+
         start_time = time.time()
 
         scaled_frame = frame.copy()
@@ -1289,7 +1286,7 @@ class SchedulerProblem(Problem):
                     break
 
         # update waypoints
-        # starting from the last waypoint which was already in the frame
+        # starting from the last waypoint that was already in the frame
         # vehicle size was already taken into account above, when shifting borders
         index = self.global_path.index(frame['waypoints'][-1])
         for idx, point in enumerate(self.global_path[index:]):
@@ -1426,9 +1423,7 @@ class SchedulerProblem(Problem):
             # find intersection point
             intersection_point = intersect_lines(line, left_side)
         else:
-            raise ValueError('No intersection point was found,'
-                             ' while a point outside the frame was found!')
-
+            raise RuntimeError('No intersection between line and frame found!')
         return intersection_point
 
     def shift_point_back(self, start, end, percentage=0, distance=0):
@@ -1470,7 +1465,9 @@ class SchedulerProblem(Problem):
     def distance_to_border(self, frame, point):
         # returns the x- and y-direction distance from point to the border of frame
         # based on: https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line
-        # this function only works correctly for points which are inside the frame
+        # when point is outside of the border, the function also returns the distance to the border,
+        # and you can use point_in_rectangle() to check if point is inside the border or not
+
         x2, y2, x3, y3 = frame['border']['limits']
         # number vertices of border
         # v2--v3
@@ -1501,7 +1498,7 @@ class SchedulerProblem(Problem):
     def find_closest_waypoint(self, position, waypoints):
 
         # only consider the waypoints past 'position' = the current vehicle position or a certain waypoint
-        # so find the waypoint which is closest to position
+        # so find the waypoint that is closest to position
         dist = max(self.environment.room[0]['shape'].width, self.environment.room[0]['shape'].height)
         closest_waypoint = waypoints[0]
         index = 0
@@ -1533,8 +1530,6 @@ class SchedulerProblem(Problem):
         problem_options = {}
         for key, value in self.problem_options.items():
             problem_options[key] = value
-        if self.frames[0]['endpoint_frame'] == self.goal_state[:2]:  # current frame is the last one, remove orientation info
-            problem_options['no_term_con_der'] = False  # include final velocity = 0 constraint
         if not self.problem_options['freeT']:
             # fixedT problem, only possible with Point2point problem
             problem = Point2point(self.vehicles, environment, freeT=self.problem_options['freeT'], options=problem_options)
