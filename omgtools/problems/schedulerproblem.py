@@ -1320,7 +1320,7 @@ class SchedulerProblem(Problem):
         # waypoint is outside frame in x-direction, shift in the waypoint direction
         if abs(delta_x) > self.frame_size*0.5:
             # move frame in x-direction, over a max of move_limit
-            move = min(move_limit, abs(delta_x)-self.frame_size*0.5 + self.veh_size*self.scale_factor)
+            move = min(self.move_limit, abs(delta_x)-self.frame_size*0.5 + self.veh_size*self.margin)
             if delta_x > 0:
                 newx_lower = self.frame_size*0.5 - move
                 newx_upper = self.frame_size*0.5 + move
@@ -1331,7 +1331,7 @@ class SchedulerProblem(Problem):
         # waypoint is outside frame in y-direction, shift in the waypoint direction
         if abs(delta_y) > self.frame_size*0.5:
             # move frame in y-direction, over a max of move_limit
-            move = min(move_limit, abs(delta_y)-self.frame_size*0.5 + self.veh_size*self.scale_factor)
+            move = min(self.move_limit, abs(delta_y)-self.frame_size*0.5 + self.veh_size*self.margin)
             if delta_y > 0:
                 newy_lower = self.frame_size*0.5 - move
                 newy_upper = self.frame_size*0.5 + move
