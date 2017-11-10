@@ -804,6 +804,9 @@ class SchedulerProblem(Problem):
         return moving_obs_in_frame
 
     def get_init_guess(self, **kwargs):
+        # local import to avoid circular dependency with Problem
+        from ..vehicles.dubins import Dubins
+        from ..vehicles.holonomic import Holonomic
         # if first iteration, compute init_guess based on global_path for all frames
         # else, use previous solutions to build a new initial guess:
         #   if 2 frames: combine splines in frame 1 and 2 to form a new spline in a single frame = new frame1
@@ -848,8 +851,7 @@ class SchedulerProblem(Problem):
         else:
             self.vehicles[0].set_initial_conditions(self.curr_state)
         # if Dubins vehicle, add orientation 0
-        # Todo: would want to check if vehicle is Dubins here, but for some reason can't import Dubins at top of file??
-        if not isinstance(self.vehicles[0], Holonomic):
+        if isinstance(self.vehicles[0], Dubins):
             if self.frames[-1]['waypoints'][-1] == self.goal_state[:2]:
                 self.vehicles[0].set_terminal_conditions(self.goal_state)  # setting goal for final frame
             else:
@@ -860,8 +862,10 @@ class SchedulerProblem(Problem):
                 x2,y2 = self.frames[-1]['waypoints'][-1]
                 pose = [x2,y2,np.arctan2((y2-y1),(x2-x1))]
                 self.vehicles[0].set_terminal_conditions(pose)
-        else:
+        elif isinstance(self.vehicles[0], Holonomic):
             self.vehicles[0].set_terminal_conditions(self.frames[-1]['waypoints'][-1])
+        else:
+            raise RuntimeError('You selected an unsupported vehicle type, choose Holonomic or Dubins')
 
         end_time = time.time()
         if self.options['verbose'] >= 2:
@@ -870,6 +874,9 @@ class SchedulerProblem(Problem):
         return init_splines, motion_times
 
     def get_init_guess_new_frame(self, frame):
+        # local import to avoid circular dependency with Problem
+        from ..vehicles.dubins import Dubins
+        from ..vehicles.holonomic import Holonomic
         # generate initial guess for new frame, based on the waypoints of
         # the global path that are inside the frame
 
@@ -896,8 +903,7 @@ class SchedulerProblem(Problem):
         max_vel = self.vehicles[0].vmax if hasattr(self.vehicles[0], 'vmax') else (self.vehicles[0].vxmax+self.vehicles[0].vymax)*0.5
         motion_time = length_to_travel/(max_vel*0.5)
 
-        # Todo: should change to isinstance(..., Dubins), but gave import error before...
-        if not isinstance(self.vehicles[0], Holonomic):
+        if isinstance(self.vehicles[0], Dubins):
             # initialize splines as zeros, since due to the change of variables it is not possible
             # to easily generate a meaningfull initial guess for r and v_tilde
             coeffs = 0*self.vehicles[0].knots[self.vehicles[0].degree-1:-(self.vehicles[0].degree-1)]
