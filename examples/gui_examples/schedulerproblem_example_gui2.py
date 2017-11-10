@@ -26,8 +26,9 @@
 from omgtools import *
 
 # create vehicle
-vehicle = Holonomic(shapes = Circle(radius=0.4), options={'syslimit': 'norm_2'},
+vehicle = Holonomic(shapes=Circle(radius=0.4), options={'syslimit': 'norm_2'},
                     bounds={'vmax': 1.2, 'vmin':-1.2, 'amax':10, 'amin':-10})
+veh_size = vehicle.shapes[0].radius
 
 # create environment with the help of a GUI
 
@@ -40,14 +41,16 @@ root.mainloop()  # run the GUI
 environment = gui.get_environment()  # get the environment from the GUI
 
 # get start and goal from GUI
-clicked = gui.get_clicked_positions()
+# include vehicle size to shift clicks that were too close to the border
+clicked = gui.get_clicked_positions(margin=veh_size)
 vehicle.set_initial_conditions(clicked[0])
 vehicle.set_terminal_conditions(clicked[1])
 start, goal = clicked[0], clicked[1]
 
 # make global planner
 # the amount of cells are extracted from the GUI and were either passed by the user to the GUI, or kept at default values
-globalplanner = AStarPlanner(environment, gui.n_cells, start, goal)
+# include vehicle size to take this into account when computing the global path
+globalplanner = AStarPlanner(environment, gui.n_cells, start, goal, options={'veh_size': veh_size})
 
 # make problem
 options = {}
