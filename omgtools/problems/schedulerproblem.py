@@ -974,8 +974,8 @@ class SchedulerProblem(Problem):
             coeffs_y = fy(self.vehicles[0].basis.greville())
             init_guess = np.c_[coeffs_x, coeffs_y]
 
-            init_guess[-3] = init_guess[-1]  # final acceleration is also 0 normally
-            init_guess[-4] = init_guess[-1]  # final acceleration is also 0 normally
+            init_guess[-2] = init_guess[-1]  # final velocity and acceleration = 0
+            init_guess[-3] = init_guess[-1]
         else:
             raise RuntimeError('You selected an unsupported vehicle type, choose Holonomic or Dubins')
 
