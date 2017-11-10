@@ -855,12 +855,23 @@ class SchedulerProblem(Problem):
             if self.frames[-1]['waypoints'][-1] == self.goal_state[:2]:
                 self.vehicles[0].set_terminal_conditions(self.goal_state)  # setting goal for final frame
             else:
-                # Todo: use last waypoint inside frame and first waypoint in next frame?
-                # compute angle between last and second last waypoint inside frame
-                # to use as a desired orientation
-                x1,y1 = self.frames[-1]['waypoints'][-2]
-                x2,y2 = self.frames[-1]['waypoints'][-1]
-                pose = [x2,y2,np.arctan2((y2-y1),(x2-x1))]
+                if hasattr(self, 'next_frame'):
+                    # use last waypoint from current and first waypoint
+                    # from next frame to compute desired orientation
+                    # take second-last waypoint, since last one was moved in make_reachable()
+                    x1,y1 = self.frames[-1]['waypoints'][-2]
+                    # take second waypoint, since first will be == second-last of previous frame
+                    x2,y2 = self.next_frame['waypoints'][1]
+                    # compute angle
+                    angle = np.arctan2((y2-y1),(x2-x1))
+                else:
+                    # compute angle between last and second last waypoint inside frame
+                    # to use as a desired orientation
+                    x1,y1 = self.frames[-1]['waypoints'][-2]
+                    x2,y2 = self.frames[-1]['waypoints'][-1]
+                    angle = np.arctan2((y2-y1),(x2-x1))
+                # desired pose = last waypoint, with compute angle
+                pose = self.frames[-1]['waypoints'][-1] + [angle]
                 self.vehicles[0].set_terminal_conditions(pose)
         elif isinstance(self.vehicles[0], Holonomic):
             self.vehicles[0].set_terminal_conditions(self.frames[-1]['waypoints'][-1])
