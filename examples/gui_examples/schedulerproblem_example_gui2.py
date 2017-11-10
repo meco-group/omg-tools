@@ -60,6 +60,7 @@ simulator = Simulator(schedulerproblem)
 # define what you want to plot
 schedulerproblem.plot('scene')
 vehicle.plot('input', knots=True, prediction=True, labels=['v_x (m/s)', 'v_y (m/s)'])
+vehicle.plot('dinput', knots=True, prediction=True, labels=['a_x (m/s^2)', 'a_y (m/s^2)'])
 
 # run it!
 simulator.run()
