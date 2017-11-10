@@ -1371,7 +1371,7 @@ class SchedulerProblem(Problem):
 
         # check stationary point
         if time is None:
-            if (xmin+distance <= point[0] <= xmax-distance) and (ymin+distance <= point[1] <= ymax-distance):
+            if (xmin+distance < point[0] < xmax-distance) and (ymin+distance < point[1] < ymax-distance):
                 return True
             else:
                 return False
