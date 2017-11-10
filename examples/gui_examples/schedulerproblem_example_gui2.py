@@ -53,9 +53,9 @@ start, goal = clicked[0], clicked[1]
 globalplanner = AStarPlanner(environment, gui.n_cells, start, goal, options={'veh_size': veh_size})
 
 # make problem
-options = {}
-schedulerproblem = SchedulerProblem(vehicle, environment, globalplanner, options=options,
-                                    frame_type='min_nobs', n_frames=2)
+options = {'n_frames': 2, 'frame_type': 'min_nobs', 'scale_up_fine': True, 'check_moving_obs_ts': 0.1}
+# options = {'n_frames': 2, 'frame_type': 'shift', 'frame_size': 5, 'check_moving_obs_ts': 0.1}
+schedulerproblem = SchedulerProblem(vehicle, environment, globalplanner, options=options)
 
 # simulate the problem
 simulator = Simulator(schedulerproblem)
