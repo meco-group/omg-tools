@@ -1389,7 +1389,7 @@ class SchedulerProblem(Problem):
         else:
             raise RuntimeError('Argument time was of the wrong type, not None, float or int')
 
-    def find_intersection_line_frame(self, frame, line):
+    def find_intersection_line_segment_frame(self, frame, line):
         # find intersection point of the provided line with frame
         x3, y3, x4, y4 = frame['border']['limits']
 
