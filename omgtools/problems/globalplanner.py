@@ -286,7 +286,7 @@ class Grid(object):
 
     def block(self, points):
         # block cells given by indices/position in grid
-        if len(points) == 2 and isinstance(points[0], (int)):
+        if len(points) == 2 and isinstance(points[0], int):
             points = [points]
         for point in points:
             if self.in_bounds(point):
