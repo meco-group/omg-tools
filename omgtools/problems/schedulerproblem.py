@@ -810,7 +810,8 @@ class SchedulerProblem(Problem):
         # if first iteration, compute init_guess based on global_path for all frames
         # else, use previous solutions to build a new initial guess:
         #   if 2 frames: combine splines in frame 1 and 2 to form a new spline in a single frame = new frame1
-        #   if 3 frames or more: combine frame1 and 2 and keep splines of frame 3 and next as new splines of frame2 and next
+        #   if 3 frames or more: combine frame1 and 2 and keep splines of frame 3 and next as new splines of
+        #        frame2 and next
         # only use global path for initial guess of new frame
         start_time = time.time()
 
@@ -1063,7 +1064,6 @@ class SchedulerProblem(Problem):
             end = time.time()
             if self.options['verbose'] >= 2:
                 print 'time spend in create_next_frame, ', end-start
-
             return next_frame
         else:
             # tried to create the next frame, while the goal position is already inside the current frame
@@ -1091,8 +1091,8 @@ class SchedulerProblem(Problem):
 
         _, index = self.find_closest_waypoint(start_position, self.global_path)
         points_in_frame = []  # holds all waypoints in the frame
-        # run over all waypoints, starting from the waypoint closest to start_position
 
+        # run over all waypoints, starting from the waypoint closest to start_position
         # first try if endpoint can be inside the frame without obstacles
         point = self.global_path[-1]
         if not self.point_in_frame(frame, point):
@@ -1202,11 +1202,6 @@ class SchedulerProblem(Problem):
         # first try to put xmax = frame border
         xmax_new = self.environment.room[0]['shape'].get_canvas_limits()[0][1] + self.environment.room[0]['position'][0]
         scaled_frame['border'] = self.make_border(xmin,ymin,xmax_new,ymax)
-
-        # Note: updating with self.veh_size*self.scale_factor may be too big
-        # leading to frames which are not as wide as they can be
-        # change e.g. to xmax_new = xmax + 0.1 (although this takes more time to compute)
-
         if not self.get_stationary_obstacles_in_frame(scaled_frame):
             xmax = xmax_new  # assign new xmax
         else:
