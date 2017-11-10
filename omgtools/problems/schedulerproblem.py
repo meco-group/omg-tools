@@ -414,13 +414,13 @@ class SchedulerProblem(Problem):
             points_in_frame = frame['waypoints']  # update points_in_frame
             endpoint = points_in_frame[-1]  # assign end point
 
-            # make line between last waypoint inside frame and first waypoint outside frame
-            waypoint_line = [points_in_frame[-1], waypoint]
-            # find intersection point between line and frame
-            intersection_point = self.find_intersection_line_frame(frame, waypoint_line)
-            # shift endpoint away from border
-            endpoint = self.shift_point_back(points_in_frame[-1], intersection_point,
-                                             distance=self.veh_size*self.scale_factor)
+            # # make line between last reachable waypoint inside frame and first waypoint outside frame,
+            # waypoint_line = [points_in_frame[-1], waypoint]
+            # # find intersection point between line and frame
+            # intersection_point = self.find_intersection_line_segment_frame(frame, waypoint_line)
+            # # move endpoint away from border
+            # endpoint = self.move_from_border(points_in_frame[-1], intersection_point, frame,
+            #                                                          distance=self.veh_size*self.margin)
         elif endpoint is not None:
             # vehicle goal is inside frame after shifting
             # shift frame over calculated distance
