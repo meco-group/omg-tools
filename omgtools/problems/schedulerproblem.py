@@ -84,6 +84,9 @@ class SchedulerProblem(Problem):
         self.frame_type = options['frame_type'] if 'frame_type' in options else 'shift'
         # set frame size for frame_type shift
         if self.frame_type is 'shift':
+            # by default frame size is set to 1/5 of total environment width
+            self.frame_size = options['frame_size'] if 'frame_size' in options else environment.room[0]['shape'].width*0.2
+            self.move_limit = options['move_limit'] if 'move_limit' in options else self.frame_size*0.25
         if self.frame_type is 'min_nobs':
             self.scale_up_fine = options['scale_up_fine'] if 'scale_up_fine' in options else True
         # check if vehicle size is larger than the cell size
