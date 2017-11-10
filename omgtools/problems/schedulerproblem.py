@@ -22,10 +22,9 @@ from multiframeproblem import MultiFrameProblem
 from point2point import Point2point
 from ..basics.shape import Rectangle, Circle
 from ..basics.geometry import distance_between_points, intersect_lines, intersect_line_segments
-from ..basics.geometry import point_in_polyhedron, circle_polyhedron_intersection
+from ..basics.geometry import point_in_rectangle
 from ..basics.spline import BSplineBasis
 from ..basics.spline_extra import concat_splines
-from ..vehicles.holonomic import Holonomic
 from ..environment.environment import Environment
 from globalplanner import AStarPlanner
 
