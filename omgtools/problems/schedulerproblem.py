@@ -326,55 +326,34 @@ class SchedulerProblem(Problem):
             frame = {}
 
         # frame of fixed size
-        if self.frame_type == 'shift':
-            for k in range(n_frames_to_create):
-                # check if previously created frame was last one
-                if frame and frame['waypoints'][-1] == self.goal_state[:2]:  # remove orientation info
-                    # reduce amount of frames that are considered and stop loop
-                    self.n_frames -= 1
-                    break
-                # set start position for next frame
-                if frame:
-                    start_pos = frame['waypoints'][-1]
-                else:
-                    start_pos = self.curr_state[:2]  # remove orientation from state (if using e.g.)
+        for k in range(n_frames_to_create):
+            # check if previously created frame was last one
+            if frame and frame['waypoints'][-1] == self.goal_state[:2]:  # remove orientation info
+                # reduce amount of frames that are considered and stop loop
+                self.n_frames -= 1
+                break
+            # set start position for computation of frame that we will add
+            if frame:
+                start_pos = frame['waypoints'][-1]
+            else:
+                # there were no frames yet, so compute self.n_frames, starting from current state
+                # remove orientation from state (if using e.g. differential drive)
+                start_pos = self.curr_state[:2]
+            if self.frame_type == 'shift':
                 frame = self.create_frame_shift(start_pos)
-
-                # append new frame to the frame list
-                self.frames.append(frame)
-
-                if self.n_frames == 1:
-                    self.next_frame = self.create_next_frame(frame)
-
-            end_time = time.time()
-            if self.options['verbose'] >= 2:
-                print 'elapsed time while creating shift frames: ', end_time-start_time
-
-        # min_nobs: enlarge frame as long as there are no obstacles inside it
-        elif self.frame_type == 'min_nobs':
-            for k in range(n_frames_to_create):
-                # check if previously created frame was last one
-                if frame and frame['waypoints'][-1] == self.goal_state[:2]:  # remove orientation info
-                    # reduce amount of frames that are considered and stop loop
-                    self.n_frames -= 1
-                    break
-                # set start position for next frame
-                if frame:
-                    start_pos = frame['waypoints'][-1]
-                else:
-                    start_pos = self.curr_state[:2]  # remove orientation from state (if using e.g.)
-
+            elif self.frame_type == 'min_nobs':
                 frame = self.create_frame_min_nobs(start_pos)
+            else:
+                raise RuntimeError('Invalid frame type: ', self.frame_type)
+            # append new frame to the frame list
+            self.frames.append(frame)
 
-                # append new frame to frame list
-                self.frames.append(frame)
-
-                if self.n_frames == 1:
-                    self.next_frame = self.create_next_frame(frame)
-
-            end_time = time.time()
-            if self.options['verbose'] >= 2:
-                print 'elapsed time while creating min_nobs frame: ', end_time-start_time
+            if self.n_frames == 1:
+                # then we need a next_frame to create a region of overlap, determining when to switch frames
+                self.next_frame = self.create_next_frame(frame)
+        end_time = time.time()
+        if self.options['verbose'] >= 2:
+            print 'elapsed time while creating new ' + self.frame_type + ' frame: ', end_time-start_time
 
     def create_frame_shift(self, start_pos):
         frame = {}
