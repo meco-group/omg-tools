@@ -166,16 +166,29 @@ def circle_polyhedron_intersection(circle, polyhedron_shape, polyhedron_position
             return True
     return False
 
-def point_in_rectangle(rectangle_limits, point, horizon_time=None, velocity=None, distance=0):
+def point_in_rectangle(rectangle_limits, point, horizon_time=None, velocity=None, distance=0, xy_check=False):
         # check if the provided point is inside the provided rectangle
         # both for stationary or moving points
         xmin, ymin, xmax, ymax = rectangle_limits
         # check stationary point
         if horizon_time is None:
-            if (xmin+distance <= point[0] <= xmax-distance) and (ymin+distance <= point[1] <= ymax-distance):
-                return True
+            if xy_check:
+                # see if point is inside rectangle for separate directions (x and y)
+                result = []
+                if(xmin+distance <= point[0] <= xmax-distance):
+                    result.append(True)
+                else:
+                    result.append(False)
+                if(ymin+distance <= point[1] <= ymax-distance):
+                    result.append(True)
+                else:
+                    result.append(False)
+                return result
             else:
-                return False
+                if (xmin+distance <= point[0] <= xmax-distance) and (ymin+distance <= point[1] <= ymax-distance):
+                    return True
+                else:
+                    return False
         # check moving point
         elif isinstance(horizon_time, (float, int)):
             # check at each time_interval seconds
