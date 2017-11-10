@@ -443,29 +443,6 @@ class SchedulerProblem(Problem):
             # all waypoints are within the frame, even without shifting, so don't shift the frame
             endpoint = self.global_path[-1]
 
-        # check if last waypoint is too close to the frame border, move the frame extra in that direction
-        dist_to_border = self.distance_to_border(frame, endpoint)
-        if abs(dist_to_border[0]) <= self.veh_size:
-            if self.options['verbose'] >= 2:
-                print 'Last waypoint too close in x-direction, moving frame'
-            # move in x-direction
-            move_distance = (self.veh_size - abs(dist_to_border[0]))*self.scale_factor
-            if dist_to_border[0]<=0:
-                xmin = xmin - move_distance
-            else:
-                xmax = xmax + move_distance
-            frame['border'] = self.make_border(xmin, ymin, xmax, ymax)
-        if abs(dist_to_border[1]) <= self.veh_size:
-            if self.options['verbose'] >= 2:
-                print 'Last waypoint too close in y-direction, moving frame'
-            # move in y-direction
-            move_distance = (self.veh_size - abs(dist_to_border[1]))*self.scale_factor
-            if dist_to_border[1]<=0:
-                ymin = ymin - move_distance
-            else:
-                ymax = ymax + move_distance
-            frame['border'] = self.make_border(xmin, ymin, xmax, ymax)
-
         # finish frame description
         # frame['border'] is already determined
         stationary_obstacles = self.get_stationary_obstacles_in_frame(frame)
