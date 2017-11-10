@@ -101,10 +101,13 @@ def intersect_lines(line1, line2):
     x3, y3= line2[0]
     x4, y4= line2[1]
 
-    intersection_point = [0.,0.]
-    intersection_point[0] = ((x1*y2 - y1*x2)*(x3-x4) - (x1-x2)*(x3*y4-y3*x4))/((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4))
-    intersection_point[1] = ((x1*y2 - y1*x2)*(y3-y4) - (y1-y2)*(x3*y4-y3*x4))/((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4))
-
+    if (((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4)) == 0.):
+        # parallel lines
+        intersection_point = None
+    else:
+        intersection_point = [0.,0.]
+        intersection_point[0] = ((x1*y2 - y1*x2)*(x3-x4) - (x1-x2)*(x3*y4-y3*x4))/((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4))
+        intersection_point[1] = ((x1*y2 - y1*x2)*(y3-y4) - (y1-y2)*(x3*y4-y3*x4))/((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4))
     return intersection_point
 
 def point_in_polyhedron(point, polyhedron_shape, polyhedron_position, margin=0):
