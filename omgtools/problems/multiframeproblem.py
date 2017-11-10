@@ -58,9 +58,6 @@ class MultiFrameProblem(Problem):
         for frame in range(self.n_frames):
             self.motion_times.append(self.define_variable('T'+str(frame), value=10))
 
-        # minimize total motion time
-        self.define_objective(sum(self.motion_times))
-
         # positivity contraint on motion time
         for motion_time in self.motion_times:
             self.define_constraint(-motion_time, -inf, 0.)
@@ -81,6 +78,15 @@ class MultiFrameProblem(Problem):
         self.define_init_constraints()
         self.define_terminal_constraints()
         self.define_connection_constraints()
+
+        # minimize total motion time
+        obj = sum(self.motion_times)
+        # add regularization on jerk to avoid nervous solutions
+        for frame in range(self.n_frames):
+            for s in total_splines[frame]:
+                dds = s.derivative(3)
+                obj += definite_integral((0.01*dds)**2, 0., 1.)
+        self.define_objective(obj)
 
     def define_init_constraints(self):
         # place initial constraints only on first spline segment
