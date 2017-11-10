@@ -58,7 +58,16 @@ class AStarPlanner(GlobalPlanner):
             raise RuntimeError('Environment has invalid room shape, only Rectangle or Square is supported')
 
         # check if vehicle size needs to be taken into account while searching a global path
-        self.veh_size = options['veh_size'] if 'veh_size' in options else [0.,0.]
+        if 'veh_size' in options:
+            if not isinstance(options['veh_size'], list):
+                options['veh_size'] = [options['veh_size']]
+            if len(options['veh_size']) == 1:
+                self.veh_size = 2*[options['veh_size']]
+            else:
+                self.veh_size = options['veh_size']
+        else:
+            # must consist of an offset in x- and y-direction
+            self.veh_size = [0.,0.]
 
         # make grid
         if ((grid_width == grid_height) and (n_cells[0] == n_cells[1])):
