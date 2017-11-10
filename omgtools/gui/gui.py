@@ -441,7 +441,26 @@ class EnvironmentGUI(tk.Frame):
     def get_environment(self):
         return self.environment
 
-    def get_clicked_positions(self):
+    def get_clicked_positions(self, margin=None):
+        # check distance to border or obstacles, if not reachable, move point
+        if margin is not None:
+            # compute environment border limits
+            env_min_x = 0
+            env_max_x = self.frame_width_m
+            env_min_y = 0
+            env_max_y = self.frame_height_m
+            for idx, click in enumerate(self.clicked_positions):
+                # make sure the click is inside the environment border
+                # if not, shift click
+                if click[0] <= env_min_x:
+                    click[0] = env_min_x + 1.01*margin
+                elif click[0] >= env_max_x:
+                    click[0] = env_max_x - 1.01*margin
+                if click[1] <= env_min_y:
+                    click[1] = env_min_y + 1.01*margin
+                elif click[1] >= env_max_y:
+                    click[1] = env_max_y - 1.01*margin
+                self.clicked_positions[idx] = click  # assign new value
         return self.clicked_positions
 
     def _create_circle(self, x, y, r, **kwargs):
