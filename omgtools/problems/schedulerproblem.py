@@ -1431,41 +1431,53 @@ class SchedulerProblem(Problem):
             raise RuntimeError('No intersection between line and frame found!')
         return intersection_point
 
-    def shift_point_back(self, start, end, percentage=0, distance=0):
-        # only used when frame_type='shift'
+    # def move_from_border(self, start, end, frame, distance=0):
+    #     # Note: this function is only used when frame_type='shift'
 
-        # move the end point/goal position inside the frame back such that it
-        # is not too close to the border
-        length = np.sqrt((end[0]-start[0])**2+(end[1]-start[1])**2)
-        angle = np.arctan2(end[1]-start[1],end[0]-start[0])
+    #     # this function moves 'end' away from the frame border
+    #     # approach: first try to move the end point over the line between start and end
+    #     # if point is still too close to border, move in x and y separately, not over the
+    #     # line anymore
+    #     # the second step is required e.g. when the point is too close to y-limit,
+    #     # but the line between start and end is horizontal
 
-        if percentage !=0:
-            # Note: using percentage is not robust, since it totally depends on length
-            new_length = length * (1 - percentage/100.)
-        elif distance != 0:
-            # 'distance' is the required perpendicular distance
-            # 'move_back' is how far to move back over the connection
-            # to obtain the desired distance
-            # if it is a vertical or horizontal line then move over distance
-            if (start[0] == end[0]) or (start[1] == end[1]):
-                move_back = distance
-            # else take into account the angle
-            else:
-                move_back = max(abs(distance/np.cos(angle)), abs(distance/np.sin(angle)))
-            new_length = length - move_back
-            if new_length < 0:
-                # Distance between last waypoint inside the frame and the
-                # intersection point with the border is too small to shift,
-                # (i.e. smaller than desired shift distance / smaller than vehicle size),
-                # selecting last waypoint inside frame
-                new_length = 0
-                print
+    #     # move the end point/goal position inside the frame back such that it
+    #     # is not too close to the border
+    #     length = np.sqrt((end[0]-start[0])**2+(end[1]-start[1])**2)  # distance between start and end
+    #     angle = np.arctan2(end[1]-start[1],end[0]-start[0])  # angle of line between start and end
 
-        end_shifted = [0.,0.]
-        end_shifted[0] = start[0] + new_length*np.cos(angle)
-        end_shifted[1] = start[1] + new_length*np.sin(angle)
+    #     # 'distance' is the required perpendicular distance
+    #     # 'move_back' is how far to move back over the connection
+    #     # to obtain the desired distance
+    #     if (abs(start[0] - end[0]) <= 1e-4) or (abs(start[1] - end[1]) <= 1e-4):
+    #         # vertical or horizontal line: move over distance
+    #         move_back = distance
+    #     else:
+    #         # take into account the angle
+    #         # find required distance to obtain required distance in both x- and y-direction
+    #         move_back = max(abs(distance/np.cos(angle)), abs(distance/np.sin(angle)))
+    #     new_length = length - move_back
 
-        return end_shifted
+    #     end_shifted = [0.,0.]
+    #     end_shifted[0] = start[0] + new_length*np.cos(angle)
+    #     end_shifted[1] = start[1] + new_length*np.sin(angle)
+
+    #     # if still too close to border, move in x and y separately
+    #     dist_to_border = self.distance_to_border(frame, end_shifted)
+    #     if abs(dist_to_border[0]) - distance < 0:
+    #         move_distance = distance - abs(dist_to_border[0])
+    #         if dist_to_border[0]<=0:
+    #             end_shifted[0] = end_shifted[0] + move_distance
+    #         else:
+    #             end_shifted[0] = end_shifted[0] - move_distance
+    #     if abs(dist_to_border[1]) - distance < 0:
+    #         move_distance = distance - abs(dist_to_border[1])
+    #         if dist_to_border[1]<=0:
+    #             end_shifted[1] = end_shifted[1] + move_distance
+    #         else:
+    #             end_shifted[1] = end_shifted[1] - move_distance
+
+    #     return end_shifted
 
     def distance_to_border(self, frame, point):
         # returns the x- and y-direction distance from point to the border of frame
