@@ -48,8 +48,8 @@ environment.add_obstacle(Obstacle({'position': [5,6]}, shape=circle))
 globalplanner = AStarPlanner(environment, [10,10], start, goal)
 
 # make coordinator
-options={'freeT': True, 'horizon_time': 15}
-multiproblem=SchedulerProblem(vehicle, environment, globalplanner, options=options, frame_type='min_nobs')
+options={'freeT': True, 'horizon_time': 15, 'frame_type':'min_nobs','scale_up_fine': True}
+multiproblem=SchedulerProblem(vehicle, environment, globalplanner, options=options)
 multiproblem.set_options({'solver_options': {'ipopt': {# 'ipopt.linear_solver': 'ma57',
                                                        'ipopt.hessian_approximation': 'limited-memory'}}})
 multiproblem.init()

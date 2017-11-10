@@ -85,7 +85,6 @@ environment.add_obstacle(Obstacle({'position': [150, 210]}, shape=Rectangle(widt
 globalplanner = AStarPlanner(environment, [25,25], start, goal)
 
 # make problem
-options={'freeT': True}
 # one extra setting is the frame_type:
 ## 'min_nobs': use frame which is as big as possible, without containing stationary obstacles
 ## 'shift' use frame of fixed size, which is moved when the vehicle comes close to the end point,
@@ -93,10 +92,10 @@ options={'freeT': True}
 
 # Note: When 'min_nobs' is selected and your vehicle size is larger than the cell size,
 # shifting frames sometimes causes problems
-schedulerproblem=SchedulerProblem(vehicle, environment, globalplanner,
-                               options=options, frame_type='min_nobs')
-# multiproblem=MultiFrameProblem(vehicle, environment, globalplanner,
-                               # options=options, frame_size=150, frame_type='shift')
+
+options={'freeT': True, 'frame_type': 'min_nobs', 'scale_up_fine': True}
+# options={'freeT': True, 'frame_type': 'shift', 'frame_size': 150}
+schedulerproblem=SchedulerProblem(vehicle, environment, globalplanner,options=options)
 
 # simulate the problem
 simulator = Simulator(schedulerproblem)

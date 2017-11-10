@@ -51,22 +51,24 @@ start, goal = clicked[0], clicked[1]
 # the amount of cells are extracted from the GUI and were either passed by the user to the GUI, or kept at default values
 globalplanner = AStarPlanner(environment, gui.n_cells, start, goal)
 
-# make coordinator
-options={'freeT': True, 'horizon_time': 10, 'no_term_con_der': False}
+# make schedulerproblem
+options={'freeT': True, 'horizon_time': 10, 'no_term_con_der': False,
+         'n_frames': 1, 'frame_type': 'min_nobs', 'scale_up_fine': True, 'check_moving_obs_ts': 0.1}
+         # 'n_frames': 1, 'frame_type': 'shift', 'frame_size': 9, 'check_moving_obs_ts': 0.1}
 
 # Note: When 'min_nobs' is selected and your vehicle size is larger than the cell size,
 # shifting frames sometimes causes problems
-schedulerproblem=SchedulerProblem(vehicle, environment, globalplanner, options=options, frame_size= 9, frame_type='min_nobs')
+schedulerproblem=SchedulerProblem(vehicle, environment, globalplanner, options=options)
 
 # Note: using linear solver ma57 is optional, normally it reduces the solving time
 schedulerproblem.set_options({'solver_options':
     {'ipopt': {
-    		   # 'ipopt.linear_solver': 'ma57',
-    		   'ipopt.warm_start_init_point': 'yes',
-			   'ipopt.warm_start_bound_push': 1e-6,
-			   'ipopt.warm_start_mult_bound_push': 1e-6,
-			   # 'ipopt.mu_init': 1e-5,
-    		   'ipopt.hessian_approximation': 'limited-memory'}}})
+               # 'ipopt.linear_solver': 'ma57',
+               'ipopt.warm_start_init_point': 'yes',
+               'ipopt.warm_start_bound_push': 1e-6,
+               'ipopt.warm_start_mult_bound_push': 1e-6,
+               # 'ipopt.mu_init': 1e-5,
+               'ipopt.hessian_approximation': 'limited-memory'}}})
 
 simulator = Simulator(schedulerproblem)
 schedulerproblem.plot('scene')

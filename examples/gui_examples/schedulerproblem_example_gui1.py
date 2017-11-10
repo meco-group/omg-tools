@@ -86,12 +86,11 @@ start, goal = clicked[0], clicked[1]
 globalplanner = AStarPlanner(environment, gui.n_cells, start, goal)
 
 # make coordinator
-options={'freeT': True, 'horizon_time': 10, 'no_term_con_der': False}
-
+options={'freeT': True, 'horizon_time': 10, 'no_term_con_der': False, 'frame_type':'min_nobs','scale_up_fine': True}
 # Note: When 'min_nobs' is selected and your vehicle size is larger than the cell size,
 # shifting frames sometimes causes problems
 # for frame_type='shift', e.g. frame_size = 9
-schedulerproblem=SchedulerProblem(vehicle, environment, globalplanner, options=options, frame_type='min_nobs')
+schedulerproblem=SchedulerProblem(vehicle, environment, globalplanner, options=options)
 
 simulator = Simulator(schedulerproblem)
 schedulerproblem.plot('scene')
