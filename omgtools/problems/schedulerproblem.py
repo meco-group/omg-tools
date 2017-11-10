@@ -49,6 +49,9 @@ class SchedulerProblem(Problem):
         self.update_times=[]
         self.cnt = 1  # frame counter
         self.n_frames = kwargs['n_frames'] if 'n_frames' in kwargs else 1  # amount of frames to combine
+        # sample time used to check if moving obstacle is inside the frame,
+        # e.g. 0.5 then check if obstacle is inside frame on time 0,0.5,1,...
+        self.check_moving_obs_ts = options['check_moving_obs_ts'] if 'check_moving_obs_ts' in options else 0.5
 
         if (self.n_frames > 1 and not self.problem_options['freeT']):
             raise ValueError('Fixed time problems are only supported for n_frames = 1')
@@ -1374,12 +1377,9 @@ class SchedulerProblem(Problem):
                 return False
         # check moving point
         elif isinstance(time, (float, int)):
-            # time interval to check
-            time_interval = 0.5
             # amount of times to check
-            N = int(round(time/time_interval)+1)
-            # sample time of check
-            Ts = float(time)/N
+            N = int(round(time/self.check_moving_obs_ts)+1)
+            Ts = self.check_moving_obs_ts
             x, y = point
             vx, vy = velocity
             for l in range(N+1):
