@@ -65,8 +65,8 @@ class SchedulerProblem(Problem):
             self.veh_size = max(shape.width, shape.height)
             # veh_size is complete width or height for rectangular shape
             size_to_check = self.veh_size
-        # Todo: remove this?
-        self.scale_factor = 1.2  # margin, to keep vehicle a little further from border
+        # margin, applied to vehicle size to avoid goal positions very close to the border
+        self.margin = 1.1
 
         # assign global planner
         if global_planner is not None:
@@ -1084,14 +1084,13 @@ class SchedulerProblem(Problem):
 
         # frame with current vehicle position as center,
         # width and height are determined by the vehicle size
-        xmin = start_position[0] - self.veh_size*self.scale_factor
-        ymin = start_position[1] - self.veh_size*self.scale_factor
-        xmax = start_position[0] + self.veh_size*self.scale_factor
-        ymax = start_position[1] + self.veh_size*self.scale_factor
+        xmin = start_position[0] - self.veh_size*self.margin
+        ymin = start_position[1] - self.veh_size*self.margin
+        xmax = start_position[0] + self.veh_size*self.margin
+        ymax = start_position[1] + self.veh_size*self.margin
         frame['border'] = self.make_border(xmin,ymin,xmax,ymax)
 
         _, index = self.find_closest_waypoint(start_position, self.global_path)
-
         points_in_frame = []  # holds all waypoints in the frame
         # run over all waypoints, starting from the waypoint closest to start_position
 
@@ -1166,14 +1165,14 @@ class SchedulerProblem(Problem):
         xmin,ymin,xmax,ymax = frame['border']['limits']
         xmin_new,ymin_new,xmax_new,ymax_new = xmin,ymin,xmax,ymax
         if point[0] > prev_point[0]:
-            xmax_new = point[0] + self.veh_size*self.scale_factor
+            xmax_new = point[0] + self.veh_size*self.margin
         elif point[0] < prev_point[0]:
-            xmin_new = point[0] - self.veh_size*self.scale_factor
+            xmin_new = point[0] - self.veh_size*self.margin
         # else: xmin and xmax are kept
         if point[1] > prev_point[1]:
-            ymax_new = point[1] + self.veh_size*self.scale_factor
+            ymax_new = point[1] + self.veh_size*self.margin
         elif point[1] < prev_point[1]:
-            ymin_new = point[1] - self.veh_size*self.scale_factor
+            ymin_new = point[1] - self.veh_size*self.margin
             ymax_new = ymax
         # else: ymin and ymax are kept
 
