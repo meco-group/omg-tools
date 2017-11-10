@@ -48,7 +48,7 @@ class SchedulerProblem(Problem):
         self.start_time = 0.
         self.update_times=[]
         self.cnt = 1  # frame counter
-        self.n_frames = kwargs['n_frames'] if 'n_frames' in kwargs else 1  # amount of frames to combine
+        self.n_frames = options['n_frames'] if 'n_frames' in options else 1  # amount of frames to combine
         # sample time used to check if moving obstacle is inside the frame,
         # e.g. 0.5 then check if obstacle is inside frame on time 0,0.5,1,...
         self.check_moving_obs_ts = options['check_moving_obs_ts'] if 'check_moving_obs_ts' in options else 0.5
@@ -81,11 +81,9 @@ class SchedulerProblem(Problem):
 
         # frame settings
         self.frames = []
-        self.frame_type = kwargs['frame_type'] if 'frame_type' in kwargs else 'shift'
+        self.frame_type = options['frame_type'] if 'frame_type' in options else 'shift'
         # set frame size for frame_type shift
         if self.frame_type is 'shift':
-            self.frame_size = kwargs['frame_size'] if 'frame_size' in kwargs else environment.room[0]['shape'].width*0.2
-
         if self.frame_type is 'min_nobs':
             self.scale_up_fine = options['scale_up_fine'] if 'scale_up_fine' in options else True
         # check if vehicle size is larger than the cell size
