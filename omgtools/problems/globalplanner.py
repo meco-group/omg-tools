@@ -349,8 +349,15 @@ class Grid(object):
         moved_point[0] = point[0] - (self.position[0] - 0.5*self.width + 0.5*self.cell_width)
         moved_point[1] = point[1] - (self.position[1] - 0.5*self.height + 0.5*self.cell_height)
         # determine how many times point fits in cell dimensions, this gives the indices in the grid
-        moved_point[0] = int(round(float(moved_point[0])/self.cell_width))
-        moved_point[1] = int(round(float(moved_point[1])/self.cell_height))
+        # lowest possible index is zero
+        moved_point[0] = max(0, int(round(float(moved_point[0])/self.cell_width)))
+        moved_point[1] = max(0, int(round(float(moved_point[1])/self.cell_height)))
+
+        if not self.in_bounds(moved_point):
+            # if point still not in bounds, its index is too high
+            # index of last cell is self.n_cells-1, assign this to moved_point
+            moved_point[0] = min(moved_point[0], self.n_cells[0]-1)
+            moved_point[1] = min(moved_point[1], self.n_cells[1]-1)
 
         if moved_point in self.occupied:
             # closest grid point is occupied, check all neighbours of this point
