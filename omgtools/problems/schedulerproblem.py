@@ -400,11 +400,19 @@ class SchedulerProblem(Problem):
         # optimize frame position based on next waypoint (='waypoint')
         if waypoint is not None:
             # found waypoint outside frame, which is not even inside the frame after shifting
-            # over move_limit: shift frame in the direction of this point
-            xmin, ymin, xmax, ymax = self.move_frame(start_pos, delta_x, delta_y, move_limit)
+            # over move_limit: shift frame in the direction of this point and check if point is
+            # far enough from border
+            xmin, ymin, xmax, ymax = self.move_frame(start_pos, delta_x, delta_y)
             frame['border'] = self.make_border(xmin, ymin, xmax, ymax)
 
-            # Todo: maybe first check if points_in_frame[-1] is close to border, if so keep it as endpoint?
+            # move waypoint to a reachable position
+            frame['waypoints'] = points_in_frame  # assign waypoints, used inside next function
+            # append last waypoint, that is not reachable for the moment
+            frame['waypoints'].append(waypoint)
+            # move the waypoint, such that it is reachable within the frame
+            frame = self.make_last_waypoint_reachable(frame, method='move_point')
+            points_in_frame = frame['waypoints']  # update points_in_frame
+            endpoint = points_in_frame[-1]  # assign end point
 
             # make line between last waypoint inside frame and first waypoint outside frame
             waypoint_line = [points_in_frame[-1], waypoint]
@@ -416,8 +424,15 @@ class SchedulerProblem(Problem):
         elif endpoint is not None:
             # vehicle goal is inside frame after shifting
             # shift frame over calculated distance
-            xmin, ymin, xmax, ymax = self.move_frame(start_pos, delta_x, delta_y, move_limit)
+            xmin, ymin, xmax, ymax = self.move_frame(start_pos, delta_x, delta_y)
             frame['border'] = self.make_border(xmin, ymin, xmax, ymax)
+
+            # assign waypoints to frame, is used in next function
+            frame['waypoints'] = points_in_frame
+            # append endpoint, that may not be reachable for the moment (too close to border)
+            frame['waypoints'].append(endpoint)
+            # if vehicle goal is too close to the frame border, move the frame extra in that direction
+            frame = self.make_last_waypoint_reachable(frame, method='move_frame')
         else:
             # all waypoints are within the frame, even without shifting, so don't shift the frame
             endpoint = self.global_path[-1]
@@ -471,8 +486,7 @@ class SchedulerProblem(Problem):
         frame['border'], frame['waypoints'] = self.scale_up_frame(frame)
 
         # possibly the last waypoint is not reachable by the vehicle, fix this
-        method = 2  # 1 = shift frame, 2 = shift last waypoint
-        frame = self.make_last_waypoint_reachable(frame, method)
+        frame = self.make_last_waypoint_reachable(frame, method='move_point')
 
         # finish frame description
         # frame['border'] is already determined
@@ -489,24 +503,29 @@ class SchedulerProblem(Problem):
 
         return frame
 
-    def make_last_waypoint_reachable(self, frame, method):
-
-        # after scaling up the last waypoint can still be too close to the frame border, i.e.
-        # the vehicle cannot reach it without colliding.
+    def make_last_waypoint_reachable(self, frame, method='move_frame'):
+        # after scaling up or moving the frame, the last waypoint can still be too close
+        # to the frame border, i.e. the vehicle cannot reach it without colliding
         # two solutions:
-        #   method1: shift frame (now stationary obstacles can end up inside the frame)
-        #   method2: shift last waypoint towards
+        #   method1: shift frame (now stationary obstacles can end up inside the frame for min_nobs)
+        #   method2: shift last waypoint inwards
         # afterwards update limits of frame
-        method = 2  # select method to obtain reachable last waypoint
+
         xmin,ymin,xmax,ymax = frame['border']['limits']
+        # is last waypoint inside the border?
+        inside_border = point_in_rectangle(frame['border']['limits'], frame['waypoints'][-1])
+        # compute distance to border
         dist_to_border = self.distance_to_border(frame, frame['waypoints'][-1])
-        if method == 1:  # move frame
+        if method == 'move_frame':  # move frame borders, keep waypoint
             if abs(dist_to_border[0]) <= self.veh_size:
                 if self.options['verbose'] >= 2:
                     print 'Last waypoint too close in x-direction, moving frame'
                 # move in x-direction
-                move_distance = (self.veh_size - abs(dist_to_border[0]))*self.scale_factor
-                if dist_to_border[0]<=0:
+                if not inside_border:
+                    move_distance = abs(dist_to_border[0]) + self.veh_size*self.margin
+                else:
+                    move_distance = -abs(dist_to_border[0]) + self.veh_size*self.margin
+                if dist_to_border[0] <= 0:
                     xmin = xmin - move_distance
                 else:
                     xmax = xmax + move_distance
@@ -515,63 +534,93 @@ class SchedulerProblem(Problem):
                 if self.options['verbose'] >= 2:
                     print 'Last waypoint too close in y-direction, moving frame'
                 # move in y-direction
-                move_distance = (self.veh_size - abs(dist_to_border[1]))*self.scale_factor
-                if dist_to_border[1]<=0:
+                if not inside_border:
+                    move_distance = abs(dist_to_border[1]) + self.veh_size*self.margin
+                else:
+                    move_distance = -abs(dist_to_border[1]) + self.veh_size*self.margin
+                if dist_to_border[1] <= 0:
                     ymin = ymin - move_distance
                 else:
                     ymax = ymax + move_distance
                 frame['border'] = self.make_border(xmin, ymin, xmax, ymax)
-        elif method == 2:  # move waypoint, keep frame borders
+        elif method == 'move_point':  # move waypoint, keep frame borders
             # compute distance from last waypoint to border
-            if any (abs(d) <= self.veh_size for d in dist_to_border):
-                # waypoint was too close to border
+            if (not inside_border or any(abs(d) <= self.veh_size*self.margin for d in dist_to_border)):
+                # waypoint was outisde of border, or too close to border
                 count = 1
-                while True:  # find waypoint which is far enough from border
+                while True:  # find waypoint that is far enough from border
+                    inside_border = point_in_rectangle(frame['border']['limits'], frame['waypoints'][-1-count])
                     dist_to_border = self.distance_to_border(frame, frame['waypoints'][-1-count])
-                    if any (abs(d) <= self.veh_size for d in dist_to_border):
-                        count += 1  # this waypoint was also inside border
-                    else:  # found waypoint which is far enough from border
+                    if (not inside_border or any(abs(d) <= self.veh_size for d in dist_to_border)):
+                        count += 1  # this waypoint was also outside of, or too close to border
+                    else:  # found waypoint that is far enough from border
                         break
-                # make line between last waypoint inside frame (was too close) and first waypoint
-                # which is far enough from border to be reachable for the vehicle
-                waypoint_line = [frame['waypoints'][-1-count], frame['waypoints'][-1]]
-                # recompute distance from last point to border
+                # check if waypoint is inside rectangle in x- and/or y-direction
+                inside_border = point_in_rectangle(frame['border']['limits'], frame['waypoints'][-1], xy_check=True)
+                # recompute distance from last waypoint to border
                 dist_to_border = self.distance_to_border(frame, frame['waypoints'][-1])
-                # now find point on waypoint_line which is far enough from border
-                desired_distance = self.veh_size*self.scale_factor  # desired distance from last waypoint to border
-                x1,y1 = waypoint_line[0]
-                x2,y2 = waypoint_line[1]
-                # for sure one of the two if conditions will evaluate to True (see overcoupling if)
-                if abs(dist_to_border[0]) <= self.veh_size:
+
+                # compute desired distance from waypoint to border, if outside border, add dist_to_border
+                desired_distance = [0.,0.]
+                if inside_border[0]:
+                    # point is inside the border in the x-direction
+                    desired_distance[0] = self.veh_size*self.margin  # desired distance from last waypoint to border
+                else:
+                    # point is outside the border in the x-direction
+                    desired_distance[0] = self.veh_size*self.margin + abs(dist_to_border[0])
+                if inside_border[1]:
+                    # point is inside the border in the y-direction
+                    desired_distance[1] = self.veh_size*self.margin  # desired distance from last waypoint to border
+                else:
+                    # point is outside the border in the y-direction
+                    desired_distance[1] = self.veh_size*self.margin + abs(dist_to_border[1])
+
+                # use desired distance to move waypoint to a reachable position
+                x1, y1 = frame['waypoints'][-1-count]  # reachable waypoint inside frame
+                x2, y2 = frame['waypoints'][-1]  # unreachable waypoint inside or outside frame
+                if (not inside_border[0] or abs(dist_to_border[0]) <= self.veh_size*self.margin):
                     # problem lies in the x-direction
                     new_waypoint = [0, 0]
                     if dist_to_border[0]<=0:
-                        new_waypoint[0] = xmin + desired_distance
+                        new_waypoint[0] = xmin + desired_distance[0]
                     else:
-                        new_waypoint[0] = xmax - desired_distance
+                        new_waypoint[0] = xmax - desired_distance[0]
                     if (y1 == y2):
                         new_waypoint[1] = y1
                     else:
+                        # use equation of line to compute y-coordinate
                         new_waypoint[1] = (new_waypoint[0]-x1)*(float((y2-y1))/(x2-x1))+y1
-                    # compute new distance, to use in check in y-direction
+
+                    # check if new_waypoint is reachable
+                    inside_border = point_in_rectangle(frame['border']['limits'], new_waypoint, xy_check=True)
+                    # compute distance from new waypoint to border
                     dist_to_border = self.distance_to_border(frame, new_waypoint)
-                if abs(dist_to_border[1]) <= self.veh_size:
+                    # re-compute the desired distance for the y-direction
+                    desired_distance = [0.,0.]
+                    if inside_border[1]:
+                        desired_distance[1] = self.veh_size*self.margin  # desired distance from last waypoint to border
+                    else:
+                        desired_distance[1] = self.veh_size*self.margin + abs(dist_to_border[1])
+                # x-direction was fixed above, now re-check only for the y-direction
+                if (not inside_border[1] or abs(dist_to_border[1]) <= self.veh_size*self.margin):
                     # problem lies in the y-direction
                     new_waypoint = [0, 0]
                     if dist_to_border[1]<=0:
-                        new_waypoint[1] = ymin + desired_distance
+                        new_waypoint[1] = ymin + desired_distance[1]
                     else:
-                        new_waypoint[1] = ymax - desired_distance
+                        new_waypoint[1] = ymax - desired_distance[1]
                     if (x1 == x2):
                         new_waypoint[0] = x1
                     else:
+                        # use equation of line to compute x-coordinate
                         new_waypoint[0] = (new_waypoint[1]-y1)*(float((x2-x1))/(y2-y1))+x1
-                # remove the old waypoints and change it by the new one
+                # remove the last count waypoints from the old frame,
+                # and change them by the newly computed (reachable) waypoint
                 for i in range(count):
                     frame['waypoints'].pop()  # remove last count waypoints
                 frame['waypoints'].append(new_waypoint)  # add new waypoint
         else:
-            raise ValueError('Method should be 1 or 2')
+            raise ValueError('Method should be move_frame or move_point, not: ', method)
         return frame
 
     def check_frames(self):
