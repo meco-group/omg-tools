@@ -1103,7 +1103,9 @@ class SchedulerProblem(Problem):
             # make frame with first point = start_position and next point = goal
             prev_point = start_position
 
-            frame, stationary_obstacles = self.update_frame_with_waypoint(frame, prev_point, point)
+            frame = self.update_frame_with_waypoint(frame, prev_point, point)
+            # check if there are any obstacles inside this new frame
+            stationary_obstacles = self.get_stationary_obstacles_in_frame(frame)
 
             if stationary_obstacles:
                 # there is an obstacle inside the frame after enlarging
@@ -1125,7 +1127,9 @@ class SchedulerProblem(Problem):
                             # no points in frame yet, so compare with current state
                             prev_point = start_position
 
-                        frame, stationary_obstacles = self.update_frame_with_waypoint(frame, prev_point, point)
+                        frame = self.update_frame_with_waypoint(frame, prev_point, point)
+                        # check if there are any obstacles inside this new frame
+                        stationary_obstacles = self.get_stationary_obstacles_in_frame(frame)
 
                         if stationary_obstacles:
                             # there is an obstacle inside the frame after enlarging
@@ -1176,10 +1180,8 @@ class SchedulerProblem(Problem):
         # else: ymin and ymax are kept
 
         frame['border'] = self.make_border(xmin_new,ymin_new,xmax_new,ymax_new)
-        # check if there are any obstacles inside this new frame
-        stationary_obstacles = self.get_stationary_obstacles_in_frame(frame)
 
-        return frame, stationary_obstacles
+        return frame
 
     def scale_up_frame(self, frame):
         # scale up the current frame in all directions, until it hits the borders
