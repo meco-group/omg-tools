@@ -70,7 +70,7 @@ class SchedulerProblem(Problem):
 
         # assign global planner
         if global_planner is not None:
-            # save the planner from the input of __init__
+            # save the provided planner
             self.global_planner = global_planner
         else:
             # make a default global planner
@@ -108,9 +108,10 @@ class SchedulerProblem(Problem):
         self.global_planner.plot_path(self.global_path)
         # append goal state to waypoints of global path,
         # since desired goal is not necessarily a waypoint
-        self.global_path.append(self.goal_state[:2])  # remove orientation info
+        # remove orientation info, since this is not relevant for the global path
+        self.global_path.append(self.goal_state[:2])
 
-        # make frames, fills in self.frames, according to self.n_frames
+        # fill in self.frames, according to self.n_frames
         self.create_frames()
 
         # get initial guess (based on global path), get motion time, for all frames
