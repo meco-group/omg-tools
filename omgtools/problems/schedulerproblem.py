@@ -799,7 +799,7 @@ class SchedulerProblem(Problem):
             if self.n_frames > 2:
                 # use old solutions for frame 2 until second last frame, these don't change
                 for k in range(2, self.n_frames):
-                    init_splines.append(self.local_problem.father.get_variables(self.vehicles[0].label,'splines_seg'+str(k)))
+                    init_splines.append(np.array(self.local_problem.father.get_variables()[self.vehicles[0].label,'splines_seg'+str(k)]))
                     motion_times.append(self.local_problem.father.get_variables(self.local_problem, 'T'+str(k),)[0][0])
             # only make guess using global path for last frame
             guess_idx = [self.n_frames-1]
