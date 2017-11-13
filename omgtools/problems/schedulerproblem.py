@@ -529,7 +529,7 @@ class SchedulerProblem(Problem):
         elif method == 'move_point':  # move waypoint, keep frame borders
             # compute distance from last waypoint to border
             if (not inside_border or any(abs(d) <= self.veh_size*self.margin for d in dist_to_border)):
-                # waypoint was outisde of border, or too close to border
+                # waypoint was outside of border, or too close to border
                 count = 1
                 while True:  # find waypoint that is far enough from border
                     inside_border = point_in_rectangle(frame['border']['limits'], frame['waypoints'][-1-count])
