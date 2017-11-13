@@ -548,7 +548,8 @@ class SchedulerProblem(Problem):
                 # use desired distance to move waypoint to a reachable position
                 x1, y1 = frame['waypoints'][-1-count]  # reachable waypoint inside frame
                 x2, y2 = frame['waypoints'][-1]  # unreachable waypoint inside or outside frame
-                if (not inside_border[0] or abs(dist_to_border[0]) <= self.veh_size*self.margin):
+                if (not inside_border[0] or abs(dist_to_border[0]) < self.veh_size):
+                    # to avoid floating point comparison problems, check distance without margin here
                     # problem lies in the x-direction
                     new_waypoint = [0, 0]
                     if dist_to_border[0]<=0:
@@ -566,7 +567,8 @@ class SchedulerProblem(Problem):
                     # compute distance from new waypoint to border
                     dist_to_border = self.distance_to_border(frame, new_waypoint)
                 # x-direction was fixed above, now re-check only for the y-direction
-                if (not inside_border[1] or abs(dist_to_border[1]) <= self.veh_size*self.margin):
+                if (not inside_border[1] or abs(dist_to_border[1]) < self.veh_size):
+                    # to avoid floating point comparison problems, check distance without margin here
                     # problem lies in the y-direction
                     new_waypoint = [0, 0]
                     if dist_to_border[1]<=0:
