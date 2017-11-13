@@ -542,21 +542,8 @@ class SchedulerProblem(Problem):
                 inside_border = point_in_rectangle(frame['border']['limits'], frame['waypoints'][-1], xy_check=True)
                 # recompute distance from last waypoint to border
                 dist_to_border = self.distance_to_border(frame, frame['waypoints'][-1])
-
-                # compute desired distance from waypoint to border, if outside border, add dist_to_border
-                desired_distance = [0.,0.]
-                if inside_border[0]:
-                    # point is inside the border in the x-direction
-                    desired_distance[0] = self.veh_size*self.margin  # desired distance from last waypoint to border
-                else:
-                    # point is outside the border in the x-direction
-                    desired_distance[0] = self.veh_size*self.margin + abs(dist_to_border[0])
-                if inside_border[1]:
-                    # point is inside the border in the y-direction
-                    desired_distance[1] = self.veh_size*self.margin  # desired distance from last waypoint to border
-                else:
-                    # point is outside the border in the y-direction
-                    desired_distance[1] = self.veh_size*self.margin + abs(dist_to_border[1])
+                # set desired distance from waypoint to border
+                desired_distance = 2*[self.veh_size*self.margin]
 
                 # use desired distance to move waypoint to a reachable position
                 x1, y1 = frame['waypoints'][-1-count]  # reachable waypoint inside frame
@@ -578,12 +565,6 @@ class SchedulerProblem(Problem):
                     inside_border = point_in_rectangle(frame['border']['limits'], new_waypoint, xy_check=True)
                     # compute distance from new waypoint to border
                     dist_to_border = self.distance_to_border(frame, new_waypoint)
-                    # re-compute the desired distance for the y-direction
-                    desired_distance = [0.,0.]
-                    if inside_border[1]:
-                        desired_distance[1] = self.veh_size*self.margin  # desired distance from last waypoint to border
-                    else:
-                        desired_distance[1] = self.veh_size*self.margin + abs(dist_to_border[1])
                 # x-direction was fixed above, now re-check only for the y-direction
                 if (not inside_border[1] or abs(dist_to_border[1]) <= self.veh_size*self.margin):
                     # problem lies in the y-direction
