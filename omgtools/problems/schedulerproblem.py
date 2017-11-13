@@ -527,6 +527,7 @@ class SchedulerProblem(Problem):
                     ymax = ymax + move_distance
                 frame['border'] = self.make_border(xmin, ymin, xmax, ymax)
         elif method == 'move_point':  # move waypoint, keep frame borders
+            new_waypoint = None
             # compute distance from last waypoint to border
             if (not inside_border or any(abs(d) <= self.veh_size*self.margin for d in dist_to_border)):
                 # waypoint was outside of border, or too close to border
@@ -580,6 +581,9 @@ class SchedulerProblem(Problem):
                     else:
                         # use equation of line to compute x-coordinate
                         new_waypoint[0] = (new_waypoint[1]-y1)*(float((x2-x1))/(y2-y1))+x1
+                if new_waypoint is None:
+                    # last waypoint was reachable when not taking into account the margin, so use this one
+                    new_waypoint = frame['waypoints'][-1]
                 # remove the last count waypoints from the old frame,
                 # and change them by the newly computed (reachable) waypoint
                 for i in range(count):
