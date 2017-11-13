@@ -190,6 +190,7 @@ class AStarPlanner(GlobalPlanner):
                     self.open_list.append(new_node)
 
             self.current_node = self.get_lowest_f_cost_node()
+
             self.remove_from_open_list(self.current_node)
             self.closed_list.append(self.current_node)
 
@@ -200,10 +201,11 @@ class AStarPlanner(GlobalPlanner):
                 closed_list_pos = []
                 for node in self.closed_list:
                     closed_list_pos.append(node.pos)
-                if not neighbors or all(item in neighbors for item in closed_list_pos):
+                if not neighbors or all([item in closed_list_pos for item in neighbors]):
                     # there are no neighbors which are accessible or they are all in the closed list,
                     # meaning that no path could be found
-                    raise RuntimeError('There is no path from the desired start to the desired end node!')
+                    raise RuntimeError('There is no path from the desired start to the desired end node! ' +
+                        'Consider using more grid points.')
 
         t2 = time.time()
         print 'Elapsed time to find a global path: ', t2-t1
