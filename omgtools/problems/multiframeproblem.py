@@ -82,10 +82,11 @@ class MultiFrameProblem(Problem):
         # minimize total motion time
         obj = sum(self.motion_times)
         # add regularization on jerk to avoid nervous solutions
-        for frame in range(self.n_frames):
-            for s in total_splines[frame]:
-                dds = s.derivative(3)
-                obj += definite_integral((0.01*dds)**2, 0., 1.)
+        if self.n_frames > 1:
+            for frame in range(self.n_frames):
+                for s in total_splines[frame]:
+                    dds = s.derivative(3)
+                    obj += definite_integral((0.01*dds)**2, 0., 1.)
         self.define_objective(obj)
 
     def define_init_constraints(self):
