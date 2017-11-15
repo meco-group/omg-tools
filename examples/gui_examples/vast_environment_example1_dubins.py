@@ -27,6 +27,7 @@ from omgtools import *
 # create vehicle
 vehicle = Dubins(shapes = Circle(radius=0.6), bounds={'vmax': 1.2, 'wmax': np.pi/3., 'wmin': -np.pi/3.}, # in rad/s
                  options={'substitution': False})
+veh_size = vehicle.shapes[0].radius
 vehicle.define_knots(knot_intervals=10)
 
 # create environment with the help of a GUI

@@ -25,8 +25,9 @@
 from omgtools import *
 
 # create vehicle
-vehicle = Holonomic(shapes = Circle(radius=0.6), options={'syslimit': 'norm_2'},
+vehicle = Holonomic(shapes = Circle(radius=0.5), options={'syslimit': 'norm_2'},
                     bounds={'vmax': 1.2, 'vmin':-1.2, 'amax':10, 'amin':-10})
+veh_size = vehicle.shapes[0].radius
 
 # create environment with the help of a GUI
 

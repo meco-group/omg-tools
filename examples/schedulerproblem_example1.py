@@ -37,6 +37,7 @@ from omgtools import *
 # create vehicle
 vehicle = Holonomic(shapes = Circle(radius=2), options={'syslimit': 'norm_2', 'stop_tol': 1.e-2},
                     bounds={'vmax': 10, 'vmin':-10, 'amax':10, 'amin':-10})
+veh_size = vehicle.shapes[0].radius
 
 # create environment
 start = [192.5,32]
@@ -82,7 +83,7 @@ environment.add_obstacle(Obstacle({'position': [150, 210]}, shape=Rectangle(widt
 
 # make global planner
 # [25,25] = number of cells in vertical and horizonal direction
-globalplanner = AStarPlanner(environment, [25,25], start, goal)
+globalplanner = AStarPlanner(environment, [25,25], start, goal, options={'veh_size': veh_size})
 
 # make problem
 # one extra setting is the frame_type:
@@ -108,5 +109,5 @@ vehicle.plot('input', knots=True, prediction=True, labels=['v_x (m/s)', 'v_y (m/
 simulator.run()
 
 # save plots
-# multiproblem.save_movie('scene', format='gif', name='multiproblem', number_of_frames=100, movie_time=5, axis=False)
-# multiproblem.save_movie('scene', format='tikz', name='multiproblemtikz', number_of_frames=100, movie_time=5, axis=False)
+schedulerproblem.save_movie('scene', format='gif', name='multiproblem', number_of_frames=150, movie_time=15, axis=False)
+# schedulerproblem.save_movie('scene', format='tikz', name='multiproblemtikz', number_of_frames=100, movie_time=5, axis=False)

@@ -23,6 +23,7 @@ from omgtools import *
 # create vehicle
 vehicle = Dubins(shapes=Circle(radius=0.3), bounds={'vmax': 0.7, 'wmax': np.pi/3., 'wmin': -np.pi/3.}, # in rad/s
                  options={'substitution': False})
+veh_size = vehicle.shapes[0].radius
 vehicle.define_knots(knot_intervals=10)
 
 # create environment
@@ -45,7 +46,7 @@ environment.add_obstacle(Obstacle({'position': [4,2]}, shape=circle))
 environment.add_obstacle(Obstacle({'position': [5,6]}, shape=circle))
 
 # make global planner
-globalplanner = AStarPlanner(environment, [10,10], start, goal)
+globalplanner = AStarPlanner(environment, [10,10], start, goal, options={'veh_size': veh_size})
 
 # make coordinator
 options={'freeT': True, 'horizon_time': 15, 'frame_type':'corridor','scale_up_fine': True}

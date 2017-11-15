@@ -31,6 +31,8 @@ from omgtools import *
 # create vehicle
 vehicle = Holonomic(shapes = Circle(radius=0.5), options={'syslimit': 'norm_2', 'stop_tol': 1.e-2},
                     bounds={'vmax': 2, 'vmin':-2, 'amax':4, 'amin':-4})
+veh_size = vehicle.shapes[0].radius
+
 # create environment
 start = [5,0]
 goal = [40,20]
@@ -55,7 +57,7 @@ environment.fill_room(room1, [obstacle1, obstacle2])
 
 # make global planner
 # [25,25] = number of cells in vertical and horizonal direction
-globalplanner = AStarPlanner(environment, [25,25], start, goal)
+globalplanner = AStarPlanner(environment, [25,25], start, goal, options={'veh_size': veh_size})
 
 # make problem
 options = {'frame_type': 'corridor', 'scale_up_fine': True, 'n_frames': 2}
