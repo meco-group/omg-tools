@@ -30,7 +30,7 @@ vehicle = Holonomic(shapes = Circle(radius=1), options={'syslimit': 'norm_2'},
 
 # create environment with the help of a GUI
 
-# Note: to run this example just click Load in the GUI and select ICRA_example2.pickle
+# Note: to run this example just click Load in the GUI and select vast_environment_example2.pickle
 
 import Tkinter as tk
 root = tk.Tk()

@@ -30,7 +30,44 @@ vehicle = Holonomic(shapes = Circle(radius=0.6), options={'syslimit': 'norm_2'},
 
 # create environment with the help of a GUI
 
-# Note: to run this example just click Load in the GUI and select ICRA_example1.pickle
+#####################################
+####### how to use the GUI? #########
+#####################################
+# create obstacles:
+# -) select the shape of the obstacle you want to place (Circle or Rectangle)
+# -) set the size of this shape (width, height for Rectangle, radius for Circle)
+# -) set the x- and y-velocity if the obstacle is moving
+# -) check Bounce if you want the moving obstacle to bounce off other obstacles or off the wall
+# -) click at the desired position in the grid
+# obstacles are automatically placed such that their center corresponds to the intersection of 4 cells
+
+# select start and goal:
+# start = right click somewhere in the grid
+# goal = right click again
+# if you made a mistake you can again click two times to make a new start and goal
+
+# buttons:
+# -) the Remove button removes the obstacle which was placed most recently
+# clicking this button multiple times removes more obstacles, in the reverse order
+# of their creation (starting with the obstacle which was created most recently)
+# -) the Save checkmark lets you save the current environment, in the file environment.pickle
+# -) the Load button loads the most recently saved environment
+# -) the Quit button closes the GUI and stops the example
+# -) the Ready button closes the GUI and continues the example,
+# by extracting your created environment from the GUI
+# -) the LoadSVG button lets you load in an environment which is defined inside an SVG
+# when loading an svg, the GUI asks how many pixels there are in 1m e.g. '10',
+# and how many cells you like horizontally and vertically e.g. '20,20'
+# the loaded obstacles are all stationary, but after loading an svg, you can manually add extra (moving) obstacles
+# for drawing.svg use e.g. 25 pixels/m and 30,30 cells
+# for maze_small.svg use e.g. 5 pixels/m and 30,30 cells
+# for maze_big.svg use e.g. 2 pixels/m and 100,100 cells (consider raising vehicle velocity limits to speed up)
+# -) at the far right and below the Save checkmark there are arrows, to scroll through the grid
+
+# Note: LoadSVG only works for a limited type of svg-files for the moment, consisting of
+# line, polyline, rect or circle objects
+
+# Note: to run this example just click Load in the GUI and select vast_environment_example1.pickle
 
 import Tkinter as tk
 root = tk.Tk()
