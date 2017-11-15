@@ -160,6 +160,9 @@ class AStarPlanner(GlobalPlanner):
         while self.current_node.pos != self.goal:
             # get positions of current node neighbours
             neighbors = self.grid.get_neighbors(self.current_node.pos)
+            if not neighbors:
+                raise RuntimeError('The current node has no free neighbors! ' +
+                        'Consider using more grid points.')
             for point in neighbors:
                 # suppose that the gridpoint is not yet seen
                 new_point = True
