@@ -20,13 +20,13 @@
 from problem import Problem
 from multiframeproblem import MultiFrameProblem
 from point2point import Point2point
+from globalplanner import AStarPlanner
+from ..environment.environment import Environment
 from ..basics.shape import Rectangle, Circle
 from ..basics.geometry import distance_between_points, intersect_lines, intersect_line_segments
 from ..basics.geometry import point_in_rectangle
 from ..basics.spline import BSplineBasis
 from ..basics.spline_extra import concat_splines
-from ..environment.environment import Environment
-from globalplanner import AStarPlanner
 
 from scipy.interpolate import interp1d
 import scipy.linalg as la
@@ -47,15 +47,6 @@ class SchedulerProblem(Problem):
             self.problem_options['freeT'] = True
         self.start_time = 0.
         self.update_times=[]
-        self.cnt = 1  # frame counter
-        self.n_frames = options['n_frames'] if 'n_frames' in options else 1  # amount of frames to combine
-        # sample time used to check if moving obstacle is inside the frame,
-        # e.g. 0.5 then check if obstacle is inside frame on time 0,0.5,1,...
-        self.check_moving_obs_ts = options['check_moving_obs_ts'] if 'check_moving_obs_ts' in options else 0.5
-
-        if (self.n_frames > 1 and not self.problem_options['freeT']):
-            raise ValueError('Fixed time problems are only supported for n_frames = 1')
-        self._n_frames = self.n_frames  # save original value
 
         # save vehicle dimension, determines how close waypoints can be to the border
         shape = self.vehicles[0].shapes[0]
@@ -81,19 +72,27 @@ class SchedulerProblem(Problem):
 
         # frame settings
         self.frames = []
+        self.cnt = 1  # frame counter
+        self.n_frames = options['n_frames'] if 'n_frames' in options else 1  # amount of frames to combine
+
+        if (self.n_frames > 1 and not self.problem_options['freeT']):
+            raise ValueError('Fixed time problems are only supported for n_frames = 1')
+        self._n_frames = self.n_frames  # save original value
         self.frame_type = options['frame_type'] if 'frame_type' in options else 'shift'
         # set frame size for frame_type shift
         if self.frame_type is 'shift':
             # by default frame size is set to 1/5 of total environment width
             self.frame_size = options['frame_size'] if 'frame_size' in options else environment.room[0]['shape'].width*0.2
+            # by default move limit is set to 1/4 of frame size
             self.move_limit = options['move_limit'] if 'move_limit' in options else self.frame_size*0.25
-        if self.frame_type is 'min_nobs':
+        if self.frame_type is 'corridor':
+            # scale up frame with small steps or not
             self.scale_up_fine = options['scale_up_fine'] if 'scale_up_fine' in options else True
         # check if vehicle size is larger than the cell size
         n_cells = self.global_planner.grid.n_cells
         if (size_to_check >= (min(environment.room[0]['shape'].width/float(n_cells[0]), \
                                   environment.room[0]['shape'].height/float(n_cells[1])))
-           and self.frame_type == 'min_nobs'):
+           and self.frame_type == 'corridor'):
             warnings.warn('Vehicle is bigger than one cell, this may cause problems' +
                           ' when switching frames. Consider reducing the amount of cells or reducing' +
                           ' the size of the vehicle')
@@ -309,8 +308,8 @@ class SchedulerProblem(Problem):
         # makes frames, based on the environment,
         # the current state and the global path (waypoints)
 
-        # there are two different options: shift and min_nobs
-        # min_nobs: change frame size such that the frame is as large as possible, without
+        # there are two different options: shift and corridor
+        # corridor: change frame size such that the frame is as large as possible, without
         # containing any stationary obstacles
         # shift: keep frame_size fixed, shift frame in the direction of the movement
         # over a maximum distance of move_limit
@@ -1395,6 +1394,47 @@ class SchedulerProblem(Problem):
         else:
             raise RuntimeError('No intersection between line and frame found!')
         return intersection_point
+    # def find_intersection_line_segment_frame(self, frame, line):
+    #     # find intersection point of the provided line with frame
+    #     x3, y3, x4, y4 = frame['border']['limits']
+
+    #     # frame border representation:
+    #     # [x3,y4]---------[x4,y4]
+    #     #    |               |
+    #     #    |               |
+    #     #    |               |
+    #     # [x3,y3]---------[x4,y3]
+
+    #     # move over border in clockwise direction:
+    #     top_side    = [[x3,y4],[x4,y4]]
+    #     right_side  = [[x4,y4],[x4,y3]]
+    #     bottom_side = [[x4,y3],[x3,y3]]
+    #     left_side   = [[x3,y3],[x3,y4]]
+
+    #     # First find which line segments intersect, afterwards use a method
+    #     # for line intersection to find the intersection point. Not possible
+    #     # to use intersect_lines immediately since it doesn't take into account
+    #     # the segments, but considers infinitely long lines.
+
+    #     #intersection with top side?
+    #     if intersect_line_segments(line, top_side):
+    #         # find intersection point
+    #         intersection_point = intersect_lines(line, top_side)
+    #     #intersection with right side?
+    #     elif intersect_line_segments(line, right_side):
+    #         # find intersection point
+    #         intersection_point = intersect_lines(line, right_side)
+    #     #intersection with bottom side?
+    #     elif intersect_line_segments(line, bottom_side):
+    #         # find intersection point
+    #         intersection_point = intersect_lines(line, bottom_side)
+    #     #intersection with left side?
+    #     elif intersect_line_segments(line, left_side):
+    #         # find intersection point
+    #         intersection_point = intersect_lines(line, left_side)
+    #     else:
+    #         raise RuntimeError('No intersection between line and frame found!')
+    #     return intersection_point
 
     # def move_from_border(self, start, end, frame, distance=0):
     #     # Note: this function is only used when frame_type='shift'
@@ -1443,83 +1483,3 @@ class SchedulerProblem(Problem):
     #             end_shifted[1] = end_shifted[1] - move_distance
 
     #     return end_shifted
-
-    def distance_to_border(self, frame, point):
-        # returns the x- and y-direction distance from point to the border of frame
-        # based on: https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line
-        # when point is outside of the border, the function also returns the distance to the border,
-        # and you can use point_in_rectangle() to check if point is inside the border or not
-
-        x2, y2, x3, y3 = frame['border']['limits']
-        # number vertices of border
-        # v2--v3
-        # |   |
-        # v1--v4
-        v1 = [x2,y2]
-        v2 = [x2,y3]
-        v3 = [x3,y3]
-        v4 = [x3,y2]
-
-        # dist from v1-v2
-        # Note the minus sign! A negative shift in x-direction is required to lower the distance
-        dist12 = -abs((v2[1]-v1[1])*point[0] - (v2[0]-v1[0])*point[1] + v2[0]*v1[1] - v2[1]*v1[0])/(np.sqrt((v2[1]-v1[1])**2+(v2[0]-v1[0])**2))
-        #dist from v2-v3
-        dist23 = abs((v3[1]-v2[1])*point[0] - (v3[0]-v2[0])*point[1] + v3[0]*v2[1] - v3[1]*v2[0])/(np.sqrt((v3[1]-v2[1])**2+(v3[0]-v2[0])**2))
-        #dist from v3-v4
-        dist34 = abs((v4[1]-v3[1])*point[0] - (v4[0]-v3[0])*point[1] + v4[0]*v3[1] - v4[1]*v3[0])/(np.sqrt((v4[1]-v3[1])**2+(v4[0]-v3[0])**2))
-        #dist from v4-v1
-        # Note the minus sign! A negative shift in y-direction is required to lower the distance
-        dist41 = -abs((v1[1]-v4[1])*point[0] - (v1[0]-v4[0])*point[1] + v1[0]*v4[1] - v1[1]*v4[0])/(np.sqrt((v1[1]-v4[1])**2+(v1[0]-v4[0])**2))
-
-        distance = [0.,0.]
-        distance[0] = dist12 if abs(dist12) < abs(dist34) else dist34  # x-direction: from point to side12 or side34
-        distance[1] = dist23 if abs(dist23) < abs(dist41) else dist41  # y-direction: from point to side23 or side41
-
-        return distance
-
-    def find_closest_waypoint(self, position, waypoints):
-
-        # only consider the waypoints past 'position' = the current vehicle position or a certain waypoint
-        # so find the waypoint that is closest to position
-        dist = max(self.environment.room[0]['shape'].width, self.environment.room[0]['shape'].height)
-        closest_waypoint = waypoints[0]
-        index = 0
-        for idx, point in enumerate(waypoints):
-            d = distance_between_points(point, position)
-            if d < dist:
-                dist = d
-                closest_waypoint = point
-                index = idx
-        return closest_waypoint, index
-
-    def generate_problem(self):
-        # transform frames into a multiframe problem
-
-        room = []
-        for k in range(self.n_frames):
-            new_room = {}
-            new_room['shape'] = self.frames[k]['border']['shape']
-            new_room['position'] = self.frames[k]['border']['position']
-            new_room['draw'] = True
-            room.append(new_room)
-        environment = Environment(room=room)
-
-        for k in range(self.n_frames):
-            obstacles = self.frames[k]['stationary_obstacles']+self.frames[k]['moving_obstacles']
-            environment.fill_room(room[k], obstacles)
-
-        # create problem
-        problem_options = {}
-        for key, value in self.problem_options.items():
-            problem_options[key] = value
-        if not self.problem_options['freeT']:
-            # fixedT problem, only possible with Point2point problem
-            problem = Point2point(self.vehicles, environment, freeT=self.problem_options['freeT'], options=problem_options)
-        else:
-            problem = MultiFrameProblem(self.vehicles, environment, n_frames=self.n_frames)
-        problem.set_options({'solver_options': self.options['solver_options']})
-        problem.init()
-        # reset the current_time, to ensure that predict uses the provided
-        # last input of previous problem and vehicle velocity is kept from one frame to another
-        problem.initialize(current_time=0.)
-        return problem
