@@ -86,11 +86,11 @@ globalplanner = AStarPlanner(environment, [25,25], start, goal)
 
 # make problem
 # one extra setting is the frame_type:
-## 'min_nobs': use frame which is as big as possible, without containing stationary obstacles
+## 'corridor': use frame which is as big as possible, without containing stationary obstacles
 ## 'shift' use frame of fixed size, which is moved when the vehicle comes close to the end point,
 ## this requires an extra setting 'frame_size': select the size of the shifted (square) frame
 
-# Note: When 'min_nobs' is selected and your vehicle size is larger than the cell size,
+# Note: When 'corridor' is selected and your vehicle size is larger than the cell size,
 # shifting frames sometimes causes problems
 
 options={'freeT': True, 'frame_type': 'corridor', 'scale_up_fine': True}

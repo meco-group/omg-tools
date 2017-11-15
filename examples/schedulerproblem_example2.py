@@ -58,7 +58,7 @@ environment.fill_room(room1, [obstacle1, obstacle2])
 globalplanner = AStarPlanner(environment, [25,25], start, goal)
 
 # make problem
-options = {'frame_type': 'min_nobs', 'scale_up_fine': True, 'n_frames': 2}
+options = {'frame_type': 'corridor', 'scale_up_fine': True, 'n_frames': 2}
 schedulerproblem = SchedulerProblem(vehicle, environment, globalplanner, options=options)
 
 # simulate the problem
