@@ -60,14 +60,16 @@ options={'freeT': True, 'horizon_time': 10, 'no_term_con_der': False,
 schedulerproblem=SchedulerProblem(vehicle, environment, globalplanner, options=options)
 
 # Note: using linear solver ma57 is optional, normally it reduces the solving time
-# multiproblem.set_options({'solver_options':
+# schedulerproblem.set_options({'solver_options':
 #     {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 
 simulator = Simulator(schedulerproblem)
 schedulerproblem.plot('scene')
 vehicle.plot('input', knots=True, prediction=True, labels=['v_x (m/s)', 'v_y (m/s)'])
+vehicle.plot('dinput', knots=True, prediction=True, labels=['a_x (m/s^2)', 'a_y (m/s^2)'])
 
 # run it!
 simulator.run()
-# multiproblem.save_movie('scene', format='gif', name='example2_minobs', number_of_frames=300, movie_time=30, axis=False)
-# multiproblem.save_movie('scene', format='tikz', name='example2_minobs', number_of_frames=100, movie_time=10, axis=False)
+schedulerproblem.plot_movie('scene', number_of_frames=100, repeat=False)
+schedulerproblem.save_movie('scene', format='gif', name='example2_corridor', number_of_frames=300, movie_time=30, axis=False)
+# schedulerproblem.save_movie('scene', format='tikz', name='example2_corridor', number_of_frames=100, movie_time=10, axis=False)

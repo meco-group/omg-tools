@@ -107,5 +107,5 @@ vehicle.plot('input', knots=True, prediction=True, labels=['v_x (m/s)', 'v_y (m/
 
 # run it!
 simulator.run()
-# multiproblem.save_movie('scene', format='gif', name='example1_minobs', number_of_frames=300, movie_time=30, axis=False)
-# multiproblem.save_movie('scene', format='tikz', name='example1_minobs', number_of_frames=100, movie_time=10, axis=False)
+# schedulerproblem.save_movie('scene', format='gif', name='example1_minobs', number_of_frames=300, movie_time=30, axis=False)
+# schedulerproblem.save_movie('scene', format='tikz', name='example1_minobs', number_of_frames=100, movie_time=10, axis=False)
