@@ -27,7 +27,7 @@
 # when considering only a single multiframeproblem. Therefore, the vehicle cannot leave
 # the first frame.
 
-# The frames that are considered here are of the type 'min_nobs', i.e. frames that are as
+# The frames that are considered here are of the type 'corridor', i.e. frames that are as
 # large as possible, without containing any stationary obstacle.
 
 from omgtools import *

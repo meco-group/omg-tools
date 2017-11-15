@@ -93,7 +93,7 @@ globalplanner = AStarPlanner(environment, [25,25], start, goal)
 # Note: When 'min_nobs' is selected and your vehicle size is larger than the cell size,
 # shifting frames sometimes causes problems
 
-options={'freeT': True, 'frame_type': 'min_nobs', 'scale_up_fine': True}
+options={'freeT': True, 'frame_type': 'corridor', 'scale_up_fine': True}
 # options={'freeT': True, 'frame_type': 'shift', 'frame_size': 150}
 schedulerproblem=SchedulerProblem(vehicle, environment, globalplanner,options=options)
 
