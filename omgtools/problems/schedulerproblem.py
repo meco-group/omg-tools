@@ -22,6 +22,7 @@ from multiframeproblem import MultiFrameProblem
 from point2point import Point2point
 from globalplanner import AStarPlanner
 from ..environment.environment import Environment
+from ..environment.frame import ShiftFrame, CorridorFrame
 from ..basics.shape import Rectangle, Circle
 from ..basics.geometry import distance_between_points, intersect_lines, intersect_line_segments
 from ..basics.geometry import point_in_rectangle
@@ -123,9 +124,9 @@ class SchedulerProblem(Problem):
         init_guess, self.motion_times = self.get_init_guess()
 
         # get moving obstacles inside frame, taking into account the calculated motion time
-        for k in range(self.n_frames):
+        for idx, frame in enumerate(self.frames):
             # updates self.frames[:]['moving_obstacles']
-            self.frames[k]['moving_obstacles'] = self.get_moving_obstacles_in_frame(self.frames[k], self.motion_times[k])
+            frame.moving_obstacles = frame.get_moving_obstacles(self.motion_times[idx])
 
         # get a problem representation of the frames
         # the schedulerproblem (self) has a local problem (multiframeproblem) at each moment
@@ -179,12 +180,12 @@ class SchedulerProblem(Problem):
             # if moving_obstacles is different from the existing moving_obstacles (new obstacle,
             # or disappeared obstacle) make a new problem
             new_problem = False
-            for k in range(self.n_frames):
-                moving_obs_in_frame = self.get_moving_obstacles_in_frame(self.frames[k], self.motion_times[k])
-                if set(moving_obs_in_frame) != set(self.frames[k]['moving_obstacles']):
+            for idx, frame in enumerate(self.frames):
+                moving_obs_in_frame = frame.get_moving_obstacles(self.motion_times[idx])
+                if set(moving_obs_in_frame) != set(frame.moving_obstacles):
                     # the amount of moving obstacles changed, or there is a new obstacle
                     new_problem = True
-                    self.frames[k]['moving_obstacles'] = moving_obs_in_frame
+                    frame.moving_obstacles = moving_obs_in_frame
                 else:
                     new_problem = False
             if new_problem:
@@ -238,7 +239,7 @@ class SchedulerProblem(Problem):
 
     def stop_criterium(self, current_time, update_time):
         # check if the current frame is the last one
-        if self.frames[-1]['endpoint_frame'] == self.goal_state[:2]:  # remove orientation info
+        if self.frames[-1].endpoint == self.goal_state[:2]:  # remove orientation info
             # if we now reach the goal, the vehicle has arrived
             if self.local_problem.stop_criterium(current_time, update_time):
                 return True
@@ -273,7 +274,7 @@ class SchedulerProblem(Problem):
         if info is not None:
             for k in range(self._n_frames):
                 # initialize frame plot, always use frames[0]
-                s, l = self.frames[0]['border']['shape'].draw(self.frames[0]['border']['position'])
+                s, l = self.frames[0].border['shape'].draw(self.frames[0].border['position'])
                 surfaces = [{'facecolor': 'none', 'edgecolor': gray, 'linestyle' : '--', 'linewidth': 1.2} for _ in s]
                 info[0][0]['surfaces'] += surfaces
                 # initialize global path plot
@@ -287,7 +288,7 @@ class SchedulerProblem(Problem):
             for k in range(len(self.frame_storage[t])):
                 # for every frame at this point in time
                 # plot frame border
-                s, l = self.frame_storage[t][k]['border']['shape'].draw(self.frame_storage[t][k]['border']['position'])
+                s, l = self.frame_storage[t][k].border['shape'].draw(self.frame_storage[t][k].border['position'])
                 data[0][0]['surfaces'] += s
             # plot global path
             # remove last waypoint, since this is the goal position,
@@ -333,21 +334,23 @@ class SchedulerProblem(Problem):
         # frame of fixed size
         for k in range(n_frames_to_create):
             # check if previously created frame was last one
-            if frame and frame['waypoints'][-1] == self.goal_state[:2]:  # remove orientation info
+            if frame and frame.waypoints[-1] == self.goal_state[:2]:  # remove orientation info
                 # reduce amount of frames that are considered and stop loop
                 self.n_frames -= 1
                 break
             # set start position for computation of frame that we will add
             if frame:
-                start_pos = frame['waypoints'][-1]
+                start_pos = frame.waypoints[-1]
             else:
                 # there were no frames yet, so compute self.n_frames, starting from current state
                 # remove orientation from state (if using e.g. differential drive)
                 start_pos = self.curr_state[:2]
             if self.frame_type == 'shift':
-                frame = self.create_frame_shift(start_pos)
-            elif self.frame_type == 'min_nobs':
-                frame = self.create_frame_min_nobs(start_pos)
+                frame = ShiftFrame(self.environment, start_pos, self.frame_size, self.move_limit,
+                                   self.global_path, self.veh_size, self.margin, self.options)
+            elif self.frame_type == 'corridor':
+                frame = CorridorFrame(self.environment, start_pos, self.global_path,
+                                      self.veh_size, self.margin, self.options)
             else:
                 raise RuntimeError('Invalid frame type: ', self.frame_type)
             # append new frame to the frame list
@@ -355,7 +358,7 @@ class SchedulerProblem(Problem):
 
             if self.n_frames == 1:
                 # then we need a next_frame to create a region of overlap, determining when to switch frames
-                self.next_frame = self.create_next_frame(frame)
+                self.next_frame = self.create_next_frame()
         end_time = time.time()
         if self.options['verbose'] >= 2:
             print 'elapsed time while creating new ' + self.frame_type + ' frame: ', end_time-start_time
@@ -588,16 +591,36 @@ class SchedulerProblem(Problem):
                 for i in range(count):
                     frame['waypoints'].pop()  # remove last count waypoints
                 frame['waypoints'].append(new_waypoint)  # add new waypoint
+    def create_next_frame(self, frame=None):
+        # only used if self.n_frames = 1
+
+        if frame is None:
+            frame = self.frames[0]
+
+        if not frame.endpoint == self.goal_state[:2]:  # remove orientation info
+            start = time.time()
+            start_position = frame.endpoint  # start at end of current frame
+            if frame.type is 'shift':
+                next_frame = ShiftFrame(self.environment, start_position, self.frame_size, self.move_limit,
+                                   self.global_path, self.options)
+            elif frame.type is 'corridor':
+                next_frame = CorridorFrame(self.environment, start_position, self.global_path,
+                                   self.veh_size, self.margin, self.options)
+
+            end = time.time()
+            if self.options['verbose'] >= 2:
+                print 'time spend in create_next_frame, ', end-start
+            return next_frame
         else:
-            raise ValueError('Method should be move_frame or move_point, not: ', method)
-        return frame
+            # tried to create the next frame, while the goal position is already inside the current frame
+            return None
 
     def check_frames(self):
         # if final goal is not in the current frame, compare current distance
         # to the local goal with the initial distance
-        if not self.point_in_frame(self.frames[0], self.goal_state[:2]):
+        if not self.frames[0].point_in_frame(self.goal_state[:2]):
             if (self.n_frames == 1 and hasattr(self, 'next_frame')):
-                if self.point_in_frame(self.next_frame, self.curr_state[:2], distance=self.veh_size):
+                if self.next_frame.point_in_frame(self.curr_state[:2], distance=self.veh_size):
                     # only called if self.n_frames = 1,
                     # then self.frames[1] doesn't exist and self.next_frame does exist
                     # current state is inside the next frame, so switch
@@ -605,7 +628,7 @@ class SchedulerProblem(Problem):
                 else:
                     valid = True
                 return valid
-            elif self.point_in_frame(self.frames[1], self.curr_state[:2], distance=self.veh_size):
+            elif self.frames[1].point_in_frame(self.curr_state[:2], distance=self.veh_size):
                 # vehicle is in overlap region between current and next frame
                 valid = False
                 return valid
@@ -632,13 +655,13 @@ class SchedulerProblem(Problem):
 
             # we already have the next frame, so we first compute the frame
             # after the next one
-            new_frame = self.create_next_frame(next_frame)
+            new_frame = self.create_next_frame(frame=self.next_frame)
             # the next frame becomes the current frame
-            self.frames[0] = self.next_frame.copy()
+            self.frames[0] = self.next_frame
             # new_frame becomes the next frame
             # Note: if the current frame is the last one, new_frame will be None
             if new_frame is not None:
-                self.next_frame = new_frame.copy()
+                self.next_frame = new_frame
             else:
                 self.next_frame = None
         else:
@@ -650,8 +673,8 @@ class SchedulerProblem(Problem):
         self.init_guess, self.motion_times = self.get_init_guess()
 
         # get moving obstacles inside frame for this time
-        for k in range(self.n_frames):
-            self.frames[k]['moving_obstacles'] = self.get_moving_obstacles_in_frame(self.frames[k], self.motion_times[k])
+        for idx, frame in enumerate(self.frames):
+            frame.moving_obstacles = frame.get_moving_obstacles(self.motion_times[idx])
 
         end_time = time.time()
         if self.options['verbose'] >= 2:
@@ -822,29 +845,29 @@ class SchedulerProblem(Problem):
             self.vehicles[0].set_initial_conditions(self.curr_state)
         # if Dubins vehicle, add orientation 0
         if isinstance(self.vehicles[0], Dubins):
-            if self.frames[-1]['waypoints'][-1] == self.goal_state[:2]:
+            if self.frames[-1].waypoints[-1] == self.goal_state[:2]:
                 self.vehicles[0].set_terminal_conditions(self.goal_state)  # setting goal for final frame
             else:
                 if hasattr(self, 'next_frame'):
                     # use last waypoint from current and first waypoint
                     # from next frame to compute desired orientation
                     # take second-last waypoint, since last one was moved in make_reachable()
-                    x1,y1 = self.frames[-1]['waypoints'][-2]
+                    x1,y1 = self.frames[-1].waypoints[-2]
                     # take second waypoint, since first will be == second-last of previous frame
-                    x2,y2 = self.next_frame['waypoints'][1]
+                    x2,y2 = self.next_frame.waypoints[1]
                     # compute angle
                     angle = np.arctan2((y2-y1),(x2-x1))
                 else:
                     # compute angle between last and second last waypoint inside frame
                     # to use as a desired orientation
-                    x1,y1 = self.frames[-1]['waypoints'][-2]
-                    x2,y2 = self.frames[-1]['waypoints'][-1]
+                    x1,y1 = self.frames[-1].waypoints[-2]
+                    x2,y2 = self.frames[-1].waypoints[-1]
                     angle = np.arctan2((y2-y1),(x2-x1))
                 # desired pose = last waypoint, with compute angle
-                pose = self.frames[-1]['waypoints'][-1] + [angle]
+                pose = self.frames[-1].waypoints[-1] + [angle]
                 self.vehicles[0].set_terminal_conditions(pose)
         elif isinstance(self.vehicles[0], Holonomic):
-            self.vehicles[0].set_terminal_conditions(self.frames[-1]['waypoints'][-1])
+            self.vehicles[0].set_terminal_conditions(self.frames[-1].waypoints[-1])
         else:
             raise RuntimeError('You selected an unsupported vehicle type, choose Holonomic or Dubins')
 
@@ -861,7 +884,7 @@ class SchedulerProblem(Problem):
         # generate initial guess for new frame, based on the waypoints of
         # the global path that are inside the frame
 
-        waypoints = frame['waypoints']
+        waypoints = frame.waypoints
         if frame is self.frames[0]:
             # current frame: change first waypoint to current state,
             # the startpoint of the init guess
