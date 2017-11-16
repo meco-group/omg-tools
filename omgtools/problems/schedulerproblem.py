@@ -89,6 +89,7 @@ class SchedulerProblem(Problem):
         if self.frame_type is 'corridor':
             # scale up frame with small steps or not
             self.scale_up_fine = options['scale_up_fine'] if 'scale_up_fine' in options else True
+            self.l_shape = options['l_shape'] if 'l_shape' in options else False
         # check if vehicle size is larger than the cell size
         n_cells = self.global_planner.grid.n_cells
         if (size_to_check >= (min(environment.room[0]['shape'].width/float(n_cells[0]), \
@@ -359,6 +360,24 @@ class SchedulerProblem(Problem):
             if self.n_frames == 1:
                 # then we need a next_frame to create a region of overlap, determining when to switch frames
                 self.next_frame = self.create_next_frame()
+
+        if (self.frame_type == 'corridor' and self.l_shape):
+            # reshape the current frames into an L-shape
+            if (self.n_frames == 1 and hasattr(self, 'next_frame')):
+                # looking only one frame ahead
+                frames = self.frames[0].create_l_shape(self.next_frame)
+                self.frames = [frames[0]]
+                self.next_frame = frames[1]
+            else:
+                # reshape all frames until the last one
+                for k in range(len(self.frames)-1):
+                    self.frames[k], self.frames[k+1]= self.frames[k].create_l_shape(self.frames[k+1])
+                # reshape last frame by computing next_frame
+                next_frame = self.create_next_frame(frame=self.frames[-1])
+                if next_frame is not None:
+                    # there is still a frame after the next one
+                    self.frames[-1], _ = self.frames[-1].create_l_shape(next_frame)
+
         end_time = time.time()
         if self.options['verbose'] >= 2:
             print 'elapsed time while creating new ' + self.frame_type + ' frame: ', end_time-start_time
@@ -436,6 +455,13 @@ class SchedulerProblem(Problem):
                 self.next_frame = new_frame
             else:
                 self.next_frame = None
+            if (self.frame_type == 'corridor' and self.l_shape):
+                # reshape the current and next frame into an L-shape
+                if self.next_frame is not None:
+                    # there is still coming a next frame
+                    frames = self.frames[0].create_l_shape(self.next_frame)
+                    self.frames = [frames[0]]
+                    self.next_frame = frames[1]
         else:
             self.create_frames()
 

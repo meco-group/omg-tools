@@ -18,8 +18,8 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from ..basics.shape import Rectangle, Circle
-from ..basics.geometry import point_in_rectangle
-from ..basics.geometry import distance_between_points
+from ..basics.geometry import point_in_rectangle, distance_between_points
+from ..basics.geometry import intersect_line_segments, intersect_lines
 
 import numpy as np
 import time
@@ -45,15 +45,17 @@ class Frame(object):
         # e.g. 0.5 then check if obstacle is inside frame on time [s] 0,0.5,1,...
         self.check_moving_obs_ts = options['check_moving_obs_ts'] if 'check_moving_obs_ts' in options else 0.5
 
-    def get_stationary_obstacles(self):
+    def get_stationary_obstacles(self, frame=None):
+        if frame is None:
+            frame = self
         obstacles = []
-        xmin, ymin, xmax, ymax = self.border['limits']
-        shape = self.border['shape']
-        pos = np.array(self.border['position'][:2])
+        xmin, ymin, xmax, ymax = frame.border['limits']
+        shape = frame.border['shape']
+        pos = np.array(frame.border['position'][:2])
         # Note: these checkpoints already include pos
         checkpoints = [[xmin, ymin],[xmin, ymax],[xmax, ymax],[xmax, ymin]]
 
-        for obstacle in self.environment.obstacles:
+        for obstacle in frame.environment.obstacles:
             # check if obstacle is stationary, this is when:
             # there is no entry trajectories or there are trajectories but no velocity or
             # all velocities are 0.
@@ -770,3 +772,146 @@ class CorridorFrame(Frame):
         end_time = time.time()
         if self.options['verbose'] >= 2:
             print 'time in scale_up_frame', end_time-start_time
+
+    def create_l_shape(self, next_frame):
+        frame1 = self  # current frame
+        frame2 = next_frame
+
+        # check for shift in the first direction: horizontal or vertical
+
+        # connect beginning of current and next frame
+        line = [frame1.waypoints[0], frame2.waypoints[0]]
+        # compute intersection point between this line segment and the next frame
+        intersection_point = self.find_intersection_line_segment_frame(frame2, line)
+        if intersection_point is not None:
+            xmin1,ymin1,xmax1,ymax1 = frame1.border['limits']
+            xmin2,ymin2,xmax2,ymax2 = frame2.border['limits']
+            # check if intersection point is on the border of frame2,
+            # if so, there is also a part outside of the line segment that intersects
+            # this gives a new limit of frame1: for this particular limit,
+            # the values for frame1 and frame2 coincide
+            if abs(intersection_point[0] - xmin2) <= 1e-4:
+                frame1.border = self.make_border(xmin1,ymin1,xmax2,ymax1)
+                if (not frame1.point_in_frame(self.start_pos) or
+                    self.get_stationary_obstacles(frame=frame1)):
+                    # start position is not inside the frame anymore,
+                    # or there is a stationary obstacle in the new frame,
+                    # meaning that the shift of the boundary was invalid:
+                    # restore old frame
+                    frame1.border = self.make_border(xmin1,ymin1,xmax1,ymax1)
+                else:
+                    # update limits
+                    xmin1,ymin1,xmax1,ymax1 = frame1.border['limits']
+            if abs(intersection_point[0] - xmax2) <= 1e-4:
+                frame1.border = self.make_border(xmin2,ymin1,xmax1,ymax1)
+                if (not frame1.point_in_frame(self.start_pos) or
+                    self.get_stationary_obstacles(frame=frame1)):
+                    # restore old frame
+                    frame1.border = self.make_border(xmin1,ymin1,xmax1,ymax1)
+                else:
+                    # update limits
+                    xmin1,ymin1,xmax1,ymax1 = frame1.border['limits']
+            if abs(intersection_point[1] - ymax2) <= 1e-4:
+                frame1.border = self.make_border(xmin1,ymin2,xmax1,ymax1)
+                if (not frame1.point_in_frame(self.start_pos) or
+                    self.get_stationary_obstacles(frame=frame1)):
+                    # restore old frame
+                    frame1.border = self.make_border(xmin1,ymin1,xmax1,ymax1)
+                else:
+                    # update limits
+                    xmin1,ymin1,xmax1,ymax1 = frame1.border['limits']
+            if abs(intersection_point[1] - ymin2) <= 1e-4:
+                frame1.border = self.make_border(xmin1,ymin1,xmax1,ymax2)
+                if (not frame1.point_in_frame(self.start_pos) or
+                    self.get_stationary_obstacles(frame=frame1)):
+                    # restore old frame
+                    frame1.border = self.make_border(xmin1,ymin1,xmax1,ymax1)
+                else:
+                    # update limits
+                    xmin1,ymin1,xmax1,ymax1 = frame1.border['limits']
+
+        # check for shift in the second direction: vertical or horizontal
+
+        # connect first and last waypoint of next frame
+        line = [frame2.waypoints[0], frame2.waypoints[-1]]
+        # compute intersection with first frame
+        intersection_point = self.find_intersection_line_segment_frame(frame1, line)
+        if intersection_point is not None:
+            xmin1,ymin1,xmax1,ymax1 = frame1.border['limits']
+            xmin2,ymin2,xmax2,ymax2 = frame2.border['limits']
+            # check if intersection point is on the border of frame1,
+            # if so, there is also a part outside of the line segment that intersects
+            # this gives a new limit of frame2: for this particular limit,
+            # the values for frame2 and frame1 coincide
+            if abs(intersection_point[0] - xmin1) <= 1e-4:
+                frame2.border = self.make_border(xmin2,ymin2,xmax1,ymax2)
+                if (not frame2.point_in_frame(frame2.waypoints[-1]) or
+                    self.get_stationary_obstacles(frame=frame2)):
+                    # last waypoint is not inside the frame2 anymore,
+                    # or there is a stationary obstacle in the new frame2,
+                    # meaning that the shift of the boundary was invalid:
+                    # restore old frame
+                    frame2.border = self.make_border(xmin2,ymin2,xmax2,ymax2)
+            if abs(intersection_point[0] - xmax1) <= 1e-4:
+                frame2.border = self.make_border(xmin1,ymin2,xmax2,ymax2)
+                if (not frame2.point_in_frame(frame2.waypoints[-1]) or
+                    self.get_stationary_obstacles(frame=frame2)):
+                    # restore old frame
+                    frame2.border = self.make_border(xmin2,ymin2,xmax2,ymax2)
+            if abs(intersection_point[1] - ymax1) <= 1e-4:
+                frame2.border = self.make_border(xmin2,ymin1,xmax2,ymax2)
+                if (not frame2.point_in_frame(frame2.waypoints[-1]) or
+                    self.get_stationary_obstacles(frame=frame2)):
+                    # restore old frame
+                    frame2.border = self.make_border(xmin2,ymin2,xmax2,ymax2)
+            if abs(intersection_point[1] - ymin1) <= 1e-4:
+                frame2.border = self.make_border(xmin2,ymin2,xmax2,ymax1)
+                if (not frame2.point_in_frame(frame2.waypoints[-1]) or
+                    self.get_stationary_obstacles(frame=frame2)):
+                    # restore old frame
+                    frame2.border = self.make_border(xmin2,ymin2,xmax2,ymax2)
+        # return (updated) frames
+        return frame1, frame2
+
+    def find_intersection_line_segment_frame(self, frame, line):
+        # find intersection point of the provided line with frame
+        x3, y3, x4, y4 = frame.border['limits']
+
+        # frame border representation:
+        # [x3,y4]---------[x4,y4]
+        #    |               |
+        #    |               |
+        #    |               |
+        # [x3,y3]---------[x4,y3]
+
+        # move over border in clockwise direction:
+        top_side    = [[x3,y4],[x4,y4]]
+        right_side  = [[x4,y4],[x4,y3]]
+        bottom_side = [[x4,y3],[x3,y3]]
+        left_side   = [[x3,y3],[x3,y4]]
+
+        # First find which line segments intersect, afterwards use a method
+        # for line intersection to find the intersection point. Not possible
+        # to use intersect_lines immediately since it doesn't take into account
+        # the segments, but considers infinitely long lines.
+
+        #intersection with top side?
+        if intersect_line_segments(line, top_side):
+            # find intersection point
+            intersection_point = intersect_lines(line, top_side)
+        #intersection with right side?
+        elif intersect_line_segments(line, right_side):
+            # find intersection point
+            intersection_point = intersect_lines(line, right_side)
+        #intersection with bottom side?
+        elif intersect_line_segments(line, bottom_side):
+            # find intersection point
+            intersection_point = intersect_lines(line, bottom_side)
+        #intersection with left side?
+        elif intersect_line_segments(line, left_side):
+            # find intersection point
+            intersection_point = intersect_lines(line, left_side)
+        else:
+            intersection_point = None
+        return intersection_point
+
