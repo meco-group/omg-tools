@@ -48,8 +48,15 @@ environment.add_obstacle(Obstacle({'position': [5,6]}, shape=circle))
 # make global planner
 globalplanner = AStarPlanner(environment, [10,10], start, goal, options={'veh_size': veh_size})
 
-# make coordinator
-options={'freeT': True, 'horizon_time': 15, 'frame_type':'corridor','scale_up_fine': True}
+# make schedulerproblem
+# 'n_frames': number of frames to combine when searching for a trajectory
+# 'check_moving_obs_ts': check in steps of ts seconds if a moving obstacle is inside the frame
+# 'frame_type': 'corridor': creates corridors
+	# 'scale_up_fine': tries to scale up the frame in small steps, leading to the largest possible corridor
+	# 'l_shape': cuts off corridors, to obtain L-shapes, and minimize the influence of moving obstacles
+# 'frame_type': 'shift': creates frames of fixed size, around the vehicle
+	# 'frame_size': size of the shifted frame
+options={'freeT': True, 'horizon_time': 15, 'frame_type':'corridor','scale_up_fine': True, 'l_shape':True}
 multiproblem=SchedulerProblem(vehicle, environment, globalplanner, options=options)
 multiproblem.set_options({'solver_options': {'ipopt': {# 'ipopt.linear_solver': 'ma57',
                                                        'ipopt.hessian_approximation': 'limited-memory'}}})

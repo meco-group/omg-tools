@@ -60,7 +60,14 @@ environment.fill_room(room1, [obstacle1, obstacle2])
 globalplanner = AStarPlanner(environment, [25,25], start, goal, options={'veh_size': veh_size})
 
 # make problem
-options = {'frame_type': 'corridor', 'scale_up_fine': True, 'n_frames': 2}
+# 'n_frames': number of frames to combine when searching for a trajectory
+# 'check_moving_obs_ts': check in steps of ts seconds if a moving obstacle is inside the frame
+# 'frame_type': 'corridor': creates corridors
+	# 'scale_up_fine': tries to scale up the frame in small steps, leading to the largest possible corridor
+	# 'l_shape': cuts off corridors, to obtain L-shapes, and minimize the influence of moving obstacles
+# 'frame_type': 'shift': creates frames of fixed size, around the vehicle
+	# 'frame_size': size of the shifted frame
+options = {'frame_type': 'corridor', 'scale_up_fine': True, 'n_frames': 2, 'l_shape':True}
 schedulerproblem = SchedulerProblem(vehicle, environment, globalplanner, options=options)
 
 # simulate the problem

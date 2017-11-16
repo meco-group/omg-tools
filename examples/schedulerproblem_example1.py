@@ -93,7 +93,13 @@ globalplanner = AStarPlanner(environment, [25,25], start, goal, options={'veh_si
 
 # Note: When 'corridor' is selected and your vehicle size is larger than the cell size,
 # shifting frames sometimes causes problems
-
+# 'n_frames': number of frames to combine when searching for a trajectory
+# 'check_moving_obs_ts': check in steps of ts seconds if a moving obstacle is inside the frame
+# 'frame_type': 'corridor': creates corridors
+	# 'scale_up_fine': tries to scale up the frame in small steps, leading to the largest possible corridor
+	# 'l_shape': cuts off corridors, to obtain L-shapes, and minimize the influence of moving obstacles
+# 'frame_type': 'shift': creates frames of fixed size, around the vehicle
+	# 'frame_size': size of the shifted frame
 options={'freeT': True, 'frame_type': 'corridor', 'scale_up_fine': True}
 # options={'freeT': True, 'frame_type': 'shift', 'frame_size': 150}
 schedulerproblem=SchedulerProblem(vehicle, environment, globalplanner,options=options)
