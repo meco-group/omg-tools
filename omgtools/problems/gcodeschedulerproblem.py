@@ -606,7 +606,10 @@ class GCodeSchedulerProblem(Problem):
             self.segments.append(new_segment)  # add next segment
 
             if self.n_segments == 1:
-                self.next_segment = self.environment.room[self.n_current_block+1]
+                if self.segments[-1]['number'] < self.cnt:
+                    self.next_segment = self.environment.room[self.n_current_block+1]
+                else:
+                    self.next_segment = None
         else:
             # all segments are currently in self.segments, don't add a new one
             # and lower the amount of segments that are combined
@@ -791,6 +794,8 @@ class GCodeSchedulerProblem(Problem):
                 motion_times.append(self.local_problem.father.get_variables(self.local_problem, 'T1',)[0][0])
                 # unneccessary to make a new guess
                 guess_idx = []
+            elif self._n_segments == 1:
+                guess_idx = range(1)
         else:
             # local_problem was not solved yet, make guess using center line for all segments
             guess_idx = range(self.n_segments)
