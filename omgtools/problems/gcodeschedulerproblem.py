@@ -599,7 +599,6 @@ class GCodeSchedulerProblem(Problem):
 
         # update the considered segments: remove first one, and add a new one
 
-        self.segments = self.segments[1:]  # drop first segment
         if self.segments[-1]['number'] < self.cnt:
             # last segment is not yet in self.segments, so there are some segments left,
             # create segment for next block
@@ -612,6 +611,7 @@ class GCodeSchedulerProblem(Problem):
             # all segments are currently in self.segments, don't add a new one
             # and lower the amount of segments that are combined
             self.n_segments -= 1
+        self.segments = self.segments[1:]  # drop first segment
 
         # self.get_init_guess() uses previous solution to get an initial guess for
         # all segments except the last one,
