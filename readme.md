@@ -1,7 +1,6 @@
 <img width=850 src="https://cdn.rawgit.com/meco-group/omg-tools/master/doc/banner.svg" alt="oh my god!"/>
 
-[![Build Status](https://travis-ci.org/meco-group/omg-tools.svg?branch=master)](https://travis-ci.org/meco-group/omg-tools) [![Coverage Status](https://coveralls.io/repos/github/meco-group/omg-tools/badge.svg?branch=master)](https://coveralls.io/github/meco-group/omg-tools?branch=master)
-[![Codacy Badge](https://api.codacy.com/project/badge/grade/a44dd52c358e4cd09b12585915738627)](https://www.codacy.com/app/joris-gillis42/omg-tools)
+[![Build Status](https://travis-ci.org/meco-group/omg-tools.svg?branch=master)](https://travis-ci.org/meco-group/omg-tools)
 [![PyPI version](https://badge.fury.io/py/omg-tools.svg)](https://badge.fury.io/py/omg-tools)
 
 Optimal Motion Generation-tools is a Python software toolbox facilitating the modeling, simulation and embedding of motion planning problems. Its main goal is to collect research topics concerning (spline-based) motion planning into a user-friendly package in order to enlarge its visibility towards the scientific and industrial world.
@@ -115,6 +114,20 @@ OMG-tools implemented on real-life motion systems. Click on a picture to watch t
 </td>
 </tr>
 
+<table style="border: none; border-collapse: collapse;" border="0" cellspacing="0" cellpadding="0" width="100%" align="center">
+<tr>
+<td align="center" valign="center" style="background-color:rgba(0, 0, 0, 0);">
+<a href="https://www.youtube.com/watch?v=XeQFI1EhGPU">
+<img src="https://img.youtube.com/vi/XeQFI1EhGPU/0.jpg" alt="Online motion planning"/>
+</a>
+</td>
+<td align="center" valign="center" bgcolor="#FFFFFF">
+<a href="https://www.youtube.com/watch?v=0ftMz0JTojE">
+<img src="https://img.youtube.com/vi/0ftMz0JTojE/0.jpg" alt="Plate transportation"/>
+</a>
+</td>
+</tr>
+
 <tr>
 <td align="center" valign="center" style="background-color:rgba(0, 0, 0, 0);">
 <a href="https://www.youtube.com/watch?v=ozV3aJvEAyY">
@@ -135,45 +148,35 @@ OMG-tools implemented on real-life motion systems. Click on a picture to watch t
 </a>
 </td>
 <td align="center" valign="center" bgcolor="#FFFFFF">
-<a href="https://www.youtube.com/watch?v=0ftMz0JTojE">
-<img src="https://img.youtube.com/vi/0ftMz0JTojE/0.jpg" alt="Plate transportation"/>
+<a href="https://www.youtube.com/watch?v=WIt9lRXMW-4">
+<img src="https://img.youtube.com/vi/WIt9lRXMW-4/0.jpg" alt="Spline-based motion planning in a vast environment"/>
 </a>
 </td>
 </tr>
 
 <tr>
-<td align="center" valign="center" style="background-color:rgba(0, 0, 0, 0);">
-<a href="https://www.youtube.com/watch?v=WIt9lRXMW-4">
-<img src="https://img.youtube.com/vi/WIt9lRXMW-4/0.jpg" alt="Spline-based motion planning in a vast environment"/>
-</a>
-</td>
 <td align="center" valign="center" bgcolor="#FFFFFF">
 <a href="https://www.youtube.com/watch?v=3nlfVI4L3p8">
 <img src="https://img.youtube.com/vi/3nlfVI4L3p8/0.jpg" alt="Spline-based motion planning in a vast environment"/>
 </a>
 </td>
-</tr>
-
-<tr>
 <td align="center" valign="center" style="background-color:rgba(0, 0, 0, 0);">
 <a href="https://www.youtube.com/watch?v=dWAzfLd_wec">
 <img src="https://img.youtube.com/vi/dWAzfLd_wec/0.jpg" alt="Spline-based motion planning in a vast environment"/>
 </a>
 </td>
+</tr>
+
+<tr>
 <td align="center" valign="center" style="background-color:rgba(0, 0, 0, 0);">
 <a href="https://www.youtube.com/watch?v=eE_uTBYYY18">
 <img src="https://img.youtube.com/vi/eE_uTBYYY18/0.jpg" alt="Spline-based CNC trajectory generation"/>
 </a>
 </td>
-</tr>
-
-<tr>
 <td align="center" valign="center" style="background-color:rgba(0, 0, 0, 0);">
 <a href="https://www.youtube.com/watch?v=afmVCCNeqQ4">
 <img src="https://img.youtube.com/vi/afmVCCNeqQ4/0.jpg" alt="Spline-based CNC trajectory generation"/>
 </a>
-</td>
-<td align="center" valign="center" bgcolor="#FFFFFF">
 </td>
 </tr>
 
