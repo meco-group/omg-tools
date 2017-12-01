@@ -276,7 +276,7 @@ void Point2Point::fillParameterDict(vector<obstacle_t>& obstacles, map<string, m
 void Point2Point::extractData(){
     map<string, map<string, vector<double>>> var_dict;
     getVariableDict(variables, var_dict);
-    spline_coeffs_vec = std::vector<double>(var_dict[VEHICLELBL]["splines0"]);
+    spline_coeffs_vec = std::vector<double>(var_dict[VEHICLELBL]["splines_seg0"]);
     vehicle->setKnotHorizon(horizon_time);
     if (freeT){
         horizon_time = var_dict[P2PLBL]["T"][0];
