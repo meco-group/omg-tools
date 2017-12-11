@@ -30,7 +30,7 @@ namespace omg{
 
 Point2Point::Point2Point(Vehicle* vehicle,
     double update_time, double sample_time, double horizon_time, int trajectory_length, bool initialize):
-parameters(N_PAR), variables(N_VAR), lbg(LBG_DEF), ubg(UBG_DEF) {
+parameters(N_PAR), variables(N_VAR), lbg(LBG_DEF), ubg(UBG_DEF), _recover(false) {
     if (trajectory_length > int(horizon_time/sample_time)){
         cerr << "trajectory_length > (horizon_time/sample_time)!" << endl;
     }
@@ -109,6 +109,11 @@ void Point2Point::reset(){
 void Point2Point::resetTime(){
     current_time = 0.0;
     current_time_prev = 0.0;
+}
+
+void Point2Point::recover(){
+    // this method should be called (by user) when encountered infeasibilities
+    _recover = true;
 }
 
 bool Point2Point::update(vector<double>& condition0, vector<double>& conditionT,
@@ -201,8 +206,9 @@ bool Point2Point::update(vector<double>& condition0, vector<double>& conditionT,
 
 bool Point2Point::solve(double current_time, vector<obstacle_t>& obstacles){
     // init variables if first time
-    if(fabs(current_time)<=1.e-6){
+    if(fabs(current_time)<=1.e-6 || _recover){
         initVariables();
+        _recover = false;
     }
     updateBounds(current_time, obstacles);
     setParameters(obstacles);
@@ -222,6 +228,14 @@ bool Point2Point::solve(double current_time, vector<obstacle_t>& obstacles){
         }
         return true;
     }
+}
+
+void Point2Point::getCoefficients(std::vector<double>& coeffs){
+    coeffs = std::vector<double>(spline_coeffs_vec);
+}
+
+int Point2Point::getLenBasis(){
+    return vehicle->getLenBasis();
 }
 
 void Point2Point::initVariables(){
@@ -256,31 +270,13 @@ void Point2Point::fillParameterDict(vector<obstacle_t>& obstacles, map<string, m
     } else{
         par_dict[P2PLBL]["t"] = {0.0};
     }
-    string obstacle_lbls [N_OBS] = OBSTACLELBLS;
-    std::vector<double> pos0(2), vel0(2), acc0(2);
-    std::vector<double> posT(2), velT(2), accT(2);
-    for (int k=0; k<n_obs; k++){
-        pos0 = obstacles[k].position;
-        vel0 = obstacles[k].velocity;
-        acc0 = obstacles[k].acceleration;
-        // prediction over update_time
-        for (int j=0; j<2; j++){
-            posT[j] = pos0[j] + update_time*vel0[j] + 0.5*pow(update_time,2)*acc0[j];
-            velT[j] = vel0[j] + update_time*acc0[j];
-            accT[j] = acc0[j];
-        }
-        par_dict[obstacle_lbls[k]]["x"] = posT;
-        par_dict[obstacle_lbls[k]]["v"] = velT;
-        par_dict[obstacle_lbls[k]]["a"] = accT;
-        par_dict[obstacle_lbls[k]]["checkpoints"] = obstacles[k].checkpoints;
-        par_dict[obstacle_lbls[k]]["rad"] = obstacles[k].radii;
-    }
+@fillParameterDict@
 }
 
 void Point2Point::extractData(){
     map<string, map<string, vector<double>>> var_dict;
     getVariableDict(variables, var_dict);
-    vector<double> spline_coeffs_vec(var_dict[VEHICLELBL]["splines_seg0"]);
+    spline_coeffs_vec = std::vector<double>(var_dict[VEHICLELBL]["splines_seg0"]);
     vehicle->setKnotHorizon(horizon_time);
     if (freeT){
         horizon_time = var_dict[P2PLBL]["T"][0];

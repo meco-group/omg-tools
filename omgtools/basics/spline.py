@@ -169,7 +169,7 @@ class Basis(object):
     def __pow__(self, pow):
         if isinstance(pow, int):
             degree = pow * self.degree
-            return self._combine(self, self, degree)
+            return self._combine(self, degree)
         else:
             raise TypeError("Power must be integer")
 
