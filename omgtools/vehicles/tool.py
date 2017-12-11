@@ -199,8 +199,8 @@ class Tool(Vehicle):
             room_limits += [lims[k]+segment['pose'][k] for k in range(self.n_dim)]
             for chck in checkpoints:
                 for k in range(2):
-                    self.define_constraint(-(chck[k]+position[k]) + room_limits[k][0] + 2*rad[0], -inf, 0.)
-                    self.define_constraint((chck[k]+position[k]) - room_limits[k][1] + 2*rad[0], -inf, 0.)
+                    self.define_constraint(-(chck[k]+position[k]) + room_limits[k][0] + rad[0], -inf, 0.)
+                    self.define_constraint((chck[k]+position[k]) - room_limits[k][1] + rad[0], -inf, 0.)
         elif (isinstance(segment['shape'], (Rectangle, Square)) and
             (isinstance(shape, Circle))):
             # we have a diagonal line segment
@@ -225,8 +225,8 @@ class Tool(Vehicle):
                                + ' impose constraints with alternative formulation')
             b = y1 - x1*a
 
-            self.define_constraint(a*position[0] + b - position[1] - tolerance + 2*rad[0], -inf, 0.)
-            self.define_constraint(-a*position[0] - b + position[1] - tolerance + 2*rad[0], -inf, 0.)
+            self.define_constraint(a*position[0] + b - position[1] - tolerance + rad[0], -inf, 0.)
+            self.define_constraint(-a*position[0] - b + position[1] - tolerance + rad[0], -inf, 0.)
         elif (isinstance(segment['shape'], (Ring)) and
             (isinstance(shape, Circle))):
             # we have a Ring/Circle segment
@@ -237,9 +237,9 @@ class Tool(Vehicle):
 
             center = segment['pose']
             self.define_constraint(-(position[0] - center[0])**2 - (position[1] - center[1])**2 +
-                                  (segment['shape'].radius_in + 2*rad[0])**2, -inf, 0.)
+                                  (segment['shape'].radius_in + rad[0])**2, -inf, 0.)
             self.define_constraint((position[0] - center[0])**2 + (position[1] - center[1])**2 -
-                                  (segment['shape'].radius_out - 2*rad[0])**2, -inf, 0.)
+                                  (segment['shape'].radius_out - rad[0])**2, -inf, 0.)
         else:
             raise RuntimeError('Invalid segment obtained when setting up collision avoidance constraints')
 
@@ -248,8 +248,8 @@ class Tool(Vehicle):
             z_min = min(segment['start'][2],segment['end'][2])
             z_max = max(segment['start'][2],segment['end'][2])
             # movement in z-direction
-            self.define_constraint(-z + z_min - 2*rad[0], -inf, 0.)
-            self.define_constraint(z - z_max  - 2*rad[0], -inf, 0.)
+            self.define_constraint(-z + z_min - rad[0], -inf, 0.)
+            self.define_constraint(z - z_max  - rad[0], -inf, 0.)
 
         # Constraints above impose that the spline must stay inside the infinite version of the segment: the
         # complete line, or the complete ring. This can cause a trajectory that is feasible, but still goes outside
