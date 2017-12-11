@@ -22,7 +22,7 @@ from ..basics.optilayer import OptiChild
 from ..basics.spline_extra import get_interval_T
 from ..basics.spline import BSplineBasis, BSpline
 from ..basics.geometry import distance_between_points, point_in_polyhedron
-from ..basics.geometry import point_in_rectangle, circle_polyhedron_intersection
+from ..basics.geometry import circle_polyhedron_intersection
 from ..basics.geometry import rectangles_overlap
 from ..basics.shape import Circle, Polyhedron, Rectangle, Square
 from casadi import inf, vertcat, cos, sin

@@ -24,8 +24,6 @@ from globalplanner import AStarPlanner
 from ..environment.environment import Environment
 from ..environment.frame import ShiftFrame, CorridorFrame
 from ..basics.shape import Rectangle, Circle
-from ..basics.geometry import distance_between_points, intersect_lines, intersect_line_segments
-from ..basics.geometry import point_in_rectangle
 from ..basics.spline import BSplineBasis
 from ..basics.spline_extra import concat_splines
 
