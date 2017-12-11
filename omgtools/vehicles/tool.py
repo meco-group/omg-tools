@@ -263,7 +263,7 @@ class Tool(Vehicle):
 
         # Warning: the value of this 'factor' may have a big influence on the total machining time!
 
-        # However, simulations shows that this box constraint is in general only necessary
+        # However, simulations show that this box constraint is in general only necessary
         # when using variable tolerances, explaining the if-check below.
 
         if self.options['variable_tolerance']:
