@@ -942,6 +942,27 @@ class GCodeSchedulerProblem(Problem):
         guess_z = np.linspace(z0,z1, len(guess_x)).tolist()
         init_guess = np.c_[guess_x, guess_y, guess_z]
 
+        # from matplotlib import pyplot as plt
+        # basis = self.vehicles[0].basis
+        # x = BSpline(basis, guess_x)
+        # y = BSpline(basis, guess_y)
+        # eval = np.linspace(0, 1, 100)
+        # plt.figure(20)
+        # plt.plot(x(eval), y(eval), 'g')  # guess
+        # points = segment['shape'].draw(segment['pose'][:2]+[0])[0][0]  # don't draw z, always pick 0.
+        # # add first point again to close shape
+        # points = np.c_[points, [points[0,0], points[1,0]]]
+        # plt.plot(points[0,:], points[1,:], color='red', linestyle = '--', linewidth= 1.2)  # ring segment
+        # plt.plot(x0, y0, 'bx')  # coeffs guess before solving
+        # plt.plot(guess_x,guess_y, 'gx')  # coeffs from solution
+
+        # plt.figure(21)
+        # plt.plot(eval, jerk(eval))
+        # plt.figure(22)
+        # plt.plot(eval, acc(eval))
+        # plt.figure(23)
+        # plt.plot(eval, vel(eval))
+
         motion_time = self.get_init_guess_motion_time(segment, coeff_guess=init_guess)
 
         return init_guess, motion_time
@@ -1078,6 +1099,9 @@ class GCodeSchedulerProblem(Problem):
         # solve optimization problem
         solver_output = solver(**solver_input)
 
+        # stats = solver.stats()
+        # print stats['return_status']
+
         # process ouput
         X = solver_output['x']
         init_guess_x = X[:len(basis)]
@@ -1091,6 +1115,7 @@ class GCodeSchedulerProblem(Problem):
         init_guess = np.c_[init_guess_x, init_guess_y, init_guess_z]
 
         # plot results
+        # from matplotlib import pyplot as plt
         # eval = np.linspace(0, 1, 100)
         # plt.figure(20)
         # plt.plot(x(eval), y(eval), 'g')  # guess
