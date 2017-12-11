@@ -1045,9 +1045,9 @@ class GCodeSchedulerProblem(Problem):
         # set up objective function
         circ = (s_x-segment['position'][0])**2 + (s_y-segment['position'][1])**2
         # stay as close to center line of ring as possible
-        obj = ((definite_integral(circ,0,1.) - ((segment['shape'].radius_out+segment['shape'].radius_in)*0.5)**2)**2)
+        # obj = ((definite_integral(circ,0,1.) - ((segment['shape'].radius_out+segment['shape'].radius_in)*0.5)**2)**2)
         # limit the jerk of the trajectory, to avoid nervous solutions
-        # obj += definite_integral(s_x.derivative(3)**2,0,1.) + definite_integral(s_y.derivative(3)**2,0,1.)
+        obj = definite_integral(s_x.derivative(3)**2,0,1.) + definite_integral(s_y.derivative(3)**2,0,1.)
 
         # make nlp
         nlp = {'x':X, 'f':obj, 'g':con}
