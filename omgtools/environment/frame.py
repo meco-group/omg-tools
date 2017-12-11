@@ -218,7 +218,7 @@ class Frame(object):
 
         xmin,ymin,xmax,ymax = self.border['limits']
         # is last waypoint inside the border?
-        inside_border = point_in_rectangle(self.border['limits'], self.waypoints[-1])
+        inside_border = point_in_rectangle(self.waypoints[-1], self.border['limits'])
         # compute distance to border
         dist_to_border = self.distance_to_border(self.waypoints[-1])
         if method == 'move_frame':  # move frame borders, keep waypoint
@@ -255,14 +255,14 @@ class Frame(object):
                 # waypoint was outside of border, or too close to border
                 count = 1
                 while True:  # find waypoint that is far enough from border
-                    inside_border = point_in_rectangle(self.border['limits'], self.waypoints[-1-count])
+                    inside_border = point_in_rectangle(self.waypoints[-1-count], self.border['limits'])
                     dist_to_border = self.distance_to_border(self.waypoints[-1-count])
                     if (not inside_border or any(abs(d) <= self.veh_size for d in dist_to_border)):
                         count += 1  # this waypoint was also outside of, or too close to border
                     else:  # found waypoint that is far enough from border
                         break
                 # check if waypoint is inside rectangle in x- and/or y-direction
-                inside_border = point_in_rectangle(self.border['limits'], self.waypoints[-1], xy_check=True)
+                inside_border = point_in_rectangle(self.waypoints[-1], self.border['limits'], xy_check=True)
                 # recompute distance from last waypoint to border
                 dist_to_border = self.distance_to_border(self.waypoints[-1])
                 # set desired distance from waypoint to border
@@ -286,7 +286,7 @@ class Frame(object):
                         new_waypoint[1] = (new_waypoint[0]-x1)*(float((y2-y1))/(x2-x1))+y1
 
                     # check if new_waypoint is reachable
-                    inside_border = point_in_rectangle(self.border['limits'], new_waypoint, xy_check=True)
+                    inside_border = point_in_rectangle(new_waypoint, self.border['limits'], xy_check=True)
                     # compute distance from new waypoint to border
                     dist_to_border = self.distance_to_border(new_waypoint)
                 # x-direction was fixed above, now re-check only for the y-direction
