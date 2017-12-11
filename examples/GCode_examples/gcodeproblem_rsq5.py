@@ -30,11 +30,14 @@ reader = GCodeReader()
 GCode = reader.run()
 
 n_blocks = 3  # amount of GCode blocks to combine
+variable_tolerance = False
+split_circle = True
 tol = 6e-3  # required tolerance of the machined part [mm]
 bounds = {'vmin':-0.3e3, 'vmax':0.3e3,
           'amin':-20e3, 'amax':20e3,
           'jmin':-800e3, 'jmax':800e3}  # [mm]
 tool = Tool(tol, bounds = bounds)  # tool to follow the GCode
+tool = Tool(tol, bounds=bounds, options={'vel_limit':'axes'})  # tool to follow the GCode
 tool.define_knots(knot_intervals=10)
 tool.set_initial_conditions(GCode[0].start)  # start position of first GCode block
 tool.set_terminal_conditions(GCode[-1].end)  # goal position of last GCode block
