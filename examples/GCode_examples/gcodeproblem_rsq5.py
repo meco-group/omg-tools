@@ -44,14 +44,19 @@ tool.set_terminal_conditions(GCode[-1].end)  # goal position of last GCode block
 # each block will be converted to a room, that is put inside the total environment
 # there are two room shapes: Rectangle and Ring (circle segment with inner and outer diameter)
 # if you want to compute trajectories by using the deployer, put with_deployer=True
-schedulerproblem = GCodeSchedulerProblem(tool, GCode, n_segments=n_blocks, with_deployer=True)
-schedulerproblem.set_options({'solver_options': {'ipopt': {'ipopt.tol': 1e-8,
-														   # 'ipopt.linear_solver': 'ma57',
-                                                           'ipopt.hessian_approximation': 'limited-memory'}}})
+schedulerproblem = GCodeSchedulerProblem(tool, GCode, n_segments=n_blocks, split_circle=split_circle,
+                                         variable_tolerance=variable_tolerance,)
+
+schedulerproblem.set_options({'solver_options': {'ipopt': {'ipopt.tol': 1e-5,
+                                                           'ipopt.linear_solver': 'ma57',
+                                                           'ipopt.warm_start_bound_push': 1e-6,
+                                                           'ipopt.warm_start_mult_bound_push': 1e-6,
+                                                           'ipopt.warm_start_mult_bound_push': 1e-6,
+                                                           'ipopt.mu_init': 1e-5,
+                                                           # 'ipopt.hessian_approximation': 'limited-memory',
+                                                           'ipopt.max_iter': 20000}}})#,
 # put problem in deployer: choose this if you just want to obtain the trajectories for the tool
 deployer = Deployer(schedulerproblem, sample_time=0.001)
-# put problem in simulator: choose this if you want to simulate step by step, and investigate after each segment
-simulator = Simulator(schedulerproblem, sample_time=0.001)
 
 # define what you want to plot
 schedulerproblem.plot('scene')
@@ -61,8 +66,7 @@ tool.plot('dinput', knots=True, prediction=True, labels=['a_x (m/s^2)', 'a_y (m/
 tool.plot('ddinput', knots=True, prediction=True, labels=['j_x (m/s^3)', 'j_y (m/s^3)', 'j_z (m/s^3)'])
 
 # run using a receding horizon of one segment
-deployer.run_segment()
-# simulator.run_segment()
+deployer.update_segment()
 
 # plotting and saving afterwards is only available when using the simulator
 # schedulerproblem.plot_movie('scene', number_of_frames=100, repeat=False)
