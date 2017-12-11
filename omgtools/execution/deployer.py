@@ -168,7 +168,10 @@ class Deployer:
                                    state_traj_old, input_traj_old, dinput_traj_old, ddinput_traj_old)
 
                 # check if target is reached
-                if (np.linalg.norm(self.problem.goal_state-self.state_traj[:, -1]) < 1e-2 and np.linalg.norm(self.input_traj[:, -1]) < 1e-2):
+                # if self.problem.stop_criterium(current_time, update_time):
+                #     target_reached = True
+                if ((np.linalg.norm(self.problem.goal_state-self.state_traj[:, -1]) < 1e-2 and np.linalg.norm(self.input_traj[:, -1]) < 1e-2) and
+                     (not hasattr(self.problem, 'next_segment') or self.problem.next_segment is None)):
                     target_reached = True
 
         # target reached, print final information
