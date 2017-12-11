@@ -1,5 +1,8 @@
+# -*- coding: utf-8 -*-
+
 from ..environment.environment import Environment, Obstacle
 from ..basics.shape import Rectangle, Circle
+from ..basics.geometry import distance_between_points, point_in_rectangle
 from svg_reader import SVGReader
 
 import Tkinter as tk
@@ -40,7 +43,7 @@ class EnvironmentGUI(tk.Frame):
         self.canvas = tk.Canvas(self.root, width=self.frame_width_px, height=self.frame_height_px,
                                 borderwidth=0, highlightthickness=0)
         self.canvas.configure(cursor="tcross")
-        self.canvas.grid(row=0,columnspan=3)
+        self.canvas.grid(row=0,columnspan=7)
         # round up sizes, such that frame width is guaranteed to be reached
         self.cell_width_px = int(np.ceil(self.frame_width_px*1./self.n_cells[0]))
         self.cell_height_px = int(np.ceil(self.frame_height_px*1./self.n_cells[1]))
@@ -51,6 +54,7 @@ class EnvironmentGUI(tk.Frame):
 
         self.obstacles = []  # list to hold all obstacles
         self.clicked_positions = []  # list to hold all clicked positions
+        self.selected_obstacle = None  # holds the selected obstacle
 
         self.canvas.bind("<Button-1>", self.make_obstacle)  # left mouse button makes obstacle
         self.canvas.bind("<Button-3>", self.get_position)  # right mouse button gives start and goal position
@@ -62,7 +66,7 @@ class EnvironmentGUI(tk.Frame):
         quit_button = tk.Button(self.root, text="Quit", fg="red", command=self.canvas.quit)
         quit_button.grid(row=3, column=0)
 
-        remove_button = tk.Button(self.root, text="Remove", fg="black", command=self.remove_last_obstacle)
+        remove_button = tk.Button(self.root, text="Remove", fg="black", command=self.remove_obstacle)
         remove_button.grid(row=4, column=0)
 
         load_button = tk.Button(self.root, text="Load", fg="black", command=self.load_environment)
@@ -77,7 +81,7 @@ class EnvironmentGUI(tk.Frame):
 
         # indicate cell size
         self.cell_size_label = tk.Label(self.root, text='Cell size: ' + str(np.round(self.frame_width_m*1./self.n_cells[0],3)) + 'x' + str(np.round(self.frame_height_m*1./self.n_cells[0],3)) + ' [m]')
-        self.cell_size_label.grid(row=1, column=1)
+        self.cell_size_label.grid(row=1, column=0)
 
         # indicate clicked position
         # self.clickedPos = tk.StringVar()
@@ -86,56 +90,70 @@ class EnvironmentGUI(tk.Frame):
         # labelClickedPos.pack()
         # labelClickedPosEntry.pack()
 
-        # select obstacle shape (rectangle or circle)
+        # select obstacle shape (rectangle or circle), or select an already created shape
         self.shape = tk.StringVar()
+        self.select_shape_button = tk.Radiobutton(self.root, text="Select shape", variable=self.shape, value='select')
+        self.select_shape_button.grid(row=2, column=1 , sticky='w')
         self.circle_button = tk.Radiobutton(self.root, text="Circle", variable=self.shape, value='circle')
-        self.circle_button.grid(row=2, column=2)
+        self.circle_button.grid(row=3, column=1 , sticky='w')
         self.rectangle_button = tk.Radiobutton(self.root, text="Rectangle", variable=self.shape, value='rectangle')
-        self.rectangle_button.grid(row=3,column=2)
+        self.rectangle_button.grid(row=4,column=1 , sticky='w')
 
         # select obstacle size
         self.width = tk.DoubleVar()
         label_width = tk.Label(self.root, text="Width [m]")
         label_width_entry = tk.Entry(self.root, bd =0, textvariable=self.width)
-        label_width.grid(row=2,column=1)
-        label_width_entry.grid(row=3,column=1)
+        label_width.grid(row=2,column=2)
+        label_width_entry.grid(row=3,column=2)
 
         self.height = tk.DoubleVar()
         label_height = tk.Label(self.root, text="Height [m]")
         label_height_entry = tk.Entry(self.root, bd =0, textvariable=self.height)
-        label_height.grid(row=4,column=1)
-        label_height_entry.grid(row=5,column=1)
+        label_height.grid(row=4,column=2)
+        label_height_entry.grid(row=5,column=2)
 
         self.radius = tk.DoubleVar()
         label_radius = tk.Label(self.root, text="Radius [m]")
         label_radius_entry = tk.Entry(self.root, bd =0, textvariable=self.radius)
-        label_radius.grid(row=6,column=1)
-        label_radius_entry.grid(row=7,column=1)
+        label_radius.grid(row=6,column=2)
+        label_radius_entry.grid(row=7,column=2)
 
         # select obstacle velocity
         self.vel_x = tk.DoubleVar(value=0.0)
         label_velx = tk.Label(self.root, text="x-velocity [m/s]")
         label_velx_entry = tk.Entry(self.root, bd =0, textvariable=self.vel_x)
-        label_velx.grid(row=4,column=2)
-        label_velx_entry.grid(row=5,column=2)
+        label_velx.grid(row=2,column=3)
+        label_velx_entry.grid(row=3,column=3)
 
         self.vel_y = tk.DoubleVar(value=0.0)
         label_vely = tk.Label(self.root, text="y-velocity [m/s]")
         label_vely_entry = tk.Entry(self.root, bd =0, textvariable=self.vel_y)
-        label_vely.grid(row=6,column=2)
-        label_vely_entry.grid(row=7,column=2)
+        label_vely.grid(row=4,column=3)
+        label_vely_entry.grid(row=5,column=3)
 
-        # select if moving obstacle should bounce off other obstacles or off the walls
+        # select if moving obstacle should bounce off other obstacles and off the walls
         self.bounce = tk.BooleanVar(value=False)
         label_bounce = tk.Checkbutton(self.root, text="Bounce [yes/no]", variable=self.bounce)
-        label_bounce.grid(row=8,column=2)
+        label_bounce.grid(row=6,column=3)
+
+        # add buttons to move previously created obstacles
+        label_move = tk.Label(self.root, text="Move obstacle")
+        label_move.grid(row=2, column=5)
+        move_up_button = tk.Button(self.root, text='↑', command= lambda: self.move_obstacle('up'))
+        move_up_button.grid(row=3, column=5)
+        move_down_button = tk.Button(self.root, text='↓', command= lambda: self.move_obstacle('down'))
+        move_down_button.grid(row=5, column=5)
+        move_left_button = tk.Button(self.root, text='←', command= lambda: self.move_obstacle('left'))
+        move_left_button.grid(row=4, column=4, sticky='e')
+        move_right_button = tk.Button(self.root, text='→', command= lambda: self.move_obstacle('right'))
+        move_right_button.grid(row=4, column=6, sticky='w')
 
         # add scrollbars
         self.hbar=tk.Scrollbar(self.root,orient=tk.HORIZONTAL)
-        self.hbar.grid(row=9, column = 0)
+        self.hbar.grid(row=1, column = 2)
         self.hbar.config(command=self.canvas.xview)
         self.vbar=tk.Scrollbar(self.root,orient=tk.VERTICAL)
-        self.vbar.grid(row=0, column = 3)
+        self.vbar.grid(row=0, column = 5)
         self.vbar.config(command=self.canvas.yview)
         self.canvas.config(width=1000, height=600)  # limit canvas size such that it fits on screen
         self.canvas.config(xscrollcommand=self.hbar.set, yscrollcommand=self.vbar.set)
@@ -193,7 +211,7 @@ class EnvironmentGUI(tk.Frame):
         pos = self.pixel_to_world(clicked_pixel)  # convert [px] to [m]
         obstacle['pos'] = pos
         if self.shape.get() == '':
-            print 'Select a shape before placing an obstacle!'
+            print 'Choose a shape or pick \'select shape\' before clicking'
         elif self.shape.get() == 'rectangle':
             if (self.width.get() <= 0 or self.height.get() <= 0):
                 print 'Select a strictly positive width and height for the rectangle first'
@@ -229,18 +247,101 @@ class EnvironmentGUI(tk.Frame):
                 obstacle['variable'] = obstacle_var
                 self.obstacles.append(obstacle)
                 print 'Created obstacle: ', obstacle
+        elif self.shape.get() == 'select':
+            # the user selected an obstacle, find out which one
+            for obstacle in self.obstacles:
+                if obstacle['shape'] == 'circle':
+                    # was the clicked position inside the circle shape?
+                    if distance_between_points(pos, obstacle['pos']) <= obstacle['radius']:
+                        self.selected_obstacle = obstacle['variable']
+                        # found the clicked obstacle, stop looking
+                        break
+                    else:
+                        self.selected_obstacle = None
+                elif obstacle['shape'] == 'rectangle':
+                    # was the clicked position inside the rectangle shape
+                    xmin = obstacle['pos'][0] - obstacle['width']
+                    ymin = obstacle['pos'][1] - obstacle['height']
+                    xmax = obstacle['pos'][0] + obstacle['width']
+                    ymax = obstacle['pos'][1] + obstacle['height']
+                    rectangle_limits = [xmin, ymin, xmax, ymax]
+                    if point_in_rectangle(pos, rectangle_limits):
+                        self.selected_obstacle = obstacle['variable']
+                        # found the clicked obstacle, stop looking
+                        break
+                    else:
+                        # the user didn't click inside an obstacle
+                        self.selected_obstacle = None
+                else:
+                    raise RuntimeError('There was an obstacle with an invalid shape: ', obstacle['shape'])
 
-    def remove_last_obstacle(self):
+    def remove_obstacle(self):
         # called when clicking the remove button,
         # this removes the obstacle which was created the last,
+        # or the obstacle that was selected,
         # and erases it from the GUI
-        if self.obstacles:
-            # get all ids of obstacles drawn on canvas
-            ids = self.canvas.find_all()
-            # delete the last id, corresponding to the last obstacle
-            self.canvas.delete(ids[-1])
-            # remove obstacle from list
-            del self.obstacles[-1]
+        if self.selected_obstacle is not None:
+            # the user wants to remove the selected obstacle
+            # delete it from the canvas
+            self.canvas.delete(self.selected_obstacle)
+            for idx, obstacle in enumerate(self.obstacles):
+                if self.selected_obstacle == obstacle['variable']:
+                    # delete it from the list
+                    del self.obstacles[idx]
+                    break
+            # reset value
+            self.selected_obstacle = None
+        else:
+            # the user wants to remove the last obstacle from the list
+            if self.obstacles:
+                # get all ids of obstacles drawn on canvas
+                ids = self.canvas.find_all()
+                # delete the last id, corresponding to the last obstacle
+                self.canvas.delete(ids[-1])
+                # remove obstacle from list
+                del self.obstacles[-1]
+
+    def move_obstacle(self, value=None):
+        # called when clicking a move arrow
+        if self.selected_obstacle is not None:
+            # the user selected an obstacle to move
+            obs_to_move = self.selected_obstacle
+        else:
+            # the user wants to move the last obstacle
+            obs_to_move = self.obstacles[-1]['variable']
+        for idx, obstacle in enumerate(self.obstacles):
+            # select the obstacle that the user wants to move
+            if obstacle['variable'] == obs_to_move:
+                obs = obstacle
+                break
+        # update obstacle position
+        pix_pos = self.world_to_pixel(obs['pos'])  # pixel coordinates
+        new_coords = self.canvas.coords(obs_to_move)  # get current coordinates from canvas
+        if value == 'up':
+            # pixel coordinates --> moving up in world = moving down in pix
+            pix_pos[1] -= self.cell_height_px
+            # update required canvas coordinates as well
+            new_coords[1] -= self.cell_height_px
+            new_coords[3] -= self.cell_height_px
+        elif value == 'down':
+            pix_pos[1] += self.cell_height_px
+            new_coords[1] += self.cell_height_px
+            new_coords[3] += self.cell_height_px
+        elif value == 'left':
+            pix_pos[0] -= self.cell_width_px
+            new_coords[0] -= self.cell_width_px
+            new_coords[2] -= self.cell_width_px
+        elif value == 'right':
+            new_coords[0] += self.cell_width_px
+            new_coords[2] += self.cell_width_px
+            pix_pos[0] += self.cell_width_px
+        else:
+            raise RuntimeError('Invalid move direction selected: ', value)
+        new_pos = self.pixel_to_world(pix_pos)  # no need to snap
+        # new world position
+        obs['pos'] = new_pos
+        # update canvas with new coordinates
+        self.canvas.coords(obs_to_move, *new_coords)
 
     def snap_to_grid(self, point):
         # Snap the user clicked point to a grid point, since obstacles can only
