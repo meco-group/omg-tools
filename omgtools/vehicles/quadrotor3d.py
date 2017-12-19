@@ -256,14 +256,23 @@ class Quadrotor3D(Vehicle):
         ddx = f_til*(1-q_phi**2)*(2*q_theta)
         ddy = -f_til*(1+q_theta**2)*(2*q_phi)
         ddz = f_til*(1-q_phi**2)*(1-q_theta**2) - self.g
-        if not hasattr(self, 'signals'): # first iteration
-            x, dx = self.integrate_twice(ddx, 0., self.pose0[0], time[0])
-            y, dy = self.integrate_twice(ddy, 0., self.pose0[1], time[0])
-            z, dz = self.integrate_twice(ddz, 0., self.pose0[2], time[0])
-        else:
-            x, dx = self.integrate_twice(ddx, self.signals['state'][3, -1], self.signals['state'][0, -1], time[0])
-            y, dy = self.integrate_twice(ddy, self.signals['state'][4, -1], self.signals['state'][1, -1], time[0])
-            z, dz = self.integrate_twice(ddz, self.signals['state'][5, -1], self.signals['state'][2, -1], time[0])
+        # if not hasattr(self, 'signals'): # first iteration
+        #     x, dx = self.integrate_twice(ddx, 0., self.pose0[0], time[0])
+        #     y, dy = self.integrate_twice(ddy, 0., self.pose0[1], time[0])
+        #     z, dz = self.integrate_twice(ddz, 0., self.pose0[2], time[0])
+        # else:
+        #     print 'state0: [%f, %f, %f]' % (self.signals['state'][0, -1], self.signals['state'][1, -1], self.signals['state'][2, -1])
+        #     print 'state0b: [%f, %f, %f]' % (self.prediction['state'][0], self.prediction['state'][1], self.prediction['state'][2])
+
+        #     x, dx = self.integrate_twice(ddx, self.signals['state'][3, -1], self.signals['state'][0, -1], time[0])
+        #     y, dy = self.integrate_twice(ddy, self.signals['state'][4, -1], self.signals['state'][1, -1], time[0])
+        #     z, dz = self.integrate_twice(ddz, self.signals['state'][5, -1], self.signals['state'][2, -1], time[0])
+
+        x, dx = self.integrate_twice(ddx, self.prediction['state'][3], self.prediction['state'][0], time[0])
+        y, dy = self.integrate_twice(ddy, self.prediction['state'][4], self.prediction['state'][1], time[0])
+        z, dz = self.integrate_twice(ddz, self.prediction['state'][5], self.prediction['state'][2], time[0])
+
+
         x_s, y_s, z_s, dx_s, dy_s, dz_s = sample_splines([x, y, z, dx, dy, dz], time)
         f_til_s, q_phi_s, q_theta_s, dq_phi_s, dq_theta_s = sample_splines([f_til, q_phi, q_theta, dq_phi, dq_theta], time)
         den = sample_splines([(1+q_phi**2)*(1+q_theta**2)], time)[0]
@@ -282,14 +291,22 @@ class Quadrotor3D(Vehicle):
             ddx2 = concat_splines([ddx2], [self.problem.options['horizon_time']])[0]
             ddy2 = concat_splines([ddy2], [self.problem.options['horizon_time']])[0]
             ddz2 = concat_splines([ddz2], [self.problem.options['horizon_time']])[0]
-            if not hasattr(self, 'signals'): # first iteration
-                x2, dx2 = self.integrate_twice(ddx2, 0., self.pose0[0], time[0])
-                y2, dy2 = self.integrate_twice(ddy2, 0., self.pose0[1], time[0])
-                z2, dz2 = self.integrate_twice(ddz2, 0., self.pose0[2], time[0])
-            else:
-                x2, dx2 = self.integrate_twice(ddx2, self.signals['state'][3, -1], self.signals['state'][0, -1], time[0])
-                y2, dy2 = self.integrate_twice(ddy2, self.signals['state'][4, -1], self.signals['state'][1, -1], time[0])
-                z2, dz2 = self.integrate_twice(ddz2, self.signals['state'][5, -1], self.signals['state'][2, -1], time[0])
+            # if not hasattr(self, 'signals'): # first iteration
+            #     x2, dx2 = self.integrate_twice(ddx2, 0., self.pose0[0], time[0])
+            #     y2, dy2 = self.integrate_twice(ddy2, 0., self.pose0[1], time[0])
+            #     z2, dz2 = self.integrate_twice(ddz2, 0., self.pose0[2], time[0])
+            # else:
+            #     x2, dx2 = self.integrate_twice(ddx2, self.signals['state'][3, -1], self.signals['state'][0, -1], time[0])
+            #     y2, dy2 = self.integrate_twice(ddy2, self.signals['state'][4, -1], self.signals['state'][1, -1], time[0])
+            #     z2, dz2 = self.integrate_twice(ddz2, self.signals['state'][5, -1], self.signals['state'][2, -1], time[0])
+
+
+            x2, dx2 = self.integrate_twice(ddx2, self.prediction['state'][3], self.prediction['state'][0], time[0])
+            y2, dy2 = self.integrate_twice(ddy2, self.prediction['state'][4], self.prediction['state'][1], time[0])
+            z2, dz2 = self.integrate_twice(ddz2, self.prediction['state'][5], self.prediction['state'][2], time[0])
+
+
+
             ddx_s, ddy_s, ddz_s = sample_splines([ddx, ddy, ddz], time)
             ddx_s2, ddy_s2, ddz_s2 = sample_splines([ddx2, ddy2, ddz2], time)
             x_s2, y_s2, z_s2, dx_s2, dy_s2, dz_s2 = sample_splines([x2, y2, z2, dx2, dy2, dz2], time)
