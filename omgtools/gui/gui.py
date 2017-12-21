@@ -479,7 +479,25 @@ class EnvironmentGUI(tk.Frame):
                 return
 
         self.reader.init(data)  # load the figure
-        self.reader.build_environment()  # save obstacles in figure
+
+        self.to_gcode = None
+        while self.to_gcode is None:
+            self.window_m2p=popupWindow(self.root, 'Do you want to convert your .svg to GCode (yes/no)?')
+            self.root.wait_window(self.window_m2p.top)
+            try:
+                self.to_gcode = self.window_m2p.value
+            except:
+                print 'Please fill in yes or no'
+            if not self.to_gcode in ['yes', 'no'] :
+                self.to_gcode = None
+                print 'Please fill in yes or no'
+        if self.to_gcode == 'yes':
+            self.reader.compute_transform()  # assigns values to self.transform
+            self.reader.get_gcode_description()  # convert .svg to .nc
+            print 'Translation from .svg to GCode ready! Check for your_file_name.nc'
+            return
+        else:
+            self.reader.build_environment()  # save obstacles in figure
 
         if not hasattr(self.reader, 'meter_to_pixel'):
             # give pop-up to ask user for meter_to_pixel conversion factor
