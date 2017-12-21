@@ -30,8 +30,9 @@ class Tool(Vehicle):
         # Todo: for now tool is a 2D shape, with 3D splines, because
         # locally the movement is all in 2D, but sometimes there is a single
         # 3D movement... Make this more general
-        # Don't make tool as large as tolerance, this removes all freedom
-        self.shapes= [Circle(0.01*tolerance)]
+        # Suppose that tool size was already taken into account in preprocessing step
+        # GCode gives tool center point position
+        self.shapes= [Circle(0)]
         self.tolerance = tolerance
         self.tolerance_small = kwargs['tol_small'] if 'tol_small' in kwargs else 0.
         bounds = bounds or {}
