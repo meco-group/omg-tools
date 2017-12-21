@@ -1066,8 +1066,8 @@ class GCodeSchedulerProblem(Problem):
         lbg = np.r_[-np.inf * np.ones(con.size1()-12), np.zeros(12)]
         ubg = np.r_[np.zeros(con.size1()-12), np.zeros(12)]
         # set bounds for variables
-        lbx = -1000 * np.ones(X.size1())
-        ubx = 1000 * np.ones(X.size1())
+        lbx = -np.inf * np.ones(X.size1())
+        ubx = np.inf * np.ones(X.size1())
 
         # create solver input
         solver_input = {}
