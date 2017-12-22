@@ -462,11 +462,11 @@ class EnvironmentGUI(tk.Frame):
             # obstacle position is saved in world coordinates [m], convert to pixels to plot
             obs_pos = self.world_to_pixel(obs['pos'])
             if obs['shape'] == 'rectangle':
-                self.canvas.create_rectangle(obs_pos[0]-obs['width']*self.meter_to_pixel*0.5, obs_pos[1]-obs['height']*self.meter_to_pixel*0.5,
+                obs['variable'] = self.canvas.create_rectangle(obs_pos[0]-obs['width']*self.meter_to_pixel*0.5, obs_pos[1]-obs['height']*self.meter_to_pixel*0.5,
                                              obs_pos[0]+obs['width']*self.meter_to_pixel*0.5, obs_pos[1]+obs['height']*self.meter_to_pixel*0.5,
                                              fill="black")
             elif obs['shape'] == 'circle':
-                self.canvas.create_circle(obs_pos[0], obs_pos[1], obs['radius']*self.meter_to_pixel, fill="black")
+                obs['variable'] = self.canvas.create_circle(obs_pos[0], obs_pos[1], obs['radius']*self.meter_to_pixel, fill="black")
 
     def load_svg(self):
         # show a popup window to let the user select an environment defined as an svg-figure
