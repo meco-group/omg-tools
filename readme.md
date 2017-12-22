@@ -95,6 +95,10 @@ The animations below give an overview of typical problems that OMG-tools can han
 <img width=100% src="./doc/gifs/ICRA_example1_minobs_dubins.gif" alt="Holonomic vehicle moving through vast warehouse using multiple frames without stationary obstacles"/>
 </td>
 </tr>
+<tr>
+<td align="center" valign="center" bgcolor="#FFFFFF">
+<img width=100% src="./doc/gifs/racetrack.gif" alt="Trajectory generation for a racetrack"/>
+</tr>
 </table>
 
 ### Experimental validation
