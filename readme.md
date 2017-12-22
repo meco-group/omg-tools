@@ -65,7 +65,7 @@ The animations below give an overview of typical problems that OMG-tools can han
 </tr>
 <tr>
 <td align="center" valign="center" bgcolor="#FFFFFF">
-<img width=100% src="./doc/gifs/multiproblem_circ.gif" alt="Big warehouse with circular bouncing obstacles"/>
+<img width=100% src="./doc/gifs/racetrack.gif" alt="Trajectory generation for a racetrack"/>
 </td>
 <td align="center" valign="center" style="background-color:rgba(0, 0, 0, 0);">
 <img width=100% src="./doc/gifs/warehouse.gif" alt="Holonomic vehicle finding its way in a warehouse"/>
@@ -93,11 +93,6 @@ The animations below give an overview of typical problems that OMG-tools can han
 </td>
 <td align="center" valign="center" bgcolor="#FFFFFF">
 <img width=100% src="./doc/gifs/ICRA_example1_minobs_dubins.gif" alt="Holonomic vehicle moving through vast warehouse using multiple frames without stationary obstacles"/>
-</td>
-</tr>
-<tr>
-<td align="center" valign="center" bgcolor="#FFFFFF">
-<img width=60% src="./doc/gifs/racetrack.gif" alt="Trajectory generation for a racetrack"/>
 </td>
 </tr>
 </table>
