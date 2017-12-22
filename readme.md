@@ -21,13 +21,13 @@ The animations below give an overview of typical problems that OMG-tools can han
 
 <table style="border: none; border-collapse: collapse;" border="0" cellspacing="0" cellpadding="0" width="100%" align="center">
 <tr>
-<td align="center" valign="center" style="background-color:rgba(0, 0, 0, 0);">
+<td align="center" valign="center" style="background-color:rgba(0, 0, 0, 0);" width="33%">
 <img width=100% src="./doc/gifs/cannonballs.gif" alt="Formation attacked by cannonballs"/>
 </td>
-<td align="center" valign="center" bgcolor="#FFFFFF">
+<td align="center" valign="center" bgcolor="#FFFFFF" width="33%">
 <img width=100% src="./doc/gifs/maze.gif" alt="Holonomic vehicle moving through a maze"/>
 </td>
-<td align="center" valign="center" style="background-color:rgba(0, 0, 0, 0);">
+<td align="center" valign="center" style="background-color:rgba(0, 0, 0, 0);" width="33%">
 <img width=100% src="./doc/gifs/revolving_door.gif" alt="Holonomic vehicle passing through a revolving door"/>
 </td>
 <tr>
@@ -96,7 +96,7 @@ The animations below give an overview of typical problems that OMG-tools can han
 </td>
 </tr>
 <tr>
-<td align="center" valign="center" bgcolor="#FFFFFF" width="33%">
+<td align="center" valign="center" bgcolor="#FFFFFF">
 <img width=100% src="./doc/gifs/racetrack.gif" alt="Trajectory generation for a racetrack"/>
 </td> 
 </tr>
