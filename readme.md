@@ -98,6 +98,7 @@ The animations below give an overview of typical problems that OMG-tools can han
 <tr>
 <td align="center" valign="center" bgcolor="#FFFFFF">
 <img width=100% src="./doc/gifs/racetrack.gif" alt="Trajectory generation for a racetrack"/>
+</td>
 </tr>
 </table>
 
