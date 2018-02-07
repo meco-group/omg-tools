@@ -25,8 +25,8 @@ from export import Export
 
 class ExportADMM(Export):
 
-    def __init__(self, label, problem, options, src_dir=[], src_files=[]):
-        Export.__init__(self, label, problem, options)
+    def __init__(self, problem, options, src_dir=[], src_files=[]):
+        Export.__init__(self, problem, options)
 
         source_dirs = ['point2point', 'point2point/admm', 'vehicles'] + src_dir
         src_files = src_files + ['ADMMPoint2Point.cpp', 'Point2Point.cpp', 'Vehicle.cpp']
@@ -83,24 +83,24 @@ class ExportADMM(Export):
         shutil.move(cwd+'/updres.c', destination+'src/updres.c')
         return filenames
 
-    def create_defines(self, father, problem, point2point):
-        defines = {}
-        defines['ADMMLBL'] = '"' + problem.label + '"'
-        defines['RHO'] = problem.options['rho']
-        defines['INITITER'] = problem.options['init_iter']
-        defines['N_SHARED'] = problem.q_i_struct(0).cat.size(1)
-        defines['N_NGHB'] = len(problem.fleet.get_neighbors(problem.vehicle))
-        defines['UPDZPROBLEM'] = '"' + problem.problem_upd_z.name() + '"'
-        defines['UPDLPROBLEM'] = '"' + problem.problem_upd_l.name() + '"'
-        defines['UPDRESPROBLEM'] = '"' + problem.problem_upd_res.name() + '"'
-        data = Export.create_defines(self, father, problem, point2point)
-        code = data['defines']
-        for name, define in defines.items():
-            code += '#define ' + str(name) + ' ' + str(define) + '\n'
-        return {'defines': code}
+    def create_constants(self, father, problem, point2point):
+        constants = {}
+        constants['std::string ADMMLBL'] = '"' + problem.label + '"'
+        constants['double RHO'] = problem.options['rho']
+        constants['int INITITER'] = problem.options['init_iter']
+        constants['int N_SHARED'] = problem.q_i_struct(0).cat.size(1)
+        constants['int N_NGHB'] = len(problem.fleet.get_neighbors(problem.vehicle))
+        constants['std::string UPDZPROBLEM'] = '"' + problem.problem_upd_z.name() + '"'
+        constants['std::string UPDLPROBLEM'] = '"' + problem.problem_upd_l.name() + '"'
+        constants['std::string UPDRESPROBLEM'] = '"' + problem.problem_upd_res.name() + '"'
+        data = Export.create_constants(self, father, problem, point2point)
+        code = data['constants']
+        for definition, value in constants.items():
+            code += 'const ' + str(definition) + ' = ' + str(value) + ';\n'
+        return {'constants': code}
 
     def _create_spline_tf(self, father, problem):
-        defines = Export._create_spline_tf(self, father, problem)
+        constants = Export._create_spline_tf(self, father, problem)
         for child, q_i in problem.q_i.items():
             for name, ind in q_i.items():
                 if name in child._splines_prim:
@@ -115,9 +115,9 @@ class ExportADMM(Export):
                                 for k in range(spl['init'].shape[0]):
                                     tf += '{'+','.join([str(t) for t in spl['init'][k].tolist()])+'},'
                                 tf = tf[:-1]+'}'
-                                defines.update({('XVAR_%s_TF') % name.upper(): tf})
+                                constants.update({('std::vector<std::vector<double>> XVAR_%s_TF') % name.upper(): tf})
                             break
-        return defines
+        return constants
 
     def create_functions(self, father, problem, point2point):
         code = Export.create_functions(self, father, problem, point2point)

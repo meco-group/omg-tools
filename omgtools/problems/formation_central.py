@@ -44,7 +44,7 @@ class FormationPoint2pointCentral(FixedTPoint2point):
         centra = {}
         splines = {}
         for veh in self.vehicles:
-            splines[veh] = self.father.get_variables(veh, 'splines0', symbolic=True)
+            splines[veh] = self.father.get_variables(veh, 'splines_seg0', symbolic=True)
             ind_veh = sorted(config[veh].keys())
             centra[veh] = veh.get_fleet_center(splines[veh], rel_pos_c[veh], substitute=False)
         # formation constraints

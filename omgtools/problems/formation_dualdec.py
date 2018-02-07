@@ -39,7 +39,7 @@ class FormationPoint2pointDualDecomposition(DDProblem):
         centra = {}
         splines = {}
         for veh in self.vehicles:
-            splines[veh] = veh.define_spline_symbol('splines0', veh.n_spl)
+            splines[veh] = veh.define_spline_symbol('splines_seg0', veh.n_spl)
             ind_veh = sorted(config[veh].keys())
             centra[veh] = veh.get_fleet_center(splines[veh], rel_pos_c[veh])
         # formation constraints

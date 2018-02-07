@@ -17,6 +17,10 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
+
+# This example finds a path through a room by dividing it into grid cells and using the
+# A-star algorithm. Place a breakpoint at line 39 to see the plot of the path.
+
 from omgtools import *
 
 start = [2,2]

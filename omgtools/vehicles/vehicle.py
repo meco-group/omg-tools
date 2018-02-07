@@ -47,7 +47,7 @@ class Vehicle(OptiChild, PlotLayer):
                                  'dimension.')
 
         self.prediction = {}
-        self.init_spline_value = None
+        self.init_spline_values = None
         self.degree = degree
 
         self.to_simulate = True
@@ -83,13 +83,17 @@ class Vehicle(OptiChild, PlotLayer):
             self.knots = kwargs['knots']
         self.basis = BSplineBasis(self.knots, self.degree)
 
-    def set_init_spline_value(self, value):
-        if value.shape == (len(self.basis), self.n_spl):
-            self.init_spline_value = value
-        else:
-            raise ValueError('Initial guess has wrong dimensions, ' +
-                'required: ' + str((len(self.basis), self.n_spl)) +
-                ' while you gave: ' + str(values.shape))
+    def set_init_spline_values(self, values, n_seg=1):
+        # first initialize as empty list
+        self.init_spline_values = [0]*n_seg
+        # then assign input values
+        for k in range(n_seg):
+            if values[k].shape == (len(self.basis), self.n_spl):
+                self.init_spline_values[k] = values[k]
+            else:
+                raise ValueError('Initial guess has wrong dimensions for spline ' +
+                    str(k) + ', required: ' + str((len(self.basis), self.n_spl)) +
+                    ' while you gave: ' + str(values[k].shape))
 
     # ========================================================================
     # Optimization modelling related functions
@@ -98,24 +102,24 @@ class Vehicle(OptiChild, PlotLayer):
     def define_splines(self, n_seg=1):
         self.n_seg = n_seg
         self.splines = []
-        for k in range(n_seg):
-            if self.init_spline_value is not None:
-                init = self.init_spline_value
-                self.init_spline_value = None
-            else:
-                try:
-                    init = self.get_init_spline_value()
-                except AttributeError as exc:
-                    init = None
+        if self.init_spline_values is not None:
+            init = self.init_spline_values
+            self.init_spline_values = None
+        else:
+            try:
+                init = self.get_init_spline_values()
+            except AttributeError as exc:
+                init = [None]*n_seg
+        for k in range(self.n_seg):
             spline = self.define_spline_variable(
-                'splines'+str(k), self.n_spl, value=init)
+                'splines_seg'+str(k), self.n_spl, value=init[k])
             self.splines.append(spline)
         return self.splines
 
     def define_collision_constraints_2d(self, hyperplanes,
-        environment, positions, tg_ha=0, offset=0):
+        room, positions, horizon_time, tg_ha=0, offset=0):
         t = self.define_symbol('t')
-        T = self.define_symbol('T')
+        # T = self.define_symbol('T')
         safety_distance = self.options['safety_distance']
         safety_weight = self.options['safety_weight']
         positions = [positions] if not isinstance(
@@ -131,7 +135,7 @@ class Vehicle(OptiChild, PlotLayer):
                     if safety_distance > 0.:
                         eps = self.define_spline_variable(
                             'eps_'+str(s)+str(k))[0]
-                        obj = safety_weight*definite_integral(eps, t/T, 1.)
+                        obj = safety_weight*definite_integral(eps, t/horizon_time, 1.)
                         self.define_objective(obj)
                         self.define_constraint(eps - safety_distance, -inf, 0.)
                         self.define_constraint(-eps, -inf, 0.)
@@ -155,19 +159,21 @@ class Vehicle(OptiChild, PlotLayer):
             # then decide on type of constraints to use:
             # room_limits or hyperplanes
             if self.options['room_constraints']:
-                if ((isinstance(environment.room['shape'], (Rectangle, Square)) and
-                    environment.room['shape'].orientation == 0.0) and
+                lims = room['shape'].get_canvas_limits()
+                room_limits = []
+                room_limits += [lims[k]+room['position'][k] for k in range(self.n_dim)]
+                if ((isinstance(room['shape'], (Rectangle, Square)) and
+                    room['shape'].orientation == 0.0) and
                     (isinstance(shape, Circle) or
                     (isinstance(shape, (Rectangle, Square)) and
                      shape.orientation == 0)) and
                     (isinstance(tg_ha, (int, float, long)) and tg_ha == 0.)):
-                    room_limits = environment.get_canvas_limits()
                     for chck in checkpoints:
-                        for k in range(2):
+                        for k in range(self.n_dim):
                             self.define_constraint(-(chck[k]+position[k]) + room_limits[k][0] + rad[0], -inf, 0.)
                             self.define_constraint((chck[k]+position[k]) - room_limits[k][1] + rad[0], -inf, 0.)
                 else:
-                    hyp_room = environment.room['shape'].get_hyperplanes(position = environment.room['position'])
+                    hyp_room = room['shape'].get_hyperplanes(position = room['position'])
                     for l, chck in enumerate(checkpoints):
                         for hpp in hyp_room.itervalues():
                             con = 0
@@ -180,10 +186,9 @@ class Vehicle(OptiChild, PlotLayer):
                             con += (-hpp['b']+rad[l])*(1+tg_ha**2)
                             self.define_constraint(con, -inf, 0)
 
-    def define_collision_constraints_3d(self, hyperplanes, environment, positions):
+    def define_collision_constraints_3d(self, hyperplanes, room, positions, horizon_time):
         # orientation for 3d not yet implemented!
         t = self.define_symbol('t')
-        T = self.define_symbol('T')
         safety_distance = self.options['safety_distance']
         safety_weight = self.options['safety_weight']
         positions = [positions] if not isinstance(
@@ -198,11 +203,11 @@ class Vehicle(OptiChild, PlotLayer):
                     safety_distance = self.options['safety_distance']
                     safety_weight = self.options['safety_weight']
                     if safety_distance > 0.:
+                        # Todo: remove?
                         t = self.define_symbol('t')
-                        T = self.define_symbol('T')
                         eps = self.define_spline_variable(
                             'eps_'+str(s)+str(k))[0]
-                        obj = safety_weight*definite_integral(eps, t/T, 1.)
+                        obj = safety_weight*definite_integral(eps, t/horizon_time, 1.)
                         self.define_objective(obj)
                         self.define_constraint(eps - safety_distance, -inf, 0.)
                         self.define_constraint(-eps, -inf, 0.)
@@ -213,13 +218,15 @@ class Vehicle(OptiChild, PlotLayer):
                             sum([a[k]*(chck[k]+position[k]) for k in range(3)])-b+rad[l], -inf, 0)
             # room constraints
             if self.options['room_constraints']:
-                room_lim = environment.get_canvas_limits()
+                lims = room['shape'].get_canvas_limits()
+                room_limits = []
+                room_limits += [lims[k]+room['position'][k] for k in range(self.n_dim)]
                 for chck in checkpoints:
                     for k in range(3):
                         self.define_constraint(-
-                                               (chck[k]+position[k]) + room_lim[k][0], -inf, 0.)
+                                               (chck[k]+position[k]) + room_limits[k][0], -inf, 0.)
                         self.define_constraint(
-                            (chck[k]+position[k]) - room_lim[k][1], -inf, 0.)
+                            (chck[k]+position[k]) - room_limits[k][1], -inf, 0.)
 
     def get_fleet_center(self, splines, rel_pos, substitute=True):
         if substitute:
@@ -236,10 +243,22 @@ class Vehicle(OptiChild, PlotLayer):
     # Deploying related functions
     # ========================================================================
 
-    def store(self, current_time, sample_time, spline_segments, segment_times, time_axis=None):
+    def store(self, current_time, sample_time, spline_segments, segment_times, time_axis=None, **kwargs):
         if not isinstance(segment_times, list):
             segment_times = [segment_times]
-        splines = concat_splines(spline_segments, segment_times)
+        # determine how many knots must be inserted when concatenating splines
+        # obtaining a certain continuity requires inserting this continuity - degree+1 knots
+        if 'continuity' in kwargs:
+            n_insert = kwargs['continuity'] - (self.degree-1)
+        else:
+            n_insert = None
+
+         # save individual spline segments
+        self.result_spline_segments = np.array(spline_segments)
+
+        splines = concat_splines(spline_segments, segment_times, n_insert=n_insert)
+
+        # save concatenated splines
         self.result_splines = splines
         horizon_time = sum(segment_times)
         if time_axis is None:
@@ -276,14 +295,25 @@ class Vehicle(OptiChild, PlotLayer):
                 self.trajectories_kn[key] = self.trajectories_kn[
                     key].reshape(1, shape[0])
 
-    def predict(self, current_time, predict_time, sample_time, state0=None, delay=0, enforce=False):
-        if enforce:
+    def predict(self, current_time, predict_time, sample_time, state0=None, input0=None, dinput0=None, delay=0, enforce_states=False, enforce_inputs=False):
+        if enforce_states and enforce_inputs:
+            if all(l is not None for l in [state0, input0, dinput0]):
+                # all three have a value, and are not None
+                self.set_initial_conditions(state0, input=input0, dinput=dinput0)
+            elif all(l is not None for l in [state0, input0]):
+                # all two have a value and are not None
+                self.set_initial_conditions(state0, input=input0)
+            else:
+                if hasattr(self, 'signals'):
+                    self.set_initial_conditions(
+                        self.signals['state'][:, -1], self.signals['input'][:, -1], self.signals['dinput'][:, -1])
+            return
+        if enforce_states:
             if state0 is not None:
                 self.set_initial_conditions(state0)
             else:
                 if hasattr(self, 'signals'):
-                    self.set_initial_conditions(
-                        self.signals['state'][:, -1], self.signals['input'][:, -1])
+                    self.set_initial_conditions(self.signals['state'][:, -1])
             return
         n_samp = int(np.round(predict_time/sample_time, 6))
         if self.options['ideal_prediction']:
@@ -314,10 +344,13 @@ class Vehicle(OptiChild, PlotLayer):
         self.prediction['state'] = state
         self.prediction['pose'] = self._state2pose(state)
 
-    def overrule_input(self, input):
+    def overrule_input(self, input, dinput=None):
         input = np.array(input)
         self.signals['input'][:, -1] = input
         self.prediction['input'] = input
+        if dinput is not None:
+            self.signals['dinput'][:, -1] = dinput
+            self.prediction['dinput'] = dinput
 
     def simulate(self, simulation_time, sample_time):
         if self.to_simulate:

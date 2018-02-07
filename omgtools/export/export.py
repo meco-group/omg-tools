@@ -24,6 +24,7 @@ import shutil
 def search_casadi():
     import casadi
     search_path = os.path.dirname(casadi.__file__)
+    search_path = search_path + '/..'
     for root, dirnames, files in os.walk(search_path):
         if 'libcasadi.so' in files:
             libdir = root
@@ -34,14 +35,14 @@ def search_casadi():
 
 class Export(object):
 
-    def __init__(self, label, problem, options):
-        self.label = label
+    def __init__(self, problem, options):
         self.set_default_options()
         self.set_options(options)
 
     def set_default_options(self):
         libcasadi, inccasadi = search_casadi()
         self.options = {}
+        self.options['namespace'] = 'omg'
         self.options['directory'] = os.path.join(os.getcwd(), 'export/')
         self.options['casadi_optiflags'] = ''  # '', '-O3', '-Os'
         self.options['casadilib'] = libcasadi
@@ -49,10 +50,11 @@ class Export(object):
         self.options['casadiobj'] = '.'
         self.options['sourcefiles'] = ' '.join(self.add_label(['test.cpp', 'Holonomic.cpp']))
         self.options['executable'] = 'Executable'
-        self.options['namespace'] = 'omg'
 
     def set_options(self, options):
         self.options.update(options)
+        if 'sourcefiles' not in options:
+            self.options['sourcefiles'] = ' '.join(self.add_label(['test.cpp', 'Holonomic.cpp']))
         if not os.path.isdir(self.options['directory']):
             os.makedirs(self.options['directory'])
 
@@ -67,7 +69,7 @@ class Export(object):
         # create data to fill in in c++ template
         data = {}
         data.update(self.get_make_options(self.add_label(src_files), probsrc))
-        data.update(self.create_defines(father, problem, point2point))
+        data.update(self.create_constants(father, problem, point2point))
         data.update(self.create_types())
         data.update(self.create_functions(father, problem, point2point))
         # write data to template files
@@ -76,6 +78,8 @@ class Export(object):
         self.change_includes(export_dir)
         # set the namespace
         self.set_namespace(export_dir)
+        # set include guards
+        self.set_includeguards(export_dir)
         print 'done.'
         print 'Check out instructions.txt for build and usage instructions.'
 
@@ -84,7 +88,7 @@ class Export(object):
             return [self.add_label(f) for f in file]
         else:
             split = file.split('.')
-            file_new = split[-2]+'_'+self.label+'.'+split[-1]
+            file_new = split[-2]+'_'+self.options['namespace']+'.'+split[-1]
             return file_new
 
     def rmv_label(self, file):
@@ -128,6 +132,27 @@ class Export(object):
                     body = f.read()
                     body = body.replace('namespace omg', 'namespace ' + self.options['namespace'])
                     body = body.replace('omg::', self.options['namespace'] + '::')
+                    f.seek(0)
+                    f.truncate()
+                    f.write(body)
+                else:
+                    raise ValueError('File '+ file +
+                                     ' does not exist!')
+
+    def set_includeguards(self, directory):
+        src_dir = os.path.join(directory, 'src')
+        header_files = []
+        for f in os.listdir(src_dir):
+            if not os.path.isdir(os.path.join(src_dir, f)) and f.split('.')[-1] == 'hpp':
+                header_files.append(f)
+        for file in header_files:
+            fil = os.path.join(src_dir, file)
+            with open(fil, 'r+') as f:
+                if f is not None:
+                    body = f.read()
+                    ind = body.find('#ifndef')
+                    label = body[ind:].split('\n')[0].split(' ')[-1]
+                    body = body.replace(label, label+'_'+self.options['namespace'].upper())
                     f.seek(0)
                     f.truncate()
                     f.write(body)
@@ -184,45 +209,42 @@ class Export(object):
     def get_make_options(self, src_files, probsrc):
         make_opt = {'sourcefiles2' : ' '.join(src_files),
                     'probsources': ' '.join(probsrc),
-                    'libname': 'libomg_'+self.label+'.so'}
+                    'libname': 'libomg_'+self.options['namespace']+'.so'}
         for key, option in self.options.items():
             make_opt[key] = option
         return make_opt
 
-    def create_defines(self, father, problem, point2point):
-        # create defines
-        defines = {}
-        defines['N_VAR'] = father._var_struct.size
-        defines['N_PAR'] = father._par_struct.size
-        defines['N_CON'] = father._con_struct.size
-        defines['TOL'] = problem.options['solver_options']['ipopt']['ipopt.tol']
+    def create_constants(self, father, problem, point2point):
+        constants = {}
+        constants['int N_VAR'] = father._var_struct.size
+        constants['int N_PAR'] = father._par_struct.size
+        constants['int N_CON'] = father._con_struct.size
+        constants['double TOL'] = problem.options['solver_options']['ipopt']['ipopt.tol']
         if 'ipopt.linear_solver' in problem.options['solver_options']['ipopt']:
-            defines['LINEAR_SOLVER'] = '"' + \
+            constants['std::string LINEAR_SOLVER'] = '"' + \
                 problem.options['solver_options']['ipopt']['ipopt.linear_solver'] +'"'
         else:
-            defines['LINEAR_SOLVER'] = '"mumps"'
-        defines['N_DIM'] = problem.vehicles[0].n_dim
-        defines['N_OBS'] = problem.environment.n_obs
-        defines['VEHICLELBL'] = '"' + problem.vehicles[0].label + '"'
-        defines['P2PLBL'] = '"' + point2point.label + '"'
-        defines['OBSTACLELBLS'] = '{' + ','.join(['"' + o.label + '"'
-            for o in problem.environment.obstacles]) + '}'
+            constants['std::string LINEAR_SOLVER'] = '"mumps"'
+        constants['int N_DIM'] = problem.vehicles[0].n_dim
+        constants['int N_OBS'] = problem.environment.n_obs
+        constants['std::string VEHICLELBL'] = '"' + problem.vehicles[0].label + '"'
+        constants['std::string P2PLBL'] = '"' + point2point.label + '"'
         if point2point.__class__.__name__ == 'FreeTPoint2point':
-            defines['FREET'] = 'true'
+            constants['bool FREET'] = 'true'
         elif point2point.__class__.__name__ in ('FixedTPoint2point', 'FreeEndPoint2point'):
-            defines['FREET'] = 'false'
+            constants['bool FREET'] = 'false'
         else:
             raise ValueError('This type of point2point problem is not ' +
                              'supported for export')
-        defines.update(self._create_spline_tf(father, problem))
-        defines.update(self._create_lb_ub(father, problem))
+        constants.update(self._create_spline_tf(father, problem))
+        constants.update(self._create_lb_ub(father, problem))
         code = ''
-        for name, define in defines.items():
-            code += '#define ' + str(name) + ' ' + str(define) + '\n'
-        return {'defines': code}
+        for definition, value in constants.items():
+            code += 'const ' + str(definition) + ' = ' + str(value) + ';\n'
+        return {'constants': code}
 
     def _create_spline_tf(self, father, problem):
-        defines = {}
+        constants = {}
         for child in father.children.values():
             for name, spl in child._splines_prim.items():
                 if name in child._variables:
@@ -232,11 +254,11 @@ class Export(object):
                             tf += '{'+','.join([str(t)
                                                 for t in spl['init'][k].tolist()])+'},'
                         tf = tf[:-1]+'}'
-                        defines.update({('%s_TF') % name.upper(): tf})
-        return defines
+                        constants.update({('std::vector<std::vector<double>> %s_TF') % name.upper(): tf})
+        return constants
 
     def _create_lb_ub(self, father, problem):
-        defines = {}
+        constants = {}
         lb, ub, cnt = '{', '{', 0
         for child in father.children.values():
             for name, con in child._constraints.items():
@@ -250,8 +272,8 @@ class Export(object):
                 cnt += con[0].size(1)
         lb = lb[:-1]+'}'
         ub = ub[:-1]+'}'
-        defines.update({'LBG_DEF': lb, 'UBG_DEF': ub})
-        return defines
+        constants.update({'std::vector<double> LBG_DEF': lb, 'std::vector<double> UBG_DEF': ub})
+        return constants
 
     def create_types(self):
         return {}
@@ -265,6 +287,7 @@ class Export(object):
         code.update(self._create_updateBounds(father, point2point))
         code.update(self._create_initSplines(father, problem))
         code.update(self._create_transformSplines(father, problem, point2point))
+        code.update(self._create_fillParameterDict(father))
         return code
 
     def _create_generateSubstituteFunctions(self, father):
@@ -418,3 +441,35 @@ class Export(object):
             raise Warning('Initialization for free time problem ' +
                           'not implemented (yet?).')
         return {'transformSplines': code}
+
+    def _create_fillParameterDict(self, father):
+        code = ''
+        obst_ind = 0
+        classic_obst_present = False
+        for label, child in father.children.items():
+            if 'obstacle' in label:
+                code += '\n'
+                if not child.options['spline_traj']:
+                    if not classic_obst_present:
+                        code += '\tstd::vector<double> pos0(2), vel0(2), acc0(2);\n'
+                        code += '\tstd::vector<double> posT(2), velT(2), accT(2);\n'
+                        classic_obst_present = True
+                    code += '\tpos0 = obstacles['+str(obst_ind)+'].position;\n'
+                    code += '\tvel0 = obstacles['+str(obst_ind)+'].velocity;\n'
+                    code += '\tacc0 = obstacles['+str(obst_ind)+'].acceleration;\n'
+                    code += '\t// prediction over update_time\n'
+                    code += '\tfor (int j=0; j<2; j++){\n'
+                    code += '\t\tposT[j] = pos0[j] + update_time*vel0[j] + 0.5*pow(update_time,2)*acc0[j];\n'
+                    code += '\t\tvelT[j] = vel0[j] + update_time*acc0[j];\n'
+                    code += '\t\taccT[j] = acc0[j];\n'
+                    code += '\t}\n'
+                    code += '\tpar_dict["'+label+'"]["x"] = posT;\n'
+                    code += '\tpar_dict["'+label+'"]["v"] = velT;\n'
+                    code += '\tpar_dict["'+label+'"]["a"] = accT;\n'
+                else:
+                    code += '\tpar_dict["'+label+'"]["traj_coeffs"] = obstacles['+str(obst_ind)+'].traj_coeffs;\n'
+                code += '\tpar_dict["'+label+'"]["checkpoints"] = obstacles['+str(obst_ind)+'].checkpoints;\n'
+                code += '\tpar_dict["'+label+'"]["rad"] = obstacles['+str(obst_ind)+'].radii;\n'
+                code += '\n'
+                obst_ind += 1
+        return {'fillParameterDict': code}

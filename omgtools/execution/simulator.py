@@ -21,6 +21,7 @@ import numpy as np
 from deployer import Deployer
 from plotlayer import PlotLayer
 
+
 class Simulator:
 
     def __init__(self, problem, sample_time=0.01, update_time=0.1):
@@ -43,7 +44,9 @@ class Simulator:
             ### adapted ###
             if (stop or self.update_time - float(self.problem.vehicles[0].signals['time'][:, -1] - self.current_time)) > self.sample_time:
                 update_time = float(self.problem.vehicles[0].signals['time'][:, -1] - self.current_time)
-                self.update_timing(update_time-self.sample_time) #correcting for first time
+                 # correcting for first time
+                 # avoid negative update times
+                self.update_timing(max(0,update_time-self.sample_time))
             else:
                 self.update_timing()
 
@@ -103,6 +106,7 @@ class Simulator:
         update_time = self.update_time if not update_time else update_time
         self.current_time += update_time
         n_samp = int(np.round(update_time/self.sample_time, 6))
+        # n_samp = max(0, int(np.round(update_time/self.sample_time, 6)))
         self.time = np.r_[self.time, np.linspace(
             self.time[-1]+self.sample_time, self.time[-1]+n_samp*self.sample_time, n_samp)]
 
@@ -112,7 +116,7 @@ class Simulator:
         else:
             hard_stop = None
         self.deployer.reset()
-        self.deployer.update(self.current_time, None, np.inf)
+        self.deployer.update(self.current_time, None, update_time=np.inf)
         if not simulate:
             return None
         if hard_stop:

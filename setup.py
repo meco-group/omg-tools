@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='omg-tools',
-    version='0.1.2',
+    version='0.1.3',
     author='Ruben Van Parys',
     author_email='ruben.vanparys@kuleuven.be',
     description=('Optimal Motion Generation tools: a user-friendly tool for ' +
@@ -26,7 +26,8 @@ setup(
                                       '*/*/*/*.cpp', '*/*/*/*.hpp']},
     install_requires=[
         'matplotlib2tikz',
-        'casadi == 3.1.1.post3'
+        'casadi == 3.1.1.post3',
+        'six >= 1.10.0'
         ],
     test_suite='nose.collector',
     tests_require=['nose>=1.0'],

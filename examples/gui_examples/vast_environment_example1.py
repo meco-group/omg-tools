@@ -25,8 +25,9 @@
 from omgtools import *
 
 # create vehicle
-vehicle = Holonomic(shapes = Circle(radius=0.6), options={'syslimit': 'norm_2'},
+vehicle = Holonomic(shapes = Circle(radius=0.5), options={'syslimit': 'norm_2'},
                     bounds={'vmax': 1.2, 'vmin':-1.2, 'amax':10, 'amin':-10})
+veh_size = vehicle.shapes[0].radius
 
 # create environment with the help of a GUI
 
@@ -67,6 +68,8 @@ vehicle = Holonomic(shapes = Circle(radius=0.6), options={'syslimit': 'norm_2'},
 # Note: LoadSVG only works for a limited type of svg-files for the moment, consisting of
 # line, polyline, rect or circle objects
 
+# Note: to run this example just click Load in the GUI and select vast_environment_example1.pickle
+
 import Tkinter as tk
 root = tk.Tk()
 # the number of desired cells in horizontal and vertical direction are passed as an option
@@ -85,18 +88,29 @@ start, goal = clicked[0], clicked[1]
 # the amount of cells are extracted from the GUI and were either passed by the user to the GUI, or kept at default values
 globalplanner = AStarPlanner(environment, gui.n_cells, start, goal)
 
-# make coordinator
-options={'freeT': True, 'horizon_time': 10, 'no_term_con_der': False}
-
-# Note: When 'min_nobs' is selected and your vehicle size is larger than the cell size,
+# Note: When 'corridor' is selected as frame_type and your vehicle size is larger than the cell size,
 # shifting frames sometimes causes problems
-multiproblem=MultiFrameProblem(vehicle, environment, globalplanner, options=options, frame_size= 9, frame_type='min_nobs')
+# 'n_frames': number of frames to combine when searching for a trajectory
+# 'check_moving_obs_ts': check in steps of ts seconds if a moving obstacle is inside the frame
+# 'frame_type': 'corridor': creates corridors
+	# 'scale_up_fine': tries to scale up the frame in small steps, leading to the largest possible corridor
+	# 'l_shape': cuts off corridors, to obtain L-shapes, and minimize the influence of moving obstacles
+# 'frame_type': 'shift': creates frames of fixed size, around the vehicle
+	# 'frame_size': size of the shifted frame
+options = {'freeT': True, 'horizon_time': 10, 'no_term_con_der': False,
+           'n_frames': 2, 'frame_type': 'corridor', 'scale_up_fine': True, 'l_shape': True, 'check_moving_obs_ts': 0.1}
+# options = {'n_frames': 2, 'frame_type': 'shift', 'frame_size': 5, 'check_moving_obs_ts': 0.1}
+schedulerproblem=SchedulerProblem(vehicle, environment, globalplanner, options=options)
 
-simulator = Simulator(multiproblem)
-multiproblem.plot('scene')
+# Note: using linear solver ma57 is optional, normally it reduces the solving time
+# multiproblem.set_options({'solver_options':
+#     {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
+
+simulator = Simulator(schedulerproblem)
+schedulerproblem.plot('scene')
 vehicle.plot('input', knots=True, prediction=True, labels=['v_x (m/s)', 'v_y (m/s)'])
 
 # run it!
 simulator.run()
-# multiproblem.save_movie('scene', format='gif', name='example1_minobs', number_of_frames=300, movie_time=30, axis=False)
-# multiproblem.save_movie('scene', format='tikz', name='example1_minobs', number_of_frames=100, movie_time=10, axis=False)
+# schedulerproblem.save_movie('scene', format='gif', name='example1_minobs', number_of_frames=300, movie_time=30, axis=False)
+# schedulerproblem.save_movie('scene', format='tikz', name='example1_minobs', number_of_frames=100, movie_time=10, axis=False)

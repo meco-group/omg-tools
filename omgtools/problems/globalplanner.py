@@ -47,18 +47,27 @@ class QuadmapPlanner(GlobalPlanner):
 class AStarPlanner(GlobalPlanner):
     # global planner using the A*-algorithm
     def __init__(self, environment, n_cells, start, goal, options={}):
-        if isinstance(environment.room['shape'], (Rectangle, Square)):
-            grid_width = environment.room['shape'].width
-            grid_height = environment.room['shape'].height
-            if 'position' in environment.room:
-                grid_position = environment.room['position']
+        if isinstance(environment.room[0]['shape'], (Rectangle, Square)):
+            grid_width = environment.room[0]['shape'].width
+            grid_height = environment.room[0]['shape'].height
+            if 'position' in environment.room[0]:
+                grid_position = environment.room[0]['position']
             else:
                 grid_position = [0, 0]
         else:
             raise RuntimeError('Environment has invalid room shape, only Rectangle or Square is supported')
 
         # check if vehicle size needs to be taken into account while searching a global path
-        self.veh_size = options['veh_size'] if 'veh_size' in options else [0.,0.]
+        if 'veh_size' in options:
+            if not isinstance(options['veh_size'], list):
+                options['veh_size'] = [options['veh_size']]
+            if len(options['veh_size']) == 1:
+                self.veh_size = 2*[options['veh_size']]
+            else:
+                self.veh_size = options['veh_size']
+        else:
+            # must consist of an offset in x- and y-direction
+            self.veh_size = [0.,0.]
 
         # make grid
         if ((grid_width == grid_height) and (n_cells[0] == n_cells[1])):
@@ -151,6 +160,9 @@ class AStarPlanner(GlobalPlanner):
         while self.current_node.pos != self.goal:
             # get positions of current node neighbours
             neighbors = self.grid.get_neighbors(self.current_node.pos)
+            if not neighbors:
+                raise RuntimeError('The current node has no free neighbors! ' +
+                        'Consider using more grid points.')
             for point in neighbors:
                 # suppose that the gridpoint is not yet seen
                 new_point = True
@@ -181,6 +193,7 @@ class AStarPlanner(GlobalPlanner):
                     self.open_list.append(new_node)
 
             self.current_node = self.get_lowest_f_cost_node()
+
             self.remove_from_open_list(self.current_node)
             self.closed_list.append(self.current_node)
 
@@ -191,10 +204,11 @@ class AStarPlanner(GlobalPlanner):
                 closed_list_pos = []
                 for node in self.closed_list:
                     closed_list_pos.append(node.pos)
-                if not neighbors or all(item in neighbors for item in closed_list_pos):
+                if not neighbors or all([item in closed_list_pos for item in neighbors]):
                     # there are no neighbors which are accessible or they are all in the closed list,
                     # meaning that no path could be found
-                    raise RuntimeError('There is no path from the desired start to the desired end node!')
+                    raise RuntimeError('There is no path from the desired start to the desired end node! ' +
+                        'Consider using more grid points.')
 
         t2 = time.time()
         print 'Elapsed time to find a global path: ', t2-t1
@@ -286,7 +300,7 @@ class Grid(object):
 
     def block(self, points):
         # block cells given by indices/position in grid
-        if len(points) == 2 and isinstance(points[0], (int)):
+        if len(points) == 2 and isinstance(points[0], int):
             points = [points]
         for point in points:
             if self.in_bounds(point):
@@ -349,8 +363,15 @@ class Grid(object):
         moved_point[0] = point[0] - (self.position[0] - 0.5*self.width + 0.5*self.cell_width)
         moved_point[1] = point[1] - (self.position[1] - 0.5*self.height + 0.5*self.cell_height)
         # determine how many times point fits in cell dimensions, this gives the indices in the grid
-        moved_point[0] = int(round(float(moved_point[0])/self.cell_width))
-        moved_point[1] = int(round(float(moved_point[1])/self.cell_height))
+        # lowest possible index is zero
+        moved_point[0] = max(0, int(round(float(moved_point[0])/self.cell_width)))
+        moved_point[1] = max(0, int(round(float(moved_point[1])/self.cell_height)))
+
+        if not self.in_bounds(moved_point):
+            # if point still not in bounds, its index is too high
+            # index of last cell is self.n_cells-1, assign this to moved_point
+            moved_point[0] = min(moved_point[0], self.n_cells[0]-1)
+            moved_point[1] = min(moved_point[1], self.n_cells[1]-1)
 
         if moved_point in self.occupied:
             # closest grid point is occupied, check all neighbours of this point

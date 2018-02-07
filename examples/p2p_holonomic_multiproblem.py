@@ -58,5 +58,6 @@ simulator.run()
 # 3th task (we can neglect circular obstacle), but first sleep 2 seconds
 simulator.sleep(2.)
 simulator.set_problem(problem2)
+problem2.plot('scene')
 vehicle.set_terminal_conditions([0.0, 1.0])
 simulator.run()

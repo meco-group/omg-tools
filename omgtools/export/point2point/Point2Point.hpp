@@ -26,10 +26,10 @@
 #include <memory.h>
 #include <iostream>
 
-#define inf std::numeric_limits<double>::infinity()
-@defines@
-
 namespace omg{
+
+const double inf = std::numeric_limits<double>::infinity();
+@constants@
 
 typedef struct obstacle {
     std::vector<double> position;
@@ -37,6 +37,8 @@ typedef struct obstacle {
     std::vector<double> acceleration;
     std::vector<double> checkpoints;
     std::vector<double> radii;
+    //To keep datatype compatible, put x coefficients first and then y coefficients in the same vector
+    std::vector<double> traj_coeffs;
     bool avoid;
 } obstacle_t;
 
@@ -44,11 +46,13 @@ class Point2Point{
     private:
         casadi::Function problem;
         bool solve(double, std::vector<obstacle_t>&);
+        bool _recover;
         void generateSubstituteFunctions();
         void initSplines();
 
     protected:
         Vehicle* vehicle;
+        std::vector<double> spline_coeffs_vec;
         double current_time=0.0;
         double current_time_prev=0.0;
         double horizon_time;
@@ -59,6 +63,7 @@ class Point2Point{
         std::map<std::string, casadi::DM> args, sol;
         std::vector<double> parameters;
         std::vector<double> variables;
+
         std::vector<double> lbg;
         std::vector<double> ubg;
         std::vector<double> time;
@@ -89,14 +94,16 @@ class Point2Point{
     public:
         const int n_dim = N_DIM;
         const int n_obs = N_OBS;
-
         Point2Point(Vehicle* vehicle, double update_time, double sample_time, double horizon_time);
         Point2Point(Vehicle* vehicle, double update_time, double sample_time, double horizon_time, int trajectory_length);
         Point2Point(Vehicle* vehicle, double update_time, double sample_time, double horizon_time, int trajectory_length, bool initialize);
         virtual void reset();
         virtual void resetTime();
+        virtual void recover();
         bool update(std::vector<double>&, std::vector<double>&, std::vector<std::vector<double>>&, std::vector<std::vector<double>>&, std::vector<obstacle_t>&);
         bool update(std::vector<double>&, std::vector<double>&, std::vector<std::vector<double>>&, std::vector<std::vector<double>>&, std::vector<obstacle_t>&, int);
+        void getCoefficients(std::vector<double>& coeffs);
+        int getLenBasis();
     };
 }
 

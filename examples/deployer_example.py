@@ -60,8 +60,6 @@ input_traj = np.c_[[0.0, 0.0]]
 n_samp = int(np.round(update_time/sample_time, 6))
 t00 = time.time()
 
-t00 = time.time()
-
 for via_point, obstacle_pos in zip(via_points, obstacle_positions):
     vehicle.set_terminal_conditions(via_point)
     target_reached = False
@@ -90,7 +88,7 @@ for via_point, obstacle_pos in zip(via_points, obstacle_positions):
 
 # plot results
 n_t = state_traj.shape[1]
-time = np.linspace(0., n_t*sample_time+1, n_t)
+time = np.linspace(0., n_t*sample_time, n_t)
 
 plt.figure()
 plt.subplot(2, 1, 1)

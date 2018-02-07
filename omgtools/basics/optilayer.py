@@ -451,18 +451,27 @@ class OptiFather(object):
                     _init_tf[basis] = init_dual_transform(basis)
                 child._splines_dual[name]['init'] = _init_tf[basis]
 
-    def transform_primal_splines(self, transform_fun):
+    def transform_primal_splines(self, transform_fun, seg_shift=None):
+        # seg_shift: index list of the segments of which the variables must be shifted
+        if seg_shift is None:
+            # by default only shift first segment, with index 0
+            seg_shift = [0]
+        elif not isinstance(seg_shift, list):
+            # should be an index list
+            seg_shift = [seg_shift]
         for label, child in self.children.items():
             for name, spl in child._splines_prim.items():
                 if name in child._variables:
-                    basis = spl['basis']
-                    init = spl['init']
-                    if init is not None:
-                        self._var_result[label, name] = transform_fun(
-                            self._var_result[label, name], basis, init)
-                    else:
-                        self._var_result[label, name] = transform_fun(
-                            self._var_result[label, name], basis)
+                    # check if n in 'segn' is in the index list of segments to shift
+                    if ('seg' in name and int(name[name.index('seg')+3]) in seg_shift):
+                        basis = spl['basis']
+                        init = spl['init']
+                        if init is not None:
+                            self._var_result[label, name] = transform_fun(
+                                self._var_result[label, name], basis, init)
+                        else:
+                            self._var_result[label, name] = transform_fun(
+                                self._var_result[label, name], basis)
 
     def transform_dual_splines(self, transform_fun):
         for label, child in self.children.items():
@@ -494,6 +503,7 @@ class OptiChild(object):
         self.symbol_dict = col.OrderedDict()
         self._objective = 0.
         self._constraint_cnt = 0
+        self.n_cons = 0
 
     def __str__(self):
         return self.label
@@ -605,7 +615,7 @@ class OptiChild(object):
     def set_value(self, name, value):
         self._values[name] = value
 
-    def define_constraint(self, expr, lb, ub, shutdown=False, name=None):
+    def define_constraint(self, expr, lb, ub, shutdown=False, name=None, skip=[]):
         if isinstance(expr, (float, int)):
             return
         if name is None:
@@ -614,12 +624,30 @@ class OptiChild(object):
             name = name + '_' + str(self._constraint_cnt)
         self._constraint_cnt += 1
         if isinstance(expr, BSpline):
-            self._constraints[name] = (
-                expr.coeffs, lb*np.ones(expr.coeffs.shape[0]),
-                ub*np.ones(expr.coeffs.shape[0]), shutdown)
-            self._splines_dual[name] = {'basis': expr.basis}
+            if not skip:  # don't skip coeffs
+                self._constraints[name] = (
+                    expr.coeffs, lb*np.ones(expr.coeffs.shape[0]),
+                    ub*np.ones(expr.coeffs.shape[0]), shutdown)
+                self._splines_dual[name] = {'basis': expr.basis}
+            else:
+                new_coeffs = expr.coeffs
+                if skip[0] == 0:
+                    # don't skip anything at the beginning
+                    new_coeffs = new_coeffs[:-skip[1]]
+                elif skip[1] == 0:
+                    # don't skip anything at the end
+                    new_coeffs = new_coeffs[skip[0]:]
+                else:
+                    new_coeffs = new_coeffs[skip[0]:-skip[1]]
+                self._constraints[name] = (
+                    new_coeffs, lb*np.ones(new_coeffs.shape[0]),
+                    ub*np.ones(new_coeffs.shape[0]), shutdown)
+                self._splines_dual[name] = {'basis': expr.basis}
+
         else:
             self._constraints[name] = (expr, lb, ub, shutdown)
+        plus = self._constraints[name][0].size()[0]
+        self.n_cons += plus
 
     def define_objective(self, expr):
         self._objective += expr

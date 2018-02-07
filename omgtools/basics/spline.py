@@ -169,7 +169,7 @@ class Basis(object):
     def __pow__(self, pow):
         if isinstance(pow, int):
             degree = pow * self.degree
-            return self._combine(self, self, degree)
+            return self._combine(self, degree)
         else:
             raise TypeError("Power must be integer")
 
@@ -185,6 +185,12 @@ class Basis(object):
         """Return the Greville abscissae of the basis"""
         return [1. / self.degree * sum(self.knots[k + 1:k + self.degree + 1])
                 for k in range(len(self))]
+
+    def scale(self, factor, shift=0):
+        # by default the domain is [0,1]
+        # this function scales the basis domain and shifts it
+        knots = self.knots*factor + shift
+        return self.__class__(knots, self.degree)
 
 
 @cached_class
@@ -437,8 +443,11 @@ class BSpline(Spline):
         return Nurbs(NurbsBasis(basis.knots, basis.degree, weights), coeffs)
 
     def derivative(self, o=1):
-        Bd, Pd = self.basis.derivative(o=o)
-        return self.__class__(Bd, Pd.dot(self.coeffs))
+        if o == 0:
+            return self
+        else:
+            Bd, Pd = self.basis.derivative(o=o)
+            return self.__class__(Bd, Pd.dot(self.coeffs))
 
     def insert_knots(self, knots):
         """Returns an equivalent spline with knot insertion"""
@@ -476,6 +485,12 @@ class BSpline(Spline):
             roots.extend([r for r in root
                          if spline.knots[i] <= r < spline.knots[i + 1]])
         return roots
+
+    def scale(self, factor, shift=0):
+        # by default the domain is [0,1]
+        # this function scales the domain of the spline and shifts it
+        basis = self.basis.scale(factor, shift=shift)
+        return self.__class__(basis, self.coeffs)
 
 
 class Nurbs(Spline):

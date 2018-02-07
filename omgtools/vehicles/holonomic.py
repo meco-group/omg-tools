@@ -59,44 +59,43 @@ class Holonomic(Vehicle):
         Vehicle.set_default_options(self)
         self.options.update({'syslimit': 'norm_inf'})
 
-    def init(self):
-        # time horizon
-        self.T = self.define_symbol('T')
-
-    def define_trajectory_constraints(self, splines):
+    def define_trajectory_constraints(self, splines, horizon_time):
         x, y = splines
         dx, dy = x.derivative(), y.derivative()
         ddx, ddy = x.derivative(2), y.derivative(2)
         # constrain total velocity
         if self.options['syslimit'] is 'norm_2':
             self.define_constraint(
-                (dx**2+dy**2) - (self.T**2)*self.vmax**2, -inf, 0.)
+                (dx**2+dy**2) - (horizon_time**2)*self.vmax**2, -inf, 0.)
             self.define_constraint(
-                (ddx**2+ddy**2) - (self.T**4)*self.amax**2, -inf, 0.)
+                (ddx**2+ddy**2) - (horizon_time**4)*self.amax**2, -inf, 0.)
         # constrain local velocity
         elif self.options['syslimit'] is 'norm_inf':
-            self.define_constraint(-dx + self.T*self.vxmin, -inf, 0.)
-            self.define_constraint(-dy + self.T*self.vymin, -inf, 0.)
-            self.define_constraint(dx - self.T*self.vxmax, -inf, 0.)
-            self.define_constraint(dy - self.T*self.vymax, -inf, 0.)
+            self.define_constraint(-dx + horizon_time*self.vxmin, -inf, 0.)
+            self.define_constraint(-dy + horizon_time*self.vymin, -inf, 0.)
+            self.define_constraint(dx - horizon_time*self.vxmax, -inf, 0.)
+            self.define_constraint(dy - horizon_time*self.vymax, -inf, 0.)
 
-            self.define_constraint(-ddx + (self.T**2)*self.axmin, -inf, 0.)
-            self.define_constraint(-ddy + (self.T**2)*self.aymin, -inf, 0.)
-            self.define_constraint(ddx - (self.T**2)*self.axmax, -inf, 0.)
-            self.define_constraint(ddy - (self.T**2)*self.aymax, -inf, 0.)
+            self.define_constraint(-ddx + (horizon_time**2)*self.axmin, -inf, 0.)
+            self.define_constraint(-ddy + (horizon_time**2)*self.aymin, -inf, 0.)
+            self.define_constraint(ddx - (horizon_time**2)*self.axmax, -inf, 0.)
+            self.define_constraint(ddy - (horizon_time**2)*self.aymax, -inf, 0.)
         else:
             raise ValueError(
                 'Only norm_2 and norm_inf are defined as system limit.')
 
-    def get_initial_constraints(self, splines):
+    def get_initial_constraints(self, splines, horizon_time):
         state0 = self.define_parameter('state0', 2)
         input0 = self.define_parameter('input0', 2)
+        # dinput0 = self.define_parameter('dinput0', 2)
         x, y = splines
         dx, dy = x.derivative(), y.derivative()
+        ddx, ddy = x.derivative(2), y.derivative(2)
         return [(x, state0[0]), (y, state0[1]),
-                (dx, self.T*input0[0]), (dy, self.T*input0[1])]
+                (dx, horizon_time*input0[0]), (dy, horizon_time*input0[1])]#,
+                # (ddx, horizon_time**2*dinput0[0]), (ddy, horizon_time**2*dinput0[1])]
 
-    def get_terminal_constraints(self, splines):
+    def get_terminal_constraints(self, splines, horizon_time=None):
         position = self.define_parameter('poseT', 2)
         x, y = splines
         term_con = [(x, position[0]), (y, position[1])]
@@ -111,18 +110,36 @@ class Holonomic(Vehicle):
         # list all predictions that are used in set_parameters
         self.prediction['state'] = state
         self.prediction['input'] = input
+        self.prediction['dinput'] = np.zeros(2)
 
     def set_terminal_conditions(self, position):
         self.poseT = position
 
-    def get_init_spline_value(self):
-        init_value = np.zeros((len(self.basis), 2))
+    def get_init_spline_value(self, subgoals=None):
         pos0 = self.prediction['state']
         posT = self.poseT
-        for k in range(2):
-            # init_value[:, k] = np.r_[pos0[k]*np.ones(self.degree), np.linspace(
-            #     pos0[k], posT[k], len(self.basis) - 2*self.degree), posT[k]*np.ones(self.degree)]
-            init_value[:, k] = np.linspace(pos0[k], posT[k], len(self.basis))
+        if self.n_seg == 1:  # default
+            init_value = np.zeros((len(self.basis), 2))
+            for k in range(2):
+                # init_value[:, k] = np.r_[pos0[k]*np.ones(self.degree), np.linspace(
+                #     pos0[k], posT[k], len(self.basis) - 2*self.degree), posT[k]*np.ones(self.degree)]
+                init_value[:, k] = np.linspace(pos0[k], posT[k], len(self.basis))
+            init_value = [init_value]  # use same format as in n_seg > 1
+        else:  # multiple segments
+            if subgoals is None:
+                raise AttributeError('No subgoal given, while there are multiple segments,'
+                                    +'cannot compute initial guess')
+            else:
+                init_value = []
+                subgoals.insert(0, pos0)  # add initial pos
+                subgoals.append(posT)  # add goal pos
+                for l in range(len(subgoals)-1):
+                    init_val = np.zeros((len(self.basis), 2))
+                    for k in range(2):
+                        # init_value[:, k] = np.r_[pos0[k]*np.ones(self.degree), np.linspace(
+                        #     pos0[k], posT[k], len(self.basis) - 2*self.degree), posT[k]*np.ones(self.degree)]
+                        init_val[:, k] = np.linspace(subgoals[l][k], subgoals[l+1][k], len(self.basis))
+                    init_value.append(init_val)
         return init_value
 
     def check_terminal_conditions(self):
@@ -137,12 +154,13 @@ class Holonomic(Vehicle):
         parameters = Vehicle.set_parameters(self, current_time)
         parameters[self]['state0'] = self.prediction['state']
         parameters[self]['input0'] = self.prediction['input']
+        # parameters[self]['dinput0'] = self.prediction['dinput']
         parameters[self]['poseT'] = self.poseT
         return parameters
 
-    def define_collision_constraints(self, hyperplanes, environment, splines):
+    def define_collision_constraints(self, hyperplanes, room, splines, horizon_time):
         x, y = splines[0], splines[1]
-        self.define_collision_constraints_2d(hyperplanes, environment, [x, y])
+        self.define_collision_constraints_2d(hyperplanes, room, [x, y], horizon_time)
 
     def splines2signals(self, splines, time):
         signals = {}
@@ -153,7 +171,7 @@ class Holonomic(Vehicle):
         signals['state'] = np.c_[sample_splines([x, y], time)]
         signals['input'] = input
         signals['v_tot'] = np.sqrt(input[0, :]**2 + input[1, :]**2)
-        signals['a'] = np.c_[sample_splines([ddx, ddy], time)]
+        signals['dinput'] = np.c_[sample_splines([ddx, ddy], time)]
         return signals
 
     def state2pose(self, state):

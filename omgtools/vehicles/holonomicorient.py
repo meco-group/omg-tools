@@ -44,49 +44,52 @@ class HolonomicOrient(Vehicle):
 
     def init(self):
         # time horizon
-        self.T = self.define_symbol('T')
         self.t = self.define_symbol('t')
 
-    def define_trajectory_constraints(self, splines):
+    def define_trajectory_constraints(self, splines, horizon_time=None):
+        if horizon_time is None:
+            horizon_time = self.define_symbol('T')  # motion time
         x, y, tg_ha = splines
         dx, dy, dtg_ha = x.derivative(), y.derivative(), tg_ha.derivative()
         ddx, ddy = x.derivative(2), y.derivative(2)
         if self.options['syslimit'] is 'norm_2':
             self.define_constraint(
-                (dx**2+dy**2) - (self.T**2)*self.vmax**2, -inf, 0.)
+                (dx**2+dy**2) - (horizon_time**2)*self.vmax**2, -inf, 0.)
             self.define_constraint(
-                (ddx**2+ddy**2) - (self.T**4)*self.amax**2, -inf, 0.)
+                (ddx**2+ddy**2) - (horizon_time**4)*self.amax**2, -inf, 0.)
         elif self.options['syslimit'] is 'norm_inf':
-            self.define_constraint(-dx + self.T*self.vmin, -inf, 0.)
-            self.define_constraint(-dy + self.T*self.vmin, -inf, 0.)
-            self.define_constraint(dx - self.T*self.vmax, -inf, 0.)
-            self.define_constraint(dy - self.T*self.vmax, -inf, 0.)
+            self.define_constraint(-dx + horizon_time*self.vmin, -inf, 0.)
+            self.define_constraint(-dy + horizon_time*self.vmin, -inf, 0.)
+            self.define_constraint(dx - horizon_time*self.vmax, -inf, 0.)
+            self.define_constraint(dy - horizon_time*self.vmax, -inf, 0.)
 
-            self.define_constraint(-ddx + (self.T**2)*self.amin, -inf, 0.)
-            self.define_constraint(-ddy + (self.T**2)*self.amin, -inf, 0.)
-            self.define_constraint(ddx - (self.T**2)*self.amax, -inf, 0.)
-            self.define_constraint(ddy - (self.T**2)*self.amax, -inf, 0.)
+            self.define_constraint(-ddx + (horizon_time**2)*self.amin, -inf, 0.)
+            self.define_constraint(-ddy + (horizon_time**2)*self.amin, -inf, 0.)
+            self.define_constraint(ddx - (horizon_time**2)*self.amax, -inf, 0.)
+            self.define_constraint(ddy - (horizon_time**2)*self.amax, -inf, 0.)
         else:
             raise ValueError(
                 'Only norm_2 and norm_inf are defined as system limit.')
         # add constraints on change in orientation
-        self.define_constraint(2*dtg_ha - (1+tg_ha**2)*self.T*self.wmax, -inf, 0.)
-        self.define_constraint(-2*dtg_ha + (1+tg_ha**2)*self.T*self.wmin, -inf, 0.)
+        self.define_constraint(2*dtg_ha - (1+tg_ha**2)*horizon_time*self.wmax, -inf, 0.)
+        self.define_constraint(-2*dtg_ha + (1+tg_ha**2)*horizon_time*self.wmin, -inf, 0.)
         # add regularization on dtg_ha
         if (self.options['reg_type'] == 'norm_1' and self.options['reg_weight'] != 0.0):
             dtg_ha = tg_ha.derivative()
             g_reg = self.define_spline_variable(
                         'g_reg', 1, basis=dtg_ha.basis)[0]
-            objective = definite_integral(g_reg, self.t/self.T, 1.)
+            objective = definite_integral(g_reg, self.t/horizon_time, 1.)
             self.define_constraint(dtg_ha - g_reg, -inf, 0.)
             self.define_constraint(-dtg_ha - g_reg, -inf, 0.)
             self.define_objective(self.options['reg_weight']*objective)
         if (self.options['reg_type'] == 'norm_2'and self.options['reg_weight'] != 0.0):
             dtg_ha = tg_ha.derivative()
-            objective = definite_integral(dtg_ha**2, self.t/self.T, 1.)
+            objective = definite_integral(dtg_ha**2, self.t/horizon_time, 1.)
             self.define_objective(self.options['reg_weight']*objective)
 
-    def get_initial_constraints(self, splines):
+    def get_initial_constraints(self, splines, horizon_time=None):
+        if horizon_time is None:
+            horizon_time = self.define_symbol('T')  # motion time
         pos0 = self.define_parameter('pos0', 2)  # x, y
         tg_ha0 = self.define_parameter('tg_ha0', 1)
         vel0 = self.define_parameter('vel0', 2)  # dx, dy
@@ -94,9 +97,9 @@ class HolonomicOrient(Vehicle):
         x, y, tg_ha = splines
         dx, dy, dtg_ha = x.derivative(), y.derivative(), tg_ha.derivative()
         return [(x, pos0[0]), (y, pos0[1]), (tg_ha, tg_ha0),
-                (dx, self.T*vel0[0]), (dy, self.T*vel0[1]), (dtg_ha, self.T*dtg_ha0)]
+                (dx, horizon_time*vel0[0]), (dy, horizon_time*vel0[1]), (dtg_ha, horizon_time*dtg_ha0)]
 
-    def get_terminal_constraints(self, splines):
+    def get_terminal_constraints(self, splines, horizon_time=None):
         posT = self.define_parameter('posT', 2)
         tg_haT = self.define_parameter('tg_haT', 1)
         x, y, tg_ha = splines
@@ -129,6 +132,7 @@ class HolonomicOrient(Vehicle):
             # init_value[:, k] = np.r_[pos0[k]*np.ones(self.degree), np.linspace(
             #     pos0[k], posT[k], len(self.basis) - 2*self.degree), posT[k]*np.ones(self.degree)]
             init_value[:, k] = np.linspace(pose0[k], poseT[k], len(self.basis))
+        init_value = [init_value]
         return init_value
 
     def check_terminal_conditions(self):
@@ -151,9 +155,9 @@ class HolonomicOrient(Vehicle):
         parameters[self]['tg_haT'] = np.tan(self.poseT[2]/2)
         return parameters
 
-    def define_collision_constraints(self, hyperplanes, environment, splines):
+    def define_collision_constraints(self, hyperplanes, environment, splines, horizon_time=None):
         x, y, tg_ha = splines[0], splines[1], splines[2]
-        self.define_collision_constraints_2d(hyperplanes, environment, [x, y], tg_ha)
+        self.define_collision_constraints_2d(hyperplanes, environment, [x, y], horizon_time, tg_ha=tg_ha)
 
     def splines2signals(self, splines, time):
         # for plotting and logging

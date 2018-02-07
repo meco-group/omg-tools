@@ -25,12 +25,13 @@
 from omgtools import *
 
 # create vehicle
-vehicle = Holonomic(shapes = Circle(radius=0.6), options={'syslimit': 'norm_2'},
-                    bounds={'vmax': 1.2, 'vmin':-1.2, 'amax':10, 'amin':-10})
+vehicle = Holonomic(shapes = Circle(radius=1), options={'syslimit': 'norm_2'},
+                    bounds={'vmax': 1.2, 'vmin':-1.2, 'amax':8, 'amin':-8})
+veh_size = vehicle.shapes[0].radius
 
 # create environment with the help of a GUI
 
-# Note: to run this example just click Load in the GUI and select ICRA_example1.pickle
+# Note: to run this example just click Load in the GUI and select vast_environment_example2.pickle
 
 import Tkinter as tk
 root = tk.Tk()
@@ -41,31 +42,44 @@ root.mainloop()  # run the GUI
 environment = gui.get_environment()  # get the environment from the GUI
 
 # get start and goal from GUI
-clicked = gui.get_clicked_positions()
+# include vehicle size to shift clicks that were too close to the border
+clicked = gui.get_clicked_positions(margin=veh_size)
 vehicle.set_initial_conditions(clicked[0])
 vehicle.set_terminal_conditions(clicked[1])
 start, goal = clicked[0], clicked[1]
 
 # make global planner
 # the amount of cells are extracted from the GUI and were either passed by the user to the GUI, or kept at default values
-globalplanner = AStarPlanner(environment, gui.n_cells, start, goal)
+# include vehicle size to take this into account when computing the global path
+globalplanner = AStarPlanner(environment, gui.n_cells, start, goal, options={'veh_size': veh_size})
 
-# make coordinator
-options={'freeT': True, 'horizon_time': 10, 'no_term_con_der': False}
+# make schedulerproblem
+# 'n_frames': number of frames to combine when searching for a trajectory
+# 'check_moving_obs_ts': check in steps of ts seconds if a moving obstacle is inside the frame
+# 'frame_type': 'corridor': creates corridors
+	# 'scale_up_fine': tries to scale up the frame in small steps, leading to the largest possible corridor
+	# 'l_shape': cuts off corridors, to obtain L-shapes, and minimize the influence of moving obstacles
+# 'frame_type': 'shift': creates frames of fixed size, around the vehicle
+	# 'frame_size': size of the shifted frame
+options={'freeT': True, 'horizon_time': 10, 'no_term_con_der': False,
+         'n_frames': 2, 'frame_type': 'corridor', 'scale_up_fine': True, 'l_shape':True, 'check_moving_obs_ts': 0.1}
+# options = {'n_frames': 2, 'frame_type': 'shift', 'frame_size': 9, 'check_moving_obs_ts': 0.1}
 
-# Note: When 'min_nobs' is selected as frame_type and your vehicle size is larger than the cell size,
+# Note: When 'corridor' is selected and your vehicle size is larger than the cell size,
 # shifting frames sometimes causes problems
-multiproblem=MultiFrameProblem(vehicle, environment, globalplanner, options=options, frame_size= 9, frame_type='min_nobs')
+schedulerproblem=SchedulerProblem(vehicle, environment, globalplanner, options=options)
 
 # Note: using linear solver ma57 is optional, normally it reduces the solving time
-# multiproblem.set_options({'solver_options':
+# schedulerproblem.set_options({'solver_options':
 #     {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
 
-simulator = Simulator(multiproblem)
-multiproblem.plot('scene')
+simulator = Simulator(schedulerproblem)
+schedulerproblem.plot('scene')
 vehicle.plot('input', knots=True, prediction=True, labels=['v_x (m/s)', 'v_y (m/s)'])
+vehicle.plot('dinput', knots=True, prediction=True, labels=['a_x (m/s^2)', 'a_y (m/s^2)'])
 
 # run it!
 simulator.run()
-# multiproblem.save_movie('scene', format='gif', name='example1_minobs', number_of_frames=300, movie_time=30, axis=False)
-# multiproblem.save_movie('scene', format='tikz', name='example1_minobs', number_of_frames=100, movie_time=10, axis=False)
+schedulerproblem.plot_movie('scene', number_of_frames=100, repeat=False)
+schedulerproblem.save_movie('scene', format='gif', name='example2_corridor', number_of_frames=300, movie_time=30, axis=False)
+# schedulerproblem.save_movie('scene', format='tikz', name='example2_corridor', number_of_frames=100, movie_time=10, axis=False)

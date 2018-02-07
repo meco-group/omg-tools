@@ -23,6 +23,7 @@ from omgtools import *
 # create vehicle
 vehicle = Dubins(shapes=Circle(radius=0.3), bounds={'vmax': 0.7, 'wmax': np.pi/3., 'wmin': -np.pi/3.}, # in rad/s
                  options={'substitution': False})
+veh_size = vehicle.shapes[0].radius
 vehicle.define_knots(knot_intervals=10)
 
 # create environment
@@ -45,13 +46,19 @@ environment.add_obstacle(Obstacle({'position': [4,2]}, shape=circle))
 environment.add_obstacle(Obstacle({'position': [5,6]}, shape=circle))
 
 # make global planner
-globalplanner = AStarPlanner(environment, [10,10], start, goal)
+globalplanner = AStarPlanner(environment, [10,10], start, goal, options={'veh_size': veh_size})
 
-# make coordinator
-options={'freeT': True, 'horizon_time': 15}
-multiproblem=MultiFrameProblem(vehicle, environment, globalplanner, options=options, frame_type='min_nobs')
-multiproblem.set_options({'solver_options': {'ipopt': {
-													   # 'ipopt.linear_solver': 'ma57',
+# make schedulerproblem
+# 'n_frames': number of frames to combine when searching for a trajectory
+# 'check_moving_obs_ts': check in steps of ts seconds if a moving obstacle is inside the frame
+# 'frame_type': 'corridor': creates corridors
+	# 'scale_up_fine': tries to scale up the frame in small steps, leading to the largest possible corridor
+	# 'l_shape': cuts off corridors, to obtain L-shapes, and minimize the influence of moving obstacles
+# 'frame_type': 'shift': creates frames of fixed size, around the vehicle
+	# 'frame_size': size of the shifted frame
+options={'freeT': True, 'horizon_time': 15, 'frame_type':'corridor','scale_up_fine': True, 'l_shape':True}
+multiproblem=SchedulerProblem(vehicle, environment, globalplanner, options=options)
+multiproblem.set_options({'solver_options': {'ipopt': {# 'ipopt.linear_solver': 'ma57',
                                                        'ipopt.hessian_approximation': 'limited-memory'}}})
 multiproblem.init()
 

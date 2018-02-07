@@ -71,26 +71,27 @@ class Bicycle(Vehicle):
         self.options.update({'exact_substitution' : False})
 
     def init(self):
-        self.T = self.define_symbol('T')  # motion time
         self.t = self.define_symbol('t')  # current time of first knot
         self.pos0 = self.define_symbol('pos0', 2)  # current position
 
-    def define_trajectory_constraints(self, splines):
+    def define_trajectory_constraints(self, splines, horizon_time=None):
+        if horizon_time is None:
+            horizon_time = self.define_symbol('T')  # motion time
         v_til, tg_ha = splines
         dv_til, dtg_ha = v_til.derivative(), tg_ha.derivative()
         ddtg_ha = tg_ha.derivative(2)
         self.define_constraint(
             v_til*(1+tg_ha**2) - self.vmax, -inf, 0.)
         self.define_constraint(
-            dv_til*(1+tg_ha**2) + 2*v_til*tg_ha*dtg_ha - self.T*self.amax, -inf, 0.)
+            dv_til*(1+tg_ha**2) + 2*v_til*tg_ha*dtg_ha - horizon_time*self.amax, -inf, 0.)
         # Alternative:
         # dx = v_til*(1-tg_ha**2)
         # dy = v_til*(2*tg_ha)
         # ddx, ddy = dx.derivative(), dy.derivative()
         # self.define_constraint(
-        #     (dx**2+dy**2) - (self.T**2)*self.vmax**2, -inf, 0.)
+        #     (dx**2+dy**2) - (horizon_time**2)*self.vmax**2, -inf, 0.)
         # self.define_constraint(
-        #     (ddx**2+ddy**2) - (self.T**4)*self.amax**2, -inf, 0.)
+        #     (ddx**2+ddy**2) - (horizon_time**4)*self.amax**2, -inf, 0.)
 
         if self.options['substitution']:
             # substitute velocity and introduce equality constraints
@@ -101,41 +102,43 @@ class Bicycle(Vehicle):
                 self.dy = self.define_spline_variable('dy', 1, 1, basis=dy.basis)[0]
                 self.define_constraint(self.dx-dx, 0., 0.)
                 self.define_constraint(self.dy-dy, 0., 0.)
-                self.x = self.integrate_once(self.dx, self.pos0[0], self.t, self.T)
-                self.y = self.integrate_once(self.dy, self.pos0[1], self.t, self.T)
+                self.x = self.integrate_once(self.dx, self.pos0[0], self.t, horizon_time)
+                self.y = self.integrate_once(self.dy, self.pos0[1], self.t, horizon_time)
             else:
                 degree = 2
                 knots = np.r_[np.zeros(degree), np.linspace(0., 1., 10+1), np.ones(degree)]
                 basis = BSplineBasis(knots, degree)
                 self.dx = self.define_spline_variable('dx', 1, 1, basis=basis)[0]
                 self.dy = self.define_spline_variable('dy', 1, 1, basis=basis)[0]
-                self.x = self.integrate_once(self.dx, self.pos0[0], self.t, self.T)
-                self.y = self.integrate_once(self.dy, self.pos0[1], self.t, self.T)
-                x = self.integrate_once(dx, self.pos0[0], self.t, self.T)
-                y = self.integrate_once(dy, self.pos0[1], self.t, self.T)
+                self.x = self.integrate_once(self.dx, self.pos0[0], self.t, horizon_time)
+                self.y = self.integrate_once(self.dy, self.pos0[1], self.t, horizon_time)
+                x = self.integrate_once(dx, self.pos0[0], self.t, horizon_time)
+                y = self.integrate_once(dy, self.pos0[1], self.t, horizon_time)
                 eps = 1e-2
                 self.define_constraint(self.x-x, -eps, eps)
                 self.define_constraint(self.y-y, -eps, eps)
 
         # limit steering angle
         self.define_constraint(
-             2*dtg_ha*self.length - v_til*(1+tg_ha**2)**2*np.tan(self.dmax)*self.T, -inf, 0.)
+             2*dtg_ha*self.length - v_til*(1+tg_ha**2)**2*np.tan(self.dmax)*horizon_time, -inf, 0.)
         self.define_constraint(
-             -2*dtg_ha*self.length + v_til*(1+tg_ha**2)**2*np.tan(self.dmin)*self.T, -inf, 0.)
+             -2*dtg_ha*self.length + v_til*(1+tg_ha**2)**2*np.tan(self.dmin)*horizon_time, -inf, 0.)
         # limit rate of change of steering angle
         self.define_constraint(
              2*self.length*ddtg_ha*(v_til*(1+tg_ha**2)**2)
              -2*self.length*dtg_ha*(dv_til*(1+tg_ha**2)**2
-             +v_til*(4*tg_ha+4*tg_ha**3)*dtg_ha) - ((self.T**2)*v_til**2*(1+tg_ha**2)**4
+             +v_til*(4*tg_ha+4*tg_ha**3)*dtg_ha) - ((horizon_time**2)*v_til**2*(1+tg_ha**2)**4
              +(2*self.length*dtg_ha)**2)*self.ddmax, -inf, 0.)
         self.define_constraint(
              -2*self.length*ddtg_ha*(v_til*(1+tg_ha**2)**2)
              +2*self.length*dtg_ha*(dv_til*(1+tg_ha**2)**2
-             +v_til*(4*tg_ha+4*tg_ha**3)*dtg_ha) + ((self.T**2)*v_til**2*(1+tg_ha**2)**4
+             +v_til*(4*tg_ha+4*tg_ha**3)*dtg_ha) + ((horizon_time**2)*v_til**2*(1+tg_ha**2)**4
              +(2*self.length*dtg_ha)**2)*self.ddmin, -inf, 0.)
         self.define_constraint(-v_til, -inf, 0)  # model requires positive V, so positive v_tilde
 
-    def get_initial_constraints(self, splines):
+    def get_initial_constraints(self, splines, horizon_time=None):
+        if horizon_time is None:
+            horizon_time = self.define_symbol('T')  # motion time
         # these make sure you get continuity along different iterations
         # states are function of v_til, tg_ha and dtg_ha so impose constraints on these
         v_til0 = self.define_parameter('v_til0', 1)
@@ -147,13 +150,13 @@ class Bicycle(Vehicle):
 
         hop0 = self.define_parameter('hop0', 1)
         tdelta0 = self.define_parameter('tdelta0', 1)  # tan(delta)
-        self.define_constraint(hop0*(2.*evalspline(ddtg_ha, self.t/self.T)*self.length
-                               -tdelta0*(evalspline(dv_til, self.t/self.T)*(1.+tg_ha0**2)**2)*self.T), 0., 0.)
+        self.define_constraint(hop0*(2.*evalspline(ddtg_ha, self.t/horizon_time)*self.length
+                               -tdelta0*(evalspline(dv_til, self.t/horizon_time)*(1.+tg_ha0**2)**2)*horizon_time), 0., 0.)
         # This constraint is obtained by using l'Hopital's rule on the expression of
         # tan(delta) = 2*dtg_ha*self.length / (v_til*(1+tg_ha**2)**2)
         # this constraint is used to impose a specific steering angle when v_til = 0, e.g. when
         # starting from standstill. Note that a part of the denomerator is removed because
-        # it contains evalspline(v_til, self.t/self.T)*... which is zero.
+        # it contains evalspline(v_til, self.t/horizon_time)*... which is zero.
         # When v_til is not 0 the steering angle is implicitly imposed due to the fact that tan(delta)
         # is only a function of v_til, tg_ha, dtg_ha. If these variables are smooth the steering angle
         # will also be smooth. Furthermore the steering angle and its rate of change are limited by the
@@ -163,13 +166,15 @@ class Bicycle(Vehicle):
         # tdeltaT = self.define_parameter('tdeltaT', 1)  # tan(delta)
         # tg_haT = self.define_parameter('tg_haT', 1)
         # self.define_constraint((2.*ddtg_ha(1.)*self.length
-        #                        -tdeltaT*(dv_til(1.)*(1.+tg_haT**2)**2)*self.T), 0., 0.)
+        #                        -tdeltaT*(dv_til(1.)*(1.+tg_haT**2)**2)*horizon_time), 0., 0.)
 
         # Further initial constraints are not necessary, these 3 are sufficient to get continuity of the state
         return [(v_til, v_til0), (tg_ha, tg_ha0),
-                (dtg_ha, self.T*dtg_ha0)]
+                (dtg_ha, horizon_time*dtg_ha0)]
 
-    def get_terminal_constraints(self, splines):
+    def get_terminal_constraints(self, splines, horizon_time=None):
+        if horizon_time is None:
+            horizon_time = self.define_symbol('T')  # motion time
         posT = self.define_parameter('posT', 2)
         v_tilT = self.define_parameter('v_tilT', 1)
         dv_tilT = self.define_parameter('dv_tilT', 1)
@@ -185,14 +190,14 @@ class Bicycle(Vehicle):
         else:
             dx = v_til*(1-tg_ha**2)
             dy = v_til*(2*tg_ha)
-            x = self.integrate_once(dx, self.pos0[0], self.t, self.T)
-            y = self.integrate_once(dy, self.pos0[1], self.t, self.T)
-            # x_int, y_int = self.T*running_integral(dx), self.T*running_integral(dy)
-            # x = x_int-evalspline(x_int, self.t/self.T) + self.pos0[0]  # self.pos0 was already defined in init
-            # y = y_int-evalspline(y_int, self.t/self.T) + self.pos0[1]
+            x = self.integrate_once(dx, self.pos0[0], self.t, horizon_time)
+            y = self.integrate_once(dy, self.pos0[1], self.t, horizon_time)
+            # x_int, y_int = horizon_time*running_integral(dx), horizon_time*running_integral(dy)
+            # x = x_int-evalspline(x_int, self.t/horizon_time) + self.pos0[0]  # self.pos0 was already defined in init
+            # y = y_int-evalspline(y_int, self.t/horizon_time) + self.pos0[1]
         term_con = [(x, posT[0]), (y, posT[1]), (tg_ha, tg_haT)]
-        term_con_der = [(v_til, v_tilT), (dtg_ha, self.T*dtg_haT),
-                        (dv_til, dv_tilT), (ddtg_ha, self.T**2*ddtg_haT)]
+        term_con_der = [(v_til, v_tilT), (dtg_ha, horizon_time*dtg_haT),
+                        (dv_til, dv_tilT), (ddtg_ha, horizon_time**2*ddtg_haT)]
         return [term_con, term_con_der]
 
     def set_initial_conditions(self, state, input=None):
@@ -214,6 +219,7 @@ class Bicycle(Vehicle):
         tg_haT = np.tan(self.poseT[2]/2)
         init_value[:, 0] = v_til0
         init_value[:, 1] = np.linspace(tg_ha0, tg_haT, len(self.basis))
+        init_value = [init_value]
         return init_value
 
     def check_terminal_conditions(self):
@@ -250,19 +256,26 @@ class Bicycle(Vehicle):
             # tdelta0 is only used when hop0 = 1, so no need to assign here
         return parameters
 
-    def define_collision_constraints(self, hyperplanes, environment, splines):
+    def define_collision_constraints(self, hyperplanes, environment, splines, horizon_time=None):
+        if horizon_time is None:
+            horizon_time = self.define_symbol('T')  # motion time
         v_til, tg_ha = splines[0], splines[1]
         if self.options['substitution']:
             x, y = self.x, self.y
         else:
             dx = v_til*(1-tg_ha**2)
             dy = v_til*(2*tg_ha)
-            x = self.integrate_once(dx, self.pos0[0], self.t, self.T)
-            y = self.integrate_once(dy, self.pos0[1], self.t, self.T)
-            # x_int, y_int = self.T*running_integral(dx), self.T*running_integral(dy)
-            # x = x_int-evalspline(x_int, self.t/self.T) + self.pos0[0]
-            # y = y_int-evalspline(y_int, self.t/self.T) + self.pos0[1]
-        self.define_collision_constraints_2d(hyperplanes, environment, [x, y], tg_ha)
+            x = self.integrate_once(dx, self.pos0[0], self.t, horizon_time)
+            y = self.integrate_once(dy, self.pos0[1], self.t, horizon_time)
+            # x_int, y_int = horizon_time*running_integral(dx), horizon_time*running_integral(dy)
+            # x = x_int-evalspline(x_int, self.t/horizon_time) + self.pos0[0]
+            # y = y_int-evalspline(y_int, self.t/horizon_time) + self.pos0[1]
+        # for circular vehicle, no tg_ha needs to be taken into account in collision avoidance constraints.
+        # so don't pass it on then
+        if isinstance(self.shapes[0], Circle):
+            self.define_collision_constraints_2d(hyperplanes, environment, [x, y], horizon_time)
+        else:  # tg_ha is required for collision avoidance
+            self.define_collision_constraints_2d(hyperplanes, environment, [x, y], horizon_time, tg_ha=tg_ha)
 
     def integrate_once(self, dx, x0, t, T=1.):
         dx_int = T*running_integral(dx)

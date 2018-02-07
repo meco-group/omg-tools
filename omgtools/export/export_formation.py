@@ -23,7 +23,7 @@ from export_admm import ExportADMM
 class ExportFormation(ExportADMM):
 
     def __init__(self, problem, options):
-        ExportADMM.__init__(self, 'p2pf', problem, options,
+        ExportADMM.__init__(self, problem, options,
             ['point2point/admm/formation', 'tests/formation'], ['FormationPoint2Point.cpp'])
 
     def set_default_options(self):

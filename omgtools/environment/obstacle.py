@@ -21,7 +21,9 @@
 from ..basics.optilayer import OptiChild
 from ..basics.spline_extra import get_interval_T
 from ..basics.spline import BSplineBasis, BSpline
-from ..basics.geometry import distance_between_points, point_in_polyhedron, circle_polyhedron_intersection
+from ..basics.geometry import distance_between_points, point_in_polyhedron
+from ..basics.geometry import circle_polyhedron_intersection
+from ..basics.geometry import rectangles_overlap
 from ..basics.shape import Circle, Polyhedron, Rectangle, Square
 from casadi import inf, vertcat, cos, sin
 from scipy.interpolate import interp1d
@@ -45,6 +47,12 @@ class ObstaclexD(OptiChild):
     def __init__(self, initial, shape, simulation, options):
         OptiChild.__init__(self, 'obstacle')
         self.simulation = simulation
+        if 'trajectories' in simulation:
+            for key in simulation['trajectories']:
+                # user specified a value at time 0
+                if 0 in simulation['trajectories'][key]['time']:
+                    # this value should be added to initial
+                    initial[key] = simulation['trajectories'][key]['values'][0]
         self.set_default_options()
         self.set_options(options)
         self.shape = shape
@@ -59,7 +67,8 @@ class ObstaclexD(OptiChild):
     # ========================================================================
 
     def set_default_options(self):
-        self.options = {'draw': True, 'avoid': True, 'bounce': False}
+        self.options = {'draw': True, 'avoid': True, 'spline_traj': False,
+        'spline_params': {'knots':[0, 0, 0, 1, 1, 1], 'degree' : 2, 'coeffs' : [0, 0, 0]}, 'bounce': False}
 
     def set_options(self, options):
         self.options.update(options)
@@ -68,33 +77,78 @@ class ObstaclexD(OptiChild):
     # Optimization modelling related functions
     # ========================================================================
 
-    def init(self):
-        # pos, vel, acc
-        x = self.define_parameter('x', self.n_dim)
-        v = self.define_parameter('v', self.n_dim)
-        a = self.define_parameter('a', self.n_dim)
-        # pos, vel, acc at time zero of time horizon
-        self.t = self.define_symbol('t')
-        self.T = self.define_symbol('T')
-        v0 = v - self.t*a
-        x0 = x - self.t*v0 - 0.5*(self.t**2)*a
-        a0 = a
-        # pos spline over time horizon
-        self.pos_spline = [BSpline(self.basis, vertcat(x0[k], 0.5*v0[k]*self.T + x0[k], x0[k] + v0[k]*self.T + 0.5*a0[k]*(self.T**2)))
-                           for k in range(self.n_dim)]
+    def init(self, horizon_times=None):
+        if self.options['spline_traj'] == False:
+            # pos, vel, acc
+            x = self.define_parameter('x', self.n_dim)
+            v = self.define_parameter('v', self.n_dim)
+            a = self.define_parameter('a', self.n_dim)
+            # pos, vel, acc at time zero of time horizon
+            self.t = self.define_symbol('t')
+            # motion time can be passed from environment
+            if horizon_times is None:
+                self.T = self.define_symbol('T')
+            elif not isinstance(horizon_times, list):
+                horizon_times = [horizon_times]
+            v0 = v - self.t*a
+            x0 = x - self.t*v0 - 0.5*(self.t**2)*a
+            a0 = a
+
+            if horizon_times:  # not None
+                # build up pos_spline gradually, e.g. the pos_spline for second segment starts at
+                # end position for first segment (pos0(1))
+                pos0 = x0
+                self.pos_spline = [0]*self.n_dim
+                for horizon_time in horizon_times:
+                    for k in range(self.n_dim):
+                        self.pos_spline[k] = BSpline(self.basis, vertcat(pos0[k], 0.5*v0[k]*horizon_time + pos0[k], pos0[k] + v0[k]*horizon_time + 0.5*a0[k]*(horizon_time**2)))
+                    # update start position for next segment
+                    pos0 = [self.pos_spline[k](1) for k in range(self.n_dim)]
+            else:
+                # horizon_times was None
+                # pos spline over time horizon
+                self.pos_spline = [BSpline(self.basis, vertcat(x0[k], 0.5*v0[k]*self.T + x0[k], x0[k] + v0[k]*self.T + 0.5*a0[k]*(self.T**2)))
+                                   for k in range(self.n_dim)]
+        else:
+            # using a spline to define obstacle trajectory
+            self.basis = BSplineBasis(self.options['spline_params']['knots'], self.options['spline_params']['degree'])
+            traj_coeffs = self.define_parameter('traj_coeffs', len(self.basis), self.n_dim)
+            # pos spline over time horizon
+            self.pos_spline = [BSpline(self.basis, traj_coeffs[:, k]) for k in range(self.n_dim)]
         # checkpoints + radii
         checkpoints, _ = self.shape.get_checkpoints()
         self.checkpoints = self.define_parameter('checkpoints', len(checkpoints)*self.n_dim)
         self.rad = self.define_parameter('rad', len(checkpoints))
+
+    # def reset_pos_spline(self, horizon_time):
+    #     # Change horizon time for the motion of the vehicle
+    #     # pos, vel, acc
+    #     x = self.define_parameter('x', self.n_dim)
+    #     v = self.define_parameter('v', self.n_dim)
+    #     a = self.define_parameter('a', self.n_dim)
+    #     # pos, vel, acc at time zero of time horizon
+    #     self.t = self.define_symbol('t')
+    #     self.T = horizon_time
+    #     v0 = v - self.t*a
+    #     x0 = x - self.t*v0 - 0.5*(self.t**2)*a
+    #     a0 = a
+    #     # pos spline over time horizon
+    #     self.pos_spline = [BSpline(self.basis, vertcat(x0[k], 0.5*v0[k]*self.T + x0[k], x0[k] + v0[k]*self.T + 0.5*a0[k]*(self.T**2)))
+    #                        for k in range(self.n_dim)]
 
     def define_collision_constraints(self, hyperplanes):
         raise ValueError('Please implement this method.')
 
     def set_parameters(self, current_time):
         parameters = {self: {}}
-        parameters[self]['x'] = self.signals['position'][:, -1]
-        parameters[self]['v'] = self.signals['velocity'][:, -1]
-        parameters[self]['a'] = self.signals['acceleration'][:, -1]
+        if not self.options['spline_traj']:
+            # 2x1 for each parameter to build the spline
+            parameters[self]['x'] = self.signals['position'][:, -1]
+            parameters[self]['v'] = self.signals['velocity'][:, -1]
+            parameters[self]['a'] = self.signals['acceleration'][:, -1]
+        else:
+            # [n-k-1]x2 for building the spline
+            parameters[self]['traj_coeffs'] = self.options['spline_params']['coeffs']
         checkpoints, rad = self.shape.get_checkpoints()
         parameters[self]['checkpoints'] = np.reshape(checkpoints, (len(checkpoints)*self.n_dim, ))
         parameters[self]['rad'] = rad
@@ -149,17 +203,20 @@ class ObstaclexD(OptiChild):
         time_state = np.array([0.])
         for l, key in enumerate(['position', 'velocity', 'acceleration']):
             for k, time in enumerate(trajectories[key]['time']):
-                index = np.where(time_state == time)[0]
-                if index.size == 0:
-                    time_state = np.r_[time_state, time]
-                    state_k = np.zeros((3*self.n_dim))
-                    state_k[
-                        l*self.n_dim:(l+1)*self.n_dim] += trajectories[key]['values'][:, k]
-                    state = np.c_[state, state_k]
-                else:
-                    index = index[0]
-                    state[
-                        l*self.n_dim:(l+1)*self.n_dim, index] += trajectories[key]['values'][:, k]
+                # the simulation trajectories for time = 0 were already added to initial,
+                # so skip all values for time = 0
+                if time != 0:
+                    index = np.where(time_state == time)[0]
+                    if index.size == 0:
+                        time_state = np.r_[time_state, time]
+                        state_k = np.zeros((3*self.n_dim))
+                        state_k[
+                            l*self.n_dim:(l+1)*self.n_dim] += trajectories[key]['values'][:, k]
+                        state = np.c_[state, state_k]
+                    else:
+                        index = index[0]
+                        state[
+                            l*self.n_dim:(l+1)*self.n_dim, index] += trajectories[key]['values'][:, k]
         ind_sorted = np.argsort(time_state)
         state_incr = np.cumsum(state[:, ind_sorted], axis=1)
         time_state = time_state[ind_sorted]
@@ -232,8 +289,8 @@ class Obstacle2D(ObstaclexD):
     # Optimization modelling related functions
     # ========================================================================
 
-    def init(self):
-        ObstaclexD.init(self)
+    def init(self, horizon_times=None):
+        ObstaclexD.init(self, horizon_times=horizon_times)
         if self.signals['angular_velocity'][:, -1] == 0.:
             self.cos = cos(self.signals['orientation'][:, -1][0])
             self.sin = sin(self.signals['orientation'][:, -1][0])
@@ -403,20 +460,10 @@ class Obstacle2D(ObstaclexD):
                         ### Option2: check for overlapping rectangles###
                         ################################################
                         # Advantage: this also works when no vertices of obstacles are inside each other
+
                         if obstacle.shape.orientation == 0:
-                            [[xmin_obs,xmax_obs],[ymin_obs,ymax_obs]] = obstacle.shape.get_canvas_limits()
-                            [posx,posy]= obstacle.signals['position'][:,-1]
-                            xmin_obs += posx
-                            xmax_obs += posx
-                            ymin_obs += posy
-                            ymax_obs += posy
-                            [[xmin_self,xmax_self],[ymin_self,ymax_self]] = shape_self.get_canvas_limits()
-                            xmin_self += pos_self[0]
-                            xmax_self += pos_self[0]
-                            ymin_self += pos_self[1]
-                            ymax_self += pos_self[1]
-                            if (xmin_self <= xmax_obs and xmax_self >= xmin_obs and
-                                ymin_self <= ymax_obs and ymax_self >= ymin_obs):
+                            if rectangles_overlap(obstacle.shape, obstacle.signals['position'][:,-1],
+                                               shape_self, pos_self):
                                 return True
                         else:
                             raise RuntimeError('Rectangle bouncing with non-zero orientation not yet implemented')

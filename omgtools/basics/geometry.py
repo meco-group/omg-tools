@@ -21,8 +21,13 @@ import numpy as np
 
 
 def distance_between_points(point1, point2):
-        # calculate distance between two points
-        return np.sqrt((point2[0]-point1[0])**2+(point2[1]-point1[1])**2)
+        # calculate distance between two points in kD-space
+        dist = 0
+        if len(point1) != len(point2):
+            raise ValueError('Dimensions of point1 and point2 do not match: ', len(point1), ', ', len(point2))
+        for k in range(len(point1)):
+            dist += (point2[k]-point1[k])**2
+        return np.sqrt(dist)
 
 def distance_to_rectangle(point, rectangle):
     # returns the x- and y-direction distance from point to a rectangle
@@ -96,13 +101,16 @@ def intersect_lines(line1, line2):
     x3, y3= line2[0]
     x4, y4= line2[1]
 
-    intersection_point = [0.,0.]
-    intersection_point[0] = ((x1*y2 - y1*x2)*(x3-x4) - (x1-x2)*(x3*y4-y3*x4))/((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4))
-    intersection_point[1] = ((x1*y2 - y1*x2)*(y3-y4) - (y1-y2)*(x3*y4-y3*x4))/((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4))
-
+    if (((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4)) == 0.):
+        # parallel lines
+        intersection_point = None
+    else:
+        intersection_point = [0.,0.]
+        intersection_point[0] = ((x1*y2 - y1*x2)*(x3-x4) - (x1-x2)*(x3*y4-y3*x4))/((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4))
+        intersection_point[1] = ((x1*y2 - y1*x2)*(y3-y4) - (y1-y2)*(x3*y4-y3*x4))/((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4))
     return intersection_point
 
-def point_in_polyhedron(point, polyhedron_shape, polyhedron_position):
+def point_in_polyhedron(point, polyhedron_shape, polyhedron_position, margin=0):
     # is the point inside the polyhedron?
 
     # for each vertex couple (=side) check if point is at positive side of normal
@@ -111,7 +119,7 @@ def point_in_polyhedron(point, polyhedron_shape, polyhedron_position):
     for idx, hyperplane in hyperplanes.items():
         a = hyperplane['a']
         b = hyperplane['b']
-        if ((a[0]*point[0] + a[1]*point[1] - b) > 0):
+        if ((a[0]*point[0] + a[1]*point[1] - b - margin) > 0):
             return False
     return True
 
@@ -157,3 +165,99 @@ def circle_polyhedron_intersection(circle, polyhedron_shape, polyhedron_position
            (distance_between_points(center, [x4,y4]) <= circle.shape.radius)):
             return True
     return False
+
+def point_in_rectangle(point, rectangle_limits, horizon_time=None, velocity=None, distance=0, xy_check=False):
+        # check if the provided point is inside the provided rectangle
+        # both for stationary or moving points
+        xmin, ymin, xmax, ymax = rectangle_limits
+        # check stationary point
+        if horizon_time is None:
+            if xy_check:
+                # see if point is inside rectangle for separate directions (x and y)
+                result = []
+                if(xmin+distance <= point[0] <= xmax-distance):
+                    result.append(True)
+                else:
+                    result.append(False)
+                if(ymin+distance <= point[1] <= ymax-distance):
+                    result.append(True)
+                else:
+                    result.append(False)
+                return result
+            else:
+                if (xmin+distance <= point[0] <= xmax-distance) and (ymin+distance <= point[1] <= ymax-distance):
+                    return True
+                else:
+                    return False
+        # check moving point
+        elif isinstance(horizon_time, (float, int)):
+            # check at each time_interval seconds
+            time_interval = 0.5
+            # amount of times to check
+            N = int(round(horizon_time/time_interval)+1)
+            # sample time of check
+            Ts = float(horizon_time)/N
+            x, y = point
+            vx, vy = velocity
+            for l in range(N+1):
+                if xmin <= (x+l*Ts*vx) <= xmax and ymin <= (y+l*Ts*vy) <= ymax:
+                    return True
+            return False
+        else:
+            raise RuntimeError('Argument horizon_time was of the wrong type, not None, float or int')
+
+def rectangles_overlap(shape1, pos1, shape2, pos2):
+
+    if shape1.orientation == 0 and shape2.orientation == 0:
+        [[xmin1,xmax1],[ymin1,ymax1]] = shape1.get_canvas_limits()
+        xmin1 += pos1[0]
+        xmax1 += pos1[0]
+        ymin1 += pos1[1]
+        ymax1 += pos1[1]
+        [[xmin2,xmax2],[ymin2,ymax2]] = shape2.get_canvas_limits()
+        xmin2 += pos2[0]
+        xmax2 += pos2[0]
+        ymin2 += pos2[1]
+        ymax2 += pos2[1]
+        if (xmin2 <= xmax1 and xmax2 >= xmin1 and
+            ymin2 <= ymax1 and ymax2 >= ymin1):
+            return True
+        else:
+            return False
+    else:
+        raise RuntimeError('Provided a rectangle with non-zero orientation, this function only supports' +
+                           ' zero orientation')
+
+def compute_rectangle_overlap_center(shape1, pos1, shape2, pos2):
+    # Compute the center of the overlap region of two overlapping rectangles
+    # Note: this function only works for non-rotated rectangles
+
+    [[xmin1,xmax1],[ymin1,ymax1]] = shape1.get_canvas_limits()
+    [[xmin2,xmax2],[ymin2,ymax2]] = shape2.get_canvas_limits()
+
+    xmin1 += pos1[0]
+    xmax1 += pos1[0]
+    ymin1 += pos1[1]
+    ymax1 += pos1[1]
+
+    xmin2 += pos2[0]
+    xmax2 += pos2[0]
+    ymin2 += pos2[1]
+    ymax2 += pos2[1]
+
+    # Check if the rectangles overlap
+    if (xmin2 <= xmax1 and xmax2 >= xmin1 and
+        ymin2 <= ymax1 and ymax2 >= ymin1):
+
+        xmin3 = max(xmin1, xmin2)
+        xmax3 = min(xmax1, xmax2)
+        ymin3 = max(ymin1, ymin2)
+        ymax3 = min(ymax1, ymax2)
+
+        center = [0, 0]
+        center[0] = xmin3 + (xmax3-xmin3)*0.5
+        center[1] = ymin3 + (ymax3-ymin3)*0.5
+        return center
+    else:
+        raise RuntimeError('Trying to compute center of overlap region, but rectangles don\'t overlap')
+

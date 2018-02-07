@@ -29,11 +29,15 @@
 # In the beginning, the first two frames are computed. When the vehicles enters the second frame (which
 # overlaps with the first one), the third frame is computed, and so the method continues.
 
+# When computing the trajectory, only one frame is taken into account. This means that sometimes problems
+# can arise when obstacles are moving behind the corner.
+
 from omgtools import *
 
 # create vehicle
 vehicle = Holonomic(shapes = Circle(radius=2), options={'syslimit': 'norm_2', 'stop_tol': 1.e-2},
                     bounds={'vmax': 10, 'vmin':-10, 'amax':10, 'amin':-10})
+veh_size = vehicle.shapes[0].radius
 
 # create environment
 start = [192.5,32]
@@ -79,32 +83,37 @@ environment.add_obstacle(Obstacle({'position': [150, 210]}, shape=Rectangle(widt
 
 # make global planner
 # [25,25] = number of cells in vertical and horizonal direction
-globalplanner = AStarPlanner(environment, [25,25], start, goal)
+globalplanner = AStarPlanner(environment, [25,25], start, goal, options={'veh_size': veh_size})
 
 # make problem
-options={'freeT': True}
 # one extra setting is the frame_type:
-## 'min_nobs': use frame which is as big as possible, without containing stationary obstacles
+## 'corridor': use frame which is as big as possible, without containing stationary obstacles
 ## 'shift' use frame of fixed size, which is moved when the vehicle comes close to the end point,
 ## this requires an extra setting 'frame_size': select the size of the shifted (square) frame
 
-# Note: When 'min_nobs' is selected and your vehicle size is larger than the cell size,
+# Note: When 'corridor' is selected and your vehicle size is larger than the cell size,
 # shifting frames sometimes causes problems
-multiproblem=MultiFrameProblem(vehicle, environment, globalplanner,
-                               options=options, frame_type='min_nobs')
-# multiproblem=MultiFrameProblem(vehicle, environment, globalplanner,
-                               # options=options, frame_size=150, frame_type='shift')
+# 'n_frames': number of frames to combine when searching for a trajectory
+# 'check_moving_obs_ts': check in steps of ts seconds if a moving obstacle is inside the frame
+# 'frame_type': 'corridor': creates corridors
+	# 'scale_up_fine': tries to scale up the frame in small steps, leading to the largest possible corridor
+	# 'l_shape': cuts off corridors, to obtain L-shapes, and minimize the influence of moving obstacles
+# 'frame_type': 'shift': creates frames of fixed size, around the vehicle
+	# 'frame_size': size of the shifted frame
+options={'freeT': True, 'frame_type': 'corridor', 'scale_up_fine': True}
+# options={'freeT': True, 'frame_type': 'shift', 'frame_size': 150}
+schedulerproblem=SchedulerProblem(vehicle, environment, globalplanner,options=options)
 
 # simulate the problem
-simulator = Simulator(multiproblem)
+simulator = Simulator(schedulerproblem)
 
 # define what you want to plot
-multiproblem.plot('scene')
+schedulerproblem.plot('scene')
 vehicle.plot('input', knots=True, prediction=True, labels=['v_x (m/s)', 'v_y (m/s)'])
 
 # run it!
 simulator.run()
 
 # save plots
-# multiproblem.save_movie('scene', format='gif', name='multiproblem', number_of_frames=100, movie_time=5, axis=False)
-# multiproblem.save_movie('scene', format='tikz', name='multiproblemtikz', number_of_frames=100, movie_time=5, axis=False)
+schedulerproblem.save_movie('scene', format='gif', name='multiproblem', number_of_frames=150, movie_time=15, axis=False)
+# schedulerproblem.save_movie('scene', format='tikz', name='multiproblemtikz', number_of_frames=100, movie_time=5, axis=False)
