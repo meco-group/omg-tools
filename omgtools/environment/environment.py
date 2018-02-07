@@ -18,11 +18,12 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from ..basics.optilayer import OptiChild
-from ..basics.spline import BSplineBasis
+from ..basics.spline import BSplineBasis, BSpline
 from ..execution.plotlayer import PlotLayer, mix_with_white
 from obstacle import Obstacle
 from casadi import inf
 import numpy as np
+import warnings
 
 
 class Environment(OptiChild, PlotLayer):
@@ -77,7 +78,12 @@ class Environment(OptiChild, PlotLayer):
             for obst in obstacle:
                 self.add_obstacle(obst)
         else:
-            if obstacle.n_dim != self.n_dim:
+            if obstacle.n_dim == 2 and self.n_dim == 3:
+                warnings.warn('You are combining a 2D obstacle with ' +
+                                'a 3D environment. The 2D obstacle is transformed ' +
+                                ' to a 3D one by extending it infinitely in ' +
+                                'z dimension.')
+            if obstacle.n_dim == 3 and self.n_dim == 2:
                 raise ValueError('Not possible to combine ' +
                                  str(obstacle.n_dim) + 'D obstacle with ' +
                                  str(self.n_dim) + 'D environment.')
@@ -125,12 +131,16 @@ class Environment(OptiChild, PlotLayer):
                         if obstacle not in hyp_obs:
                             hyp_obs[obstacle] = []
                         a = self.define_spline_variable(
-                            'a'+'_'+vehicle.label+'_'+'seg'+str(idx)+'_'+str(k)+str(l), self.n_dim, basis=basis)
+                            'a'+'_'+vehicle.label+'_'+'seg'+str(idx)+'_'+str(k)+str(l), obstacle.n_dim, basis=basis)
                         b = self.define_spline_variable(
                             'b'+'_'+vehicle.label+'_'+'seg'+str(idx)+'_'+str(k)+str(l), 1, basis=basis)[0]
                         self.define_constraint(
-                            sum([a[p]*a[p] for p in range(self.n_dim)])-1, -inf, 0.)
-                        hyp_veh[shape].append({'a': a, 'b': b})
+                            sum([a[p]*a[p] for p in range(obstacle.n_dim)])-1, -inf, 0.)
+                        if self.n_dim == 3 and obstacle.n_dim == 2:
+                            a2 = [a[0], a[1], BSpline(basis, np.zeros(len(basis)))]
+                            hyp_veh[shape].append({'a': a2, 'b': b})
+                        else:
+                            hyp_veh[shape].append({'a': a, 'b': b})
                         hyp_obs[obstacle].append({'a': a, 'b': b})
                         obstacle.define_collision_constraints(hyp_obs[obstacle])
             vehicle.define_collision_constraints(hyp_veh, room, splines[idx], horizon_times[idx])
@@ -329,6 +339,11 @@ class Environment(OptiChild, PlotLayer):
                 lines += l
         for obstacle in self.obstacles:
             s, l = obstacle.draw(t)
+            if self.n_dim == 3 and obstacle.n_dim == 2:
+                for k in range(len(s)):
+                    s[k] = np.vstack((s[k], np.zeros((1, s[k].shape[1]))))
+                for k in range(len(l)):
+                    l[k] = np.vstack((l[k], np.zeros((1, l[k].shape[1]))))
             surfaces += s
             lines += l
         return surfaces, lines
