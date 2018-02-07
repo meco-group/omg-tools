@@ -462,11 +462,11 @@ class EnvironmentGUI(tk.Frame):
             # obstacle position is saved in world coordinates [m], convert to pixels to plot
             obs_pos = self.world_to_pixel(obs['pos'])
             if obs['shape'] == 'rectangle':
-                self.canvas.create_rectangle(obs_pos[0]-obs['width']*self.meter_to_pixel*0.5, obs_pos[1]-obs['height']*self.meter_to_pixel*0.5,
+                obs['variable'] = self.canvas.create_rectangle(obs_pos[0]-obs['width']*self.meter_to_pixel*0.5, obs_pos[1]-obs['height']*self.meter_to_pixel*0.5,
                                              obs_pos[0]+obs['width']*self.meter_to_pixel*0.5, obs_pos[1]+obs['height']*self.meter_to_pixel*0.5,
                                              fill="black")
             elif obs['shape'] == 'circle':
-                self.canvas.create_circle(obs_pos[0], obs_pos[1], obs['radius']*self.meter_to_pixel, fill="black")
+                obs['variable'] = self.canvas.create_circle(obs_pos[0], obs_pos[1], obs['radius']*self.meter_to_pixel, fill="black")
 
     def load_svg(self):
         # show a popup window to let the user select an environment defined as an svg-figure
@@ -479,7 +479,25 @@ class EnvironmentGUI(tk.Frame):
                 return
 
         self.reader.init(data)  # load the figure
-        self.reader.build_environment()  # save obstacles in figure
+
+        self.to_gcode = None
+        while self.to_gcode is None:
+            self.window_m2p=popupWindow(self.root, 'Do you want to convert your .svg to GCode (yes/no)?')
+            self.root.wait_window(self.window_m2p.top)
+            try:
+                self.to_gcode = self.window_m2p.value
+            except:
+                print 'Please fill in yes or no'
+            if not self.to_gcode in ['yes', 'no'] :
+                self.to_gcode = None
+                print 'Please fill in yes or no'
+        if self.to_gcode == 'yes':
+            self.reader.compute_transform()  # assigns values to self.transform
+            self.reader.get_gcode_description()  # convert .svg to .nc
+            print 'Translation from .svg to GCode ready! Check for your_file_name.nc'
+            return
+        else:
+            self.reader.build_environment()  # save obstacles in figure
 
         if not hasattr(self.reader, 'meter_to_pixel'):
             # give pop-up to ask user for meter_to_pixel conversion factor
