@@ -218,13 +218,15 @@ class Vehicle(OptiChild, PlotLayer):
                             sum([a[k]*(chck[k]+position[k]) for k in range(3)])-b+rad[l], -inf, 0)
             # room constraints
             if self.options['room_constraints']:
-                room_lim = room['shape'].get_canvas_limits()
+                lims = room['shape'].get_canvas_limits()
+                room_limits = []
+                room_limits += [lims[k]+room['position'][k] for k in range(self.n_dim)]
                 for chck in checkpoints:
                     for k in range(3):
                         self.define_constraint(-
-                                               (chck[k]+position[k]) + room_lim[k][0], -inf, 0.)
+                                               (chck[k]+position[k]) + room_limits[k][0], -inf, 0.)
                         self.define_constraint(
-                            (chck[k]+position[k]) - room_lim[k][1], -inf, 0.)
+                            (chck[k]+position[k]) - room_limits[k][1], -inf, 0.)
 
     def get_fleet_center(self, splines, rel_pos, substitute=True):
         if substitute:
@@ -295,10 +297,10 @@ class Vehicle(OptiChild, PlotLayer):
 
     def predict(self, current_time, predict_time, sample_time, state0=None, input0=None, dinput0=None, delay=0, enforce_states=False, enforce_inputs=False):
         if enforce_states and enforce_inputs:
-            if not all(l is None for l in [state0, input0, dinput0]):
+            if all(l is not None for l in [state0, input0, dinput0]):
                 # all three have a value, and are not None
                 self.set_initial_conditions(state0, input=input0, dinput=dinput0)
-            elif not all(l is None for l in [state0, input0]):
+            elif all(l is not None for l in [state0, input0]):
                 # all two have a value and are not None
                 self.set_initial_conditions(state0, input=input0)
             else:

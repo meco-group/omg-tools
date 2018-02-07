@@ -107,11 +107,8 @@ class Simulator:
         self.current_time += update_time
         n_samp = int(np.round(update_time/self.sample_time, 6))
         # n_samp = max(0, int(np.round(update_time/self.sample_time, 6)))
-        try:
-            self.time = np.r_[self.time, np.linspace(
-                self.time[-1]+self.sample_time, self.time[-1]+n_samp*self.sample_time, n_samp)]
-        except Exception as exc:
-            import pdb; pdb.set_trace()  # breakpoint bbb45235x //
+        self.time = np.r_[self.time, np.linspace(
+            self.time[-1]+self.sample_time, self.time[-1]+n_samp*self.sample_time, n_samp)]
 
     def run_once(self, simulate=True, **kwargs):
         if 'hard_stop' in kwargs:
