@@ -11,6 +11,7 @@ images/*
 export*
 data/*
 lvd/*
+dronekit_example/*
 .*
 !.gitignore
 !.travis.yml
