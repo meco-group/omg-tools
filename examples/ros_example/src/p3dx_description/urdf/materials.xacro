@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 
-<!-- 
+<!--
 These are some material descriptions of the Pioneer 3DX.
 Copyright (C) 2013 Rafael Berkvens rafael.berkvens@uantwerpen.be
 
@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 This project is based on work by Tracy Davies, where it was in turn based on
 work original in ucs-ros-pkg.
  -->
- 
+
 <robot>
 
 	<material name="ChassisRed">
