@@ -287,7 +287,7 @@ class Export(object):
         code.update(self._create_updateBounds(father, point2point))
         code.update(self._create_initSplines(father, problem))
         code.update(self._create_transformSplines(father, problem, point2point))
-        code.update(self._create_fillParameterDict(father))
+        code.update(self._create_fillParameterDict(father, problem))
         return code
 
     def _create_generateSubstituteFunctions(self, father):
@@ -442,7 +442,7 @@ class Export(object):
                           'not implemented (yet?).')
         return {'transformSplines': code}
 
-    def _create_fillParameterDict(self, father):
+    def _create_fillParameterDict(self, father, problem):
         code = ''
         obst_ind = 0
         classic_obst_present = False
@@ -473,8 +473,8 @@ class Export(object):
                 code += '\n'
                 obst_ind += 1
             if 'environment' in label:
-                for idx, room in enumerate(self.problem.environment.room):
+                for idx, room in enumerate(problem.environment.room):
                     lims = room['shape'].get_canvas_limits()
-                    for k in range(self.problem.environment.n_dim):
+                    for k in range(problem.environment.n_dim):
                         code += '\tpar_dict["'+label+'"]["room_'+str(idx)+'_limits_'+str(k)+'"] = {' + str(lims[k][0]+room['position'][k]) + ',' + str(lims[k][1]+room['position'][k]) + '};\n'
         return {'fillParameterDict': code}

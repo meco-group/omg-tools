@@ -115,5 +115,3 @@ plt.plot(time, input_traj[1, :])
 
 plt.figure()
 plt.plot(state_traj[0, :], state_traj[1, :])
-
-plt.show(block=True)
