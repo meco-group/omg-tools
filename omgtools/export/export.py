@@ -472,4 +472,9 @@ class Export(object):
                 code += '\tpar_dict["'+label+'"]["rad"] = obstacles['+str(obst_ind)+'].radii;\n'
                 code += '\n'
                 obst_ind += 1
+            if 'environment' in label:
+                for idx, room in enumerate(self.problem.environment.room):
+                    lims = room['shape'].get_canvas_limits()
+                    for k in range(self.problem.environment.n_dim):
+                        code += '\tpar_dict["'+label+'"]["room_'+str(idx)+'_limits_'+str(k)+'"] = {' + str(lims[k][0]+room['position'][k]) + ',' + str(lims[k][1]+room['position'][k]) + '};\n'
         return {'fillParameterDict': code}

@@ -190,7 +190,6 @@ class Deployer:
             self.problem.no_update = False
         elif not self.problem.local_problem.problem.stats()['return_status'] == 'Solve_Succeeded':
             # problem was not solved well, don't go to next segment
-            import pdb; pdb.set_trace()  # breakpoint f9e5f88a //
             self.problem.no_update = True
             # reset saved trajectories
             # i.e. trajectories starting at the starting point of trajectory that was not successfully computed
