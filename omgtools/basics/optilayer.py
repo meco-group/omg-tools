@@ -335,6 +335,14 @@ class OptiFather(object):
         else:
             self._var_result[child.label, name] = variables
 
+    def set_dual_variables(self, variables, child=None, name=None):
+        if child is None:
+            self._dual_var_result = self._con_struct(variables)
+        elif name is None:
+            self._dual_var_result[child.label] = variables
+        else:
+            self._dual_var_result[child.label, name] = variables
+
     def get_variables(self, child=None, name=None, **kwargs):
         if child is None:
             return self._var_result
@@ -374,6 +382,12 @@ class OptiFather(object):
                     return child._variables[name]
                 else:
                     return np.array(self._var_result[child.label, name])
+
+    def get_dual_variables(self, child=None, name=None, **kwargs):
+        if child is None:
+            return self._dual_var_result
+        else:
+            raise RuntimeError('Error dual variables')
 
     def get_parameters(self, child=None, name=None, **kwargs):
         if child is None:
