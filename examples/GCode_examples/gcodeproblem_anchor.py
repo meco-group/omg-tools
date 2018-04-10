@@ -46,13 +46,13 @@ split_small = 0.1
 split_length = 6.
 # split_circle: split large circle segments in smaller ones to avoid shortcuts in the trajectory
 split_circle = True
-bounds = {'vmin':-1e3, 'vmax':1e3,
+bounds = {'vmin':-150, 'vmax':150,
           'amin':-20e3, 'amax':20e3,
-          'jmin':-850e3, 'jmax':850e3}  # [mm]
+          'jmin':-1500e3, 'jmax':1500e3}  # [mm]
 # vel_limit: if the limiting factor is the machining process, put 'machining'
 # if the limiting factor is the velocity of the axes themselves, put: 'axes'
 tool = Tool(tol, bounds=bounds, options={'vel_limit':'machining','variable_tolerance':variable_tolerance}, tol_small=tol_small)  # tool to follow the GCode
-tool.define_knots(knot_intervals=10)
+tool.define_knots(knot_intervals=20)
 tool.set_initial_conditions(GCode[0].start)  # start position of first GCode block
 tool.set_terminal_conditions(GCode[-1].end)  # goal position of last GCode block
 
