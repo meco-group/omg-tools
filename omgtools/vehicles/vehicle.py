@@ -159,15 +159,15 @@ class Vehicle(OptiChild, PlotLayer):
             # then decide on type of constraints to use:
             # room_limits or hyperplanes
             if self.options['room_constraints']:
-                lims = room['shape'].get_canvas_limits()
-                room_limits = []
-                room_limits += [lims[k]+room['position'][k] for k in range(self.n_dim)]
                 if ((isinstance(room['shape'], (Rectangle, Square)) and
                     room['shape'].orientation == 0.0) and
                     (isinstance(shape, Circle) or
                     (isinstance(shape, (Rectangle, Square)) and
                      shape.orientation == 0)) and
                     (isinstance(tg_ha, (int, float, long)) and tg_ha == 0.)):
+
+                    room_limits = [self.define_symbol('room_%d_limits_%d' % (room['id'], k), 2) for k in range(self.n_dim)]
+
                     for chck in checkpoints:
                         for k in range(self.n_dim):
                             self.define_constraint(-(chck[k]+position[k]) + room_limits[k][0] + rad[0], -inf, 0.)
@@ -218,9 +218,8 @@ class Vehicle(OptiChild, PlotLayer):
                             sum([a[k]*(chck[k]+position[k]) for k in range(3)])-b+rad[l], -inf, 0)
             # room constraints
             if self.options['room_constraints']:
-                lims = room['shape'].get_canvas_limits()
-                room_limits = []
-                room_limits += [lims[k]+room['position'][k] for k in range(self.n_dim)]
+                room_limits = [self.define_symbol('room_%d_limits_%d' % (room['id'], k), 2) for k in range(self.n_dim)]
+
                 for chck in checkpoints:
                     for k in range(3):
                         self.define_constraint(-

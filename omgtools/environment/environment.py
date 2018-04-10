@@ -143,6 +143,11 @@ class Environment(OptiChild, PlotLayer):
                             hyp_veh[shape].append({'a': a, 'b': b})
                         hyp_obs[obstacle].append({'a': a, 'b': b})
                         obstacle.define_collision_constraints(hyp_obs[obstacle])
+
+            for k in range(self.n_dim):
+                self.define_parameter('room_%d_limits_%d' % (idx, k), 2)
+            room['id'] = idx
+
             vehicle.define_collision_constraints(hyp_veh, room, splines[idx], horizon_times[idx])
 
     def define_intervehicle_collision_constraints(self, vehicles, horizon_times):
@@ -329,6 +334,14 @@ class Environment(OptiChild, PlotLayer):
                     obstacle.signals['velocity'][:,-1] = vel_new
             obstacle.simulate(simulation_time, sample_time)
         self.update_plots()
+
+    def set_parameters(self, current_time):
+        parameters = {self: {}}
+        for idx, room in enumerate(self.room):
+            lims = room['shape'].get_canvas_limits()
+            for k in range(self.n_dim):
+                parameters[self]['room_%d_limits_%d' % (idx, k)] = lims[k]+room['position'][k]
+        return parameters
 
     def draw(self, t=-1):
         surfaces, lines = [], []
