@@ -62,12 +62,13 @@ class SchedulerProblem(Problem):
         self.margin = 1.1
 
         # assign global planner
-        if global_planner is not None:
-            # save the provided planner
-            self.global_planner = global_planner
-        else:
-            # make a default global planner
-            self.global_planner = AStarPlanner(environment, [20, 20], self.curr_state, self.goal_state)
+        self.global_planner = None
+        # if global_planner is not None:
+        #     # save the provided planner
+        #     self.global_planner = global_planner
+        # else:
+        #     # make a default global planner
+        #     self.global_planner = AStarPlanner(environment, [20, 20], self.curr_state, self.goal_state)
 
         # frame settings
         self.frames = []
@@ -88,14 +89,15 @@ class SchedulerProblem(Problem):
             # scale up frame with small steps or not
             self.scale_up_fine = options['scale_up_fine'] if 'scale_up_fine' in options else True
             self.l_shape = options['l_shape'] if 'l_shape' in options else False
-        # check if vehicle size is larger than the cell size
-        n_cells = self.global_planner.grid.n_cells
-        if (size_to_check >= (min(environment.room[0]['shape'].width/float(n_cells[0]), \
-                                  environment.room[0]['shape'].height/float(n_cells[1])))
-           and self.frame_type == 'corridor'):
-            warnings.warn('Vehicle is bigger than one cell, this may cause problems' +
-                          ' when switching frames. Consider reducing the amount of cells or reducing' +
-                          ' the size of the vehicle')
+        if self.global_planner is not None:
+            # check if vehicle size is larger than the cell size
+            n_cells = self.global_planner.grid.n_cells
+            if (size_to_check >= (min(environment.room[0]['shape'].width/float(n_cells[0]), \
+                                      environment.room[0]['shape'].height/float(n_cells[1])))
+               and self.frame_type == 'corridor'):
+                warnings.warn('Vehicle is bigger than one cell, this may cause problems' +
+                              ' when switching frames. Consider reducing the amount of cells or reducing' +
+                              ' the size of the vehicle')
 
     def init(self):
         # otherwise the init of Problem is called, which is not desirable
@@ -104,17 +106,29 @@ class SchedulerProblem(Problem):
     def initialize(self, current_time):
         self.local_problem.initialize(current_time)
 
+    def set_global_path(self, global_path):
+        self.global_path = global_path
+        self.global_path.append(self.goal_state[:2])
+
+    def set_moving_obstacles(self, moving_obstacles):
+        self.moving_obstacles = moving_obstacles
+        self.moving_obstacles_changed = True
+
     def reinitialize(self):
         # this function is called at the start and creates the first frame
 
-        self.global_path = self.global_planner.get_path()
-        # plot grid and global path
-        self.global_planner.grid.draw()
-        self.global_planner.plot_path(self.global_path)
-        # append goal state to waypoints of global path,
-        # since desired goal is not necessarily a waypoint
-        # remove orientation info, since this is not relevant for the global path
-        self.global_path.append(self.goal_state[:2])
+        if self.global_planner is not None:
+            self.global_path = self.global_planner.get_path()
+            # plot grid and global path
+            self.global_planner.grid.draw()
+            self.global_planner.plot_path(self.global_path)
+            # append goal state to waypoints of global path,
+            # since desired goal is not necessarily a waypoint
+            # remove orientation info, since this is not relevant for the global path
+            self.global_path.append(self.goal_state[:2])
+
+        elif not hasattr(self, 'global_path'):
+            raise ValueError('Global path not set!')
 
         # fill in self.frames, according to self.n_frames
         self.create_frames()
@@ -122,10 +136,13 @@ class SchedulerProblem(Problem):
         # get initial guess (based on global path), get motion time, for all frames
         init_guess, self.motion_times = self.get_init_guess()
 
-        # get moving obstacles inside frame, taking into account the calculated motion time
-        for idx, frame in enumerate(self.frames):
-            # updates self.frames[:]['moving_obstacles']
-            frame.moving_obstacles = frame.get_moving_obstacles(self.motion_times[idx])
+        if not hasattr(self, 'moving_obstacles'):
+            # get moving obstacles inside frame, taking into account the calculated motion time
+            for idx, frame in enumerate(self.frames):
+                # updates self.frames[:]['moving_obstacles']
+                frame.moving_obstacles = frame.get_moving_obstacles(self.motion_times[idx])
+        else:
+            self.moving_obstacles_changed = False
 
         # get a problem representation of the frames
         # the schedulerproblem (self) has a local problem (multiframeproblem) at each moment
@@ -148,18 +165,30 @@ class SchedulerProblem(Problem):
         frames_valid = self.check_frames()
         if not frames_valid:
             self.cnt += 1  # count frame
-
             # frames were not valid anymore, update based on current position
 
+            n_frames_prev = self.n_frames
+
             # if n_frames=1, we need self.next_frame
-            if (self.n_frames == 1 and
-                hasattr(self, 'next_frame')):
+            if (self.n_frames == 1 and hasattr(self, 'next_frame')):
                 self.update_frames(next_frame=self.next_frame)
             else:
                 self.update_frames()
 
-            # transform frames into local_problem and simulate
-            self.local_problem = self.generate_problem()
+            if hasattr(self, 'moving_obstacles'):
+                if self.moving_obstacles_changed:
+                    # transform frames into local_problem and simulate
+                    self.local_problem = self.generate_problem()
+                    self.moving_obstacles_changed = False
+                elif n_frames_prev == self.n_frames:
+                    # update room based on updated frames
+                    self.local_problem = self.update_room(self.local_problem)
+                else:
+                    # transform frames into local_problem and simulate
+                    self.local_problem = self.generate_problem()
+            else:
+                # transform frames into local_problem and simulate
+                self.local_problem = self.generate_problem()
             # update_frames() updates self.motion_times and self.init_guess
             self.local_problem.reset_init_guess(self.init_guess)
         else:
@@ -179,14 +208,19 @@ class SchedulerProblem(Problem):
             # if moving_obstacles is different from the existing moving_obstacles (new obstacle,
             # or disappeared obstacle) make a new problem
             new_problem = False
-            for idx, frame in enumerate(self.frames):
-                moving_obs_in_frame = frame.get_moving_obstacles(self.motion_times[idx])
-                if set(moving_obs_in_frame) != set(frame.moving_obstacles):
-                    # the amount of moving obstacles changed, or there is a new obstacle
+            if hasattr(self, 'moving_obstacles'):
+                if self.moving_obstacles_changed:
                     new_problem = True
-                    frame.moving_obstacles = moving_obs_in_frame
-                else:
-                    new_problem = False
+                    self.moving_obstacles_changed = False
+            else:
+                for idx, frame in enumerate(self.frames):
+                    moving_obs_in_frame = frame.get_moving_obstacles(self.motion_times[idx])
+                    if set(moving_obs_in_frame) != set(frame.moving_obstacles):
+                        # the amount of moving obstacles changed, or there is a new obstacle
+                        new_problem = True
+                        frame.moving_obstacles = moving_obs_in_frame
+                    else:
+                        new_problem = False
             if new_problem:
                 # new moving obstacle in one of the frames or obstacle disappeared from frame
                 # np.array converts DM to array
@@ -435,8 +469,9 @@ class SchedulerProblem(Problem):
 
         start_time = time.time()
 
-        self.global_path = self.global_planner.get_path(start=self.curr_state, goal=self.goal_state)
-        self.global_path.append(self.goal_state[:2])  # append goal state to path, remove orientation info
+        if self.global_planner is not None:
+            self.global_path = self.global_planner.get_path(start=self.curr_state, goal=self.goal_state)
+            self.global_path.append(self.goal_state[:2])  # append goal state to path, remove orientation info
 
         # make new frame
         if next_frame is not None:
@@ -468,9 +503,10 @@ class SchedulerProblem(Problem):
         # analogously for the motion_times
         self.init_guess, self.motion_times = self.get_init_guess()
 
-        # get moving obstacles inside frame for this time
-        for idx, frame in enumerate(self.frames):
-            frame.moving_obstacles = frame.get_moving_obstacles(self.motion_times[idx])
+        if not hasattr(self, 'moving_obstacles'):
+            # get moving obstacles inside frame for this time
+            for idx, frame in enumerate(self.frames):
+                frame.moving_obstacles = frame.get_moving_obstacles(self.motion_times[idx])
 
         end_time = time.time()
         if self.options['verbose'] >= 2:
@@ -707,9 +743,12 @@ class SchedulerProblem(Problem):
             room.append(new_room)
         environment = Environment(room=room)
 
-        for k in range(self.n_frames):
-            obstacles = self.frames[k].stationary_obstacles+self.frames[k].moving_obstacles
-            environment.fill_room(room[k], obstacles)
+        if hasattr(self, 'moving_obstacles'):
+            environment.add_obstacle(self.moving_obstacles)
+        else:
+            for k in range(self.n_frames):
+                obstacles = self.frames[k].stationary_obstacles+self.frames[k].moving_obstacles
+                environment.fill_room(room[k], obstacles)
 
         # create problem
         problem_options = {}
@@ -722,6 +761,16 @@ class SchedulerProblem(Problem):
             problem = MultiFrameProblem(self.vehicles, environment, n_frames=self.n_frames)
         problem.set_options({'solver_options': self.options['solver_options']})
         problem.init()
+        # reset the current_time, to ensure that predict uses the provided
+        # last input of previous problem and vehicle velocity is kept from one frame to another
+        problem.initialize(current_time=0.)
+        return problem
+
+    def update_room(self, problem):
+        # update room of problem conform new frames
+        for k in range(self.n_frames):
+            problem.environment.room[k]['shape'] = self.frames[k].border['shape']
+            problem.environment.room[k]['position'] = self.frames[k].border['position']
         # reset the current_time, to ensure that predict uses the provided
         # last input of previous problem and vehicle velocity is kept from one frame to another
         problem.initialize(current_time=0.)
