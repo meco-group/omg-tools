@@ -46,7 +46,6 @@ class Shape2D(Shape):
     def draw(self, pose=np.zeros(3)):
         return [np.c_[pose[:2]] + self.rotate(pose[2], surf) for surf in self.surfaces], []
 
-
 class Circle(Shape2D):
 
     def __init__(self, radius):

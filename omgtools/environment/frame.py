@@ -530,7 +530,7 @@ class CorridorFrame(Frame):
         self.scale_up_frame()
 
         # possibly the last waypoint is not reachable by the vehicle, fix this
-        self.make_last_waypoint_reachable( method='move_point')
+        self.make_last_waypoint_reachable(method='move_point')
 
         # finish frame description
         # frame['border'] is already determined
