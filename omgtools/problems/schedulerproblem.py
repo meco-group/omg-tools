@@ -62,7 +62,7 @@ class SchedulerProblem(Problem):
         self.margin = 1.1
 
         # assign global planner
-        self.global_planner = None
+        self.global_planner = global_planner
         # if global_planner is not None:
         #     # save the provided planner
         #     self.global_planner = global_planner
