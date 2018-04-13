@@ -51,7 +51,7 @@ globalplanner = AStarPlanner(environment, [25, 25], start, goal, options={'veh_s
 waypoints = globalplanner.get_path()
 
 # make schedular problem to generate trajectories localy through n frames
-options = {'freeT': True, 'frame_type': 'corridor', 'scale_up_fine': True, 'n_frames': 1, 'fixed_problem_size': True}
+options = {'freeT': True, 'frame_type': 'corridor', 'scale_up_fine': True, 'n_frames': 1}
 schedulerproblem = SchedulerProblem(vehicle, environment, None, options=options)
 
 schedulerproblem.set_global_path(waypoints)
