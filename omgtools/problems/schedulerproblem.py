@@ -39,7 +39,7 @@ class SchedulerProblem(Problem):
     def __init__(self, fleet, environment, global_planner=None, options=None, **kwargs):
         Problem.__init__(self, fleet, environment, options, label='schedulerproblem')
         self.curr_state = self.vehicles[0].prediction['state'] # initial vehicle position
-        # self.goal_state = self.vehicles[0].poseT # overall goal
+        self.goal_state = self.vehicles[0].poseT # overall goal
         self.problem_options = options  # e.g. selection of problem type (freeT, fixedT)
         if not 'freeT' in options:
             # select default type
@@ -109,6 +109,7 @@ class SchedulerProblem(Problem):
     def set_global_path(self, global_path):
         self.global_path = global_path
         self.global_path.append(self.vehicles[0].poseT[:2])
+        self.goal_state = self.vehicles[0].poseT
 
     def set_moving_obstacles(self, moving_obstacles):
         self.moving_obstacles = moving_obstacles
@@ -169,7 +170,7 @@ class SchedulerProblem(Problem):
 
             n_frames_prev = self.n_frames
 
-            # if n_frames=1, we need self.next_frame
+            # if n_frames=1, we need self.next_framed
             if (self.n_frames == 1 and hasattr(self, 'next_frame')):
                 self.update_frames(next_frame=self.next_frame)
             else:
@@ -272,7 +273,7 @@ class SchedulerProblem(Problem):
 
     def stop_criterium(self, current_time, update_time):
         # check if the current frame is the last one
-        if self.frames[-1].endpoint == self.vehicles[0].poseT[:2]:  # remove orientation info
+        if self.frames[-1].endpoint == self.goal_state[:2]:  # remove orientation info
             # if we now reach the goal, the vehicle has arrived
             if self.local_problem.stop_criterium(current_time, update_time):
                 return True
@@ -367,7 +368,7 @@ class SchedulerProblem(Problem):
         # frame of fixed size
         for k in range(n_frames_to_create):
             # check if previously created frame was last one
-            if frame and frame.waypoints[-1] == self.vehicles[0].poseT[:2]:  # remove orientation info
+            if frame and frame.waypoints[-1] == self.goal_state[:2]:  # remove orientation info
                 # reduce amount of frames that are considered and stop loop
                 self.n_frames -= 1
                 break
@@ -420,7 +421,7 @@ class SchedulerProblem(Problem):
         if frame is None:
             frame = self.frames[0]
 
-        if not frame.endpoint == self.vehicles[0].poseT[:2]:  # remove orientation info
+        if not frame.endpoint == self.goal_state[:2]:  # remove orientation info
             start = time.time()
             start_position = frame.endpoint  # start at end of current frame
             if frame.type is 'shift':
@@ -441,7 +442,7 @@ class SchedulerProblem(Problem):
     def check_frames(self):
         # if final goal is not in the current frame, compare current distance
         # to the local goal with the initial distance
-        if not self.frames[0].point_in_frame(self.vehicles[0].poseT[:2]):
+        if not self.frames[0].point_in_frame(self.goal_state[:2]):
             if (self.n_frames == 1 and hasattr(self, 'next_frame')):
                 if self.next_frame.point_in_frame(self.curr_state[:2], distance=self.veh_size):
                     # only called if self.n_frames = 1,
@@ -470,8 +471,8 @@ class SchedulerProblem(Problem):
         start_time = time.time()
 
         if self.global_planner is not None:
-            self.global_path = self.global_planner.get_path(start=self.curr_state, goal=self.vehicles[0].poseT)
-            self.global_path.append(self.vehicles[0].poseT[:2])  # append goal state to path, remove orientation info
+            self.global_path = self.global_planner.get_path(start=self.curr_state, goal=self.goal_state)
+            self.global_path.append(self.goal_state[:2])  # append goal state to path, remove orientation info
 
         # make new frame
         if next_frame is not None:
@@ -562,8 +563,8 @@ class SchedulerProblem(Problem):
             self.vehicles[0].set_initial_conditions(self.curr_state)
         # if Dubins vehicle, add orientation 0
         if isinstance(self.vehicles[0], Dubins):
-            if self.frames[-1].waypoints[-1] == self.vehicles[0].poseT[:2]:
-                self.vehicles[0].set_terminal_conditions(self.vehicles[0].poseT)  # setting goal for final frame
+            if self.frames[-1].waypoints[-1] == self.goal_state[:2]:
+                self.vehicles[0].set_terminal_conditions(self.goal_state)  # setting goal for final frame
             else:
                 if hasattr(self, 'next_frame'):
                     # use last waypoint from current and first waypoint
