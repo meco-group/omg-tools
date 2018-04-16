@@ -322,6 +322,7 @@ class Vehicle(OptiChild, PlotLayer):
             for key in self.trajectories:
                 if key not in ['state', 'input', 'pose']:
                     self.prediction[key] = self.trajectories[key][:, n_samp+delay]
+
             input = self.trajectories['input'][:, delay:]
             if state0 is None:
                 state0 = self.signals['state'][:, -n_samp-1]  # current state
@@ -412,8 +413,13 @@ class Vehicle(OptiChild, PlotLayer):
         # make interpolation function which returns the input at a certain time
         time_interp = np.linspace(
             0., (input.shape[1]-1)*sample_time, input.shape[1])
-        input_interp = interp1d(time_interp, input, kind='linear',
-                                bounds_error=False, fill_value=input[:, -1])
+        if input.shape[1] == 1:
+            input_interp = interp1d(np.r_[time_interp, time_interp[-1]+sample_time], np.c_[input, input[:,-1]], kind='linear',
+                                    bounds_error=False, fill_value=input[:, -1])
+        else:
+            input_interp = interp1d(time_interp, input, kind='linear',
+                                    bounds_error=False, fill_value=input[:, -1])
+
         state = odeint(ode, state0, time_axis, args=(input_interp,)).T
         return state
 
