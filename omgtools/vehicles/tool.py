@@ -207,27 +207,21 @@ class Tool(Vehicle):
             # we have a diagonal line segment
 
             # in that case for any point [x, y] on the (infinite) line, the following equation must hold:
-            # y = ax+b
-            # and y - ax - b = 0
-            # with a = the slope, and b = the offset
-            # then we can relax this to <= tol and >= tol
 
-            # Todo: constraint imposes that position must lie somewhere on the connection,
-            # not that it must lie between start and end. Improve by using hyperplanes?
+            # -tol <= a'*q - b <= tol
+            # with b the offset,a the normalized normal vector, and q = [x,y]'
 
             x1, y1, z1 = segment['start']
             x2, y2, z2 = segment['end']
             tolerance = segment['shape'].height*0.5
-            if x1 != x2:
-                a = (y2-y1)/(x2-x1)
-            else:
-                # should never come here, since this case would evaluate to True for the first if-check
-                raise ValueError('Trying to compute the slope of a vertical line,'
-                               + ' impose constraints with alternative formulation')
-            b = y1 - x1*a
 
-            self.define_constraint(a*position[0] + b - position[1] - tolerance + rad[0], -inf, 0.)
-            self.define_constraint(-a*position[0] - b + position[1] - tolerance + rad[0], -inf, 0.)
+            vector = [x2-x1, y2-y1]  # vector from end to start
+            a = np.array([-vector[1],vector[0]])*(1/np.sqrt(vector[0]**2+vector[1]**2))  # normalized normal vector
+            b = np.dot(a,np.array([x1, y1]))  # offset
+
+            self.define_constraint(a[0]*position[0] + a[1]*position[1] - b - tolerance + rad[0], -inf, 0.)
+            self.define_constraint(-a[0]*position[0] - a[1]*position[1] + b - tolerance + rad[0], -inf, 0.)
+
         elif (isinstance(segment['shape'], (Ring)) and
             (isinstance(shape, Circle))):
             # we have a Ring/Circle segment
