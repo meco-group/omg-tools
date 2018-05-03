@@ -118,6 +118,8 @@ class SchedulerProblem(Problem):
     def reinitialize(self):
         # this function is called at the start and creates the first frame
 
+        self.iteration0 = True
+
         if self.global_planner is not None:
             self.global_path = self.global_planner.get_path()
             # plot grid and global path
@@ -154,6 +156,8 @@ class SchedulerProblem(Problem):
     def solve(self, current_time, update_time):
         # solve the local problem with a receding horizon,
         # and update frames if necessary
+
+        self.iteration0 = False
 
         # update current state
         if not hasattr(self.vehicles[0], 'signals'):
@@ -351,7 +355,7 @@ class SchedulerProblem(Problem):
 
         start_time = time.time()
 
-        if self.frames:
+        if not self.iteration0:
             # already computed frames before, end up here because frame[0] was not valid anymore
             # shift all frames forward over one frame, i.e. remove self.frames[0]
             # but only if there is more than one frame
@@ -364,6 +368,7 @@ class SchedulerProblem(Problem):
         else:
             n_frames_to_create = self.n_frames
             frame = {}
+            self.frames = []
 
         # frame of fixed size
         for k in range(n_frames_to_create):
