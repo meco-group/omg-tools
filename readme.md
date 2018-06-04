@@ -12,6 +12,7 @@ This toolbox focuses on receding horizon control for single-agent systems as wel
 * Mercy T., Van Parys R., Pipeleers G. (2017), Spline-based motion planning for autonomous guided
 vehicles in a dynamic environment, Transactions on Control systems Technology. ([pdf](https://lirias.kuleuven.be/bitstream/123456789/592031/1/FINAL+VERSION.pdf))
 * Van Parys R., Pipeleers G. (2017), Distributed MPC for multi-vehicle systems moving in formation, Robotics and Autonomous Systems, vol. 97C (pp. 144-152). ([pdf](https://lirias.kuleuven.be/bitstream/123456789/590813/3/Distributed+MPC+for+multi-vehicle+systems+moving+in+formation.pdf))
+* Mercy T., Hostens E., Pipeleers G. (2018). Online motion planning for autonomous vehicles in vast environments. Proceedings of the 2018 International Workshop on Advanced Motion Control. Tokyo, March 9-11 2018 ([pdf](https://lirias2repo.kuleuven.be/rest/bitstreams/484961/retrieve))
 
 If these methods help you with your research, please cite us!
 
