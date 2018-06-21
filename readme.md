@@ -244,7 +244,7 @@ OMG-tools itself is downloaded from the [PyPI repository](https://pypi.python.or
 
 `sudo pip install omg-tools`
 
-This also installs [CasADi](https://casadi.org/), a powerful open-source tool for nonlinear optimization and algorithmic differentiation.
+This also installs [CasADi](http://casadi.org/), a powerful open-source tool for nonlinear optimization and algorithmic differentiation.
 
 ### Advanced installation
 If you want to save simulation results in gif-format, you need [imagemagick](https://imagemagick.org). For Linux Debian users:
