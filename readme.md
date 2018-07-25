@@ -11,7 +11,8 @@ This toolbox focuses on receding horizon control for single-agent systems as wel
 * Van Parys R., Pipeleers G. (2017). Spline-Based Motion Planning in an Obstructed 3D environment. Proceedings of the 20th IFAC World Congress. IFAC World Congress. Toulouse, France, 9-14 July 2017 (pp. 8998-9003). ([pdf](https://lirias.kuleuven.be/bitstream/123456789/575111/3/RubenVanParys_2017_IFAC_lirias.pdf))
 * Mercy T., Van Parys R., Pipeleers G. (2017), Spline-based motion planning for autonomous guided
 vehicles in a dynamic environment, Transactions on Control systems Technology. ([pdf](https://lirias.kuleuven.be/bitstream/123456789/592031/1/FINAL+VERSION.pdf))
-* Van Parys R., Pipeleers G. (2017), Distributed MPC for multi-vehicle systems moving in formation, Robotics and Autonomous Systems, vol. 97C (pp. 144-152). ([pdf](https://lirias.kuleuven.be/bitstream/123456789/590813/3/Distributed+MPC+for+multi-vehicle+systems+moving+in+formation.pdf))
+* Van Parys R., Pipeleers G. (2017), Distributed MPC for multi-vehicle systems moving in formation, Robotics and Autonomous Systems, vol. 97C (pp. 144-152). ([pdf](https://lirias2repo.kuleuven.be/bitstream/id/473742/)) 
+* Mercy T., Hostens E., Pipeleers G. (2018). Online motion planning for autonomous vehicles in vast environments. Proceedings of the 2018 International Workshop on Advanced Motion Control. Tokyo, March 9-11 2018 ([pdf](https://lirias2repo.kuleuven.be/rest/bitstreams/484961/retrieve))
 
 If these methods help you with your research, please cite us!
 
@@ -243,8 +244,10 @@ OMG-tools itself is downloaded from the [PyPI repository](https://pypi.python.or
 
 `sudo pip install omg-tools`
 
+This also installs [CasADi](http://casadi.org/), a powerful open-source tool for nonlinear optimization and algorithmic differentiation.
+
 ### Advanced installation
-If you want to save simulation results in gif-format, you need [imagemagick](www.imagemagick.org). For Linux Debian users:
+If you want to save simulation results in gif-format, you need [imagemagick](https://imagemagick.org). For Linux Debian users:
 
 `sudo add-apt-repository main && apt-get update && install imagemagick `
 
