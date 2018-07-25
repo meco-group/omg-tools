@@ -67,6 +67,16 @@ class Circle(Shape2D):
         return [np.array([-self.radius, self.radius]),
                 np.array([-self.radius, self.radius])]
 
+
+class Cylinder(Circle):
+    # cylinder is alias for circle: it is a circle which is
+    # infinitely extended in z dimension
+    # (this is taken care of in the collision avoidance constraints defined by environment)
+
+    def __init__(self, radius):
+        Circle.__init__(self, radius)
+
+
 class Ring(Shape2D):
     def __init__(self, radius_in, radius_out, start, end, direction):
         self.radius_in = radius_in
@@ -79,11 +89,11 @@ class Ring(Shape2D):
     def get_surfaces(self):
         if (self.start == self.end).all():
             # full ring, placed in the origin
-            s = linspace(0,2*np.pi,1000)
+            s = linspace(0, 2*np.pi, 1000)
         else:
             # part of a ring, placed in the origin
-            self.start_angle = np.arctan2(self.start[1],self.start[0])
-            self.end_angle = np.arctan2(self.end[1],self.end[0])
+            self.start_angle = np.arctan2(self.start[1], self.start[0])
+            self.end_angle = np.arctan2(self.end[1], self.end[0])
             if self.direction == 'CW':
                 if self.start_angle < self.end_angle:
                     self.start_angle += 2*np.pi  # arctan2 returned a negative start_angle, make positive
@@ -116,6 +126,7 @@ class Ring(Shape2D):
                 np.array([min_xy[1], max_xy[1]])]
 
     # def get_checkpoints():  # not applicable because non-convex shape
+
 
 class Polyhedron(Shape2D):
 

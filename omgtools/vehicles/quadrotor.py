@@ -31,7 +31,7 @@ class Quadrotor(Vehicle):
         Vehicle.__init__(
             self, n_spl=2, degree=4, shapes=Circle(radius), options=options)
         self.radius = radius
-        self.u1min = bounds['u1min'] if 'u1min' in bounds else 1.
+        self.u1min = bounds['u1min'] if 'u1min' in bounds else 2.
         self.u1max = bounds['u1max'] if 'u1max' in bounds else 15.
         self.u2min = bounds['u2min'] if 'u2min' in bounds else -8.
         self.u2max = bounds['u2max'] if 'u2max' in bounds else 8.
