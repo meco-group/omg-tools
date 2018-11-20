@@ -112,7 +112,11 @@ class GCodeProblem(Problem):
         # suppose that all splines have the same degree
         self.continuity = self.vehicles[0].splines[0][0].basis.degree  # save desired continuity
         for j in range(self.n_segments-1):
-            for spline1, spline2 in zip(self.vehicles[0].splines[j], self.vehicles[0].splines[j+1]):
+            for k, (spline1, spline2) in enumerate(zip(self.vehicles[0].splines[j], self.vehicles[0].splines[j+1])):
+                # constrain trajectory to pass exactly through corner point, uncomment next three lines
+                # self.define_constraint(evalspline(spline1, 1)-self.environment.room[j]['end'][k], 0., 0.)
+                # self.define_constraint(evalspline(spline2, 0)-self.environment.room[j+1]['start'][k], 0., 0.)
+                # for d in range(1,self.continuity):
                 for d in range(self.continuity):
                     # give dimensions by multiplication with the motion time
                     self.define_constraint(

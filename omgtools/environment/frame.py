@@ -381,7 +381,7 @@ class ShiftFrame(Frame):
         # determine next waypoint outside frame so we can
         # change the position of the frame if needed
         waypoint = None  # holds waypoint outside the frame
-        endpoint = None  # holds the goal point if it is inside the frame
+        self.endpoint = None  # holds the goal point if it is inside the frame
         points_in_frame = []  # holds all waypoints in the frame
 
         # start with waypoint that is closest to start_pos
@@ -402,7 +402,7 @@ class ShiftFrame(Frame):
                     break
                 # point is last point, and no points outside frame were found yet
                 elif point == self.global_path[-1]:
-                    endpoint = point
+                    self.endpoint = point
                 else:
                     # waypoint inside frame after shifting
                     points_in_frame.append(point)
@@ -443,7 +443,7 @@ class ShiftFrame(Frame):
             # assign waypoints to frame, is used in next function
             self.waypoints = points_in_frame
             # append endpoint, that may not be reachable for the moment (too close to border)
-            self.waypoints.append(endpoint)
+            self.waypoints.append(self.endpoint)
             # if vehicle goal is too close to the frame border, move the frame extra in that direction
             self.make_last_waypoint_reachable(method='move_frame')
         else:
@@ -460,7 +460,7 @@ class ShiftFrame(Frame):
         # If generated frame contains goal position, endpoint will be = goal position, since the goal position
         # was added to the global path. This was necessary because otherwise you will end up on a grid point
         # and not necessarily in the goal position (which can lie between grid points, anywhere on the map)
-        self.waypoints.append(endpoint)
+        self.waypoints.append(self.endpoint)
 
     def move_frame(self, delta_x, delta_y, start_pos=None):
         # if no start position is given, default position is used

@@ -37,7 +37,7 @@ n_blocks = 3
 # it is also possible that segments with variable tolerance are too short, check with required stop distance of tool
 variable_tolerance = False
 # required tolerance of the machined part [mm]
-tol = 0.01
+tol = 0.001
 # reduced tolerance for middle of segments
 tol_small = 0.1*tol
 # how to split segments if using variable tolerance e.g. 0.1 --> 0.1, 0.8, 0.1 * total length
@@ -74,7 +74,7 @@ schedulerproblem.set_options({'solver_options': {'ipopt': {'ipopt.tol': 1e-5,
                                                            'ipopt.max_iter': 20000}}})#,
 
 # put problem in deployer, computes the trajectories for the tool
-deployer = Deployer(schedulerproblem, sample_time=0.001)
+deployer = Deployer(schedulerproblem, sample_time=0.0001)
 
 # define what you want to plot
 schedulerproblem.plot('scene')

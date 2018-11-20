@@ -87,6 +87,9 @@ class AStarPlanner(GlobalPlanner):
         theta = np.arctan(float(self.grid.cell_height)/self.grid.cell_width)
         self.diag_cost = self.grid.cell_width / np.cos(theta)
 
+        # save environment in attribute
+        self.environment = environment
+
     def set_start(self, start):
         self.start = start
 
@@ -146,6 +149,11 @@ class AStarPlanner(GlobalPlanner):
     def get_path(self, start=None, goal=None):
         # main function of the A* algorithm
         t1 = time.time()
+
+        # update the blocked grid cells, since environment may have changed
+        blocked = self.grid.get_occupied_cells(self.environment)
+        self.grid.block(blocked)
+
         if start is not None:
             # only grid points are reachable
             self.start = self.grid.move_to_gridpoint(start)

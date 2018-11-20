@@ -118,6 +118,7 @@ class Tool(Vehicle):
         self.define_constraint(ddy - (horizon_time**2)*self.aymax, -inf, 0., skip=skip)
         self.define_constraint(ddz - (horizon_time**2)*self.azmax, -inf, 0., skip=skip)
 
+        # remove for corner benchmarks
         self.define_constraint(-dddx + (horizon_time**3)*self.jxmin, -inf, 0.)
         self.define_constraint(-dddy + (horizon_time**3)*self.jymin, -inf, 0.)
         self.define_constraint(-dddz + (horizon_time**3)*self.jzmin, -inf, 0.)
@@ -142,12 +143,14 @@ class Tool(Vehicle):
         term_con = [(x, position[0]), (y, position[1]), (z, position[2])]
         term_con_der = []
         for d in range(1, self.degree):
+        # for d in range(2, self.degree):
             term_con_der.extend([(x.derivative(d), 0.), (y.derivative(d), 0.), (z.derivative(d), 0.)])
         return [term_con, term_con_der]
 
     def set_initial_conditions(self, state, input=None, dinput=None, ddinput=None):
         if input is None:
             input = np.zeros(3)
+            # input[0] = 25.
         if dinput is None:
             dinput = np.zeros(3)
         if ddinput is None:
@@ -163,7 +166,7 @@ class Tool(Vehicle):
     def check_terminal_conditions(self):
         tol = self.options['stop_tol']
         if (np.linalg.norm(self.signals['state'][:, -1] - self.poseT) > tol or
-                np.linalg.norm(self.signals['input'][:, -1])) > tol:
+                np.linalg.norm(self.signals['input'][:, -1]) > tol):
             return False
         else:
             return True
