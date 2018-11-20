@@ -66,6 +66,7 @@ class Vehicle(OptiChild, PlotLayer):
 
     def set_default_options(self):
         self.options = {'safety_distance': 0., 'safety_weight': 10.,
+                        'velocity_weight': 100.,
                         'room_constraints': True, 'stop_tol': 1.e-3,
                         'ideal_prediction': False, 'ideal_update': False,
                         '1storder_delay': False, 'time_constant': 0.1,
