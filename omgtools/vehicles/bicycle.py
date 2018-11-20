@@ -397,7 +397,7 @@ class Bicycle(Vehicle):
 
         if self.options['plot_type'] is 'bicycle':
             car = Rectangle(width=self.length, height=self.length/4.)
-            wheel = Rectangle(self.length/2., self.length/6.)
+            wheel = Rectangle(width=self.length/10., height=self.length/14.)
             surfaces += car.draw(self.signals['pose'][:3, t])[0]  # vehicle
             pos_front = self.signals['pose'][:2, t] + (self.length/3)*np.array([np.cos(self.signals['pose'][2, t]),
                                                          np.sin(self.signals['pose'][2, t])])
