@@ -90,6 +90,7 @@ class Deployer:
 
         # initialize trajectories
         self.state_traj = np.c_[self.problem.curr_state]
+        # self.input_traj = np.c_[[25.,0.,0.]]  # removed 25.
         self.input_traj = np.c_[[0.,0.,0.]]
         self.dinput_traj = np.c_[[0.,0.,0.]]
         self.ddinput_traj = np.c_[[0.,0.,0.]]
@@ -170,8 +171,12 @@ class Deployer:
                 # check if target is reached
                 # if self.problem.stop_criterium(current_time, update_time):
                 #     target_reached = True
-                if ((np.linalg.norm(self.problem.goal_state-self.state_traj[:, -1]) < 1e-2 and np.linalg.norm(self.input_traj[:, -1]) < 1e-2) and
-                     (not hasattr(self.problem, 'next_segment') or self.problem.next_segment is None)):
+                if ((np.linalg.norm(self.problem.goal_state-self.state_traj[:, -1]) < 1e-2
+                    # and np.linalg.norm(self.input_traj[:, -1]) < 1e-2
+                     ) and
+                     (not hasattr(self.problem, 'next_segment') or self.problem.next_segment is None
+                        ) and
+                     (len(self.problem.segments)==1)):
                     target_reached = True
 
         # target reached, print final information
