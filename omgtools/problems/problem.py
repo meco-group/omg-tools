@@ -110,8 +110,8 @@ class Problem(OptiChild, PlotLayer):
         lb, ub = self.father.update_bounds(current_time)
         # solve!
         t0 = time.time()
-        result = self.problem(x0=var, p=par, lbg=lb, ubg=ub)
-        # result = self.problem(x0=var, lam_g0= dual_var, p=par, lbg=lb, ubg=ub)
+        # result = self.problem(x0=var, p=par, lbg=lb, ubg=ub)
+        result = self.problem(x0=var, lam_g0= dual_var, p=par, lbg=lb, ubg=ub)
         t1 = time.time()
         t_upd = t1-t0
         self.father.set_variables(result['x'])
