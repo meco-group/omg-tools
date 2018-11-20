@@ -390,40 +390,40 @@ class Obstacle2D(ObstaclexD):
         # Circle - Polyhedron is based on:
         # http://stackoverflow.com/questions/401847/circle-rectangle-collision-detection-intersection
         if isinstance(self.shape, Circle):
-            obstacle_shape = obstacle.shape
+            pos_self = self.signals['position'][:,-1]
             obstacle_pos = obstacle.signals['position'][:,-1]
             if isinstance(obstacle.shape, Circle):
                 self_checkpoints = self.shape.get_checkpoints()
                 obs_checkpoints = obstacle.shape.get_checkpoints()
 
                 for self_chck, self_rad in zip(*self_checkpoints):
-                    self_chck = self_chck + self.signals['position'][:,-1]
+                    self_chck = self_chck + pos_self
                     for obs_chck, obs_rad in zip(*obs_checkpoints):
-                        obs_chck = obs_chck + obstacle.signals['position'][:,-1]
+                        obs_chck = obs_chck + obstacle_pos
                         if (distance_between_points(self_chck, obs_chck) < (self_rad + obs_rad)):
                             return True
                 # didn't find an overlap
                 return False
             elif isinstance(obstacle.shape, Polyhedron):
-                if (point_in_polyhedron(self.signals['position'][:,-1], obstacle_shape, obstacle_pos) or
-                   circle_polyhedron_intersection(self, obstacle_shape, obstacle_pos)):
+                if (point_in_polyhedron(pos_self, obstacle.shape, obstacle_pos) or
+                   circle_polyhedron_intersection(self.shape, pos_self, obstacle.shape, obstacle_pos)):
                     return True
                 else:
                     return False
 
         elif isinstance(self.shape, Polyhedron):
-            shape_self = self.shape
             pos_self = self.signals['position'][:,-1]
+            obstacle_pos = obstacle.signals['position'][:,-1]
             if isinstance(obstacle.shape, Circle):
-                if (point_in_polyhedron(obstacle.signals['position'][:,-1], shape_self, pos_self) or
-                   circle_polyhedron_intersection(obstacle, shape_self, pos_self)):
+                if (point_in_polyhedron(obstacle_pos, self.shape, pos_self) or
+                   circle_polyhedron_intersection(obstacle.shape, obstacle_pos, self.shape, pos_self)):
                     return True
                 else:
                     return False
                 return False
             elif isinstance(obstacle.shape, Polyhedron):
                 if isinstance(obstacle.shape, Rectangle):
-                    if isinstance(shape_self, Rectangle):
+                    if isinstance(self.shape, Rectangle):
                         # Rectangle - Rectangle bouncing
 
                         ###################################################################
@@ -462,8 +462,8 @@ class Obstacle2D(ObstaclexD):
                         # Advantage: this also works when no vertices of obstacles are inside each other
 
                         if obstacle.shape.orientation == 0:
-                            if rectangles_overlap(obstacle.shape, obstacle.signals['position'][:,-1],
-                                               shape_self, pos_self):
+                            if rectangles_overlap(obstacle.shape, obstacle_pos,
+                                               self.shape, pos_self):
                                 return True
                         else:
                             raise RuntimeError('Rectangle bouncing with non-zero orientation not yet implemented')

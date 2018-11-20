@@ -123,7 +123,7 @@ def point_in_polyhedron(point, polyhedron_shape, polyhedron_position, margin=0):
             return False
     return True
 
-def circle_polyhedron_intersection(circle, polyhedron_shape, polyhedron_position):
+def circle_polyhedron_intersection(circle_shape, circle_pos, polyhedron_shape, polyhedron_position):
 
     # Does one of the sides of the polyhedron have a point inside the circle?
     # Compute perpendicular from the circle center to the polyhedron side
@@ -143,11 +143,11 @@ def circle_polyhedron_intersection(circle, polyhedron_shape, polyhedron_position
     vertices[0] +=  polyhedron_position[0]
     vertices[1] +=  polyhedron_position[1]
 
-    center = circle.signals['position'][:,-1]
+    center = circle_pos
     for i in range(len(vertices)):
         # first quickly check if any vertex is inside the circle
         dist = distance_between_points(center, [vertices[0][i], vertices[1][i]])
-        if dist <= circle.shape.radius:
+        if dist <= circle_shape.radius:
             # one of the vertices is inside the circle
             return True
     for i in range(len(vertices[0])-1):
@@ -162,9 +162,10 @@ def circle_polyhedron_intersection(circle, polyhedron_shape, polyhedron_position
         # and check distance between intersection point and circle center
         line1 = [[x1,y1],[x2,y2]]  # side of polyhedron
         if (((x1-eps<=x4<=x2+eps and y1-eps<=y4<=y2+eps) or (x1+eps>=x4>=x2-eps and y1+eps>=y4>=y2-eps)) and
-           (distance_between_points(center, [x4,y4]) <= circle.shape.radius)):
+           (distance_between_points(center, [x4,y4]) <= circle_shape.radius)):
             return True
     return False
+
 
 def point_in_rectangle(point, rectangle_limits, horizon_time=None, velocity=None, distance=0, xy_check=False):
         # check if the provided point is inside the provided rectangle
