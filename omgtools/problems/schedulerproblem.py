@@ -391,7 +391,7 @@ class SchedulerProblem(Problem):
             start_position = frame.endpoint  # start at end of current frame
             if frame.type is 'shift':
                 next_frame = ShiftFrame(self.environment, start_position, self.frame_size, self.move_limit,
-                                   self.global_path, self.options)
+                                   self.global_path, self.veh_size, self.margin, self.options)
             elif frame.type is 'corridor':
                 next_frame = CorridorFrame(self.environment, start_position, self.global_path,
                                    self.veh_size, self.margin, self.options)
