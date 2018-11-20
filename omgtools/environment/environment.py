@@ -60,6 +60,11 @@ class Environment(OptiChild, PlotLayer):
         for obstacle in obstacles:
             self.add_obstacle(obstacle)
 
+        # add danger zones
+        self.danger_zones, self.n_zones = [], 0
+        for zone in self.danger_zones:
+            self.add_danger_zone(zone)
+
     # ========================================================================
     # Copy function
     # ========================================================================
@@ -89,6 +94,14 @@ class Environment(OptiChild, PlotLayer):
                                  str(self.n_dim) + 'D environment.')
             self.obstacles.append(obstacle)
             self.n_obs += 1
+
+    def add_danger_zone(self, danger_zone):
+        if isinstance(danger_zone, list):
+            for zone in danger_zone:
+                self.add_danger_zone(zone)
+        else:
+            self.danger_zones.append(danger_zone)
+            self.n_zones += 1
 
     def fill_room(self, room, obstacles):
         # if key didn't exist yet, it is created
@@ -328,6 +341,8 @@ class Environment(OptiChild, PlotLayer):
                     print 'setting new velocity'
                     obstacle.signals['velocity'][:,-1] = vel_new
             obstacle.simulate(simulation_time, sample_time)
+        for zone in self.danger_zones:
+            zone.simulate(simulation_time, sample_time)
         self.update_plots()
 
     def draw(self, t=-1):
@@ -344,6 +359,10 @@ class Environment(OptiChild, PlotLayer):
                     s[k] = np.vstack((s[k], np.zeros((1, s[k].shape[1]))))
                 for k in range(len(l)):
                     l[k] = np.vstack((l[k], np.zeros((1, l[k].shape[1]))))
+            surfaces += s
+            lines += l
+        for zone in self.danger_zones:
+            s, l = zone.draw(t)
             surfaces += s
             lines += l
         return surfaces, lines
@@ -373,6 +392,14 @@ class Environment(OptiChild, PlotLayer):
                 l_.append(line)
         for k, _ in enumerate(s_):
             surfaces[k]['facecolor'] = 'none'  # make room surface transparent
+
+        for zone in self.danger_zones:
+            if zone.options['draw']:
+                shape, line = room['shape'].draw()
+                s_.append(shape)
+                l_.append(line)
+        for k, _ in enumerate(s_):
+            surfaces[k]['facecolor'] = 'none'
 
         if 'limits' in kwargs:
             limits = kwargs['limits']

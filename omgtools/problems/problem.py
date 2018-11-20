@@ -18,6 +18,8 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from ..basics.optilayer import OptiFather, OptiChild
+from ..basics.geometry import distance_between_points
+from ..basics.shape import Circle, Rectangle
 from ..vehicles.fleet import get_fleet_vehicles
 from ..execution.plotlayer import PlotLayer
 from itertools import groupby
@@ -103,6 +105,7 @@ class Problem(OptiChild, PlotLayer):
     def solve(self, current_time, update_time):
         current_time -= self.start_time  # start_time: the point in time where you start solving
         self.init_step(current_time, update_time)  # pass on update_time to make initial guess
+        self.update_vehicle_limits()  # used to change the velocity limits
         # set initial guess, parameters, lb & ub
         var = self.father.get_variables()
         dual_var = self.father.get_dual_variables()
@@ -179,6 +182,50 @@ class Problem(OptiChild, PlotLayer):
                             raise ValueError('Each vehicle spline should receive an initial guess.')
                         else:
                             self.father.set_variables(init_guess[l].tolist(),child=vehicle, name='splines_seg'+str(l))
+
+    def update_vehicle_limits(self):
+        # check if the vehicle is in a zone that requires reduced speed, if so change its limits
+        if hasattr(self.environment, 'danger_zones'):
+            if hasattr(self.vehicles[0], 'signals'):
+                veh_pos = self.vehicles[0].signals['state'][:,-1]
+            else:
+                veh_pos = self.vehicles[0].prediction['state']  # first iteration
+            for zone in self.environment.danger_zones:
+                # check distance between current vehicle position and dangerzone
+                zone_pos = zone.signals['position'][:,-1]
+                if isinstance(zone.shape, Circle):
+                    zone_size = zone.shape.radius
+                elif zone.shape.width == zone.shape.height:
+                    zone_size = zone.shape.width  # suppose that danger zones are square
+                else:
+                    raise RuntimeError('The danger zones must be either circular or square')
+                if isinstance(self.vehicles[0].shapes[0], Circle):
+                    veh_size = self.vehicles[0].shapes[0].radius
+                elif isinstance(self.vehicles[0].shapes[0], Rectangle):
+                    veh_size = max(self.vehicles[0].shapes[0].width, self.vehicles[0].shapes[0].height)  # suppose that danger zones are square
+                else:
+                    raise RuntimeError('Vehicle must be either circular or rectangular')
+                # compute positive distance between zone and vehicle centers
+                # take into account vehicle size
+                dist = distance_between_points(zone_pos, veh_pos) - veh_size
+                if dist <= zone_size:
+                    # vehicle is inside the danger zone
+                    # decide upon new velocity bounds: smoothly go from the current limits to new, reduced ones
+                    import pdb; pdb.set_trace()  # breakpoint f43e287c //
+                    dist = dist*1./zone_size  # normalize 0...1
+                    for vehicle in self.vehicles:
+                        # vehicle is supposed to be holonomic
+                        vxmin = zone.bounds['vxmin'] #+ dist*(vehicle.original_bounds['vxmin'] - zone.bounds['vxmin'])
+                        vymin = zone.bounds['vymin'] #+ dist*(vehicle.original_bounds['vymin'] - zone.bounds['vymin'])
+                        vxmax = zone.bounds['vxmax'] #+ dist*(vehicle.original_bounds['vxmax'] - zone.bounds['vxmax']) 
+                        vymax = zone.bounds['vymax'] #+ dist*(vehicle.original_bounds['vymax'] - zone.bounds['vymax'])
+                        vel_limits = [vxmin, vymin, vxmax, vymax]
+                        vehicle.set_velocities(vel_limits)  # xmin,ymin,xmax,ymax
+                        # new velocities are set, quit function
+                        return
+        else:
+            # there were no danger zones so keep the original limits
+            pass
 
     # ========================================================================
     # Simulation related functions

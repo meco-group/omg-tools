@@ -51,9 +51,16 @@ class Holonomic(Vehicle):
                 self.axmin = self.aymin = bounds['amin']
             if 'amax' in bounds:
                 self.axmax = self.aymax = bounds['amax']
-        elif self.options['syslimit'] is 'norm_2':
+        # elif self.options['syslimit'] is 'norm_2':
             self.vmax = bounds['vmax'] if 'vmax' in bounds else 0.5
             self.amax = bounds['amax'] if 'amax' in bounds else 1.
+
+        # save original velocity bounds
+        self.original_bounds = {}
+        self.original_bounds['vxmin'] = self.vxmin
+        self.original_bounds['vymin'] = self.vymin
+        self.original_bounds['vxmax'] = self.vxmax
+        self.original_bounds['vymax'] = self.vymax
 
     def set_default_options(self):
         Vehicle.set_default_options(self)
@@ -63,6 +70,12 @@ class Holonomic(Vehicle):
         x, y = splines
         dx, dy = x.derivative(), y.derivative()
         ddx, ddy = x.derivative(2), y.derivative(2)
+
+        vxmin = self.define_parameter('vxmin', 1)
+        vymin = self.define_parameter('vymin', 1)
+        vxmax = self.define_parameter('vxmax', 1)
+        vymax = self.define_parameter('vymax', 1)
+
         # constrain total velocity
         if self.options['syslimit'] is 'norm_2':
             self.define_constraint(
@@ -71,10 +84,10 @@ class Holonomic(Vehicle):
                 (ddx**2+ddy**2) - (horizon_time**4)*self.amax**2, -inf, 0.)
         # constrain local velocity
         elif self.options['syslimit'] is 'norm_inf':
-            self.define_constraint(-dx + horizon_time*self.vxmin, -inf, 0.)
-            self.define_constraint(-dy + horizon_time*self.vymin, -inf, 0.)
-            self.define_constraint(dx - horizon_time*self.vxmax, -inf, 0.)
-            self.define_constraint(dy - horizon_time*self.vymax, -inf, 0.)
+            self.define_constraint(-dx + horizon_time*vxmin, -inf, 0.)
+            self.define_constraint(-dy + horizon_time*vymin, -inf, 0.)
+            self.define_constraint(dx - horizon_time*vxmax, -inf, 0.)
+            self.define_constraint(dy - horizon_time*vymax, -inf, 0.)
 
             self.define_constraint(-ddx + (horizon_time**2)*self.axmin, -inf, 0.)
             self.define_constraint(-ddy + (horizon_time**2)*self.aymin, -inf, 0.)
@@ -156,7 +169,19 @@ class Holonomic(Vehicle):
         parameters[self]['input0'] = self.prediction['input']
         # parameters[self]['dinput0'] = self.prediction['dinput']
         parameters[self]['poseT'] = self.poseT
+
+        parameters[self]['vxmin'] = self.vxmin
+        parameters[self]['vymin'] = self.vymin
+        parameters[self]['vxmax'] = self.vxmax
+        parameters[self]['vymax'] = self.vymax
         return parameters
+
+    def set_velocities(self,vel_limits):
+        # change the velocity limits
+        self.vxmin = vel_limits[0]
+        self.vymin = vel_limits[1]
+        self.vxmax = vel_limits[2]
+        self.vymax = vel_limits[3]
 
     def define_collision_constraints(self, hyperplanes, room, splines, horizon_time):
         x, y = splines[0], splines[1]
