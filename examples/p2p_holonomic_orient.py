@@ -31,7 +31,7 @@ vehicle.set_terminal_conditions([2., 2., np.pi/2.])
 
 # create environment
 environment = Environment(room={'shape': Square(5.)})
-rectangle = Rectangle(width=3., height=0.2)
+rectangle = Rectangle(width=3.15, height=0.2)
 
 environment.add_obstacle(Obstacle({'position': [-1.8, -0.5]}, shape=rectangle))
 environment.add_obstacle(Obstacle({'position': [1.7, -0.5]}, shape=rectangle))
@@ -40,8 +40,34 @@ trajectories = {'velocity': {'time': [3., 4.],
 environment.add_obstacle(Obstacle({'position': [1.5, 0.5]}, shape=Circle(0.4),
                                   simulation={'trajectories': trajectories}))
 
+
+
+solver = 'ipopt'
+if solver is 'ipopt':
+    options = {'solver': solver}
+    options['solver_options'] = {'ipopt': {'ipopt.tol': 1e-5,
+                                                          # 'ipopt.linear_solver': 'ma57',
+                                                           'ipopt.warm_start_bound_push': 1e-6,
+                                                           'ipopt.warm_start_mult_bound_push': 1e-6,
+                                                           'ipopt.warm_start_mult_bound_push': 1e-6,
+                                                           'ipopt.mu_init': 1e-5,
+                                                           # 'ipopt.hessian_approximation': 'limited-memory',
+                                                           # 'ipopt.max_iter': 20000
+                                                           }}
+    problem = Point2point(vehicle, environment, options, freeT=True)
+elif solver is 'worhp':
+    options = {'solver': solver}
+    worhp_options = {  # 'worhp.qp_ipLsMethod': 'MA57',  # todo: option not found?
+        'worhp.MaxIter': 200,
+        'worhp.TolOpti': 1e-6,
+        # False = warm start
+        'worhp.InitialLMest': False,
+        'worhp.UserHM': True}  # True = exact Hessian
+    options['solver_options'] = {'worhp': worhp_options}
+    problem = Point2point(vehicle, environment, options, freeT=True)
+
 # create a point-to-point problem
-problem = Point2point(vehicle, environment, freeT=True)
+# problem = Point2point(vehicle, environment, freeT=True)
 problem.init()
 
 # create simulator

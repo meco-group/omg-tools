@@ -25,7 +25,7 @@
 from omgtools import *
 
 # create vehicle
-vehicle = Holonomic(shapes = Circle(radius=0.5), options={'syslimit': 'norm_2'},
+vehicle = Holonomic(shapes = Circle(radius=0.6), options={'syslimit': 'norm_2'},
                     bounds={'vmax': 1.2, 'vmin':-1.2, 'amax':10, 'amin':-10})
 veh_size = vehicle.shapes[0].radius
 
@@ -98,17 +98,23 @@ globalplanner = AStarPlanner(environment, gui.n_cells, start, goal)
 # 'frame_type': 'shift': creates frames of fixed size, around the vehicle
 	# 'frame_size': size of the shifted frame
 options = {'freeT': True, 'horizon_time': 10, 'no_term_con_der': False,
-           'n_frames': 2, 'frame_type': 'corridor', 'scale_up_fine': True, 'l_shape': True, 'check_moving_obs_ts': 0.1}
-# options = {'n_frames': 2, 'frame_type': 'shift', 'frame_size': 5, 'check_moving_obs_ts': 0.1}
+           'n_frames': 2, 'frame_type': 'corridor', 'scale_up_fine': True,'frame_size':10, 'l_shape': True, 'check_moving_obs_ts': 0.1}
+# options = {'n_frames': 1, 'frame_type': 'shift', 'frame_size': 5, 'check_moving_obs_ts': 0.1}
 schedulerproblem=SchedulerProblem(vehicle, environment, globalplanner, options=options)
 
 # Note: using linear solver ma57 is optional, normally it reduces the solving time
-# multiproblem.set_options({'solver_options':
-#     {'ipopt': {'ipopt.linear_solver': 'ma57'}}})
+schedulerproblem.set_options({'solver_options':
+    {'ipopt': {
+                #'ipopt.linear_solver': 'ma57',
+            'ipopt.warm_start_bound_push': 1e-6,
+            'ipopt.warm_start_mult_bound_push': 1e-6,
+            'ipopt.mu_init': 1e-5,
+    		    'ipopt.hessian_approximation':'exact'}}})
 
 simulator = Simulator(schedulerproblem)
 schedulerproblem.plot('scene')
 vehicle.plot('input', knots=True, prediction=True, labels=['v_x (m/s)', 'v_y (m/s)'])
+vehicle.plot('v_tot')
 
 # run it!
 simulator.run()

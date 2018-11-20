@@ -25,7 +25,7 @@
 from omgtools import *
 
 # create vehicle
-vehicle = Holonomic(shapes = Circle(radius=0.75), options={'syslimit': 'norm_2'},
+vehicle = Holonomic(shapes = Circle(radius=1), options={'syslimit': 'norm_2'},
                     bounds={'vmax': 1.2, 'vmin':-1.2, 'amax':8, 'amin':-8})
 veh_size = vehicle.shapes[0].radius
 
@@ -75,7 +75,6 @@ schedulerproblem.set_options({'solver_options':
 			   'ipopt.tol': 1e-5,
                'ipopt.warm_start_bound_push': 1e-6,
                'ipopt.warm_start_mult_bound_push': 1e-6,
-               'ipopt.warm_start_mult_bound_push': 1e-6,
                'ipopt.mu_init': 1e-5,
                # 'ipopt.hessian_approximation': 'limited-memory',
                'ipopt.max_iter': 20000}}})#,}}})
@@ -84,6 +83,7 @@ simulator = Simulator(schedulerproblem)
 schedulerproblem.plot('scene')
 vehicle.plot('input', knots=True, prediction=True, labels=['v_x (m/s)', 'v_y (m/s)'])
 vehicle.plot('dinput', knots=True, prediction=True, labels=['a_x (m/s^2)', 'a_y (m/s^2)'])
+vehicle.plot('v_tot')
 
 # run it!
 simulator.run()
