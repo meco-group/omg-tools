@@ -18,7 +18,10 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from ..basics.optilayer import OptiFather, OptiChild
-from ..basics.geometry import distance_between_points
+from ..basics.geometry import distance_between_points, point_in_polyhedron
+from ..basics.geometry import circle_polyhedron_intersection
+from ..basics.geometry import rectangles_overlap
+from ..basics.shape import Circle, Polyhedron, Rectangle, Square
 from ..basics.shape import Circle, Rectangle
 from ..vehicles.fleet import get_fleet_vehicles
 from ..execution.plotlayer import PlotLayer
@@ -207,14 +210,14 @@ class Problem(OptiChild, PlotLayer):
                     raise RuntimeError('Vehicle must be either circular or rectangular')
                 # compute positive distance between zone and vehicle centers
                 # take into account vehicle size
-                dist = distance_between_points(zone_pos, veh_pos) - veh_size
+                # dist = distance_between_points(zone_pos, veh_pos) - veh_size
 
-                # if self.vehicles[0].overlaps_with(zone):
+                if self.environment.shapes_overlap(self.vehicles[0].shapes[0], veh_pos, zone.shape, zone_pos):
 
-                if dist <= zone_size:
-                    # vehicle is inside the danger zone
-                    # decide upon new velocity bounds: smoothly go from the current limits to new, reduced ones
-                    dist = dist*1./zone_size  # normalize 0...1
+                # if dist <= zone_size:
+                #     # vehicle is inside the danger zone
+                #     # decide upon new velocity bounds: smoothly go from the current limits to new, reduced ones
+                #     dist = dist*1./zone_size  # normalize 0...1
                     for vehicle in self.vehicles:
                         # vehicle is supposed to be holonomic
                         # immediately reduce bounds to minimum value, or do gradually
