@@ -352,6 +352,10 @@ class Environment(OptiChild, PlotLayer):
                 s, l = room['shape'].draw(pose = np.r_[room['position'], room['orientation']])
                 surfaces += s
                 lines += l
+        for zone in self.danger_zones:
+            s, l = zone.draw(t)
+            surfaces += s
+            lines += l
         for obstacle in self.obstacles:
             s, l = obstacle.draw(t)
             if self.n_dim == 3 and obstacle.n_dim == 2:
@@ -359,10 +363,6 @@ class Environment(OptiChild, PlotLayer):
                     s[k] = np.vstack((s[k], np.zeros((1, s[k].shape[1]))))
                 for k in range(len(l)):
                     l[k] = np.vstack((l[k], np.zeros((1, l[k].shape[1]))))
-            surfaces += s
-            lines += l
-        for zone in self.danger_zones:
-            s, l = zone.draw(t)
             surfaces += s
             lines += l
         return surfaces, lines
@@ -400,6 +400,7 @@ class Environment(OptiChild, PlotLayer):
                 l_.append(line)
         for k, _ in enumerate(s_):
             surfaces[k]['facecolor'] = 'none'
+            surfaces[k]['edgecolor'] = 'red'
 
         if 'limits' in kwargs:
             limits = kwargs['limits']
