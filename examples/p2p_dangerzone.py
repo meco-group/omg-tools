@@ -21,7 +21,7 @@ from omgtools import *
 
 # create vehicle
 vehicle = Holonomic(bounds={'vxmin': -1, 'vymin': -1, 'vxmax': 1, 'vymax': 1,
-							'axmin': -1, 'aymin': -1, 'axmax': 1, 'aymax': 1}, options={'syslimit':'norm_inf', 'velocity_weight': 100.})
+							'axmin': -1, 'aymin': -1, 'axmax': 1, 'aymax': 1}, options={'syslimit':'norm_inf', 'velocity_weight': 50.})
 
 vehicle.set_initial_conditions([-2, -2])
 vehicle.set_terminal_conditions([2., 2.])
@@ -30,16 +30,17 @@ vehicle.set_terminal_conditions([2., 2.])
 environment = Environment(room={'shape': Square(5.)})
 
 # environment.add_obstacle(Obstacle({'position': [-2.1, -0.5]}, shape=rectangle))
-# trajectories = {'velocity': {'time': [0., 40.],
-#                              'values': [[-0.35, 0.35], [0., 0.15]]}}
-environment.add_obstacle(Obstacle({'position': [-2, 0]}, shape=Circle(0.5), options={'bounce':False},
-                                  simulation={'trajectories': {}}))
+trajectories = {'velocity': {'time': [0., 40.],
+                             'values': [[-0.25, 0.25], [0., 0.15]]}}
+environment.add_obstacle(Obstacle({'position': [1, -1]}, shape=Circle(0.5), options={'bounce':False},
+                                  simulation={'trajectories': trajectories}))
 
 # environment.add_danger_zone(DangerZone({'position': [0., 0]}, shape=Circle(1),
 #                            bounds = {'vxmin': -0.5, 'vymin': -0.5, 'vxmax': 0.5, 'vymax': 0.5, 'vmax': 0.25}))
 
-environment.add_danger_zone(DangerZone({'position': [0., 0]}, shape=Rectangle(width=1.5, height=1.5),
-                           bounds = {'vxmin': -0.5, 'vymin': -0.5, 'vxmax': 0.5, 'vymax': 0.5, 'vmax': 0.25}))
+environment.add_danger_zone(DangerZone({'position': [1., -1]}, shape=Rectangle(width=2, height=2),
+                           bounds = {'vxmin': -0.5, 'vymin': -0.5, 'vxmax': 0.5, 'vymax': 0.5, 'vmax': 0.25},
+                           simulation={'trajectories': trajectories}))
 
 # create a point-to-point problem
 problem = Point2point(vehicle, environment, freeT=True)

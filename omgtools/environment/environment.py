@@ -357,6 +357,10 @@ class Environment(OptiChild, PlotLayer):
         self.update_plots()
 
     def shapes_overlap(self, shape1, pos1, shape2, pos2):
+        if not isinstance(pos1, np.ndarray):
+            pos1 = np.array(pos1)
+        if not isinstance(pos2, np.ndarray):
+            pos2 = np.array(pos2)
         # check if shape1 overlaps with shape2
         # Circle - Polyhedron is based on:
         # http://stackoverflow.com/questions/401847/circle-rectangle-collision-detection-intersection
