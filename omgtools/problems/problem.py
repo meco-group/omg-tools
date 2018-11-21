@@ -196,6 +196,7 @@ class Problem(OptiChild, PlotLayer):
             # initialize variables to hold new velocity limits
             vxmin, vymin, vxmax, vymax = [], [], [], []
             vmax = []
+            in_danger_zone = False
             for zone in self.environment.danger_zones:
                 # check distance between current vehicle position and dangerzone
                 zone_pos = zone.signals['position'][:,-1]
@@ -219,19 +220,21 @@ class Problem(OptiChild, PlotLayer):
                                 vmax = zone.bounds['vmax']
                             vel_limits = [vmax]
                         vehicle.set_velocities(vel_limits)  # xmin,ymin,xmax,ymax
-                else:
-                    # after leaving zone, set back to original limits
-                    for vehicle in self.vehicles:
-                        if self.vehicles[0].options['syslimit'] == 'norm_inf':
-                            vxmin = vehicle.original_bounds['vxmin']
-                            vymin = vehicle.original_bounds['vymin']
-                            vxmax = vehicle.original_bounds['vxmax'] 
-                            vymax = vehicle.original_bounds['vymax']
-                            vel_limits = [vxmin, vymin, vxmax, vymax]
-                        else:
-                            vmax = vehicle.original_bounds['vmax']
-                            vel_limits = [vmax]
-                        vehicle.set_velocities(vel_limits)  # xmin,ymin,xmax,ymax
+                        in_danger_zone = True
+            if not in_danger_zone:
+                # if not in zone, set back to original limits
+                # such that limits are re-set if you leave the zone
+                for vehicle in self.vehicles:
+                    if self.vehicles[0].options['syslimit'] == 'norm_inf':
+                        vxmin = vehicle.original_bounds['vxmin']
+                        vymin = vehicle.original_bounds['vymin']
+                        vxmax = vehicle.original_bounds['vxmax'] 
+                        vymax = vehicle.original_bounds['vymax']
+                        vel_limits = [vxmin, vymin, vxmax, vymax]
+                    else:
+                        vmax = vehicle.original_bounds['vmax']
+                        vel_limits = [vmax]
+                    vehicle.set_velocities(vel_limits)  # xmin,ymin,xmax,ymax
         else:
             # there were no danger zones so keep the original limits
             pass
