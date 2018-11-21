@@ -196,36 +196,12 @@ class Problem(OptiChild, PlotLayer):
             for zone in self.environment.danger_zones:
                 # check distance between current vehicle position and dangerzone
                 zone_pos = zone.signals['position'][:,-1]
-                if isinstance(zone.shape, Circle):
-                    zone_size = zone.shape.radius
-                elif zone.shape.width == zone.shape.height:
-                    zone_size = zone.shape.width  # suppose that danger zones are square
-                else:
-                    raise RuntimeError('The danger zones must be either circular or square')
-                if isinstance(self.vehicles[0].shapes[0], Circle):
-                    veh_size = self.vehicles[0].shapes[0].radius
-                elif isinstance(self.vehicles[0].shapes[0], Rectangle):
-                    veh_size = max(self.vehicles[0].shapes[0].width, self.vehicles[0].shapes[0].height)  # suppose that danger zones are square
-                else:
-                    raise RuntimeError('Vehicle must be either circular or rectangular')
-                # compute positive distance between zone and vehicle centers
-                # take into account vehicle size
-                # dist = distance_between_points(zone_pos, veh_pos) - veh_size
-
                 if self.environment.shapes_overlap(self.vehicles[0].shapes[0], veh_pos, zone.shape, zone_pos):
-
-                # if dist <= zone_size:
-                #     # vehicle is inside the danger zone
-                #     # decide upon new velocity bounds: smoothly go from the current limits to new, reduced ones
-                #     dist = dist*1./zone_size  # normalize 0...1
                     for vehicle in self.vehicles:
                         # vehicle is supposed to be holonomic
-                        # immediately reduce bounds to minimum value, or do gradually
+                        # immediately reduce bounds to minimum value
+                        # but check if the new limit is more strict than the old one, choose most strict one
                         if self.vehicles[0].options['syslimit'] == 'norm_inf':
-                            vxmin = zone.bounds['vxmin'] #+ dist*(vehicle.original_bounds['vxmin'] - zone.bounds['vxmin'])
-                            vymin = zone.bounds['vymin'] #+ dist*(vehicle.original_bounds['vymin'] - zone.bounds['vymin'])
-                            vxmax = zone.bounds['vxmax'] #+ dist*(vehicle.original_bounds['vxmax'] - zone.bounds['vxmax']) 
-                            vymax = zone.bounds['vymax'] #+ dist*(vehicle.original_bounds['vymax'] - zone.bounds['vymax'])
                             vel_limits = [vxmin, vymin, vxmax, vymax]
                         else:
                             vmax = zone.bounds['vmax']
