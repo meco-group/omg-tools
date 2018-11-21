@@ -60,6 +60,6 @@ vehicle.plot('input', knots=True, prediction=True, labels=['v_x (m/s)', 'v_y (m/
 # run it!
 simulator.run()
 
-problem.save_movie('scene', format='gif', name='diagonal_diffdrive_pos', number_of_frames=80, movie_time=4, axis=True)
-vehicle.save_movie('input', format='gif', name='diagonal_diffdrive_vel', number_of_frames=80, movie_time=4, axis=True)
+# problem.save_movie('scene', format='gif', name='diagonal_diffdrive_pos', number_of_frames=80, movie_time=4, axis=True)
+# vehicle.save_movie('input', format='gif', name='diagonal_diffdrive_vel', number_of_frames=80, movie_time=4, axis=True)
 
