@@ -193,6 +193,9 @@ class Problem(OptiChild, PlotLayer):
                 veh_pos = self.vehicles[0].signals['state'][:,-1]
             else:
                 veh_pos = self.vehicles[0].prediction['state']  # first iteration
+            # initialize variables to hold new velocity limits
+            vxmin, vymin, vxmax, vymax = [], [], [], []
+            vmax = []
             for zone in self.environment.danger_zones:
                 # check distance between current vehicle position and dangerzone
                 zone_pos = zone.signals['position'][:,-1]
@@ -202,13 +205,20 @@ class Problem(OptiChild, PlotLayer):
                         # immediately reduce bounds to minimum value
                         # but check if the new limit is more strict than the old one, choose most strict one
                         if self.vehicles[0].options['syslimit'] == 'norm_inf':
+                            if not vxmin or zone.bounds['vxmin'] > vxmin:
+                                vxmin = zone.bounds['vxmin']
+                            if not vymin or zone.bounds['vymin'] > vymin:
+                                vymin = zone.bounds['vymin']
+                            if not vxmax or zone.bounds['vxmax'] < vxmax:
+                                vxmax = zone.bounds['vxmax']
+                            if not vymax or zone.bounds['vymax'] < vymax:
+                                vymax = zone.bounds['vymax']
                             vel_limits = [vxmin, vymin, vxmax, vymax]
                         else:
-                            vmax = zone.bounds['vmax']
+                            if not vmax or zone.bounds['vmax'] < vmax:
+                                vmax = zone.bounds['vmax']
                             vel_limits = [vmax]
                         vehicle.set_velocities(vel_limits)  # xmin,ymin,xmax,ymax
-                        # new velocities are set, quit function
-                        return
                 else:
                     # after leaving zone, set back to original limits
                     for vehicle in self.vehicles:
