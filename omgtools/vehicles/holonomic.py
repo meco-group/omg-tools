@@ -85,7 +85,7 @@ class Holonomic(Vehicle):
 
             # hard constraints
             self.define_constraint(
-                (dx**2+dy**2) - (horizon_time**2)*self.vmax**2, -inf, 0.)
+                (dx**2+dy**2) - (horizon_time**2)*self.original_bounds['vmax']**2, -inf, 0.)
             self.define_constraint(
                 (ddx**2+ddy**2) - (horizon_time**4)*self.amax**2, -inf, 0.)
 
