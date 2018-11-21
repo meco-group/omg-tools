@@ -20,7 +20,7 @@
 from vehicle import Vehicle
 from ..problems.point2point import FreeTPoint2point, FixedTPoint2point
 from ..basics.shape import Square, Circle
-from ..basics.spline_extra import sample_splines
+from ..basics.spline_extra import sample_splines, definite_integral
 from ..basics.spline_extra import evalspline, running_integral, concat_splines
 from ..basics.spline import BSplineBasis
 from casadi import inf, SX, MX
@@ -60,8 +60,13 @@ class Dubins(Vehicle):
         self.wmin = bounds['wmin'] if 'wmin' in bounds else -np.pi/6. # in rad/s
         self.wmax = bounds['wmax'] if 'wmax' in bounds else np.pi/6.
 
+        # save original velocity bounds
+        self.original_bounds = {}
+        self.original_bounds['vmax'] = self.vmax
+
     def set_default_options(self):
         Vehicle.set_default_options(self)
+        self.options.update({'syslimit': 'norm_2'})  # always limit total velocity
         self.options.update({'stop_tol': 1.e-2})
         self.options.update({'substitution' : False})
         self.options.update({'exact_substitution' : False})
@@ -71,13 +76,29 @@ class Dubins(Vehicle):
         self.pos0 = self.define_parameter('pos0', 2)  # current position
 
     def define_trajectory_constraints(self, splines, horizon_time=None):
+        vmax = self.define_parameter('vmax', 1)
+
+        self.vel_slack = self.define_spline_variable('vel_slack_00')[0]
+
         if horizon_time is None:
             horizon_time = self.define_symbol('T')  # motion time
         v_til, tg_ha = splines
         dv_til, dtg_ha = v_til.derivative(), tg_ha.derivative()
-        # velocity constraint
+        
+        # hard velocity constraint
         self.define_constraint(
-            v_til*(1+tg_ha**2) - self.vmax, -inf, 0.)
+            v_til*(1+tg_ha**2) - self.original_bounds['vmax'], -inf, 0.)
+
+        # soft velocity constraint
+        self.define_constraint(
+            v_til*(1+tg_ha**2) - vmax - self.vel_slack, -inf, 0.)
+
+        velocity_weight = self.options['velocity_weight']
+        t = self.define_symbol('t')
+        obj = velocity_weight*definite_integral(self.vel_slack, t/horizon_time, 1.)
+        self.define_constraint(-self.vel_slack, -inf, 0.)
+        self.define_objective(obj)
+
         # self.define_constraint(-v_til*(1+tg_ha**2) - self.vmax, -inf, 0)  # backward velocity
 
         self.define_constraint(-v_til, -inf, 0)  # only forward driving, positive v_tilde
@@ -239,7 +260,13 @@ class Dubins(Vehicle):
         parameters[self]['pos0'] = self.prediction['state'][:2]
         parameters[self]['posT'] = self.poseT[:2]  # x,y
         parameters[self]['tg_haT'] = np.tan(self.poseT[2]/2.)
+
+        parameters[self]['vmax'] = self.vmax
         return parameters
+
+    def set_velocities(self,vel_limits):
+        # change the velocity limits
+        self.vmax = vel_limits[0]
 
     def define_collision_constraints(self, hyperplanes, environment, splines, horizon_time=None):
         if horizon_time is None:

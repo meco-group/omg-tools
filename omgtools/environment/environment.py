@@ -365,7 +365,9 @@ class Environment(OptiChild, PlotLayer):
         # Circle - Polyhedron is based on:
         # http://stackoverflow.com/questions/401847/circle-rectangle-collision-detection-intersection
         if isinstance(shape1, Circle):
+            pos1 = pos1[:2]  # sometimes circle has an orientation, which is irrelevant here
             if isinstance(shape2, Circle):
+                pos2 = pos2[:2]  # sometimes circle has an orientation, which is irrelevant here
                 shape1_checkpoints = shape1.get_checkpoints()
                 shape2_checkpoints = shape2.get_checkpoints()
 
@@ -386,6 +388,7 @@ class Environment(OptiChild, PlotLayer):
 
         elif isinstance(shape1, Polyhedron):
             if isinstance(shape2, Circle):
+                pos2 = pos2[:2]  # sometimes circle has an orientation, which is irrelevant here
                 if (point_in_polyhedron(pos2, shape1, pos1) or
                    circle_polyhedron_intersection(shape2, pos2, shape1, pos1)):
                     return True
