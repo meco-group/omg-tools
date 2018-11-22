@@ -39,6 +39,7 @@ class SchedulerProblem(Problem):
     def __init__(self, fleet, environment, global_planner=None, options=None, **kwargs):
         Problem.__init__(self, fleet, environment, options, label='schedulerproblem')
         self.curr_state = self.vehicles[0].prediction['state'] # initial vehicle position
+        self.curr_input = self.vehicles[0].prediction['input']
         self.goal_state = self.vehicles[0].poseT # overall goal
         self.problem_options = options  # e.g. selection of problem type (freeT, fixedT)
         if not 'freeT' in options:
@@ -143,9 +144,11 @@ class SchedulerProblem(Problem):
         if not hasattr(self.vehicles[0], 'signals'):
             # first iteration
             self.curr_state = self.vehicles[0].prediction['state']
+            self.curr_input = self.vehicles[0].prediction['input']
         else:
             # all other iterations
             self.curr_state = self.vehicles[0].signals['state'][:,-1]
+            self.curr_input = self.vehicles[0].signals['input'][:,-1]
 
         frames_valid = self.check_frames()
         if not frames_valid:
@@ -525,7 +528,7 @@ class SchedulerProblem(Problem):
             # use current vehicle velocity as starting velocity for next frame
             self.vehicles[0].set_initial_conditions(self.curr_state, input=self.vehicles[0].signals['input'][:,-1])
         else:
-            self.vehicles[0].set_initial_conditions(self.curr_state)
+            self.vehicles[0].set_initial_conditions(self.curr_state, self.curr_input)
         # if Dubins vehicle, add orientation 0
         if isinstance(self.vehicles[0], Dubins):
             if self.frames[-1].waypoints[-1] == self.goal_state[:2]:
