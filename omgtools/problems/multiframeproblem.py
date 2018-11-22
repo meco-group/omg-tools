@@ -136,6 +136,9 @@ class MultiFrameProblem(Problem):
     # Deploying related functions
     # ========================================================================
 
+    def initialize(self, current_time):
+        self.start_time = current_time
+
     def reinitialize(self, father=None):
         if father is None:
             father = self.father

@@ -103,6 +103,8 @@ class SchedulerProblem(Problem):
 
     def initialize(self, current_time):
         self.local_problem.initialize(current_time)
+        # get the start time from the local problem
+        self.start_time = self.local_problem.start_time
 
     def reinitialize(self):
         # this function is called at the start and creates the first frame
