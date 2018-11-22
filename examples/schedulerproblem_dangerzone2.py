@@ -30,7 +30,7 @@ vehicle.set_initial_conditions(start)
 vehicle.set_terminal_conditions(goal)
 
 # create environment
-environment = Environment(room={'shape': Rectangle(width=20, height=20), 'position':[0,0], 'draw':True})
+environment = Environment(room={'shape': Square(20), 'position':[0,0], 'draw':True})
 
 rect = Rectangle(width=4, height=4)
 environment.add_obstacle(Obstacle({'position': [-6,-6]}, shape=rect))
@@ -43,25 +43,13 @@ environment.add_obstacle(Obstacle({'position': [6,-6]}, shape=rect))
 environment.add_obstacle(Obstacle({'position': [6,0]}, shape=rect))
 environment.add_obstacle(Obstacle({'position': [6,6]}, shape=rect))
 
-# Warning: if you use fill room, then also fill the empty rooms with []
-# environment.fill_room(room1, [obstacle1, obstacle2, obstacle3, obstacle4, obstacle5, obstacle6])
-
-# trajectories = {'velocity': {'time': [0.],
-#                              'values': [[0.42, 0]]}}
-# environment.add_obstacle(Obstacle({'position': [-4., 0]}, shape=Circle(0.3), options={'bounce':True},
-#                                   simulation={'trajectories': trajectories}))
-
-# environment.add_danger_zone(DangerZone({'position': [-4, 0]}, shape=Circle(0.6),
-#                            bounds = {'vxmin': -0.25, 'vymin': -0.25, 'vxmax': 0.25, 'vymax': 0.25, 'vmax': 0.25},
-#                            simulation={'trajectories': trajectories}))
-
+# add a dangerzone that moves over time, shows up at each crossroad when the vehicle comes in the neighbourhood
+# in this example, the dangerzone is moved manually (i.e. 18 and 27 are chosen on purpose)
+# normally, you would use the deployer for this, such that you can decide which DangerZone is closest to the vehicle
+# but deployer doesn't have nice plotting, so I simulated the behaviour of deployer_example_dangerzone.py here
 environment.add_danger_zone(DangerZone({'position': [-3, -3]}, shape=Rectangle(width=3, height=4),
                            bounds = {'vxmin': -0.5, 'vymin': -0.5, 'vxmax': 0.5, 'vymax': 0.5, 'vmax': 0.5},
                            simulation={'trajectories': {'position':{'time':[[18],[27]], 'values': [[6,0],[0,6]]}}}))
-
-# environment.add_danger_zone(DangerZone({'position': [1., -1]}, shape=Rectangle(width=2, height=2),
-#                            bounds = {'vxmin': -0.5, 'vymin': -0.5, 'vxmax': 0.5, 'vymax': 0.5, 'vmax': 0.25},
-#                            simulation={'trajectories': trajectories}))
 
 # make global planner
 # [25,25] = number of cells in vertical and horizonal direction
@@ -79,7 +67,7 @@ globalplanner = AStarPlanner(environment, [50,50], start, goal, options={'veh_si
 options = {'frame_type': 'corridor', 'scale_up_fine': True, 'n_frames': 1, 'l_shape':False}
 schedulerproblem = SchedulerProblem(vehicle, environment, globalplanner, options=options)
 schedulerproblem.set_options({'solver_options': {'ipopt': {
-                                                       'ipopt.linear_solver': 'ma57',
+                                                       #'ipopt.linear_solver': 'ma57',
                                                        # 'ipopt.hessian_approximation': 'limited-memory'
                                                        }}})
 
@@ -94,7 +82,5 @@ vehicle.plot('dinput', knots=True, prediction=True, labels=['a_x (m/s^2)', 'a_y 
 # run it!
 simulator.run()
 
-
-import pdb; pdb.set_trace()  # breakpoint a635c35f //
-schedulerproblem.save_movie('scene', format='gif', name='multiframe_pos2', number_of_frames=80, movie_time=8, axis=True)
-vehicle.save_movie('input', format='gif', name='multiframe_vel2', number_of_frames=80, movie_time=8, axis=True)
+# schedulerproblem.save_movie('scene', format='gif', name='multiframe_pos2', number_of_frames=80, movie_time=8, axis=True)
+# vehicle.save_movie('input', format='gif', name='multiframe_vel2', number_of_frames=80, movie_time=8, axis=True)

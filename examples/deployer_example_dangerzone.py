@@ -22,7 +22,7 @@ import time
 import matplotlib.pyplot as plt
 import numpy as np
 
-# this file demonstrates how to use the deployer in a motion planning application
+# this file demonstrates how to use the deployer in a motion planning application with a schedulerproblem
 
 # create vehicle
 vehicle = Holonomic(shapes = Circle(0.4), bounds={'vxmin': -1, 'vymin': -1, 'vxmax': 1, 'vymax': 1, 'vmax':1,
@@ -82,7 +82,7 @@ globalplanner = AStarPlanner(environment, [50,50], start, goal, options={'veh_si
 options = {'frame_type': 'corridor', 'scale_up_fine': True, 'n_frames': 1, 'l_shape':False}
 schedulerproblem = SchedulerProblem(vehicle, environment, globalplanner, options=options)
 schedulerproblem.set_options({'solver_options': {'ipopt': {
-                                                       'ipopt.linear_solver': 'ma57',
+                                                       # 'ipopt.linear_solver': 'ma57',
                                                        # 'ipopt.hessian_approximation': 'limited-memory'
                                                        }}})
 
@@ -99,9 +99,7 @@ input_traj = np.c_[[0.0, 0.0]]
 n_samp = int(np.round(update_time/sample_time, 6))
 
 target_reached = False
-vehicle.set_initial_conditions(start) # for init guess
 deployer.reset() # let's start from new initial guess
-current_frame_number = schedulerproblem.cnt
 while not target_reached:
     # 'measure' current state (here ideal trajectory following is simulated)
     if state_traj.shape[1] > 1:
@@ -123,8 +121,6 @@ while not target_reached:
     state_traj = np.c_[state_traj, trajectories['state'][:, 1:n_samp+1]]
     input_traj = np.c_[input_traj, trajectories['input'][:, 1:n_samp+1]]
     # check target
-    # print 'goal norm: ', np.linalg.norm(goal-state_traj[:, -1])
-    # print 'input_norm: ', np.linalg.norm(input_traj[:, -1])
     if (np.linalg.norm(goal-state_traj[:, -1]) < 1e-2 and np.linalg.norm(input_traj[:, -1]) < 1e-1):
         target_reached = True
     # update time
@@ -146,6 +142,6 @@ plt.plot(time, input_traj[0, :])
 plt.subplot(2, 1, 2)
 plt.plot(time, input_traj[1, :])
 
-plt.figure()
-plt.plot(state_traj[0, :], state_traj[1, :])
-import pdb; pdb.set_trace()  # breakpoint b6b40441 //
+plt.figure(1)
+plt.plot(state_traj[0, :], state_traj[1, :], 'g')
+import pdb; pdb.set_trace()  # breakpoint 66ea645c //
