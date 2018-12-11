@@ -716,10 +716,9 @@ class SchedulerProblem(Problem):
             obstacles = self.frames[k].stationary_obstacles+self.frames[k].moving_obstacles
             environment.fill_room(room[k], obstacles)
 
-        # if danger zones are present, add them all to the environment of the local problem
-        if hasattr(self.environment, 'danger_zones'):
-            for zone in self.environment.danger_zones:
-                environment.add_danger_zone(zone)
+        # if danger zones are present, add them to the environment of the local problem
+        for zone in self.environment.danger_zones:
+            environment.add_danger_zone(zone)
 
         # create problem
         problem_options = {}

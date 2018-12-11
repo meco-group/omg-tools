@@ -188,7 +188,7 @@ class Problem(OptiChild, PlotLayer):
 
     def update_vehicle_limits(self):
         # check if the vehicle is in a zone that requires reduced speed, if so change its limits
-        if hasattr(self.environment, 'danger_zones'):
+        if self.environment.danger_zones:
             if hasattr(self.vehicles[0], 'signals'):
                 veh_pos = self.vehicles[0].signals['state'][:,-1]
             else:
