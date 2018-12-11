@@ -47,7 +47,7 @@ environment.add_obstacle(Obstacle({'position': [6,6]}, shape=rect))
 # in this example, the dangerzone is moved manually (i.e. 18 and 27 are chosen on purpose)
 # normally, you would use the deployer for this, such that you can decide which DangerZone is closest to the vehicle
 # but deployer doesn't have nice plotting, so I simulated the behaviour of deployer_example_dangerzone.py here
-environment.add_danger_zone(DangerZone({'position': [-3, -3]}, shape=Rectangle(width=3, height=4),
+environment.add_danger_zone(DangerZone({'position': [-3, -3]}, shape=Rectangle(width=2, height=2),
                            bounds = {'vxmin': -0.5, 'vymin': -0.5, 'vxmax': 0.5, 'vymax': 0.5, 'vmax': 0.5},
                            simulation={'trajectories': {'position':{'time':[[18],[27]], 'values': [[6,0],[0,6]]}}}))
 
