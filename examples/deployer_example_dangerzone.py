@@ -109,7 +109,7 @@ while not target_reached:
     # check which danger zone is most closeby and update position accordingly
     min_distance = np.inf
     for zone in dangerzones:
-        dist = distance_between_points(current_state, zone.signals['position'][:,-1])
+        dist = euclidean_distance_between_points(current_state, zone.signals['position'][:,-1])
         if dist < min_distance:
             min_distance = dist
             closest_dangerzone = zone
