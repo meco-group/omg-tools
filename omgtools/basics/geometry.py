@@ -20,14 +20,23 @@
 import numpy as np
 
 
+def euclidean_distance_between_points(point1, point2):
+    # calculate Euclidean distance between two points in kD-space
+    dist = 0
+    if len(point1) != len(point2):
+        raise ValueError('Dimensions of point1 and point2 do not match: ', len(point1), ', ', len(point2))
+    for k in range(len(point1)):
+        dist += (point2[k]-point1[k])**2
+    return np.sqrt(dist)
+
 def distance_between_points(point1, point2):
-        # calculate distance between two points in kD-space
-        dist = 0
-        if len(point1) != len(point2):
-            raise ValueError('Dimensions of point1 and point2 do not match: ', len(point1), ', ', len(point2))
-        for k in range(len(point1)):
-            dist += (point2[k]-point1[k])**2
-        return np.sqrt(dist)
+    # calculate distance between two points in kD-space, returned as distance in each dimension
+    dist = []
+    if len(point1) != len(point2):
+        raise ValueError('Dimensions of point1 and point2 do not match: ', len(point1), ', ', len(point2))
+    for k in range(len(point1)):
+        dist.append(np.abs(point2[k]-point1[k]))
+    return dist
 
 def distance_to_rectangle(point, rectangle):
     # returns the x- and y-direction distance from point to a rectangle
@@ -146,7 +155,7 @@ def circle_polyhedron_intersection(circle_shape, circle_pos, polyhedron_shape, p
     center = circle_pos
     for i in range(len(vertices)):
         # first quickly check if any vertex is inside the circle
-        dist = distance_between_points(center, [vertices[0][i], vertices[1][i]])
+        dist = euclidean_distance_between_points(center, [vertices[0][i], vertices[1][i]])
         if dist <= circle_shape.radius:
             # one of the vertices is inside the circle
             return True
@@ -162,7 +171,7 @@ def circle_polyhedron_intersection(circle_shape, circle_pos, polyhedron_shape, p
         # and check distance between intersection point and circle center
         line1 = [[x1,y1],[x2,y2]]  # side of polyhedron
         if (((x1-eps<=x4<=x2+eps and y1-eps<=y4<=y2+eps) or (x1+eps>=x4>=x2-eps and y1+eps>=y4>=y2-eps)) and
-           (distance_between_points(center, [x4,y4]) <= circle_shape.radius)):
+           (euclidean_distance_between_points(center, [x4,y4]) <= circle_shape.radius)):
             return True
     return False
 

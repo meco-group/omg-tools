@@ -23,7 +23,7 @@ from gcodeproblem import GCodeProblem
 from ..basics.shape import Rectangle, Square, Circle
 from ..environment.environment import Environment
 from ..basics.shape import Rectangle, Ring
-from ..basics.geometry import distance_between_points, point_in_polyhedron
+from ..basics.geometry import euclidean_distance_between_points, point_in_polyhedron
 from ..basics.spline import BSplineBasis, BSpline
 from ..basics.spline_extra import concat_splines, running_integral, definite_integral
 
@@ -243,9 +243,9 @@ class GCodeSchedulerProblem(Problem):
             # convert block to room
             if block.type in ['G00', 'G01']:
                 # not using variable tolerance, or segment is too short to split
-                if (not self.variable_tolerance or distance_between_points(block.start, block.end) < self.split_length):
+                if (not self.variable_tolerance or euclidean_distance_between_points(block.start, block.end) < self.split_length):
                     # add tolerance to width to obtain the complete reachable region
-                    width = distance_between_points(block.start, block.end) + 2*tolerance
+                    width = euclidean_distance_between_points(block.start, block.end) + 2*tolerance
                     height = 2*tolerance
                     orientation = np.arctan2(block.end[1]-block.start[1], block.end[0]-block.start[0])
                     shape = Rectangle(width = width,  height = height, orientation = orientation)
@@ -261,7 +261,7 @@ class GCodeSchedulerProblem(Problem):
                     # large tolerances in the first and last parts, tight tolerance in the middle part
 
                     orientation = np.arctan2(block.end[1]-block.start[1], block.end[0]-block.start[0])
-                    width = distance_between_points(block.start, block.end)  # default width
+                    width = euclidean_distance_between_points(block.start, block.end)  # default width
 
                     ## part 1
                     l1 = self.split_small*width
@@ -700,7 +700,7 @@ class GCodeSchedulerProblem(Problem):
                 for k in range(len(segment['shape'].vertices[0])-1):
                     point1 = segment['shape'].vertices[:,k]+segment['position']
                     point2 = segment['shape'].vertices[:,k+1]+segment['position']
-                    dist = distance_between_points(point1,point2)
+                    dist = euclidean_distance_between_points(point1,point2)
                     if abs(dist - segment['shape'].width) < 1e-3:
                         # the connection between the points gives a side of length = width of the shape
                         couples.append([point1,point2])

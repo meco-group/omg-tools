@@ -19,7 +19,7 @@
 
 from ..basics.optilayer import OptiChild
 from ..basics.spline import BSplineBasis, BSpline
-from ..basics.geometry import distance_between_points, point_in_polyhedron
+from ..basics.geometry import euclidean_distance_between_points, point_in_polyhedron
 from ..basics.geometry import circle_polyhedron_intersection
 from ..basics.geometry import rectangles_overlap
 from ..basics.shape import Circle, Polyhedron, Rectangle
@@ -375,7 +375,7 @@ class Environment(OptiChild, PlotLayer):
                     shape1_chck = shape1_chck + pos1
                     for shape2_chck, shape2_rad in zip(*shape2_checkpoints):
                         shape2_chck = shape2_chck + pos2
-                        if (distance_between_points(shape1_chck, shape2_chck) < (shape1_rad + shape2_rad)):
+                        if (euclidean_distance_between_points(shape1_chck, shape2_chck) < (shape1_rad + shape2_rad)):
                             return True
                 # didn't find an overlap
                 return False

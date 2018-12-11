@@ -18,7 +18,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from ..basics.shape import Rectangle, Circle
-from ..basics.geometry import point_in_rectangle, distance_between_points
+from ..basics.geometry import point_in_rectangle, euclidean_distance_between_points
 from ..basics.geometry import intersect_line_segments, intersect_lines
 
 import numpy as np
@@ -355,7 +355,7 @@ class Frame(object):
         closest_waypoint = waypoints[0]
         index = 0
         for idx, point in enumerate(waypoints):
-            d = distance_between_points(point, position)
+            d = euclidean_distance_between_points(point, position)
             if d < dist:
                 dist = d
                 closest_waypoint = point

@@ -2,7 +2,7 @@
 
 from ..environment.environment import Environment, Obstacle
 from ..basics.shape import Rectangle, Circle
-from ..basics.geometry import distance_between_points, point_in_rectangle
+from ..basics.geometry import euclidean_distance_between_points, point_in_rectangle
 from svg_reader import SVGReader
 
 import Tkinter as tk
@@ -252,7 +252,7 @@ class EnvironmentGUI(tk.Frame):
             for obstacle in self.obstacles:
                 if obstacle['shape'] == 'circle':
                     # was the clicked position inside the circle shape?
-                    if distance_between_points(pos, obstacle['pos']) <= obstacle['radius']:
+                    if euclidean_distance_between_points(pos, obstacle['pos']) <= obstacle['radius']:
                         self.selected_obstacle = obstacle['variable']
                         # found the clicked obstacle, stop looking
                         break
