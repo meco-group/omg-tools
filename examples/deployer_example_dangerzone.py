@@ -145,4 +145,3 @@ plt.plot(time, input_traj[1, :])
 
 plt.figure(1)
 plt.plot(state_traj[0, :], state_traj[1, :], 'g')
-import pdb; pdb.set_trace()  # breakpoint 66ea645c //
