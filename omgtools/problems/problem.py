@@ -271,7 +271,7 @@ class Problem(OptiChild, PlotLayer):
                     zone_to_change.old_dimensions = [zone_to_change.shape.radius]
                     zone_to_change.shape.radius += brake_dist
                 elif isinstance(zone_to_change.shape, Rectangle):
-                    option = 2
+                    option = 1
                     if option == 1:
                         # option 1: in worst case you arrive perpendicular to the danger zone borders, so enlarge all sides 
                         #           of the danger zone with 2*brake_dist (i.e. one brake_dist on each side)
@@ -312,7 +312,8 @@ class Problem(OptiChild, PlotLayer):
                                 while curr_dist < brake_dist:
                                     # move backwards over the trajectory, until you find a point
                                     # that is far enough from the danger zone border to be able to slow down before entering the zone
-                                    prev_point = current_traj[:, i-1]
+                                    # remove orientation from current_traj
+                                    prev_point = current_traj[:2, i-1]
                                     curr_dist += euclidean_distance_between_points(curr_point, prev_point)  # distance along the trajectory
                                     curr_point = prev_point
                                     i -= 1
