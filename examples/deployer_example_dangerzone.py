@@ -115,6 +115,7 @@ while not target_reached:
             closest_dangerzone = zone
     # update danger zone position to the one of the closest
     environment.danger_zones[0].signals['position'] = closest_dangerzone.signals['position']
+    environment.danger_zones[0].shape = closest_dangerzone.shape
     # update motion planning
     trajectories = deployer.update(current_time, current_state)
     # store state & input trajectories -> simulation of ideal trajectory following
