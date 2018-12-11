@@ -18,9 +18,9 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 from ..basics.optilayer import OptiFather, OptiChild
-from ..basics.geometry import distance_between_points, point_in_polyhedron
-from ..basics.geometry import circle_polyhedron_intersection
-from ..basics.geometry import rectangles_overlap
+from ..basics.geometry import euclidean_distance_between_points, distance_between_points
+from ..basics.geometry import circle_polyhedron_intersection, distance_to_rectangle
+from ..basics.geometry import rectangles_overlap, point_in_polyhedron
 from ..basics.shape import Circle, Polyhedron, Rectangle, Square
 from ..basics.shape import Circle, Rectangle
 from ..vehicles.fleet import get_fleet_vehicles
@@ -108,6 +108,7 @@ class Problem(OptiChild, PlotLayer):
     def solve(self, current_time, update_time):
         current_time -= self.start_time  # start_time: the point in time where you start solving
         self.init_step(current_time, update_time)  # pass on update_time to make initial guess
+        self.enlarge_danger_zones()  # enlarge danger zone such that reduced speed is reached in the original zone
         self.update_vehicle_limits()  # used to change the velocity limits
         # set initial guess, parameters, lb & ub
         var = self.father.get_variables()
@@ -185,6 +186,164 @@ class Problem(OptiChild, PlotLayer):
                             raise ValueError('Each vehicle spline should receive an initial guess.')
                         else:
                             self.father.set_variables(init_guess[l].tolist(),child=vehicle, name='splines_seg'+str(l))
+
+    def enlarge_danger_zones(self):
+        # This function enlarges the danger zone to take into account the required brake distance
+        # to slow down from current velocity limit to reduced velocity limit. This enlargement ensures that the
+        # vehicle will drive at the reduced velocity limit when it's inside the danger zone. 
+        # The enlargement is done in all directions, because we suppose that the danger zone will be
+        # removed by a higher level in the code when the vehicle has passed it.
+
+        if self.environment.danger_zones:
+            # if there is a danger zone present
+            if hasattr(self.vehicles[0], 'signals'):
+                # all other iterations
+                veh_pos = self.vehicles[0].signals['state'][:,-1]
+            else:
+                # first iteration
+                veh_pos = self.vehicles[0].prediction['state']
+
+            if isinstance(self.vehicles[0].shapes[0], Circle):
+                veh_size = self.vehicles[0].shapes[0].radius
+            elif isinstance(self.vehicles[0].shapes[0], Rectangle):
+                veh_size = np.max(self.vehicles[0].shapes[0].width, self.vehicles[0].shapes[0].height)
+            else:
+                raise RuntimeError('Only circular and rectangular vehicle shapes are supported for now, not ', self.vehicles[0].shape)
+
+            # find danger zone that is closest to the current vehicle position
+            min_dist = np.inf
+            closest_zone_idx = None
+            for idx, zone in enumerate (self.environment.danger_zones):
+                # check distance between current vehicle position and danger zone
+                zone_pos = zone.signals['position'][:,-1]
+                # remove orientation from vehicle position
+                dist = euclidean_distance_between_points(veh_pos[:2], zone_pos)
+                if dist < min_dist:
+                    min_dist = dist
+                    closest_zone_idx = idx
+            # closest zone, change this one
+            zone_to_change = self.environment.danger_zones[closest_zone_idx]
+
+            if hasattr(zone_to_change, 'old_dimensions'):
+                # zone was already enlarged in a previous function call, don't do this again
+                return
+            else:
+                # zone was not yet enlarged, find out how to enlarge it
+
+                # compute brake distance to go from current velocity limit to new ones
+                # i.e. suppose that the vehicle is currently driving at its maximum velocity
+                # Note: supposed that the vehicle is Holonomic, and that the velocity limits are symmetric
+                if (self.vehicles[0].options['syslimit'] == 'norm_2'):
+                    vel_difference = self.vehicles[0].vmax - zone_to_change.bounds['vmax']  
+                    
+                    # compute time required to slow down
+                    t_slow_down = np.abs(vel_difference/self.vehicles[0].amax)
+                    
+                    # compute brake dist as:
+                    # x = at^2/2 + vt + x0 
+                    # fill in v = v0 + at
+                    # x = at^2/2+(v0+at)t with t = (v -v0)/a = t_slow_down
+                    # or: x = (v**2-v0**2)/2a
+                    brake_dist = self.vehicles[0].amax * t_slow_down**2 * 0.5 + (self.vehicles[0].vmax - self.vehicles[0].amax * t_slow_down)*t_slow_down
+                else:
+                    old_limits = np.array([self.vehicles[0].vxmax, self.vehicles[0].vymax])
+                    new_limits = np.array([zone_to_change.bounds['vxmax'], zone_to_change.bounds['vymax']])
+                    # maximum value for both axis is the determining one
+                    vel_difference = np.max(old_limits - new_limits)
+
+                    # compute time required to slow down
+                    t_slow_down = np.abs(vel_difference/self.vehicles[0].axmax)
+                    
+                    # compute brake dist as:
+                    # x = at^2/2 + vt + x0 
+                    # fill in v = v0 + at
+                    # x = at^2/2+(v0+at)t with t = (v -v0)/a = t_slow_down
+                    # or: x = (v**2-v0**2)/2a
+                    brake_dist = self.vehicles[0].axmax * t_slow_down**2 * 0.5 + (self.vehicles[0].vxmax - self.vehicles[0].axmax * t_slow_down)*t_slow_down
+                
+                # Take into account vehicle size, in order to reach the new maximum velocity when the border of the vehicle
+                # enters the zone, instead of the center (checking if the vehicle is inside the danger zone is also done for the border).
+                brake_dist += veh_size
+
+                # enlarge the zone based on computed brake distance
+                if isinstance(zone_to_change.shape, Circle):
+                    # save old dimensions and enlarge radius
+                    zone_to_change.old_dimensions = [zone_to_change.shape.radius]
+                    zone_to_change.shape.radius += brake_dist
+                elif isinstance(zone_to_change.shape, Rectangle):
+                    option = 2
+                    if option == 1:
+                        # option 1: in worst case you arrive perpendicular to the danger zone borders, so enlarge all sides 
+                        #           of the danger zone with 2*brake_dist (i.e. one brake_dist on each side)
+                        # Note: no check of the current trajectory is required here, you will enlarge the danger zone anyway
+                        zone_to_change.old_dimensions = [zone_to_change.shape.width, zone_to_change.shape.height]
+                        zone_to_change.shape.width += 2*brake_dist
+                        zone_to_change.shape.height += 2*brake_dist
+                        # update vertices
+                        zone_to_change.shape.vertices = zone_to_change.shape.get_vertices()
+
+                    elif option == 2: 
+                        # option 2: compute distance along the current vehicle path, for all points before the intersection of the 
+                        #           current path with the original danger zone, repeat until the distance over the path is larger than the breaking distance
+                        #           place outer point here and enlarge danger zone such that the border goes through the outer point
+                        #           we use the largest distance between the outer point and the danger zone center (i.e. x or y distance)
+                        #           to determine the new size of the danger zone, which is justified if you suppose the danger zone is
+                        #           situated in a corridor (i.e. then the distance in this one dimension (x or y) is the determining factor)
+                        if hasattr(self.vehicles[0], 'trajectories'):
+                            current_traj = self.vehicles[0].trajectories['state']
+                            zone_to_change_pos = zone_to_change.signals['position'][:,-1]
+                            intersection_point = None
+                            intersection_idx = None
+                            outer_point = None  # new border point for enlarged danger zone
+                            for idx, pos in enumerate(zip(current_traj[0,:], current_traj[1,:])):
+                                # find first point of trajectory inside the danger zone
+                                if circle_polyhedron_intersection(self.vehicles[0].shapes[0], pos,  zone_to_change.shape, zone_to_change_pos):
+                                    intersection_point = np.array(pos)
+                                    intersection_idx = idx
+                                    break
+                            if intersection_point is not None:
+                                # the trajectory intersects with the danger zone
+                                # find at which point you need to start slowing down, i.e. at which point the new border
+                                # of the danger zone must be placed
+                                curr_dist = 0
+                                curr_point = intersection_point
+                                # initialize counter
+                                i = intersection_idx
+                                while curr_dist < brake_dist:
+                                    # move backwards over the trajectory, until you find a point
+                                    # that is far enough from the danger zone border to be able to slow down before entering the zone
+                                    prev_point = current_traj[:, i-1]
+                                    curr_dist += euclidean_distance_between_points(curr_point, prev_point)  # distance along the trajectory
+                                    curr_point = prev_point
+                                    i -= 1
+                                    if i < 0:
+                                        raise RuntimeError('No point on trajectory found that is far enough from entrance of dangerzone!')
+                                outer_point = curr_point
+                                 
+                            if outer_point is not None:
+                                # found a point that is far enough from the border of the dangerzone
+                                # enlarge danger zone such that its borders run through outer_point
+                                zone_to_change.old_dimensions = [zone_to_change.shape.width, zone_to_change.shape.height]
+                                # get distance between outer_point and center of danger zone, along each dimension
+                                distances = distance_between_points(outer_point, zone_to_change_pos)
+                                # x-direction = width, y-direction = height
+                                if distances[0] > (zone_to_change.shape.width*0.5):
+                                    # outer_point lies outside the danger zone in the x-direction
+                                    zone_to_change.shape.width += 2*(distances[0] - zone_to_change.shape.width*0.5)
+                                    zone_to_change.shape.height += 2*(distances[0] - zone_to_change.shape.width*0.5)
+                                elif distances[1] > (zone_to_change.shape.height*0.5):
+                                    # outer_point lies outside the danger zone in the y-direction
+                                    zone_to_change.shape.width += 2*(distances[1] - veh_size - zone_to_change.shape.height*0.5)
+                                    zone_to_change.shape.height += 2*(distances[1] - veh_size - zone_to_change.shape.height*0.5)
+                                else:
+                                    raise RuntimeError('This function can only consider danger zones in a corridor. \
+                                                        Your danger zone was not in a corridor.')
+                                # update vertices
+                                zone_to_change.shape.vertices = zone_to_change.shape.get_vertices()
+                    else:
+                        raise RuntimeError('Select a valid option, i.e. 1 or 2, not ', option)
+                else:
+                    raise RuntimeError('Only circular and rectangular danger zones are supported for now, you have: ', zone_to_change.shape)
 
     def update_vehicle_limits(self):
         # check if the vehicle is in a zone that requires reduced speed, if so change its limits
