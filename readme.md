@@ -235,6 +235,11 @@ problem.save_movie('scene')
 Check out the examples directory for more code examples. There you can find a simple tutorial example which provides a documented overview of the basic functionality of the toolbox.
 
 ## Installation
+
+### Docker file
+
+OMG-tools is available in a Docker container. The image can be obtained [here](https://cloud.docker.com/repository/docker/tmercy/omg-tools/general).
+
 ### Basic installation
 OMG-tools is written in Python 2.7 and requires the installation of the following packages:
 
