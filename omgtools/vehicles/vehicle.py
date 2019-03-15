@@ -215,7 +215,7 @@ class Vehicle(OptiChild, PlotLayer):
                         eps = 0.
                     for l, chck in enumerate(checkpoints):
                         self.define_constraint(
-                            sum([a[k]*(chck[k]+position[k]) for k in range(3)])-b+rad[l], -inf, 0)
+                            sum([a[k]*(chck[k]+position[k]) for k in range(3)])-b+rad[l]+safety_distance-eps, -inf, 0)
             # room constraints
             if self.options['room_constraints']:
                 lims = room['shape'].get_canvas_limits()
