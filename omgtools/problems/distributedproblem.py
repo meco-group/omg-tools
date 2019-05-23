@@ -17,7 +17,7 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-from problem import Problem
+from .problem import Problem
 from casadi import symvar, Function
 import collections as col
 import numpy as np
@@ -179,7 +179,7 @@ class DistributedProblem(Problem):
         return symbol_dict
 
     def _sort_dict(self, ref, dic):
-        return col.OrderedDict(sorted(dic.iteritems(), key=lambda x: x[0]._index if(x[0]._index > ref) else x[0]._index + self.fleet.N))
+        return col.OrderedDict(sorted(dic.items(), key=lambda x: x[0]._index if(x[0]._index > ref) else x[0]._index + self.fleet.N))
 
     # ========================================================================
     # Deploying related functions
@@ -226,13 +226,13 @@ class DistributedProblem(Problem):
 
     def final(self):
         obj = self.compute_objective()
-        print '\nWe reached our target!'
-        print '%-18s %6g' % ('Objective:', obj)
-        print '%-18s %6g ms' % ('Max update time:',
-                                max(self.update_times)*1000.)
-        print '%-18s %6g ms' % ('Av update time:',
+        print('\nWe reached our target!')
+        print('%-18s %6g' % ('Objective:', obj))
+        print('%-18s %6g ms' % ('Max update time:',
+                                max(self.update_times)*1000.))
+        print('%-18s %6g ms' % ('Av update time:',
                                 (sum(self.update_times)*1000. /
-                                 len(self.update_times)))
+                                 len(self.update_times))))
 
     def compute_objective(self):
         obj = 0.

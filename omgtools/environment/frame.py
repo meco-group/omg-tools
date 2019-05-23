@@ -17,6 +17,7 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
+from __future__ import print_function
 from ..basics.shape import Rectangle, Circle
 from ..basics.geometry import point_in_rectangle, distance_between_points
 from ..basics.geometry import intersect_line_segments, intersect_lines
@@ -160,7 +161,7 @@ class Frame(object):
 
         end_time = time.time()
         if self.options['verbose'] >= 3:
-            print 'elapsed time in get_moving_obstacles', end_time-start_time
+            print('elapsed time in get_moving_obstacles', end_time-start_time)
 
         return moving_obstacles
 
@@ -224,7 +225,7 @@ class Frame(object):
         if method == 'move_frame':  # move frame borders, keep waypoint
             if abs(dist_to_border[0]) <= self.veh_size:
                 if self.options['verbose'] >= 2:
-                    print 'Last waypoint too close in x-direction, moving frame'
+                    print('Last waypoint too close in x-direction, moving frame')
                 # move in x-direction
                 if not inside_border:
                     move_distance = abs(dist_to_border[0]) + self.veh_size*self.margin
@@ -237,7 +238,7 @@ class Frame(object):
                 self.border = self.make_border(xmin, ymin, xmax, ymax)
             if abs(dist_to_border[1]) <= self.veh_size:
                 if self.options['verbose'] >= 2:
-                    print 'Last waypoint too close in y-direction, moving frame'
+                    print('Last waypoint too close in y-direction, moving frame')
                 # move in y-direction
                 if not inside_border:
                     move_distance = abs(dist_to_border[1]) + self.veh_size*self.margin
@@ -454,9 +455,9 @@ class ShiftFrame(Frame):
         # frame['border'] is already determined
         self.stationary_obstacles = self.get_stationary_obstacles()
         if self.options['verbose'] >= 2:
-            print 'Stationary obstacles inside new frame: ', self.stationary_obstacles
-            print 'first waypoint in new frame: ', self.waypoints[0]
-            print 'last waypoint in new frame:', self.endpoint
+            print('Stationary obstacles inside new frame: ', self.stationary_obstacles)
+            print('first waypoint in new frame: ', self.waypoints[0])
+            print('last waypoint in new frame:', self.endpoint)
         # If generated frame contains goal position, endpoint will be = goal position, since the goal position
         # was added to the global path. This was necessary because otherwise you will end up on a grid point
         # and not necessarily in the goal position (which can lie between grid points, anywhere on the map)
@@ -536,9 +537,9 @@ class CorridorFrame(Frame):
         # frame['border'] is already determined
         self.stationary_obstacles = self.get_stationary_obstacles()
         if self.options['verbose'] >= 2:
-            print 'Stationary obstacles inside new frame: ', self.stationary_obstacles
-            print 'first waypoint in new frame: ', self.waypoints[0]
-            print 'last waypoint in new frame:', self.waypoints[-1]
+            print('Stationary obstacles inside new frame: ', self.stationary_obstacles)
+            print('first waypoint in new frame: ', self.waypoints[0])
+            print('last waypoint in new frame:', self.waypoints[-1])
         # If generated frame contains goal position, endpoint will be = goal position, since the goal position
         # was added to the global path. This was necessary because otherwise you will end up on a grid point
         # and not necessarily in the goal position (which can lie between grid points, anywhere on the map)
@@ -630,7 +631,7 @@ class CorridorFrame(Frame):
             self.waypoints = points_in_frame
 
         end_time = time.time()
-        print 'time in CorridorFrame', end_time-start_time
+        print('time in CorridorFrame', end_time-start_time)
 
     def update_frame_with_waypoint(self, prev_point, point):
         # updates the frame when adding a new waypoint to the frame
@@ -771,7 +772,7 @@ class CorridorFrame(Frame):
 
         end_time = time.time()
         if self.options['verbose'] >= 2:
-            print 'time in scale_up_frame', end_time-start_time
+            print('time in scale_up_frame', end_time-start_time)
 
     def create_l_shape(self, next_frame):
         frame1 = self  # current frame

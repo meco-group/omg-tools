@@ -241,7 +241,7 @@ Check out the examples directory for more code examples. There you can find a si
 OMG-tools is available in a Docker container. The image can be obtained [here](https://cloud.docker.com/repository/docker/tmercy/omg-tools/general).
 
 ### Basic installation
-OMG-tools is written in Python 2.7 and requires the installation of the following packages:
+OMG-tools is written in Python and requires the installation of the following packages:
 
 `sudo apt-get install python-pip python-numpy python-scipy python-matplotlib`
 

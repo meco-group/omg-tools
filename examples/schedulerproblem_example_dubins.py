@@ -27,7 +27,7 @@ veh_size = vehicle.shapes[0].radius
 vehicle.define_knots(knot_intervals=10)
 
 # create environment
-print 'Using environment for known example'
+print('Using environment for known example')
 #for now fix environment to the one for which A*-path is known
 start = [2,2,0]
 goal = [8,8,0]

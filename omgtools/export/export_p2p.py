@@ -20,7 +20,7 @@
 import os
 import shutil
 from casadi import nlpsol
-from export import Export
+from .export import Export
 
 
 class ExportP2P(Export):

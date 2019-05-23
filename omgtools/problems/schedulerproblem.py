@@ -17,10 +17,12 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-from problem import Problem
-from multiframeproblem import MultiFrameProblem
-from point2point import Point2point
-from globalplanner import AStarPlanner
+from __future__ import print_function
+
+from .problem import Problem
+from .multiframeproblem import MultiFrameProblem
+from .point2point import Point2point
+from .globalplanner import AStarPlanner
 from ..environment.environment import Environment
 from ..environment.frame import ShiftFrame, CorridorFrame
 from ..basics.shape import Rectangle, Circle
@@ -246,14 +248,14 @@ class SchedulerProblem(Problem):
             return False
 
     def final(self):
-        print 'The robot has reached its goal!'
-        print 'The problem was divided over ', self.cnt,' frames'
+        print('The robot has reached its goal!')
+        print('The problem was divided over ', self.cnt,' frames')
         if self.options['verbose'] >= 1:
-            print '%-18s %6g ms' % ('Max update time:',
-                                    max(self.update_times)*1000.)
-            print '%-18s %6g ms' % ('Av update time:',
+            print('%-18s %6g ms' % ('Max update time:',
+                                    max(self.update_times)*1000.))
+            print('%-18s %6g ms' % ('Av update time:',
                                     (sum(self.update_times)*1000. /
-                                     len(self.update_times)))
+                                     len(self.update_times))))
 
     # ========================================================================
     # Export related functions
@@ -378,7 +380,7 @@ class SchedulerProblem(Problem):
 
         end_time = time.time()
         if self.options['verbose'] >= 2:
-            print 'elapsed time while creating new ' + self.frame_type + ' frame: ', end_time-start_time
+            print('elapsed time while creating new ' + self.frame_type + ' frame: ', end_time-start_time)
 
     def create_next_frame(self, frame=None):
         # only used if self.n_frames = 1
@@ -398,7 +400,7 @@ class SchedulerProblem(Problem):
 
             end = time.time()
             if self.options['verbose'] >= 2:
-                print 'time spend in create_next_frame, ', end-start
+                print('time spend in create_next_frame, ', end-start)
             return next_frame
         else:
             # tried to create the next frame, while the goal position is already inside the current frame
@@ -474,7 +476,7 @@ class SchedulerProblem(Problem):
 
         end_time = time.time()
         if self.options['verbose'] >= 2:
-            print 'elapsed time while updating frame: ', end_time-start_time
+            print('elapsed time while updating frame: ', end_time-start_time)
 
     def get_init_guess(self, **kwargs):
         # local import to avoid circular dependency with Problem
@@ -508,7 +510,7 @@ class SchedulerProblem(Problem):
             guess_idx = [self.n_frames-1]
         else:
             # local_problem was not solved yet, make guess using global path for all frames
-            guess_idx = range(self.n_frames)
+            guess_idx = list(range(self.n_frames))
 
         # make guesses based on global path
         for k in guess_idx:
@@ -554,7 +556,7 @@ class SchedulerProblem(Problem):
 
         end_time = time.time()
         if self.options['verbose'] >= 2:
-            print 'elapsed time in get_init_guess ', end_time - start_time
+            print('elapsed time in get_init_guess ', end_time - start_time)
 
         return init_splines, motion_times
 

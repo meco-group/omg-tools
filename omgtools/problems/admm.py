@@ -19,8 +19,8 @@
 
 from ..basics.optilayer import OptiFather, create_function
 from ..basics.spline_extra import shift_knot1_fwd, shift_knot1_bwd, shift_over_knot
-from problem import Problem
-from dualmethod import DualUpdater, DualProblem
+from .problem import Problem
+from .dualmethod import DualUpdater, DualProblem
 from casadi import symvar, mtimes, MX, Function
 from casadi import vertcat, horzcat, jacobian, solve, substitute
 from casadi.tools import struct_symMX
@@ -62,7 +62,7 @@ class ADMM(DualUpdater):
 
     def construct_upd_x(self, problem=None):
         # construct optifather & give reference to problem
-        self.father_updx = OptiFather(self.group.values())
+        self.father_updx = OptiFather(list(self.group.values()))
         self.problem.father = self.father_updx
         # define parameters
         z_i = self.define_parameter('z_i', self.q_i_struct.shape[0])
@@ -394,7 +394,7 @@ class ADMM(DualUpdater):
         self.var_admm['x_i'] = self._get_x_variables()
         stats = self.problem_upd_x.stats()
         if (stats['return_status'] != 'Solve_Succeeded'):
-            print 'upd_x %d: %s' % (self._index, stats['return_status'])
+            print('upd_x %d: %s' % (self._index, stats['return_status']))
         return t_upd
 
     def set_parameters_upd_z(self, current_time):
@@ -532,7 +532,7 @@ class ADMM(DualUpdater):
                 l_ij = l_ij + ((alpha_p - 1)/self.alpha)*(l_ij - l_ij_p)
                 self.c_res_p = c_res
             else:
-                print 'resetting alpha'
+                print('resetting alpha')
                 self.alpha = 1.
                 z_i = z_i_p
                 z_ij = z_ij_p
@@ -613,14 +613,14 @@ class ADMMProblem(DualProblem):
             if ((self.iteration - 1) % 20 == 0):
                 print('----|------|----------|----------|'
                       '----------|----------|----------|----------')
-                print('%3s | %4s | %8s | %8s | %8s | %8s | %8s | %8s ' %
+                print(('%3s | %4s | %8s | %8s | %8s | %8s | %8s | %8s ' %
                       ('It', 't', 'prim res', 'dual res',
-                       't upd_x', 't upd_z', 't upd_l', 't_res'))
+                       't upd_x', 't upd_z', 't upd_l', 't_res')))
                 print('----|------|----------|----------|'
                       '----------|----------|----------|----------')
-            print('%3d | %4.1f | %.2e | %.2e | %.2e | %.2e | %.2e | %.2e ' %
+            print(('%3d | %4.1f | %.2e | %.2e | %.2e | %.2e | %.2e | %.2e ' %
                   (self.iteration, current_time, p_res, d_res, t_upd_x,
-                   t_upd_z, t_upd_l, t_res))
+                   t_upd_z, t_upd_l, t_res)))
         self.residuals['primal'] = np.r_[self.residuals['primal'], p_res]
         self.residuals['dual'] = np.r_[self.residuals['dual'], d_res]
         self.residuals['combined'] = np.r_[

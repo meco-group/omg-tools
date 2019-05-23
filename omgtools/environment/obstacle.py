@@ -17,7 +17,7 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-
+from __future__ import division
 from ..basics.optilayer import OptiChild
 from ..basics.spline_extra import get_interval_T
 from ..basics.spline import BSplineBasis, BSpline
@@ -334,7 +334,7 @@ class Obstacle2D(ObstaclexD):
     def define_collision_constraints(self, hyperplanes):
         for hyperplane in hyperplanes:
             a, b = hyperplane['a'], hyperplane['b']
-            for l in range(self.checkpoints.shape[0]/self.n_dim):
+            for l in range(self.checkpoints.shape[0]//self.n_dim):
                 xpos = self.pos_spline[
                     0]*self.gon_weight + self.checkpoints[l*self.n_dim+0]*self.cos - self.checkpoints[l*self.n_dim+1]*self.sin
                 ypos = self.pos_spline[
@@ -493,7 +493,7 @@ class Obstacle2D(ObstaclexD):
                 # didn't find an overlap
                 return False
             else:
-                print 'Only rectangular borders can be checked for bouncing obstacles yet'
+                print('Only rectangular borders can be checked for bouncing obstacles yet')
         elif isinstance(self.shape, Polyhedron):
             if isinstance(room['shape'], (Rectangle, Square)):
                 for self_chck, self_rad in zip(*self_checkpoints):
@@ -505,7 +505,7 @@ class Obstacle2D(ObstaclexD):
                 # didn't find an overlap
                 return False
             else:
-                print 'Only rectangular borders can be checked for bouncing obstacles yet'
+                print('Only rectangular borders can be checked for bouncing obstacles yet')
 
     def draw(self, t=-1):
         if not self.options['draw']:
@@ -528,6 +528,6 @@ class Obstacle3D(ObstaclexD):
     def define_collision_constraints(self, hyperplanes):
         for hyperplane in hyperplanes:
             a, b = hyperplane['a'], hyperplane['b']
-            for l in range(self.checkpoints.shape[0]/self.n_dim):
+            for l in range(self.checkpoints.shape[0]//self.n_dim):
                 self.define_constraint(-sum([a[k]*(self.checkpoints[l*self.shape.n_dim+k]+self.pos_spline[k])
                                              for k in range(self.n_dim)]) + b + self.rad[l], -inf, 0.)

@@ -17,10 +17,10 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-from problem import Problem
-from distributedproblem import DistributedProblem
+from .problem import Problem
+from .distributedproblem import DistributedProblem
 from casadi import SX, MX, DM
-from casadi.tools import struct, entry, structure
+from casadi.tools import struct, entry, struct_SX, struct_MX, struct_MX_mutable
 import collections as col
 
 
@@ -81,11 +81,11 @@ class DualUpdater(Problem):
     # ========================================================================
 
     def _struct2dict(self, var, dic):
-        from admm import ADMM
-        from dualdecomposition import DDUpdater
+        from .admm import ADMM
+        from .dualdecomposition import DDUpdater
         if isinstance(var, list):
             return [self._struct2dict(v, dic) for v in var]
-        elif isinstance(dic.keys()[0], (DDUpdater, ADMM)):
+        elif isinstance(list(dic.keys())[0], (DDUpdater, ADMM)):
             ret = {}
             for nghb in dic.keys():
                 ret[nghb.label] = {}
@@ -106,12 +106,12 @@ class DualUpdater(Problem):
     def _dict2struct(self, var, stru):
         if isinstance(var, list):
             return [self._dict2struct(v, stru) for v in var]
-        elif 'dd' in var.keys()[0] or 'admm' in var.keys()[0]:
-            chck = var.values()[0].values()[0].values()[0]
+        elif 'dd' in list(var.keys())[0] or 'admm' in list(var.keys())[0]:
+            chck = list(list(list(var.values())[0].values())[0].values())[0]
             if isinstance(chck, SX):
-                ret = structure.SXStruct(stru)
+                ret = struct_SX(stru)
             elif isinstance(chck, MX):
-                ret = structure.MXStruct(stru)
+                ret = struct_MX_mutable(stru)
             elif isinstance(chck, DM):
                 ret = stru(0)
             for nghb in var.keys():
@@ -120,11 +120,11 @@ class DualUpdater(Problem):
                         ret[nghb, child, name] = var[nghb][child][name]
             return ret
         else:
-            chck = var.values()[0].values()[0]
+            chck = list(list(var.values())[0].values())[0]
             if isinstance(chck, SX):
-                ret = structure.SXStruct(stru)
+                ret = struct_SX(stru)
             elif isinstance(chck, MX):
-                ret = structure.MXStruct(stru)
+                ret = struct_MX_mutable(stru)
             elif isinstance(chck, DM):
                 ret = stru(0)
             for child, q in var.items():
@@ -147,15 +147,15 @@ class DualUpdater(Problem):
         return x
 
     def _transform_spline(self, var, tf, dic):
-        from admm import ADMM
-        from dualdecomposition import DDUpdater
+        from .admm import ADMM
+        from .dualdecomposition import DDUpdater
         if isinstance(var, list):
             return [self._transform_spline(v, tf, dic) for v in var]
         elif isinstance(var, struct):
             var = self._struct2dict(var, dic)
             var = self._transform_spline(var, tf, dic)
             return self._dict2struct(var, _create_struct_from_dict(dic))
-        elif isinstance(dic.keys()[0], (DDUpdater, ADMM)):
+        elif isinstance(list(dic.keys())[0], (DDUpdater, ADMM)):
             ret = {}
             for nghb in dic.keys():
                 ret[nghb.label] = self._transform_spline(

@@ -20,7 +20,7 @@
 import os
 import shutil
 from casadi import nlpsol
-from export import Export
+from .export import Export
 
 
 class ExportADMM(Export):
@@ -36,8 +36,8 @@ class ExportADMM(Export):
                 self.export(source_dirs, dest_dir, src_files, updater.father_updx, updater, updater.problem)
         else:
             updaters = problem.separate_per_build()
-            if (len(updaters.keys()) == 1 and len(updaters.values()[0].keys()) == 1):
-                updater = updaters.values()[0].values()[0][0]
+            if (len(list(updaters.keys())) == 1 and len(list(updaters.values())[0].keys()) == 1):
+                updater = list(list(updaters.values())[0].values())[0][0]
                 self.export(source_dirs, self.options['directory'], src_files, updater.father_updx, updater, updater.problem)
             else:
                 for veh_type, nghb_nr in updaters.items():

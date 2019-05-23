@@ -71,9 +71,9 @@ elif solver is 'knitro':
       {'knitro': {'knitro.bar_initpt': 2, 'knitro.honorbnds': 0, 'knitro.scale': 1}}})
       # other possible options: 'knitro.linsolver': 2, 'knitro.bar_murule':5, 'knitro.algorithm':1
 else:
-    print('You selected solver: ' + solver +
+    print(('You selected solver: ' + solver +
           ' but this solver is not supported. ' +
-          'Choose between ipopt, worhp, snopt or blocksqp.')
+          'Choose between ipopt, worhp, snopt or blocksqp.'))
 problem.init()
 
 # create simulator

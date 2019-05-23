@@ -70,13 +70,13 @@ if not os.path.isdir(testdir):
     os.makedirs(os.path.join(options['directory'], 'test'))
 jump = int(simulator.update_time/simulator.sample_time)
 size = len(trajectories[vehicles[0].label]['state'])
-with open(os.path.join(testdir, 'data_state.csv'), 'wb') as f:
+with open(os.path.join(testdir, 'data_state.csv'), 'w') as f:
     w = csv.writer(f)
     for i in range(0, size, jump):
         for vehicle in vehicles:
             for k in range(trajectories[vehicle.label]['state'][i].shape[0]):
                 w.writerow(trajectories[vehicle.label]['state'][i][k, :])
-with open(os.path.join(testdir, 'data_input.csv'), 'wb') as f:
+with open(os.path.join(testdir, 'data_input.csv'), 'w') as f:
     w = csv.writer(f)
     for i in range(0, size, jump):
         for vehicle in vehicles:

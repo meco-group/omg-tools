@@ -19,8 +19,8 @@
 
 from ..basics.optilayer import OptiFather, create_function
 from ..basics.spline_extra import shift_knot1_fwd, shift_over_knot
-from problem import Problem
-from dualmethod import DualUpdater, DualProblem
+from .problem import Problem
+from .dualmethod import DualUpdater, DualProblem
 from casadi import symvar, mtimes, MX, reshape, substitute
 from casadi.tools import struct_symMX
 import numpy as np
@@ -57,7 +57,7 @@ class DDUpdater(DualUpdater):
 
     def construct_upd_xz(self, problem=None):
         # construct optifather & give reference to problem
-        self.father_updx = OptiFather(self.group.values())
+        self.father_updx = OptiFather(list(self.group.values()))
         self.problem.father = self.father_updx
         # define z_ij variables
         init = self.q_ij_struct(0)
@@ -203,7 +203,7 @@ class DDUpdater(DualUpdater):
         self.var_dd['z_ij'] = self.q_ij_struct(z_ij)
         stats = self.problem_upd_xz.stats()
         if (stats['return_status'] != 'Solve_Succeeded'):
-            print 'upd_xz %d: %s' % (self._index, stats['return_status'])
+            print('upd_xz %d: %s' % (self._index, stats['return_status']))
         return t_upd
 
     def update_l(self, current_time):
@@ -300,12 +300,12 @@ class DDProblem(DualProblem):
             if ((self.iteration - 1) % 20 == 0):
                 print(
                     '----|------|----------|----------|----------|----------')
-                print('%3s | %4s | %8s | %8s | %8s | %8s ' %
-                      ('It', 't', 'prim res', 't upd_xz', 't upd_l', 't_res'))
+                print(('%3s | %4s | %8s | %8s | %8s | %8s ' %
+                      ('It', 't', 'prim res', 't upd_xz', 't upd_l', 't_res')))
                 print(
                     '----|------|----------|----------|----------|----------')
-            print('%3d | %4.1f | %.2e | %.2e | %.2e | %.2e ' %
-                  (self.iteration, current_time, p_res, t_upd_xz, t_upd_l, t_res))
+            print(('%3d | %4.1f | %.2e | %.2e | %.2e | %.2e ' %
+                  (self.iteration, current_time, p_res, t_upd_xz, t_upd_l, t_res)))
         self.residuals['primal'] = np.r_[self.residuals['primal'], p_res]
         self.update_times.append(t_upd_xz + t_upd_l + t_res)
 

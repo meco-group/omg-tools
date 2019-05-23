@@ -17,9 +17,9 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-
-from problem import Problem
-from gcodeproblem import GCodeProblem
+from __future__ import print_function
+from .problem import Problem
+from .gcodeproblem import GCodeProblem
 from ..basics.shape import Rectangle, Square, Circle
 from ..environment.environment import Environment
 from ..basics.shape import Rectangle, Ring
@@ -118,7 +118,7 @@ class GCodeSchedulerProblem(Problem):
             self.curr_state = self.vehicles[0].signals['state'][:,-1]
 
         # did we move far enough over the current segment yet?
-        print 'Current GCode block: ', self.n_current_block
+        print('Current GCode block: ', self.n_current_block)
         segments_valid = self.check_segments()
         if not segments_valid:
             # add new segment and remove first one
@@ -172,16 +172,16 @@ class GCodeSchedulerProblem(Problem):
             return False
 
     def final(self):
-        print 'The tool has reached its goal!'
-        print self.cnt, ' GCode commands were executed.'
+        print('The tool has reached its goal!')
+        print(self.cnt, ' GCode commands were executed.')
         # print 'Total machining time when considering standstill-standstill segments: ', np.round(self.get_init_guess_total_motion_time(),3), ' s'
-        print 'Total machining time for computed trajectories: ', np.round(sum(self.motion_time_log),3), ' s'
+        print('Total machining time for computed trajectories: ', np.round(sum(self.motion_time_log),3), ' s')
         if self.options['verbose'] >= 1:
-            print '%-18s %6g ms' % ('Max update time:',
-                                    max(self.update_times)*1000.)
-            print '%-18s %6g ms' % ('Av update time:',
+            print('%-18s %6g ms' % ('Max update time:',
+                                    max(self.update_times)*1000.))
+            print('%-18s %6g ms' % ('Av update time:',
                                     (sum(self.update_times)*1000. /
-                                     len(self.update_times)))
+                                     len(self.update_times))))
 
     # ========================================================================
     # Export related functions
@@ -795,10 +795,10 @@ class GCodeSchedulerProblem(Problem):
                 # unneccessary to make a new guess
                 guess_idx = []
             elif self._n_segments == 1:
-                guess_idx = range(1)
+                guess_idx = list(range(1))
         else:
             # local_problem was not solved yet, make guess using center line for all segments
-            guess_idx = range(self.n_segments)
+            guess_idx = list(range(self.n_segments))
 
         # make guesses based on center line of GCode
         for k in guess_idx:
@@ -816,7 +816,7 @@ class GCodeSchedulerProblem(Problem):
 
         end_time = time.time()
         if self.options['verbose'] >= 2:
-            print 'elapsed time in get_init_guess ', end_time - start_time
+            print('elapsed time in get_init_guess ', end_time - start_time)
 
         return init_splines, motion_times
 
@@ -854,22 +854,22 @@ class GCodeSchedulerProblem(Problem):
         maxjy = max(dddpos_y(eval)/motion_time**3)
 
         if maxvx > self.vehicles[0].vxmax:
-            print maxvx
+            print(maxvx)
             raise RuntimeError('Velx guess too high')
         if maxvy > self.vehicles[0].vymax:
-            print maxvy
+            print(maxvy)
             raise RuntimeError('Vely guess too high')
         if maxax > self.vehicles[0].axmax:
-            print maxax
+            print(maxax)
             raise RuntimeError('Accx guess too high')
         if maxay > self.vehicles[0].aymax:
-            print maxay
+            print(maxay)
             raise RuntimeError('Accy guess too high')
         if maxjx > self.vehicles[0].jxmax:
-            print maxjx
+            print(maxjx)
             raise RuntimeError('Jerkx guess too high')
         if maxjy > self.vehicles[0].jymax:
-            print maxjy
+            print(maxjy)
             raise RuntimeError('Jerky guess too high')
 
         return init_guess, motion_time

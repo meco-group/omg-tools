@@ -115,7 +115,6 @@ data = {'err_admm': err_admm, 'err_fastadmm': err_fastadmm,
         'err_ama': err_ama, 'err_dualdec': err_dualdec, 'iterations': iterations}
 
 plt.figure()
-plt.hold(True)
 plt.semilogy(iterations, err_dualdec, label='Dual decomposition')
 plt.semilogy(iterations, err_ama, label='AMA')
 plt.semilogy(iterations, err_admm, label='ADMM')

@@ -17,6 +17,7 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
+from __future__ import print_function
 import os
 import shutil
 
@@ -61,7 +62,7 @@ class Export(object):
     def export(self, source_dirs, export_dir, src_files, father, problem, point2point=None):
         if point2point is None:
             point2point = problem
-        print 'Exporting ...',
+        print('Exporting ...', end=' ')
         # copy files
         files = self.copy_files(source_dirs, export_dir)
         # export casadi problem(s)
@@ -73,15 +74,15 @@ class Export(object):
         data.update(self.create_types())
         data.update(self.create_functions(father, problem, point2point))
         # write data to template files
-        self.fill_template(data, files.values())
+        self.fill_template(data, list(files.values()))
         # change including filenames with label
         self.change_includes(export_dir)
         # set the namespace
         self.set_namespace(export_dir)
         # set include guards
         self.set_includeguards(export_dir)
-        print 'done.'
-        print 'Check out instructions.txt for build and usage instructions.'
+        print('done.')
+        print('Check out instructions.txt for build and usage instructions.')
 
     def add_label(self, file):
         if isinstance(file, list):

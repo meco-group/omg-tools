@@ -1,2 +1,2 @@
-from optilayer import OptiChild, OptiFather
-from shape import *
+from .optilayer import OptiChild, OptiFather
+from .shape import *

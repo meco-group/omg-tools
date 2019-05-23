@@ -26,7 +26,12 @@ from scipy.sparse import csr_matrix
 # from piecewise import PiecewisePolynomial as ppoly
 # from scipy.sparse.linalg import spsolve
 from collections import Counter
-import md5
+import hashlib
+
+def md5(data):
+  m = hashlib.md5()
+  m.update(data)
+  return m.digest()
 
 NO_POINTS = 501
 
@@ -38,7 +43,7 @@ def memoize(f):
             self.f = f
 
         def __call__(self, *args):
-            key = (args[0], md5.new(np.atleast_1d(args[1])).digest())
+            key = (args[0], md5(np.atleast_1d(args[1])))
             if key in self:
                 return self[key]
             else:
@@ -60,7 +65,7 @@ def cached_class(klass):
         __doc__ = klass.__doc__
 
         def __new__(cls, *args, **kwds):
-            key = (cls,) + tuple([md5.new(np.atleast_1d(k)).digest() for k in args]) + tuple(kwds.iteritems())
+            key = (cls,) + tuple([md5(np.atleast_1d(k)) for k in args]) + tuple(kwds.items())
             try:
                 inst = cache.get(key, None)
             except TypeError:  # Can't cache this set of arguments
@@ -174,7 +179,14 @@ class Basis(object):
             raise TypeError("Power must be integer")
 
     def __eq__(self, other):
-        return all(self.knots == other.knots) and self.degree == other.degree
+        return self.knots.shape == other.knots.shape and all(self.knots == other.knots) and self.degree == other.degree
+
+    def __hash__(self):
+        sh = [hash(self.degree)] + [hash(e) for e in self.knots]
+        r = sh[0]
+        for e in sh[1:]:
+          r = r ^ e
+        return r
 
     def insert_knots(self, knots):
         unique_knots = np.setdiff1d(knots, self.knots)
@@ -249,10 +261,10 @@ class BSplineBasis(Basis):
 
     def support(self):
         """Return a list of support intervals for each basis function"""
-        return zip(
+        return list(zip(
             self.knots[:-(self.degree + 1)],
             self.knots[(self.degree + 1):]
-            )
+            ))
 
     def pairs(self, other):
         """Return which pairs remain when multiplying two bases"""
@@ -261,7 +273,7 @@ class BSplineBasis(Basis):
             return max(a[0], b[0]) < min(a[1], b[1])
         i_self = self.support()
         i_other = other.support()
-        pairs = np.where([map(lambda x: is_valid(j, x), i_other)
+        pairs = np.where([[is_valid(j, x) for x in i_other]
                           for j in i_self])
         # Additionaly build a selection matrix for the product
         S = np.zeros((len(self), len(self) * len(other)))
@@ -369,6 +381,13 @@ class Spline(object):
                 type(self.coeffs) == type(other.coeffs) and
                 all(self.coeffs == other.coeffs))
 
+    def __hash__(self):
+        sh = [hash(self.basis)] + [hash(e) for e in self.coeffs]
+        r = sh[0]
+        for e in sh[1:]:
+          r = r ^ e
+        return r
+
 
 class BSpline(Spline):
     """Construct a Bspline curve from the basis B and coefficients c
@@ -410,7 +429,7 @@ class BSpline(Spline):
                                   other.coeffs[pairs[1].tolist()])
             except:  # cvxopt, cvxpy, assuming other.coeffs is not a variable
                 S = np.zeros((len(pairs[0]), len(self)))
-                S[[range(len(pairs[0])), pairs[0]]] = 1.
+                S[[list(range(len(pairs[0]))), pairs[0]]] = 1.
                 S = cvxopt.matrix(S)
                 coeffs_product = cvxopt.spdiag(other.coeffs[pairs[1].tolist()]) * S * self.coeffs
                 # coeffs_product = cp.vstack(*[self.coeffs[p0] * other.coeffs[p1] for (p0, p1) in zip(*pairs)])
@@ -572,23 +591,23 @@ class TensorBSpline(object):
         There still seems to be something wrong here...
         """
         s = np.inner(self.basis[-1](x[-1]).toarray(), self.coeffs)
-        for i in reversed(range(self.dims() - 1)):
+        for i in reversed(list(range(self.dims() - 1))):
             s = np.inner(self.basis[i](x[i]).toarray(), s)
         return s
 
     def __add__(self, other):
         if isinstance(other, TensorBSpline) and other.var == self.var:
             if self.dims() == 2 and get_module(self.coeffs) in ['cvxpy', 'cvxopt']:
-                basis = map(lambda x, y: x + y, self.basis, other.basis)
-                Tself = map(lambda x, y: cvxopt.matrix(x.transform(y).toarray()), basis, self.basis)
-                Tother = map(lambda x, y: cvxopt.matrix(x.transform(y).toarray()), basis, other.basis)
+                basis = list(map(lambda x, y: x + y, self.basis, other.basis))
+                Tself = list(map(lambda x, y: cvxopt.matrix(x.transform(y).toarray()), basis, self.basis))
+                Tother = list(map(lambda x, y: cvxopt.matrix(x.transform(y).toarray()), basis, other.basis))
                 cself = Tself[0] * self.coeffs * Tself[1].T
                 cother = Tother[0] * other.coeffs * Tother[1].T
                 coeffs = cself + cother
             else:
-                basis = map(lambda x, y: x + y, self.basis, other.basis)
-                Tself = map(lambda x, y: x.transform(y).toarray(), basis, self.basis)
-                Tother = map(lambda x, y: x.transform(y).toarray(), basis, other.basis)
+                basis = list(map(lambda x, y: x + y, self.basis, other.basis))
+                Tself = list(map(lambda x, y: x.transform(y).toarray(), basis, self.basis))
+                Tother = list(map(lambda x, y: x.transform(y).toarray(), basis, other.basis))
                 cself = self.coeffs
                 for i in range(self.dims()):
                     cself = np.tensordot(Tself[i], cself.swapaxes(0, i), axes=[1, 0]).swapaxes(0, i)
@@ -618,12 +637,12 @@ class TensorBSpline(object):
         if isinstance(other, TensorBSpline):
             if len(self.basis) > 2:
                 return NotImplementedError("Too complex to implement :-)")
-            basis = map(lambda x, y: x * y, self.basis, other.basis)
-            pairs = map(lambda x, y: x.pairs(y)[0], self.basis, other.basis)
-            basis_product = map(lambda x, y, p, b: x(b._x)[:, p[0]].multiply(y(b._x)[:, p[1]]), self.basis, other.basis, pairs, basis)
+            basis = list(map(lambda x, y: x * y, self.basis, other.basis))
+            pairs = list(map(lambda x, y: x.pairs(y)[0], self.basis, other.basis))
+            basis_product = list(map(lambda x, y, p, b: x(b._x)[:, p[0]].multiply(y(b._x)[:, p[1]]), self.basis, other.basis, pairs, basis))
             coeffs_product = (self.coeffs[pairs[0][0]].T[pairs[1][0]] *
                               other.coeffs[pairs[0][1]].T[pairs[1][1]])
-            T = map(lambda x, b: b.transform(lambda y: x.toarray()[y, :]), basis_product, basis)
+            T = list(map(lambda x, b: b.transform(lambda y: x.toarray()[y, :]), basis_product, basis))
             coeffs = coeffs_product.T
             for i, t in enumerate(T):
                 coeffs = np.tensordot(t.toarray(), coeffs.swapaxes(0, i), axes=[1, 0]).swapaxes(0, i)

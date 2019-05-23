@@ -17,8 +17,8 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-from dualdecomposition import DDProblem
-from point2point import Point2point
+from .dualdecomposition import DDProblem
+from .point2point import Point2point
 import numpy as np
 
 
@@ -102,4 +102,4 @@ class FormationPoint2pointDualDecomposition(DDProblem):
     def final(self):
         DDProblem.final(self)
         err = self.get_interaction_error()
-        print '%-18s %6g %%' % ('Formation error:', err)
+        print('%-18s %6g %%' % ('Formation error:', err))

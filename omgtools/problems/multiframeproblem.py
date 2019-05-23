@@ -17,8 +17,8 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-from problem import Problem
-from point2point import Point2pointProblem
+from .problem import Problem
+from .point2point import Point2pointProblem
 from ..basics.optilayer import OptiFather, OptiChild
 from ..vehicles.fleet import get_fleet_vehicles
 from ..execution.plotlayer import PlotLayer
@@ -218,13 +218,13 @@ class MultiFrameProblem(Problem):
         self.reset_init_time()
         obj = self.compute_objective()
         if self.options['verbose'] >= 1:
-            print '\nWe reached our target!'
-            print '%-18s %6g' % ('Objective:', obj)
-            print '%-18s %6g ms' % ('Max update time:',
-                                    max(self.update_times)*1000.)
-            print '%-18s %6g ms' % ('Av update time:',
+            print('\nWe reached our target!')
+            print('%-18s %6g' % ('Objective:', obj))
+            print('%-18s %6g ms' % ('Max update time:',
+                                    max(self.update_times)*1000.))
+            print('%-18s %6g ms' % ('Av update time:',
                                     (sum(self.update_times)*1000. /
-                                     len(self.update_times)))
+                                     len(self.update_times))))
 
     def init_step(self, current_time, update_time):
         if (current_time - self.start_time) > 0:

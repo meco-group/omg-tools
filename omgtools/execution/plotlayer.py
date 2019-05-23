@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+from __future__ import division
 
 import warnings
 import os
@@ -310,8 +311,8 @@ class PlotLayer(object):
             nof = kwargs['number_of_frames']
         else:
             nof = len(t)-1
-        subsample = (len(t)-1)/(nof-1)
-        indices = range(0, len(t)-1, subsample)
+        subsample = (len(t)-1)//(nof-1)
+        indices = list(range(0, len(t)-1, subsample))
         indices.extend([len(t)-1 for k in range(nof-len(indices))])
         kwargs['no_update'] = True
         plot = self.plot(argument, **kwargs)
@@ -333,8 +334,8 @@ class PlotLayer(object):
             interval = kwargs['movie_time']/(nof-1)
         else:
             interval = 10./(nof-1)
-        subsample = (len(t)-1)/(nof-1)
-        indices = range(0, len(t)-1, subsample)
+        subsample = (len(t)-1)//(nof-1)
+        indices = list(range(0, len(t)-1, subsample))
         indices.extend([len(t)-1 for k in range(nof-len(indices))])
         kwargs['no_update'] = True
         plot = self.plot(argument, **kwargs)

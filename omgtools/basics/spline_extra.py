@@ -17,7 +17,7 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-from spline import BSpline, BSplineBasis
+from .spline import BSpline, BSplineBasis
 from casadi import SX, MX, mtimes, Function, vertcat
 from scipy.interpolate import splev
 import scipy.linalg as la

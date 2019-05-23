@@ -20,7 +20,7 @@
 from ..basics.optilayer import OptiChild
 from ..basics.spline import BSplineBasis, BSpline
 from ..execution.plotlayer import PlotLayer, mix_with_white
-from obstacle import Obstacle
+from .obstacle import Obstacle
 from casadi import inf
 import numpy as np
 import warnings
@@ -325,7 +325,7 @@ class Environment(OptiChild, PlotLayer):
                                 vel_new = [vel[0],-vel[1]]
                         # reset position
                         obstacle.signals['position'][:,-1] = old_pos
-                    print 'setting new velocity'
+                    print('setting new velocity')
                     obstacle.signals['velocity'][:,-1] = vel_new
             obstacle.simulate(simulation_time, sample_time)
         self.update_plots()

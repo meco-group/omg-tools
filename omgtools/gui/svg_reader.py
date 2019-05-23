@@ -46,10 +46,10 @@ class SVGReader(object):
                 # if not yet found, search for the word path in the next branch
                 self.svgpath = self.tree.find("{%s}g" %self.ns).find("{%s}g" %self.ns).findall("{%s}path" %self.ns)
         except:  # error occured, e.g. no <g/> found, this is possible when you only have basic shapes
-            print 'No shapes found which are described by a path, probably you only have basic shapes'
+            print('No shapes found which are described by a path, probably you only have basic shapes')
             return
         if not self.svgpath:  # no path found, this is possible when you only have basic shapes
-            print 'No shapes found which are described by a path, probably you only have basic shapes'
+            print('No shapes found which are described by a path, probably you only have basic shapes')
             return
 
         self.n_paths = len(self.svgpath)  # number of paths which build up the figure
@@ -68,7 +68,7 @@ class SVGReader(object):
                     test2 = test1.replace("-"," -")  # replace minus sign by: space minus
                     test3 = test2.replace("c"," c ")  # replace c by: space c space
                     # splits the line at each space, to create separate points
-                    newpoints = np.array(map(eval, test3.strip().split(' ')))
+                    newpoints = np.array(list(map(eval, test3.strip().split(' '))))
                     if line[0] == 'c':  # lower case c means relative coordinates, upper case C is absolute coordinates
                         newpoints[0:6:2] = newpoints[0:6:2] + points[-2]  # relative to absolute coordinates for x
                         newpoints[1:6:2] = newpoints[1:6:2] + points[-1]  # relative to absolute coordinates for y
@@ -99,9 +99,9 @@ class SVGReader(object):
                 self.rectangles = self.tree.find("{%s}g" %self.ns).find("{%s}g" %self.ns).findall("{%s}rect" %self.ns)
             self.n_rect = len(self.rectangles)  # number of paths which build up the figure
             if self.n_rect == 0:
-                print 'No rectangles found'
+                print('No rectangles found')
         except:
-            print 'No shapes found which are described by a rect'
+            print('No shapes found which are described by a rect')
 
         # find svg-paths, describing the circles
         try:
@@ -115,9 +115,9 @@ class SVGReader(object):
                 self.circles = self.tree.find("{%s}g" %self.ns).find("{%s}g" %self.ns).findall("{%s}circle" %self.ns)
             self.n_circ = len(self.circles)  # number of paths which build up the figure
             if self.n_circ == 0:
-                print 'No circles found'
+                print('No circles found')
         except:
-            print 'No shapes found which are described by a circle'
+            print('No shapes found which are described by a circle')
 
         for rectangle in self.rectangles:
             obstacle = {}
@@ -158,9 +158,9 @@ class SVGReader(object):
                 self.polylines = self.tree.find("{%s}g" %self.ns).find("{%s}g" %self.ns).findall("{%s}polyline" %self.ns)
             self.n_polylines = len(self.polylines)  # number of paths which build up the figure
             if self.n_polylines == 0:
-                print 'No polylines found'
+                print('No polylines found')
         except:
-            print 'No shapes found which are described by a polyline'
+            print('No shapes found which are described by a polyline')
 
         # find svg-lines
         # example: <line fill="none" stroke="#333333" stroke-width="10" x1="25.41" y1="174.59" x2="69.672" y2="174.59"/>
@@ -175,9 +175,9 @@ class SVGReader(object):
                 self.lines = self.tree.find("{%s}g" %self.ns).find("{%s}g" %self.ns).findall("{%s}line" %self.ns)
             self.n_lines = len(self.lines)  # number of paths which build up the figure
             if self.n_lines == 0:
-                print 'No lines found'
+                print('No lines found')
         except:
-            print 'No shapes found which are described by a line'
+            print('No shapes found which are described by a line')
 
         for polyline in self.polylines:
             try:
@@ -189,7 +189,7 @@ class SVGReader(object):
                         stroke_width = float(element.split(':')[1])
             vertices = polyline.get('points').split(' ')
             vertices[:] = (v for v in vertices if v != '')  # remove all empty strings
-            vertices = np.array(map(eval, vertices))  # gives array of arrays [[x,y],[],...]
+            vertices = np.array(list(map(eval, vertices)))  # gives array of arrays [[x,y],[],...]
             vertices += self.transform
 
             # make rectangle of each vertex couple
@@ -266,14 +266,14 @@ class SVGReader(object):
             trans1.remove('')
             self.transform1 = np.array(map(eval, trans1)[0])
         except:
-            print 'No transform1 found'
+            print('No transform1 found')
         try:
             trans2 = self.tree.find("{%s}g" %self.ns).find("{%s}g" %self.ns).get('transform')
             trans2 = trans2.split('translate')
             trans2.remove('')
             self.transform2 = np.array(map(eval, trans2)[0])
         except:
-            print 'No transform2 found'
+            print('No transform2 found')
         if hasattr(self, 'transform1') and hasattr(self, 'transform2'):
             self.transform = self.transform1 + self.transform2  # coordinate frame transformation
         elif hasattr(self, 'transform1') :

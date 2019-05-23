@@ -1,10 +1,19 @@
-import Tkinter as tk
-import tkFileDialog as tkfiledialog
+try:
+  import tkinter as tk
+  import tkinter.filedialog as tkfiledialog
+except ImportError:
+  import Tkinter as tk
+  import tkFileDialog as tkfiledialog
 import numpy as np
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-from gcode_block import generate_gcodeblock
+from .gcode_block import generate_gcodeblock
+
+try:
+  input = raw_input
+except NameError:
+  pass
 
 class GCodeReader(object):
     def __init__(self):
@@ -28,14 +37,14 @@ class GCodeReader(object):
             if file:
                 try:
                     data = open(file, 'rb')
-                except Exception, details:
+                except Exception as details:
                     tkmessagebox.showerror(('Error'),details)
                     return
         else:
             try:
                 data = open(file, 'rb')
-            except Exception, details:
-                print details
+            except Exception as details:
+                print(details)
                 return
         self.file = data
 
@@ -45,7 +54,7 @@ class GCodeReader(object):
         # ask the user if he wants to change the GCode file
         answer = ''
         while (not answer in ['yes', 'no']):
-            answer = raw_input('Do you want to shift or scale the loaded GCode? (yes/no): ')
+            answer = input('Do you want to shift or scale the loaded GCode? (yes/no): ')
 
         if answer == 'yes':
             # shift and scale the GCode file
@@ -56,9 +65,9 @@ class GCodeReader(object):
             scaling = []
             while (not ((type(offset) == list) and (len(offset) == 2) and (all(isinstance(o, float) for o in offset)))
                     or not (isinstance(scaling, float))):
-                offset = raw_input('What is the offset?  E.g. a,b to move midpoint from x,y to x-a, y-b: ').split(',')
+                offset = input('What is the offset?  E.g. a,b to move midpoint from x,y to x-a, y-b: ').split(',')
                 offset = [float(offset[0]), float(offset[1])]
-                scaling = float(raw_input('What is the scaling factor? E.g. 2.1: '))
+                scaling = float(input('What is the scaling factor? E.g. 2.1: '))
 
             # apply offset
             offset_lines = []

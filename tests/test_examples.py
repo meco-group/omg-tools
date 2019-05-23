@@ -1,7 +1,7 @@
+from __future__ import division
 import os
 import imp
 import subprocess
-
 
 def test_generator():
     if 'NODE_TOTAL' not in os.environ or 'NODE_INDEX' not in os.environ:
@@ -17,7 +17,7 @@ def test_generator():
         if (os.path.isfile(os.path.join(example_dir, f)) and f.endswith('.py') and not 'gui' in f):
             example_files.append(f)
     example_files.sort()
-    n_files = len(example_files)/node_total
+    n_files = len(example_files)//node_total
     if node_index == node_total-1:
         test_files = example_files[node_index*n_files:]
     else:
@@ -32,13 +32,13 @@ def test_export():
              'export_r': 'RendezVous'}
     for d, f in files.items():
         if os.path.isdir(os.path.join(os.getcwd(), d)):
-            print subprocess.check_output(
+            print(subprocess.check_output(
                 ("cd %s && make && cd bin && ./%s && cd ../..") %
-                (d, f), shell=True, stderr=subprocess.STDOUT)
+                (d, f), shell=True, stderr=subprocess.STDOUT))
 
 
 def run_example(filename):
     example_dir = os.path.join(os.getcwd(), 'examples')
-    print ''
+    print('')
     imp.load_source(filename.split('.')[-2],
                     os.path.join(example_dir, filename))

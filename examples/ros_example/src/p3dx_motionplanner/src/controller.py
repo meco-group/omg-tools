@@ -43,7 +43,7 @@ class Controller(object):
         self._mp_status = False
         self._n_robots = n_robots
         self._obst_traj = obst_traj
-        self._robobst = obst_traj.keys()
+        self._robobst = list(obst_traj.keys())
         self._robot_est_pose = [[0., 0., 0.] for k in range(n_robots)]
         self._robot_real_pose = [[0., 0., 0.] for k in range(n_robots)]
         self._robobst_est_pose = [[0., 0.] for k in range(len(self._robobst))]
@@ -100,7 +100,7 @@ class Controller(object):
         self._mp_status = data
 
     def get_mp_result(self, data):
-        print 'got result!'
+        print('got result!')
         v_traj = [data.trajectories[k].v_traj for k in range(self._n_robots)]
         w_traj = [data.trajectories[k].w_traj for k in range(self._n_robots)]
         self.store_trajectories(v_traj, w_traj)
@@ -122,7 +122,7 @@ class Controller(object):
                 # trigger motion planner
                 self.fire_motionplanner(self._time, pose0)
             else:
-                print 'overtime!'
+                print('overtime!')
         # send velocity sample
         for k in range(self._n_robots):
             self._cmd_twist.linear.x = self._vel_traj[k]['v'][self._index]
@@ -168,7 +168,7 @@ class Controller(object):
         self._init = True
 
     def fire_motionplanner(self, time, pose0):
-        print 'firing!'
+        print('firing!')
         self._trigger.goal = self._goal
         self._trigger.state = [P3DXPose(pose0[k][:]) for k in range(self._n_robots)]
         self._trigger.obstacles = [Obstacle(pose=self._robobst_est_pose[k], velocity=self._robobst_est_velocity[k]) for k in range(len(self._robobst))]
@@ -180,7 +180,7 @@ class Controller(object):
         proceed = True
         while (not self._mp_status):
             rate.sleep()
-        print 'controller started!'
+        print('controller started!')
         self.set_goal(self._settings.terminal_pose)
         k = 0
         while (proceed):
@@ -192,14 +192,14 @@ class Controller(object):
             self._cmd_twist.linear.x = 0.
             self._cmd_twist.angular.z = 0.
             self._cmd_vel_topic[k].publish(self._cmd_twist)
-        print 'target reached!'
+        print('target reached!')
 
     def init_gazebo(self, st):
         rospy.set_param('gazebo/use_sim_time', True)
         try:
             ssm = rospy.ServiceProxy('/gazebo/set_model_state', SetModelState)
-        except rospy.ServiceException, e:
-            print 'Service call failed: %s' % (e)
+        except rospy.ServiceException as e:
+            print('Service call failed: %s' % (e))
         for k in range(self._n_robots):
             pose0, twist0 = Pose(), Twist()
             pose0.position.x = st.init_pose[k].pose[0]
@@ -228,7 +228,7 @@ class Controller(object):
             ssm(mod0)
 
     def configure(self):
-        print 'configure controller'
+        print('configure controller')
         st = Settings()
         # timing
         st.sample_time = self._sample_time

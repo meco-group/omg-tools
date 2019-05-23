@@ -37,4 +37,4 @@ waypoints = planner.get_path()
 planner.grid.draw()
 planner.plot_path(waypoints)
 # put breakpoint here to see the plot
-print waypoints
+print(waypoints)

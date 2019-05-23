@@ -29,7 +29,10 @@ from scipy.integrate import odeint
 from numpy.random import normal
 from itertools import groupby
 import numpy as np
+import sys
 
+if sys.version_info >= (3,):
+  long = int
 
 class Vehicle(OptiChild, PlotLayer):
 
@@ -175,7 +178,7 @@ class Vehicle(OptiChild, PlotLayer):
                 else:
                     hyp_room = room['shape'].get_hyperplanes(position = room['position'])
                     for l, chck in enumerate(checkpoints):
-                        for hpp in hyp_room.itervalues():
+                        for hpp in hyp_room.values():
                             con = 0
                             con += (hpp['a'][0]*chck[0] + hpp['a'][1]*chck[1])*(1.-tg_ha**2)
                             con += (-hpp['a'][0]*chck[1] + hpp['a'][1]*chck[0])*(2*tg_ha)

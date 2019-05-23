@@ -59,12 +59,12 @@ trajectories, signals = simulator.run()
 testdir = os.path.join(options['directory'], 'test')
 if not os.path.isdir(testdir):
     os.makedirs(os.path.join(options['directory'], 'test'))
-with open(os.path.join(testdir, 'data_state.csv'), 'wb') as f:
+with open(os.path.join(testdir, 'data_state.csv'), 'w') as f:
     w = csv.writer(f)
     for i in range(0, len(trajectories['state']), int(simulator.update_time/simulator.sample_time)):
         for k in range(trajectories['state'][i].shape[0]):
             w.writerow(trajectories['state'][i][k, :])
-with open(os.path.join(testdir, 'data_input.csv'), 'wb') as f:
+with open(os.path.join(testdir, 'data_input.csv'), 'w') as f:
     w = csv.writer(f)
     for i in range(0, len(trajectories['input']), int(simulator.update_time/simulator.sample_time)):
         for k in range(trajectories['input'][i].shape[0]):

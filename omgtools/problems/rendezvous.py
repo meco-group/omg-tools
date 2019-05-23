@@ -17,8 +17,8 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-from admm import ADMMProblem
-from point2point import FreeEndPoint2point
+from .admm import ADMMProblem
+from .point2point import FreeEndPoint2point
 from ..export.export_rendezvous import ExportRendezVous
 import numpy as np
 
@@ -28,7 +28,7 @@ class RendezVous(ADMMProblem):
     def __init__(self, fleet, environment, options=None):
         problems = []
         for veh in fleet.vehicles:
-            free_ind = fleet.configuration[veh].keys()
+            free_ind = list(fleet.configuration[veh].keys())
             problems.append(
                 FreeEndPoint2point(veh, environment.copy(), options, {veh: free_ind}))
         ADMMProblem.__init__(self, fleet, environment, problems, options)

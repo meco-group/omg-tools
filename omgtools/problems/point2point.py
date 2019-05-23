@@ -17,7 +17,7 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-from problem import Problem
+from .problem import Problem
 from ..basics.spline_extra import definite_integral
 from ..basics.spline_extra import shiftoverknot_T, shift_spline, evalspline
 from ..export.export_p2p import ExportP2P
@@ -105,13 +105,13 @@ class Point2pointProblem(Problem):
         self.reset_init_time()
         obj = self.compute_objective()
         if self.options['verbose'] >= 1:
-            print '\nWe reached our target!'
-            print '%-18s %6g' % ('Objective:', obj)
-            print '%-18s %6g ms' % ('Max update time:',
-                                    max(self.update_times)*1000.)
-            print '%-18s %6g ms' % ('Av update time:',
+            print('\nWe reached our target!')
+            print('%-18s %6g' % ('Objective:', obj))
+            print('%-18s %6g ms' % ('Max update time:',
+                                    max(self.update_times)*1000.))
+            print('%-18s %6g ms' % ('Av update time:',
                                     (sum(self.update_times)*1000. /
-                                     len(self.update_times)))
+                                     len(self.update_times))))
 
     def compute_objective(self):
         raise NotImplementedError('Please implement this method!')
@@ -389,7 +389,7 @@ class FreeEndPoint2point(FixedTPoint2point):
             self.free_ind = {}
             for vehicle in self.vehicles:
                 term_con = vehicle.get_terminal_constraints(vehicle.splines[0])
-                self.free_ind[vehicle] = range(len(term_con))
+                self.free_ind[vehicle] = list(range(len(term_con)))
         FixedTPoint2point.construct(self)
 
     def define_terminal_constraints(self):

@@ -34,7 +34,10 @@ vehicle.define_knots(knot_intervals=10)
 
 # Note: to run this example just click Load in the GUI and select vast_environment_example1.pickle
 
-import Tkinter as tk
+try:
+  import tkinter as tk
+except ImportError:
+  import Tkinter as tk
 root = tk.Tk()
 # the number of desired cells in horizontal and vertical direction are passed as an option
 # together with the width and height of the environment, this determines the cell size

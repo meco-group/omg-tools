@@ -17,6 +17,7 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
+from __future__ import print_function
 from ..basics.shape import Rectangle, Square, Circle
 
 import time
@@ -211,7 +212,7 @@ class AStarPlanner(GlobalPlanner):
                         'Consider using more grid points.')
 
         t2 = time.time()
-        print 'Elapsed time to find a global path: ', t2-t1
+        print('Elapsed time to find a global path: ', t2-t1)
 
         # convert a set of nodes to a set of positions
         path = self.closed_list_to_path()
@@ -384,8 +385,8 @@ class Grid(object):
                                [moved_point[0]-1, moved_point[1]+1],
                                [moved_point[0]-1, moved_point[1]-1]]
             # remove inaccessible points from points_to_check
-            points_to_check = filter(self.in_bounds, points_to_check)
-            points_to_check = filter(self.free, points_to_check)
+            points_to_check = list(filter(self.in_bounds, points_to_check))
+            points_to_check = list(filter(self.free, points_to_check))
             # select closest point which is not occupied
             if points_to_check is not None:
                 # worst case: only a diagonally placed cell is available
@@ -419,9 +420,9 @@ class Grid(object):
                    [x, y+1],[x, y-1],
                    [x-1, y+1], [x+1, y+1],
                    [x-1, y-1], [x+1, y-1]]
-        results = filter(self.in_bounds, results)
-        results = filter(self.free, results)
-        results = filter(lambda x: self.is_accessible(point, x), results)
+        results = list(filter(self.in_bounds, results))
+        results = list(filter(self.free, results))
+        results = [x for x in results if self.is_accessible(point, x)]
         return results
 
     def get_occupied_cells(self, environment):

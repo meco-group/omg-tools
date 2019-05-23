@@ -1,13 +1,20 @@
 # -*- coding: utf-8 -*-
-
+from __future__ import print_function
 from ..environment.environment import Environment, Obstacle
 from ..basics.shape import Rectangle, Circle
 from ..basics.geometry import distance_between_points, point_in_rectangle
-from svg_reader import SVGReader
+from .svg_reader import SVGReader
 
-import Tkinter as tk
-import tkFileDialog as tkfiledialog
-import tkMessageBox as tkmessagebox
+
+try:
+  import tkinter as tk
+  import tkinter.filedialog as tkfiledialog
+  import tkinter.messagebox as tkmessagebox
+except ImportError:
+  import Tkinter as tk
+  import tkFileDialog as tkfiledialog
+  import tkMessageBox as tkmessagebox
+
 import pickle
 import numpy as np
 import os, sys  # for retreiving example name while saving environment
@@ -211,14 +218,14 @@ class EnvironmentGUI(tk.Frame):
         pos = self.pixel_to_world(clicked_pixel)  # convert [px] to [m]
         obstacle['pos'] = pos
         if self.shape.get() == '':
-            print 'Choose a shape or pick \'select shape\' before clicking'
+            print('Choose a shape or pick \'select shape\' before clicking')
         elif self.shape.get() == 'rectangle':
             if (self.width.get() <= 0 or self.height.get() <= 0):
-                print 'Select a strictly positive width and height for the rectangle first'
+                print('Select a strictly positive width and height for the rectangle first')
             elif (self.width.get()*self.meter_to_pixel >= self.frame_width_px):
-                print 'Selected width is too big'
+                print('Selected width is too big')
             elif (self.height.get()*self.meter_to_pixel >= self.frame_height_px):
-                print 'Selected height is too big'
+                print('Selected height is too big')
             else:  # valid, draw and add to self.obstacles
                 obstacle_var = self.canvas.create_rectangle(snapped_pos[0]-self.width.get()*self.meter_to_pixel*0.5, snapped_pos[1]-self.height.get()*self.meter_to_pixel*0.5,
                                              snapped_pos[0]+self.width.get()*self.meter_to_pixel*0.5, snapped_pos[1]+self.height.get()*self.meter_to_pixel*0.5,
@@ -231,12 +238,12 @@ class EnvironmentGUI(tk.Frame):
                 # save variable to be able to delete obstacle from canvas
                 obstacle['variable'] = obstacle_var
                 self.obstacles.append(obstacle)
-                print 'Created obstacle: ', obstacle
+                print('Created obstacle: ', obstacle)
         elif self.shape.get() == 'circle':
             if (self.radius.get() <= 0):
-                print 'Select a strictly positive radius before making a circle'
+                print('Select a strictly positive radius before making a circle')
             elif (self.radius.get()*self.meter_to_pixel >= (self.frame_width_px or self.frame_height_px)):
-                print 'Selected radius is too big'
+                print('Selected radius is too big')
             else:  # valid, draw and add to self.obstacles
                 obstacle_var = self.canvas.create_circle(snapped_pos[0], snapped_pos[1], self.radius.get()*self.meter_to_pixel, fill="black")
                 obstacle['shape'] = 'circle'
@@ -246,7 +253,7 @@ class EnvironmentGUI(tk.Frame):
                 # save variable to be able to delete obstacle from canvas
                 obstacle['variable'] = obstacle_var
                 self.obstacles.append(obstacle)
-                print 'Created obstacle: ', obstacle
+                print('Created obstacle: ', obstacle)
         elif self.shape.get() == 'select':
             # the user selected an obstacle, find out which one
             for obstacle in self.obstacles:
@@ -356,13 +363,13 @@ class EnvironmentGUI(tk.Frame):
         clicked_y = self.canvas.canvasy(event.y)  # this deals with the scrollbars
         clicked = [clicked_x, clicked_y]
         clicked = self.pixel_to_world(clicked)
-        print 'You clicked on: ', clicked
+        print('You clicked on: ', clicked)
         self.clicked_positions.append(clicked)  # save position which the user clicked on
         if (len(self.clicked_positions) > 2):
             self.clicked_positions[0] = self.clicked_positions[1]  # second = first
             self.clicked_positions[1] = self.clicked_positions[2]  # second last = last
             self.clicked_positions=self.clicked_positions[:2]  # remove last
-            print 'You clicked more than two times, your initial first click was removed'
+            print('You clicked more than two times, your initial first click was removed')
 
     def build_environment(self):
         # only build environment and shut down GUI if start and goal positions are clicked
@@ -397,7 +404,7 @@ class EnvironmentGUI(tk.Frame):
             self.destroy()
             self.root.destroy()
         else:  # start and goal not selected yet
-            print 'Please right-click on the start and goal position first'
+            print('Please right-click on the start and goal position first')
 
     def add_obstacle(self, obstacle):
         # draws an obstacle on the current canvas
@@ -411,12 +418,12 @@ class EnvironmentGUI(tk.Frame):
             obstacle['variable'] = obstacle_var
             obstacle['width'] = obstacle['width']*1./self.meter_to_pixel  # [px] to [m]
             obstacle['height'] = obstacle['height']*1./self.meter_to_pixel  # [px] to [m]
-            print 'Added obstacle: ', obstacle
+            print('Added obstacle: ', obstacle)
         elif obstacle['shape'] == 'circle':
             obstacle_var = self.canvas.create_circle(pos[0], pos[1], obstacle['radius'], fill="black")
             obstacle['variable'] = obstacle_var
             obstacle['radius'] = obstacle['radius']*1./self.meter_to_pixel  # [px] to [m]
-            print 'Added obstacle: ', obstacle
+            print('Added obstacle: ', obstacle)
 
     def save_environment(self):
         environment = {}
@@ -438,7 +445,7 @@ class EnvironmentGUI(tk.Frame):
         filename = tkfiledialog.askopenfilename(filetypes=[('Pickle files', '.pickle'), ('all files','.*')])
         try:
             data = open(filename, 'rb')
-        except Exception, details:
+        except Exception as details:
             tkmessagebox.showerror(('Error'),details)
             return
         saved_env = pickle.load(data)
@@ -474,7 +481,7 @@ class EnvironmentGUI(tk.Frame):
         if filename:
             try:
                 data = open(filename, 'rb')
-            except Exception, details:
+            except Exception as details:
                 tkmessagebox.showerror(('Error'),details)
                 return
 
@@ -487,14 +494,14 @@ class EnvironmentGUI(tk.Frame):
             try:
                 self.to_gcode = self.window_m2p.value
             except:
-                print 'Please fill in yes or no'
+                print('Please fill in yes or no')
             if not self.to_gcode in ['yes', 'no'] :
                 self.to_gcode = None
-                print 'Please fill in yes or no'
+                print('Please fill in yes or no')
         if self.to_gcode == 'yes':
             self.reader.compute_transform()  # assigns values to self.transform
             self.reader.get_gcode_description()  # convert .svg to .nc
-            print 'Translation from .svg to GCode ready! Check for your_file_name.nc'
+            print('Translation from .svg to GCode ready! Check for your_file_name.nc')
             return
         else:
             self.reader.build_environment()  # save obstacles in figure
@@ -508,9 +515,9 @@ class EnvironmentGUI(tk.Frame):
                 try:
                     self.meter_to_pixel = int(self.window_m2p.value)
                 except:
-                    print 'Please fill in a natural number'
+                    print('Please fill in a natural number')
                 if self.meter_to_pixel < 0:
-                    print 'Please fill in a positive number'
+                    print('Please fill in a positive number')
 
         if not hasattr(self.reader, 'n_cells'):
             #  give pop-up to ask user for n_cells in horizontal and vertical direction
@@ -521,21 +528,21 @@ class EnvironmentGUI(tk.Frame):
                 try:
                     value = self.window_m2p.value.split(',')
                     if len(value) != 2:
-                        print 'Please enter exactly two natural numbers, in the form n, m.'
+                        print('Please enter exactly two natural numbers, in the form n, m.')
                         self.n_cells = [0, 0]  # reset values
                         continue # skip next part
                     self.n_cells[0] = int(value[0])
                     self.n_cells[1] = int(value[1])
                 except:
-                    print ('Please input your desired cell numbers in the form n, m.' +
-                          'In which n and m are natural numbers')
+                    print(('Please input your desired cell numbers in the form n, m.' +
+                          'In which n and m are natural numbers'))
                     self.n_cells = [0, 0]  # reset values
                     continue  # skip next part
                 if 0 in self.n_cells:
-                    print 'Your desired number of cells cannot be 0 in one of the directions'
+                    print('Your desired number of cells cannot be 0 in one of the directions')
                 if any(c < 0 for c in self.n_cells):
                     self.n_cells = [0, 0]
-                    print 'Please use positive numbers to indicate the desired number of cells'
+                    print('Please use positive numbers to indicate the desired number of cells')
 
         self.position = self.reader.position  # top left corner of the image [px]
         self.obstacles = self.reader.obstacles

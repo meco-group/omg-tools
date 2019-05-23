@@ -17,8 +17,8 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-from admm import ADMMProblem
-from point2point import Point2point
+from .admm import ADMMProblem
+from .point2point import Point2point
 from ..export.export_formation import ExportFormation
 import numpy as np
 
@@ -103,7 +103,7 @@ class FormationPoint2point(ADMMProblem):
     def final(self):
         ADMMProblem.final(self)
         err = self.get_interaction_error()
-        print '%-18s %6g %%' % ('Formation error:', err*100.)
+        print('%-18s %6g %%' % ('Formation error:', err*100.))
 
     def export(self, options=None):
         options = options or {}

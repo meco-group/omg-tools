@@ -17,6 +17,8 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
+
+from __future__ import print_function
 try:
     from casadi import Compiler
 except:
@@ -25,7 +27,7 @@ except:
 from casadi import DM, MX, inf, Function, nlpsol, external
 from casadi import symvar, substitute
 from casadi.tools import struct, struct_MX, struct_symMX, entry
-from spline import BSpline
+from .spline import BSpline
 from itertools import groupby
 import time
 import numpy as np
@@ -47,7 +49,7 @@ def evalf(fun, x):
 def create_nlp(var, par, obj, con, options, name=''):
     codegen = options['codegen']
     if options['verbose'] >= 1:
-        print 'Building nlp ... ',
+        print('Building nlp ... ', end=' ')
     t0 = time.time()
     nlp = {'x': var, 'p': par, 'f': obj, 'g': con}
     slv_opt = options['solver_options'][options['solver']]
@@ -59,7 +61,7 @@ def create_nlp(var, par, obj, con, options, name=''):
     name = 'nlp' if name == '' else 'nlp_' + name
     if codegen['build'] == 'jit':
         if options['verbose'] >= 1:
-            print('[jit compilation with flags %s]' % (codegen['flags'])),
+            print(('[jit compilation with flags %s]' % (codegen['flags'])), end=' ')
         solver.generate_dependencies(name+'.c')
         compiler = Compiler(
             name+'.c', 'clang', {'flags': codegen['flags']})
@@ -73,7 +75,7 @@ def create_nlp(var, par, obj, con, options, name=''):
             os.makedirs(directory)
         path = os.path.join(directory, name)
         if options['verbose'] >= 1:
-            print('[compile to .so with flags %s]' % (codegen['flags'])),
+            print(('[compile to .so with flags %s]' % (codegen['flags'])), end=' ')
         if os.path.isfile(path+'.so'):
             os.remove(path+'.so')
         solver.generate_dependencies(name+'.c')
@@ -90,7 +92,7 @@ def create_nlp(var, par, obj, con, options, name=''):
         if not os.path.isfile(path+'.so'):
             raise ValueError('%s.so does not exist!', path)
         if options['verbose'] >= 1:
-            print('[using shared object %s.so]' % path),
+            print(('[using shared object %s.so]' % path), end=' ')
         problem = nlpsol('solver', options['solver'], path+'.so', slv_opt)
     elif codegen['build'] is None:
         problem = solver
@@ -98,19 +100,19 @@ def create_nlp(var, par, obj, con, options, name=''):
         raise ValueError('Invalid build option.')
     t1 = time.time()
     if options['verbose'] >= 1:
-        print 'in %5f s' % (t1-t0)
+        print('in %5f s' % (t1-t0))
     return problem, (t1-t0)
 
 
 def create_function(name, inp, out, options):
     codegen = options['codegen']
     if options['verbose'] >= 1:
-        print 'Building function %s ... ' % name,
+        print('Building function %s ... ' % name, end=' ')
     t0 = time.time()
     fun = Function(name, inp, out).expand()
     if codegen['build'] == 'jit':
         if options['verbose'] >= 1:
-            print('[jit compilation with flags %s]' % (codegen['flags'])),
+            print(('[jit compilation with flags %s]' % (codegen['flags'])), end=' ')
         fun.generate(name)
         compiler = Compiler(
             name+'.c', 'clang', {'flags': codegen['flags']})
@@ -124,7 +126,7 @@ def create_function(name, inp, out, options):
             os.makedirs(directory)
         path = os.path.join(directory, name)
         if options['verbose'] >= 1:
-            print('[compile to .so with flags %s]' % (codegen['flags'])),
+            print(('[compile to .so with flags %s]' % (codegen['flags'])), end=' ')
         if os.path.isfile(path+'.so'):
             os.remove(path+'.so')
         fun.generate(name+'.c')
@@ -141,7 +143,7 @@ def create_function(name, inp, out, options):
         if not os.path.isfile(path+'.so'):
             raise ValueError('%s.so does not exist!', path)
         if options['verbose'] >= 1:
-            print('[using shared object %s.so]' % path),
+            print(('[using shared object %s.so]' % path), end=' ')
         fun = external(name, path+'.so')
     elif codegen['build'] is None:
         fun = fun
@@ -149,7 +151,7 @@ def create_function(name, inp, out, options):
         raise ValueError('Invalid build option.')
     t1 = time.time()
     if options['verbose'] >= 1:
-        print 'in %5f s' % (t1-t0)
+        print('in %5f s' % (t1-t0))
     return fun, (t1-t0)
 
 

@@ -38,7 +38,7 @@ class MotionPlanner(object):
         rospy.Subscriber('mp_configure', Settings, self.configure)
 
     def configure(self, st):
-        print 'configure motionplanner'
+        print('configure motionplanner')
         # timing
         self._sample_time = st.sample_time
         self._update_time = st.update_time
@@ -71,7 +71,7 @@ class MotionPlanner(object):
         environment.add_obstacle(self._obstacles)
         self._robobst = st.robobst
         # create problem
-        print 'creating problem'
+        print('creating problem')
         if self._n_robots == 1:
             problem = omg.Point2point(self._fleet, environment, freeT=False)
             problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57', 'ipopt.hessian_approximation': 'limited-memory'}}})
@@ -88,11 +88,11 @@ class MotionPlanner(object):
     def start(self):
         rospy.init_node('p3dx_motionplanner')
         self._goal = [[np.inf, np.inf, np.inf] for k in range(3)]
-        print 'listening'
+        print('listening')
         rospy.spin()
 
     def update(self, cmd):
-        print 'started motion planning update!'
+        print('started motion planning update!')
         reset = False
         for k, vehicle in enumerate(self._fleet.vehicles):
             if cmd.goal[k].pose != self._goal[k]:
@@ -102,7 +102,7 @@ class MotionPlanner(object):
                 reset = True
         if reset:
             self._deployer.reset()
-            print 'resetted deployer!'
+            print('resetted deployer!')
         state0 = [cmd.state[k].pose[:] for k in range(self._n_robots)]
         for l, k in enumerate(self._robobst):
             pos = cmd.obstacles[l].pose[:2]

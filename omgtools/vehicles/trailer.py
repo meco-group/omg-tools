@@ -17,8 +17,8 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-from vehicle import Vehicle
-from dubins import Dubins
+from .vehicle import Vehicle
+from .dubins import Dubins
 from ..basics.shape import Circle, Rectangle, Square
 from ..basics.spline_extra import sample_splines
 from casadi import inf

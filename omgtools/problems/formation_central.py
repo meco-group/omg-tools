@@ -17,7 +17,7 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-from point2point import FixedTPoint2point
+from .point2point import FixedTPoint2point
 from ..basics.spline_extra import definite_integral
 from casadi import inf
 
