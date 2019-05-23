@@ -224,7 +224,7 @@ class DDUpdater(DualUpdater):
 
     def communicate(self):
         for nghb in self.q_ji.keys():
-            l_ji = nghb.var_dd['l_ij'].prefix[str(self)]
+            l_ji = nghb.var_dd['l_ij'].prefix[str(self)].cast()
             x_j = nghb.var_dd['x_i']
             self.var_dd['l_ji'][str(nghb)] = l_ji
             self.var_dd['x_j'][str(nghb)] = x_j

@@ -467,8 +467,8 @@ class ADMM(DualUpdater):
 
     def communicate(self):
         for nghb in self.q_ji.keys():
-            z_ji = nghb.var_admm['z_ij'].prefix[str(self)]
-            l_ji = nghb.var_admm['l_ij'].prefix[str(self)]
+            z_ji = nghb.var_admm['z_ij'].prefix[str(self)].cast()
+            l_ji = nghb.var_admm['l_ij'].prefix[str(self)].cast()
             x_j = nghb.var_admm['x_i']
             self.var_admm['z_ji'][str(nghb)] = z_ji
             self.var_admm['l_ji'][str(nghb)] = l_ji
