@@ -151,7 +151,7 @@ class ADMM(DualUpdater):
         f = -(l + rho*x)
         G = -(1/rho)*mtimes(A, A.T)
         h = b + (1/rho)*mtimes(A, f)
-        mu = solve(G, h)
+        mu = solve(G, h, "symbolicqr")
         z = -(1/rho)*(mtimes(A.T, mu)+f)
         l_qi = self.q_i_struct.shape[0]
         l_qij = self.q_ij_struct.shape[0]
