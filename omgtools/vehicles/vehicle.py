@@ -22,7 +22,7 @@ from ..basics.spline import BSplineBasis
 from ..basics.spline_extra import concat_splines, definite_integral, sample_splines
 from ..basics.shape import Rectangle, Square, Circle
 from ..execution.plotlayer import PlotLayer
-from casadi import inf
+from casadi import inf, vertsplit
 from scipy.signal import filtfilt, butter
 from scipy.interpolate import interp1d
 from scipy.integrate import odeint
@@ -232,6 +232,7 @@ class Vehicle(OptiChild, PlotLayer):
                             (chck[k]+position[k]) - room_limits[k][1], -inf, 0.)
 
     def get_fleet_center(self, splines, rel_pos, substitute=True):
+        rel_pos = rel_pos if isinstance(rel_pos,list) else vertsplit(rel_pos)
         if substitute:
             center = self.define_substitute('fleet_center', [s+rp for s, rp in zip(splines, rel_pos)])
             return center
