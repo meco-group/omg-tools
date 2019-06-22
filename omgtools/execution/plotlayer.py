@@ -235,7 +235,10 @@ class PlotLayer(object):
                     axis = figure.add_subplot(ax_r, ax_c, k*ax_c+l+1)
                     _init_axis_2d(axis, info[k][l])
                 if 'aspect_equal' in info[k][l] and info[k][l]['aspect_equal']:
-                    axis.set_aspect('equal')
+                    try:
+                      axis.set_aspect('equal')
+                    except:
+                      pass
         plot.update({'info': info})
 
     # ========================================================================
