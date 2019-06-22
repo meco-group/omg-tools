@@ -1,15 +1,17 @@
 env:
   global:
-    - LD_LIBRARY_PATH=$HOME/libhsl
-    # - IPOPT_DEFAULT_LINEAR_SOLVER=ma57
     - COVERALLS_PARALLEL=1
     - NODE_TOTAL=4
   matrix:
-    - NODE_INDEX=0
-    - NODE_INDEX=1
-    - NODE_INDEX=2
-    - NODE_INDEX=3
-
+    - NODE_INDEX=0 PY=2.7 CA=3.1.1.post3
+    - NODE_INDEX=1 PY=2.7 CA=3.1.1.post3
+    - NODE_INDEX=2 PY=2.7 CA=3.1.1.post3
+    - NODE_INDEX=3 PY=2.7 CA=3.1.1.post3 PIP_EXTRA=matplotlib2tikz==0.6.18
+    - NODE_INDEX=0 PY=3.7
+    - NODE_INDEX=1 PY=3.7
+    - NODE_INDEX=2 PY=3.7
+    - NODE_INDEX=3 PY=3.7
+    
 sudo: required
 dist: trusty
 language: generic
@@ -20,9 +22,6 @@ notifications:
 before_script:
   - set -e
   - set -o pipefail  # otherwise, piping with grep discards exit statuses
-  - git clone https://github.com/meco-group/bob.git
-#  - pushd bob && source setup.sh && popd
-#  - bob_get libhsl.tar.gz && mkdir $HOME/libhsl && tar -xf libhsl.tar.gz -C $HOME/libhsl
 
 script:
   - nosetests --verbosity=2 --nocapture --with-xcoverage --cover-package=omgtools --cover-tests
@@ -33,13 +32,17 @@ after_success:
 install:
   - export DISPLAY=':99.0'
   - Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
-  - sudo pip install .
+  - pip install .
 
 before_install:
+  - wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
+  - chmod +x miniconda.sh
+  - ./miniconda.sh -b
+  - export PATH=$HOME/miniconda3/bin:$PATH
+  - conda create --quiet --yes -n condaenv python=$PY matplotlib scipy nosexcover coveralls
+  - source activate condaenv
+  - if [ ! -z $CA ]; then pip install casadi==$CA; fi
+  - if [ ! -z $PIP_EXTRA ]; then pip install $PIP_EXTRA; fi
   - sudo add-apt-repository main
   - sudo apt-get update
-  - sudo apt-get install -y python-pip python-numpy python-scipy python-matplotlib
-  - sudo pip install numpy --upgrade
-  - sudo apt-get install imagemagick
-  - sudo pip install nosexcover coveralls
-  - sudo apt-get install -y valgrind xvfb
+  - sudo apt-get install -y valgrind xvfb imagemagick
