@@ -21,6 +21,8 @@ from omgtools import *
 import numpy as np
 import matplotlib.pyplot as plt
 
+assert_ma57()
+
 # settings
 number_of_iterations = 100
 

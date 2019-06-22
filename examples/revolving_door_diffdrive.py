@@ -20,6 +20,8 @@
 from omgtools import *
 import numpy as np
 
+assert_ma57()
+
 # create vehicle
 vehicle = Dubins(bounds={'vmax': 0.7, 'wmin': -30., 'wmax': 30.})
 vehicle.define_knots(knot_intervals=6)

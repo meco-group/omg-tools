@@ -19,6 +19,8 @@
 
 from omgtools import *
 
+assert_ma57()
+
 # create vehicle
 vehicle = AGV(length=0.8, options={'plot_type': 'agv'})
 vehicle.define_knots(knot_intervals=5)  # choose lower amount of knot intervals

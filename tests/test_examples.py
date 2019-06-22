@@ -40,5 +40,12 @@ def test_export():
 def run_example(filename):
     example_dir = os.path.join(os.getcwd(), 'examples')
     print('')
-    imp.load_source(filename.split('.')[-2],
+    try:
+      imp.load_source(filename.split('.')[-2],
                     os.path.join(example_dir, filename))
+
+    # Forgive sys.exit(0)
+    except SystemExit as e:
+      if e.code!=0:
+        import sys
+        sys.exit(e.code)

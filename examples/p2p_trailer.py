@@ -19,6 +19,8 @@
 
 from omgtools import *
 
+assert_ma57()
+
 # create vehicle
 vehicle = Dubins(shapes=Circle(0.2), bounds={'vmax': 0.8, 'wmax': np.pi/3., 'wmin': -np.pi/3.})
 vehicle.define_knots(knot_intervals=9)  # adapt amount of knot intervals

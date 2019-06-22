@@ -19,6 +19,8 @@
 
 from omgtools import *
 
+assert_ma57()
+
 # create fleet
 N = 3
 vehicles = [Dubins(options={'degree': 2}, bounds={'vmax': 1., 'wmax': np.pi/6., 'wmin': -np.pi/6.}) for l in range(N)]
