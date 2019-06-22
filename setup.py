@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='omg-tools',
-    version='0.1.3',
+    version='0.1.4',
     author='Ruben Van Parys',
     author_email='ruben.vanparys@kuleuven.be',
     description=('Optimal Motion Generation tools: a user-friendly tool for ' +
