@@ -24,7 +24,7 @@ work original in ucs-ros-pkg.
 <robot xmlns:xacro="http://ros.org/wiki/xacro">
 
 	<!-- properties (constants) -->
-	<property name="M_PI" value="3.14159" />
+	<xacro:property name="M_PI" value="3.14159" />
 
 	<!-- right/left hubcap + wheel -->
 	<xacro:macro name="p3dx_wheel" params="suffix parent reflect">
@@ -38,7 +38,7 @@ work original in ucs-ros-pkg.
 					iyz="0" izz="0.011763977943" />
 			</inertial>
 
-			<visual name="base_visual">
+			<visual>
 				<origin xyz="0 0 0" rpy="0 0 0" />
 				<geometry name="pioneer_geom">
 					<mesh filename="package://p3dx_description/meshes/${suffix}_wheel.stl" />
@@ -72,7 +72,7 @@ work original in ucs-ros-pkg.
 					iyz="0" izz="0.011763977943" />
 			</inertial>
 
-			<visual name="base_visual">
+			<visual>
 				<origin xyz="0 0 0" rpy="0 0 0" />
 				<geometry name="pioneer_geom">
 					<mesh filename="package://p3dx_description/meshes/${suffix}_hubcap.stl" />

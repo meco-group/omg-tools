@@ -23,7 +23,7 @@
 		a URDF robot -->
 
 	<param name="robot_description"
-        command="$(find xacro)/xacro.py '$(find p3dx_description)/urdf/pioneer3dx.xacro'" />
+        command="$(find xacro)/xacro '$(find p3dx_description)/urdf/pioneer3dx.xacro'" />
 
 
 	<group ns="robot0">
