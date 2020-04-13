@@ -74,12 +74,12 @@ class MotionPlanner(object):
         print('creating problem')
         if self._n_robots == 1:
             problem = omg.Point2point(self._fleet, environment, freeT=False)
-            problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57', 'ipopt.hessian_approximation': 'limited-memory'}}})
+            problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'mumps', 'ipopt.hessian_approximation': 'limited-memory'}}})
             problem.set_options({'hard_term_con': False, 'horizon_time': 10.})
         else:
             options = {'rho': 5., 'horizon_time': 35., 'hard_term_con': True, 'init_iter':5}
             problem = omg.FormationPoint2point(self._fleet, environment, options=options)
-            problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'ma57', 'ipopt.max_iter': 500}}})
+            problem.set_options({'solver_options': {'ipopt': {'ipopt.linear_solver': 'mumps', 'ipopt.max_iter': 500}}})
         problem.init()
         self._deployer = omg.Deployer(problem, self._sample_time, self._update_time)
         self._deployer.reset()
