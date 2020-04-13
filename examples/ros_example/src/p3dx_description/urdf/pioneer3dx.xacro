@@ -37,7 +37,7 @@ work original in ucs-ros-pkg.
 			<inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1" />
 		</inertial>
 
-		<visual name="base_visual">
+		<visual>
 			<origin xyz="-0.045 0 0.148" rpy="0 0 0" />
 			<geometry name="pioneer_geom">
 				<mesh filename="package://p3dx_description/meshes/chassis.stl" />
@@ -63,7 +63,7 @@ work original in ucs-ros-pkg.
 			<inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1" />
 		</inertial>
 
-		<visual name="base_visual">
+		<visual>
 			<origin xyz="0 0 0" rpy="0 0 0" />
 			<geometry name="top_geom">
 				<mesh filename="package://p3dx_description/meshes/top.stl" />
@@ -96,7 +96,7 @@ work original in ucs-ros-pkg.
 			<inertia ixx="0.01" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.01" />
 		</inertial>
 
-		<visual name="base_visual">
+		<visual>
 			<origin xyz="0 0 0" rpy="0 0 0" />
 			<geometry name="pioneer_geom">
 				<mesh filename="package://p3dx_description/meshes/swivel.stl" />
@@ -134,7 +134,7 @@ work original in ucs-ros-pkg.
 				iyy="0.015218160428" iyz="-0.000004273467" izz="0.011763977943" />
 		</inertial>
 
-		<visual name="base_visual">
+		<visual>
 			<origin xyz="0 0 0" rpy="0 0 0" />
 			<geometry name="pioneer_geom">
 				<mesh filename="package://p3dx_description/meshes/center_hubcap.stl" />
@@ -172,7 +172,7 @@ work original in ucs-ros-pkg.
 				iyy="0.015218160428" iyz="-0.000004273467" izz="0.011763977943" />
 		</inertial>
 
-		<visual name="base_visual">
+		<visual>
 			<origin xyz="0 0 0" rpy="0 0 0" />
 			<geometry name="pioneer_geom">
 				<mesh filename="package://p3dx_description/meshes/center_wheel.stl" />
@@ -207,7 +207,7 @@ work original in ucs-ros-pkg.
 			<inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1" />
 		</inertial>
 
-		<visual name="front_sonar_vis">
+		<visual>
 			<origin rpy="0 0 0" xyz="0 0 0" />
 			<geometry name="pioneer_geom">
 				<mesh filename="package://p3dx_description/meshes/front_sonar.stl" />
