@@ -18,10 +18,10 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
  -->
 
-<robot>
+<robot name="pioneer3dx" xmlns:xacro="http://ros.org/wiki/xacro">
 
   <!-- properties (constants) -->
-  <property name="ns" value="p3dx" />
+  <xacro:property name="ns" value="p3dx" />
 
   <!-- ros_control plugin -->
   <gazebo>
@@ -69,8 +69,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 		<plugin name="differential_drive_controller" filename="libgazebo_ros_diff_drive.so">
 			<alwaysOn>true</alwaysOn>
 			<updateRate>100</updateRate>
-			<leftJoint>base_right_wheel_joint</leftJoint>
-			<rightJoint>base_left_wheel_joint</rightJoint>
+			<leftJoint>base_left_wheel_joint</leftJoint>
+			<rightJoint>base_right_wheel_joint</rightJoint>
             <!-- <wheelSeparation>0.39</wheelSeparation> -->
 			<wheelSeparation>0.316</wheelSeparation>
             <!-- <wheelDiameter>0.15</wheelDiameter> -->
@@ -82,7 +82,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 			<odometryFrame>odom</odometryFrame>
 			<robotBaseFrame>base_link</robotBaseFrame>
 
-            <legacyMode>true</legacyMode>
+
 		</plugin>
 	</gazebo>
 
