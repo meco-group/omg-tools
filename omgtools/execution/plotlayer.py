@@ -137,10 +137,10 @@ def _update_axis_3d(axis, info, data):
 
 
 def _cleanup_rubbish(path, info, root=None):
-    # cleanup rubbish due to bugs in matplotlib2tikz
+    # cleanup rubbish due to bugs in tikzplotlib
     with open(path, 'r+') as f:
         body = f.read()
-        # matplotlib2tikz's \path lines are buggy and comprise errors.
+        # tikzplotlib's \path lines are buggy and comprise errors.
         # Let's remove them and replace them with our own.
         index = body.find('\path [draw=black, fill opacity=0]')
         while index >= 0:
@@ -277,7 +277,7 @@ class PlotLayer(object):
     # ========================================================================
 
     def save_plot(self, argument=None, name='plot', path='images/', **kwargs):
-        from matplotlib2tikz import save as tikz_save
+        from tikzplotlib import save as tikz_save
         directory = path
         if not os.path.isdir(directory):
             os.makedirs(directory)
@@ -290,21 +290,21 @@ class PlotLayer(object):
                         info[k][l]['projection'] == '3d'):
                     proj_3d = True
         if proj_3d:
-            warnings.warn('3D plotting is not supported by matplotlib2tikz. ' +
+            warnings.warn('3D plotting is not supported by tikzplotlib. ' +
                           'Saving to pdf instead.')
             path = directory+'/'+name+'.pdf'
             plt.savefig(path, bbox_inches='tight', pad_inches=0)
         else:
-            figurewidth = kwargs[
-                'figurewidth'] if 'figurewidth' in kwargs else '8cm'
-            figureheight = kwargs[
-                'figureheight'] if 'figureheight' in kwargs else None
+            axis_width = kwargs[
+                'axis_width'] if 'axis_width' in kwargs else '8cm'
+            axis_height = kwargs[
+                'axis_height'] if 'axis_height' in kwargs else None
             path = directory+'/'+name+'.tikz'
-            if figureheight is None:
-                tikz_save(path, figurewidth=figurewidth)
+            if axis_height is None:
+                tikz_save(path, axis_width=axis_width)
             else:
                 tikz_save(
-                    path, figurewidth=figurewidth, figureheight=figureheight)
+                    path, axis_width=axis_width, axis_height=axis_height)
             _cleanup_rubbish(path, info)
 
     def plot_movie(self, argument=None, repeat=False, **kwargs):
@@ -361,12 +361,12 @@ class PlotLayer(object):
                                'Did you install imagemagick on your system?'))
             shutil.rmtree(directory)
         elif format == 'tikz':
-            from matplotlib2tikz import save as tikz_save
+            from tikzplotlib import save as tikz_save
             root = kwargs['root'] if 'root' in kwargs else None
-            figurewidth = kwargs[
-                'figurewidth'] if 'figurewidth' in kwargs else '8cm'
-            figureheight = kwargs[
-                'figureheight'] if 'figureheight' in kwargs else None
+            axis_width = kwargs[
+                'axis_width'] if 'axis_width' in kwargs else '8cm'
+            axis_height = kwargs[
+                'axis_height'] if 'axis_height' in kwargs else None
             # by default scale only axis is true, but you can disable it
             # this option makes sure the plot has the provided width and height
             scaleonlyaxis = kwargs[
@@ -383,21 +383,21 @@ class PlotLayer(object):
                                 proj_3d = True
                     if proj_3d:
                         warnings.warn('3D plotting is not supported by ' +
-                                      'matplotlib2tikz. ' +
+                                      'tikzplotlib. ' +
                                       'Saving to pdf instead.')
                 if proj_3d:
                     path = directory+'/'+name+'_'+str(cnt)+'.pdf'
                     plt.savefig(path, bbox_inches='tight', pad_inches=0)
                 else:
                     path = directory+'/'+name+'_'+str(cnt)+'.tikz'
-                    if figureheight is None:
-                        tikz_save(path, figurewidth=figurewidth,
+                    if axis_height is None:
+                        tikz_save(path, axis_width=axis_width,
                                   extra_axis_parameters={'scale only axis=' +
                                          str(scaleonlyaxis).lower()})
                         # tikz requires a lowercase true/false
                     else:
-                        tikz_save(path, figurewidth=figurewidth,
-                                  figureheight=figureheight,
+                        tikz_save(path, axis_width=axis_width,
+                                  axis_height=axis_height,
                                   extra_axis_parameters={['scale only axis=' +
                                           str(scaleonlyaxis).lower()]})
                         # tikz requires a lowercase true/false
