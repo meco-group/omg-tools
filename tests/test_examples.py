@@ -38,14 +38,21 @@ def test_export():
 
 
 def run_example(filename):
+    subprocess.Popen("rm solver.*", shell=True).wait()
     example_dir = os.path.join(os.getcwd(), 'examples')
-    print('')
+    name = filename.split('.')[-2]
+    print(name)
     try:
-      imp.load_source(filename.split('.')[-2],
+      imp.load_source(name,
                     os.path.join(example_dir, filename))
 
+    #  
     # Forgive sys.exit(0)
     except SystemExit as e:
       if e.code!=0:
         import sys
         sys.exit(e.code)
+    finally:
+      subprocess.Popen("mkdir dumps/%s && mv solver.* dumps/%s" % (name, name),shell=True).wait()
+      pass
+
