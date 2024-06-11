@@ -259,6 +259,7 @@ class Vehicle(OptiChild, PlotLayer):
 
          # save individual spline segments
         self.result_spline_segments = np.array(spline_segments)
+        self.segment_times = segment_times
 
         splines = concat_splines(spline_segments, segment_times, n_insert=n_insert)
 

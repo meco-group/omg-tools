@@ -31,7 +31,7 @@ class Deployer:
         self.iteration0 = True
         # handy when making multiple instances of deployer
         # in one problem, e.g. gcodeproblem_multi_z.py
-        plt.close('all')
+        # plt.close('all')
 
     def set_problem(self, problem):
         self.problem = problem

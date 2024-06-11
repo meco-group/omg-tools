@@ -4,7 +4,7 @@ from .basics import *
 from .problems import *
 from .execution import *
 from .export import *
-from .gui import *
+# from .gui import *
 
 
 def assert_ma57():
