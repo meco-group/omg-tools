@@ -128,6 +128,7 @@ class GCodeReader(object):
         else:
             file_str = file.readlines()
         for line in file_str:
+            line = line.strip().decode("utf-8")
             # extract commands
             if line[0] == '(':
                 # this is a commented line
@@ -150,6 +151,7 @@ class GCodeReader(object):
             file_data = open(f, 'rb')
             file_str = file_data.readlines()
             for line in file_str:
+                line = line.strip().decode("utf-8")
                 # extract commands
                 if line[0] == 'G' or (line[0] == 'N' and 'G' in line):
                     self.commands.append(line)
@@ -232,7 +234,7 @@ class GCodeReader(object):
         self.get_connections()
 
         fig = plt.figure()
-        ax = fig.gca(projection='3d')
+        ax = fig.add_subplot(projection='3d')
         ax.scatter(self.connections[:,0], self.connections[:,1], self.connections[:,2], color='red', marker='x', label='GCode')
         coordinates = []
         for block in self.blocks:
@@ -241,7 +243,7 @@ class GCodeReader(object):
                 coordinates.append(c)
         self.coords = np.array(coordinates)
         ax.plot(self.coords[:,0], self.coords[:,1], self.coords[:,2], color='blue', label='GCode')
-        plt.show(block=False)
+        plt.show(block=True)
 
     def run(self):
         self.load_file()

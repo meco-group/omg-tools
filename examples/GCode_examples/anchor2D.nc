@@ -1,5 +1,4 @@
 %% ISO 6983 code of anchor
-
 G00 X0 Y0
 G02 X-20 Y20 I5 J25
 G01 X-23 Y17

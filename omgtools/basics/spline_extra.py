@@ -71,7 +71,7 @@ def running_integral(spline):
     if isinstance(coeffs, (MX, SX)):
         coeffs_int = vertcat(*coeffs_int)
     else:
-        coeffs_int = np.array(coeffs_int)
+        coeffs_int = np.array([item if isinstance(item, float) else item[0] for item in coeffs_int])
     spline_int = BSpline(basis_int, coeffs_int)
     return spline_int
 
