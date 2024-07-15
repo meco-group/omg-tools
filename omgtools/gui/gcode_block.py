@@ -57,7 +57,154 @@ class G01(GCodeBlock):
     def get_coordinates(self):
         start = [self.X0, self.Y0, self.Z0]
         end = [self.X1, self.Y1, self.Z1]
-        return [start, end]
+        N = 4
+        coords = []
+        x_values = np.linspace(start[0], end[0], N)
+        y_values = np.linspace(start[1], end[1], N)
+        z_values = np.linspace(start[2], end[2], N)
+        for x, y, z in zip(x_values, y_values, z_values):
+            coords.append([x, y, z])
+        return coords
+
+    def get_velocity_profile(self, t0, v_max, a_max):
+        # compute velocity profile, linear
+        start = [self.X0, self.Y0, self.Z0]
+        end = [self.X1, self.Y1, self.Z1]
+        start = [coord/1000 for coord in start]
+        end = [coord/1000 for coord in end]
+        dist_to_max = v_max**2/(2*a_max)
+        p = [[], []]
+        v = [[], []]
+        a = [[], []]
+        t = []
+        a_s = [[np.sign(end[0] - start[0])], 
+               [np.sign(end[1] - start[1])]]
+
+        dist_to_cover = [np.abs(start[0] - end[0]),
+                         np.abs(start[1] - end[1])]
+        bd = 0 if dist_to_cover[0] > dist_to_cover[1] else 1
+        dist_ratio = dist_to_cover[1-bd]/dist_to_cover[bd]
+        a_s[bd][0] = a_s[bd][0]*a_max
+        a_s[1-bd][0] = a_s[1-bd][0]*a_max*dist_ratio
+
+        N = 10
+
+        curr_pos = [start[0], start[1]]
+        ax = a_s[0][0]
+        ay = a_s[1][0]
+
+        if 2*dist_to_max > dist_to_cover[bd]:
+            print('Warning: unable to reach max velocity')
+            # accelerate
+            t1 = np.sqrt(dist_to_cover[bd]/a_max)
+            t.append(0.)
+            v[0].append(0.)
+            v[1].append(0.)
+            p[0].append(curr_pos[0])
+            p[1].append(curr_pos[1])
+            for i in range(N):
+                t_local = (i+1)*t1/N
+                t.append(t_local)
+                a[0].append(ax)
+                a[1].append(ay)
+                v[0].append(ax*t_local)
+                v[1].append(ay*t_local)
+                p[0].append(curr_pos[0] + ax*t_local**2/2)
+                p[1].append(curr_pos[1] + ay*t_local**2/2)
+            a[0].append(0)
+            a[1].append(0)
+
+            curr_pos = [p[0][-1], p[1][-1]]
+            curr_vel = [v[0][-1], v[1][-1]]
+
+            # brake
+            ax = -ax
+            ay = -ay
+            t.append(t1)
+            v[0].append(curr_vel[0])
+            v[1].append(curr_vel[1])
+            p[0].append(curr_pos[0])
+            p[1].append(curr_pos[1])
+            for i in range(N):
+                t_local = (i+1)*t1/N
+                t.append(t1 + t_local)
+                a[0].append(ax)
+                a[1].append(ay)
+                v[0].append(curr_vel[0] + ax*t_local)
+                v[1].append(curr_vel[1] + ay*t_local)
+                p[0].append(curr_pos[0] + curr_vel[0]*t_local + ax*t_local**2/2)
+                p[1].append(curr_pos[1] + curr_vel[1]*t_local + ay*t_local**2/2)
+            a[0].append(0)
+            a[1].append(0)
+
+        else:
+            print('Warning: able to reach max velocity')
+            # accelerate
+            t1 = v_max/a_max
+            t.append(0.)
+            v[0].append(0.)
+            v[1].append(0.)
+            p[0].append(curr_pos[0])
+            p[1].append(curr_pos[1])
+            for i in range(N):
+                t_local = (i+1)*t1/N
+                t.append(t_local)
+                a[0].append(ax)
+                a[1].append(ay)
+                v[0].append(ax*t_local)
+                v[1].append(ay*t_local)
+                p[1].append(curr_pos[1] + ay*t_local**2/2)
+                p[0].append(curr_pos[0] + ax*t_local**2/2)
+            a[0].append(0)
+            a[1].append(0)
+
+            curr_pos = [p[0][-1], p[1][-1]]
+            curr_vel = [v[0][-1], v[1][-1]]
+
+            # coast
+            ax_coast = 0
+            ay_coast = 0
+            t.append(t1)
+            a[0].append(ax_coast)
+            a[1].append(ay_coast)
+            v[0].append(curr_vel[0])
+            v[1].append(curr_vel[1])
+            p[0].append(curr_pos[0])
+            p[1].append(curr_pos[1])
+
+            t2 = (dist_to_cover[bd]-2*dist_to_max)/v_max
+            t.append(t1 + t2)
+            a[0].append(0)
+            a[1].append(0)
+            v[0].append(curr_vel[0])
+            v[1].append(curr_vel[1])
+            p[0].append(curr_pos[0] + curr_vel[0]*t2)
+            p[1].append(curr_pos[1] + curr_vel[1]*t2)
+            
+            curr_pos = [p[0][-1], p[1][-1]]
+
+            # brake       
+            ax = -ax
+            ay = -ay
+            t.append(t1 + t2)
+            v[0].append(curr_vel[0])
+            v[1].append(curr_vel[1])
+            p[0].append(curr_pos[0])
+            p[1].append(curr_pos[1])
+            for i in range(N):
+                t_local = (i+1)*t1/N
+                t.append(t1 + t2 + t_local)
+                a[0].append(ax)
+                a[1].append(ay)
+                v[0].append(curr_vel[0] + ax*t_local)
+                v[1].append(curr_vel[1] + ay*t_local)
+                p[0].append(curr_pos[0] + curr_vel[0]*t_local + ax*t_local**2/2)
+                p[1].append(curr_pos[1] + curr_vel[1]*t_local + ay*t_local**2/2)
+            a[0].append(0)
+            a[1].append(0)
+
+        t = [t0 + t_local for t_local in t]
+        return p, v, a, t
 
 class G02(GCodeBlock):
     def __init__(self, command, number, prev_block):
@@ -111,6 +258,7 @@ class G02(GCodeBlock):
                 # probably angle2 is smaller, but arctan2 returned a negative angle
                 angle1 += 2*np.pi
             arc_angle = angle1 - angle2
+            self.arc_angle = arc_angle
 
             # if angle1 < angle2 and angle2 != np.pi:
             #     arc_angle += np.pi
@@ -118,6 +266,8 @@ class G02(GCodeBlock):
             start_angle = angle1
             end_angle = start_angle - arc_angle  # clockwise
             angles = np.linspace(start_angle,end_angle,20)
+            self.start_angle = start_angle
+            self.end_angle = end_angle
             for s in angles:
                 coords.append([self.X0, self.center[1]+self.radius*np.cos(s),self.center[2]+self.radius*np.sin(s)])
         elif self.plane == 'XZ':
@@ -132,6 +282,7 @@ class G02(GCodeBlock):
                 # probably angle2 is smaller, but arctan2 returned a negative angle
                 angle1 += 2*np.pi
             arc_angle = angle1 - angle2
+            self.arc_angle = arc_angle
 
             # if angle1 < angle2 and angle2 != np.pi:
             #     arc_angle += np.pi
@@ -139,6 +290,8 @@ class G02(GCodeBlock):
             start_angle = np.arctan2(self.Z0-self.center[2],self.X0-self.center[0])
             end_angle = start_angle - arc_angle  # clockwise
             angles = np.linspace(start_angle,end_angle,20)
+            self.start_angle = start_angle
+            self.end_angle = end_angle
 
             for s in angles:
                 coords.append([self.center[0]+self.radius*np.cos(s), self.Y0, self.center[2]+self.radius*np.sin(s)])
@@ -154,6 +307,7 @@ class G02(GCodeBlock):
                 # probably angle2 is smaller, but arctan2 returned a negative angle
                 angle1 += 2*np.pi
             arc_angle = angle1 - angle2
+            self.arc_angle = arc_angle
 
             # if angle1 < angle2 and angle2 != np.pi:
             #     arc_angle += np.pi
@@ -161,6 +315,8 @@ class G02(GCodeBlock):
             start_angle = angle1
             end_angle = start_angle - arc_angle  # clockwise
             angles = np.linspace(start_angle,end_angle,20)
+            self.start_angle = start_angle
+            self.end_angle = end_angle
 
             for s in angles:
                 coords.append([self.center[0]+self.radius*np.cos(s),self.center[1]+self.radius*np.sin(s), self.Z0])
@@ -168,6 +324,10 @@ class G02(GCodeBlock):
             raise ValueError('Trying to plot an arc in 3D space, but only arcs in 2D subspace are supported')
 
         return coords
+    
+    def get_velocity_profile(self, t0, v_max, a_max):
+        return G03.get_velocity_profile(self, t0, v_max, a_max, sign=-1)
+
 
 class G03(GCodeBlock):
     def __init__(self, command, number, prev_block):
@@ -222,6 +382,7 @@ class G03(GCodeBlock):
                 # probably angle2 is bigger, but arctan2 returned a negative angle
                 angle2 += 2*np.pi
             arc_angle = angle2 - angle1
+            self.arc_angle = arc_angle
 
             # if angle1 > angle2 and angle1 != np.pi:
             #     arc_angle -= np.pi
@@ -229,6 +390,9 @@ class G03(GCodeBlock):
             start_angle = angle1
             end_angle = start_angle + arc_angle  # counter-clockwise
             angles = np.linspace(start_angle,end_angle,20)
+            self.start_angle = start_angle
+            self.end_angle = end_angle
+
             for s in angles:
                 coords.append([self.X0, self.center[1]+self.radius*np.cos(s),self.center[2]+self.radius*np.sin(s)])
         elif self.plane == 'XZ':
@@ -245,6 +409,7 @@ class G03(GCodeBlock):
                 # probably angle2 is bigger, but arctan2 returned a negative angle
                 angle2 += 2*np.pi
             arc_angle = angle2 - angle1
+            self.arc_angle = arc_angle
 
             # if angle1 > angle2 and angle1 != np.pi:
             #     arc_angle -= np.pi
@@ -252,6 +417,8 @@ class G03(GCodeBlock):
             start_angle = angle1
             end_angle = start_angle + arc_angle  # counter-clockwise
             angles = np.linspace(start_angle,end_angle,20)
+            self.start_angle = start_angle
+            self.end_angle = end_angle
 
             for s in angles:
                 coords.append([self.center[0]+self.radius*np.cos(s), self.Y0, self.center[2]+self.radius*np.sin(s)])
@@ -269,6 +436,7 @@ class G03(GCodeBlock):
                 # probably angle2 is bigger, but arctan2 returned a negative angle
                 angle2 += 2*np.pi
             arc_angle = angle2 - angle1
+            self.arc_angle = arc_angle
 
             # if angle1 > angle2 and angle1 != np.pi:
             #     arc_angle -= np.pi
@@ -276,6 +444,8 @@ class G03(GCodeBlock):
             start_angle = angle1
             end_angle = start_angle + arc_angle  # counter-clockwise
             angles = np.linspace(start_angle,end_angle,20)
+            self.start_angle = start_angle
+            self.end_angle = end_angle
 
             for s in angles:
                 coords.append([self.center[0]+self.radius*np.cos(s),self.center[1]+self.radius*np.sin(s), self.Z0])
@@ -283,6 +453,135 @@ class G03(GCodeBlock):
             raise ValueError('Trying to plot an arc in 3D space, but only arcs in 2D subspace are supported')
 
         return coords
+    
+    def get_velocity_profile(self, t0, v_max, a_max, sign=1):
+        # compute velocity profile, linear
+        radius = self.radius/1000
+        center = [coord/1000 for coord in self.center]
+
+        omega_v = v_max/radius
+        omega_a = np.sqrt(a_max/radius)
+        omega_max = omega_v if omega_v < omega_a else omega_a
+        alpha_max = a_max/radius
+        
+        print('start_angle: ', self.start_angle)
+        print('end_angle: ', self.end_angle)
+        print('arc_angle: ', self.arc_angle)
+
+        N = 10
+
+        p = [[], []]
+        v = [[], []]
+        a = [[], []]
+        t = []
+
+        omega = []
+        alpha = []
+        theta = []
+
+        # for i in range(N+1):
+        #     t_local = i*T/N
+        #     t.append(t0 + t_local)
+        #     p[0].append(center[0]+radius*np.cos(angles[i]))
+        #     p[1].append(center[1]+radius*np.sin(angles[i]))
+        #     v[0].append(-radius*np.sin(angles[i])*omega_max)
+        #     v[1].append(radius*np.cos(angles[i])*omega_max)
+        #     a[0].append(-radius*np.cos(angles[i])*omega_max**2)
+        #     a[1].append(-radius*np.sin(angles[i])*omega_max**2)
+
+        t_acc = omega_max/alpha_max
+        theta_acc = 0.5*alpha_max*t_acc**2
+        theta_coast = self.arc_angle - 2*theta_acc
+        t_coast = theta_coast/omega_max
+
+        t.append(0)
+        omega.append(0.)
+        theta.append(self.start_angle)
+        for i in range(N):
+            t_local = (i+1)*t_acc/N
+            t.append(t_local)
+            alpha.append(sign*alpha_max)
+            omega.append(sign*alpha_max*t_local)
+            theta.append(self.start_angle + sign*0.5*alpha_max*t_local**2)
+        alpha.append(0)
+
+        # t.append(0)
+        # omega.append(0.)
+        # theta.append(self.start_angle)
+        # for i in range(N):
+        #     dt_local = t_acc/N
+        #     t_new = t[-1] + dt_local
+        #     alpha_new = sign*alpha_max
+        #     omega_new = omega[-1] + alpha_new*dt_local
+        #     theta_new = theta[-1] + omega_new*dt_local + 0.5*alpha_new*dt_local**2
+        #     # continue on this approach by checking if the acceleration is too high
+        #     # if it is, scale the acceleration down
+        #     # if it is not, continue
+
+        # [[-radius*np.cos(theta)*omega**2 - radius*np.sin(theta)*alpha for theta, omega, alpha in zip(theta, omega, alpha)],
+        #  [-radius*np.sin(theta)*omega**2 + radius*np.cos(theta)*alpha for theta, omega, alpha in zip(theta, omega, alpha)]]
+        
+
+        t.append(t_acc)
+        omega.append(sign*omega_max)
+        theta.append(self.start_angle + sign*theta_acc)
+        for i in range(N):
+            t_local = (i+1)*t_coast/N
+            t.append(t_acc + t_local)
+            alpha.append(0.)
+            omega.append(sign*omega_max)
+            theta.append(self.start_angle + sign*theta_acc + sign*omega_max*t_local)
+        alpha.append(0)
+        
+        t.append(t_acc + t_coast)
+        omega.append(sign*omega_max)
+        theta.append(self.start_angle + sign*theta_acc + sign*theta_coast)
+        for i in range(N):
+            t_local = (i+1)*t_acc/N
+            t.append(t_acc + t_coast + t_local)
+            alpha.append(-sign*alpha_max)
+            omega.append(sign*omega_max - sign*alpha_max*t_local)
+            theta.append(self.start_angle + sign*theta_acc + sign*theta_coast + sign*omega_max*t_local - sign*0.5*alpha_max*t_local**2)
+        alpha.append(0)
+        print('t: ', t)
+        print('alpha: ', alpha)
+        print('omega: ', omega)
+        print('theta: ', theta)
+
+        positions = [[center[0] + radius*np.cos(thetas) for thetas in theta], 
+                     [center[1] + radius*np.sin(thetas) for thetas in theta]]
+        velocities = [[-radius*np.sin(theta)*omega for theta, omega in zip(theta, omega)],
+                      [radius*np.cos(theta)*omega for theta, omega in zip(theta, omega)]]
+        accelerations = [[-radius*np.cos(theta)*omega**2 - radius*np.sin(theta)*alpha for theta, omega, alpha in zip(theta, omega, alpha)],
+                         [-radius*np.sin(theta)*omega**2 + radius*np.cos(theta)*alpha for theta, omega, alpha in zip(theta, omega, alpha)]]
+        
+        # tt = np.zeros_like(t)
+        # dt = t[1] - t[0]
+        # for i in range(len(t)-1):
+        #     ax, ay = accelerations[0][i], accelerations[1][i]
+        #     if abs(ax) > a_max or abs(ay) > a_max:
+        #         axy = max(abs(ax), abs(ay))
+        #         a_scaling = a_max/axy
+        #     else:
+        #         a_scaling = 1
+        #     t_new = dt/a_scaling
+        #     accelerations[0][i] *= a_scaling
+        #     accelerations[1][i] *= a_scaling
+           
+        #     tt[i+1] = tt[i] + t_new
+        # print(tt)
+
+        t = [t0 + t_local for t_local in t]
+        
+        p[0] = positions[0]
+        p[1] = positions[1]
+        v[0] = velocities[0]
+        v[1] = velocities[1]
+        a[0] = accelerations[0]
+        a[1] = accelerations[1]
+        
+        return p, v, a, t
+
 
 def distance_between(point1, point2):
     # compute distance between points in nD space

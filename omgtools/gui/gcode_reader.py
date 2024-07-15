@@ -52,9 +52,9 @@ class GCodeReader(object):
         # shift midpoint and scale up or down a certain GCode file
 
         # ask the user if he wants to change the GCode file
-        answer = ''
-        while (not answer in ['yes', 'no']):
-            answer = input('Do you want to shift or scale the loaded GCode? (yes/no): ')
+        answer = 'no'
+        # while (not answer in ['yes', 'no']):
+        #     answer = input('Do you want to shift or scale the loaded GCode? (yes/no): ')
 
         if answer == 'yes':
             # shift and scale the GCode file
@@ -128,6 +128,7 @@ class GCodeReader(object):
         else:
             file_str = file.readlines()
         for line in file_str:
+            line = line.strip().decode("utf-8")
             # extract commands
             if line[0] == '(':
                 # this is a commented line
@@ -150,6 +151,7 @@ class GCodeReader(object):
             file_data = open(f, 'rb')
             file_str = file_data.readlines()
             for line in file_str:
+                line = line.strip().decode("utf-8")
                 # extract commands
                 if line[0] == 'G' or (line[0] == 'N' and 'G' in line):
                     self.commands.append(line)
@@ -232,16 +234,99 @@ class GCodeReader(object):
         self.get_connections()
 
         fig = plt.figure()
-        ax = fig.gca(projection='3d')
+        ax = fig.add_subplot(projection='3d')
         ax.scatter(self.connections[:,0], self.connections[:,1], self.connections[:,2], color='red', marker='x', label='GCode')
         coordinates = []
+        t0 = 0
+        p = [[], []]
+        v = [[], []]
+        a = [[], []]
+        t = []
         for block in self.blocks:
             coords = block.get_coordinates()
+            print(block.type)
+            if block.type == 'G01':
+                pb, vb, ab, tb = block.get_velocity_profile(t0, 0.1, .5)
+            elif block.type == 'G02':
+                pb, vb, ab, tb = block.get_velocity_profile(t0, 0.1, .5)
+            elif block.type == 'G03':
+                pb, vb, ab, tb = block.get_velocity_profile(t0, 0.1, .5)
+            p[0].append(pb[0])
+            p[1].append(pb[1])
+            v[0].append(vb[0])
+            v[1].append(vb[1])
+            a[0].append(ab[0])
+            a[1].append(ab[1])
+            t.append(tb)
+            t0 = tb[-1]
+
             for c in coords:
                 coordinates.append(c)
         self.coords = np.array(coordinates)
         ax.plot(self.coords[:,0], self.coords[:,1], self.coords[:,2], color='blue', label='GCode')
-        plt.show(block=False)
+        # plt.show(block=True)
+
+        _, (ax2_1, ax2_2) = plt.subplots(2, 1)
+        ax2_1.plot(self.coords[:,0])
+        ax2_2.plot(self.coords[:,1])
+
+        _, (ax2_1, ax2_2) = plt.subplots(2, 1)
+        ax2_1.plot(self.coords[2:,0] - self.coords[:-2,0])
+        ax2_2.plot(self.coords[2:,1] - self.coords[:-2,1])
+
+        _, (ax2_1, ax2_2) = plt.subplots(2, 1)
+        ax2_1.plot(self.coords[2:,0] - 2*self.coords[1:-1,0] + self.coords[:-2,0])
+        ax2_2.plot(self.coords[2:,1] - 2*self.coords[1:-1,1] + self.coords[:-2,1])
+
+        _, (ax3_1, ax3_2) = plt.subplots(2, 1)
+        pxx = []
+        pyy = []
+        ttt = []
+        for tt, px, py in zip(t, p[0], p[1]):
+            ax3_1.plot(tt, px)
+            ax3_2.plot(tt, py)
+            pxx.extend([1000*ppx for ppx in px])
+            pyy.extend([1000*ppy for ppy in py])
+            ttt.extend(tt)
+
+        _, (ax4_1, ax4_2, ax4_3) = plt.subplots(3, 1)
+        vxx = []
+        vyy = []
+        ttt = []
+        for tt, vx, vy in zip(t, v[0], v[1]):
+            ax4_1.plot(tt, vx)
+            ax4_2.plot(tt, vy)
+            ax4_3.plot(tt, [np.sqrt(vxx**2 + vyy**2) for vxx, vyy in zip(vx, vy)])
+            vxx.extend(vx)
+            vyy.extend(vy)
+            ttt.extend(tt)
+            
+        _, (ax5_1, ax5_2, ax5_3) = plt.subplots(3, 1)
+        axx = []
+        ayy = []
+        ttt = []
+        for tt, ax, ay in zip(t, a[0], a[1]):
+            ax5_1.step(tt, ax, where='post')
+            ax5_2.step(tt, ay, where='post')
+            ax5_3.step(tt, [np.sqrt(axx**2 + ayy**2) for axx, ayy in zip(ax, ay)], where='post')
+            axx.extend(ax)
+            ayy.extend(ay)
+            ttt.extend(tt)
+
+        _, ax5_1 = plt.subplots(1, 1)
+        ax5_1.plot(ttt, axx)
+        a_v = [(vxx1-vxx2)/(tx1-tx2) for vxx1, vxx2, tx1, tx2 in zip(vxx[1:], vxx[:-1], ttt[1:], ttt[:-1])]
+        ax5_1.plot(ttt[1:], a_v)
+
+        _, (ax1_1) = plt.subplots(1, 1)
+        ax1_1.plot(self.coords[:,0], self.coords[:,1], color='blue')
+        ax1_1.plot(pxx, pyy, color='red')
+        ax1_1.set_xlabel('X [mm]')
+        ax1_1.set_ylabel('Y [mm]')
+        ax1_1.set_aspect('equal')
+
+        plt.show(block=True)
+
 
     def run(self):
         self.load_file()

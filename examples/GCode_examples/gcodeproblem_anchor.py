@@ -30,14 +30,14 @@ reader = GCodeReader()
 GCode = reader.run()
 
 # amount of GCode blocks to combine
-n_blocks = 3
+n_blocks = 2
 # variable_tolerance: allow less freedom in the middle of segments, allow more freedom in the area of connection
 # Warning: if you receive a message 'infeasible problem' try increasing the amount of knot_intervals,
 # this gives more freedom
 # it is also possible that segments with variable tolerance are too short, check with required stop distance of tool
 variable_tolerance = False
 # required tolerance of the machined part [mm]
-tol = 0.01
+tol = 0.05
 # reduced tolerance for middle of segments
 tol_small = 0.1*tol
 # how to split segments if using variable tolerance e.g. 0.1 --> 0.1, 0.8, 0.1 * total length
@@ -46,13 +46,13 @@ split_small = 0.1
 split_length = 6.
 # split_circle: split large circle segments in smaller ones to avoid shortcuts in the trajectory
 split_circle = True
-bounds = {'vmin':-150, 'vmax':150,
-          'amin':-20e3, 'amax':20e3,
+bounds = {'vmin':-100, 'vmax':100,
+          'amin':-500, 'amax':500,
           'jmin':-1500e3, 'jmax':1500e3}  # [mm]
 # vel_limit: if the limiting factor is the machining process, put 'machining'
 # if the limiting factor is the velocity of the axes themselves, put: 'axes'
 tool = Tool(tol, bounds=bounds, options={'vel_limit':'machining','variable_tolerance':variable_tolerance}, tol_small=tol_small)  # tool to follow the GCode
-tool.define_knots(knot_intervals=20)
+tool.define_knots(knot_intervals=10)
 tool.set_initial_conditions(GCode[0].start)  # start position of first GCode block
 tool.set_terminal_conditions(GCode[-1].end)  # goal position of last GCode block
 
@@ -78,10 +78,10 @@ deployer = Deployer(schedulerproblem, sample_time=0.001)
 
 # define what you want to plot
 schedulerproblem.plot('scene')
-tool.plot('state', knots=True, prediction=True, labels=['x (m)', 'y (m)', 'z (m)'])
-tool.plot('input', knots=True, prediction=True, labels=['v_x (m/s)', 'v_y (m/s)', 'v_z (m/s)'])
-tool.plot('dinput', knots=True, prediction=True, labels=['a_x (m/s^2)', 'a_y (m/s^2)', 'a_z (m/s^2)'])
-tool.plot('ddinput', knots=True, prediction=True, labels=['j_x (m/s^3)', 'j_y (m/s^3)', 'j_z (m/s^3)'])
+# tool.plot('state', knots=True, prediction=True, labels=['x (m)', 'y (m)', 'z (m)'])
+# tool.plot('input', knots=True, prediction=True, labels=['v_x (m/s)', 'v_y (m/s)', 'v_z (m/s)'])
+# tool.plot('dinput', knots=True, prediction=True, labels=['a_x (m/s^2)', 'a_y (m/s^2)', 'a_z (m/s^2)'])
+# tool.plot('ddinput', knots=True, prediction=True, labels=['j_x (m/s^3)', 'j_y (m/s^3)', 'j_z (m/s^3)'])
 
 # run using a receding horizon of one segment
 deployer.update_segment()
@@ -90,3 +90,4 @@ deployer.update_segment()
 # schedulerproblem.plot_movie('scene', number_of_frames=100, repeat=False)
 # schedulerproblem.save_movie('scene', format='gif', name='gcodegif', number_of_frames=100, movie_time=10, axis=False)
 # schedulerproblem.save_movie('scene', number_of_frames=50, name='gcodescheduler', axis=False)
+plt.show(block=True)

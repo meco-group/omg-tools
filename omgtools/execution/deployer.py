@@ -31,7 +31,7 @@ class Deployer:
         self.iteration0 = True
         # handy when making multiple instances of deployer
         # in one problem, e.g. gcodeproblem_multi_z.py
-        # plt.close('all')
+        plt.close('all')
 
     def set_problem(self, problem):
         self.problem = problem
@@ -161,7 +161,7 @@ class Deployer:
                 self.ddinput_traj = np.c_[self.ddinput_traj, trajectories['ddinput'][:, 1:n_samp+1], self.ddinputs_end]
 
                 # update plot of trajectories of state, input,...
-                self.update_plot(current_time, update_time)
+                # self.update_plot(current_time, update_time)
 
                 # check if problem was solved successfully
                 self.check_results(states, inputs, dinputs, ddinputs, current_time,
@@ -173,6 +173,7 @@ class Deployer:
                 if ((np.linalg.norm(self.problem.goal_state-self.state_traj[:, -1]) < 1e-2 and np.linalg.norm(self.input_traj[:, -1]) < 1e-2) and
                      (not hasattr(self.problem, 'next_segment') or self.problem.next_segment is None)):
                     target_reached = True
+                    self.update_plot(current_time, update_time)
 
         # target reached, print final information
         self.problem.final()
@@ -240,38 +241,38 @@ class Deployer:
 
     def init_plot(self):
         # create figures
-        _, (self.ax2_1, self.ax2_2, self.ax2_3) = plt.subplots(3, 1, sharex=True)  # state
+        _, (self.ax2_1, self.ax2_2) = plt.subplots(2, 1, sharex=True)  # state
         self.ax2_1.plot([], [], zorder=0)
         self.ax2_2.plot([], [], zorder=0)
-        self.ax2_3.plot([], [], zorder=0)
+        # self.ax2_3.plot([], [], zorder=0)
         self.ax2_1.set_ylabel('x[mm]')
         self.ax2_2.set_ylabel('y[mm]')
-        self.ax2_3.set_ylabel('z[mm]')
-        _, (self.ax3_1, self.ax3_2, self.ax3_3) = plt.subplots(3, 1, sharex=True)  # input
+        # self.ax2_3.set_ylabel('z[mm]')
+        _, (self.ax3_1, self.ax3_2) = plt.subplots(2, 1, sharex=True)  # input
         self.ax3_1.plot([], [], zorder=0)
         self.ax3_2.plot([], [], zorder=0)
-        self.ax3_3.plot([], [], zorder=0)
+        # self.ax3_3.plot([], [], zorder=0)
         self.ax3_1.set_ylabel('vx[mm/s]')
         self.ax3_2.set_ylabel('vy[mm/s]')
-        self.ax3_3.set_ylabel('vz[mm/s]')
+        # self.ax3_3.set_ylabel('vz[mm/s]')
         _, self.ax4 = plt.subplots(1,1, sharex=True)  # total velocity
         self.ax4.plot([], [], zorder=0)
         self.ax4.set_ylabel('time[s]')
         self.ax4.set_ylabel('v [mm/s]')
-        _, (self.ax5_1, self.ax5_2, self.ax5_3) = plt.subplots(3, 1, sharex=True)  # dinput
+        _, (self.ax5_1, self.ax5_2) = plt.subplots(2, 1, sharex=True)  # dinput
         self.ax5_1.plot([], [], zorder=0)
         self.ax5_2.plot([], [], zorder=0)
-        self.ax5_3.plot([], [], zorder=0)
+        # self.ax5_3.plot([], [], zorder=0)
         self.ax5_1.set_ylabel('ax[mm/s**2]')
         self.ax5_2.set_ylabel('ay[mm/s**2]')
-        self.ax5_3.set_ylabel('az[mm/s**2]')
-        _, (self.ax6_1, self.ax6_2, self.ax6_3) = plt.subplots(3, 1, sharex=True)  # ddinput
+        # self.ax5_3.set_ylabel('az[mm/s**2]')
+        _, (self.ax6_1, self.ax6_2) = plt.subplots(2, 1, sharex=True)  # ddinput
         self.ax6_1.plot([], [], zorder=0)
         self.ax6_2.plot([], [], zorder=0)
-        self.ax6_3.plot([], [], zorder=0)
+        # self.ax6_3.plot([], [], zorder=0)
         self.ax6_1.set_ylabel('jx[mm/s**3]')
         self.ax6_2.set_ylabel('jy[mm/s**3]')
-        self.ax6_3.set_ylabel('jz[mm/s**3]')
+        # self.ax6_3.set_ylabel('jz[mm/s**3]')
         _, self.ax7 = plt.subplots(1,1, sharex=True)  # scene
         self.ax7.plot([], [], zorder=0)
         for i in range(len(self.problem.environment.room)):
@@ -293,9 +294,9 @@ class Deployer:
         self.ax2_2.lines[0].set_data(time, self.state_traj[1, :])
         self.ax2_2.relim()
         self.ax2_2.autoscale_view()
-        self.ax2_3.lines[0].set_data(time, self.state_traj[2, :])
-        self.ax2_3.relim()
-        self.ax2_3.autoscale_view()
+        # self.ax2_3.lines[0].set_data(time, self.state_traj[2, :])
+        # self.ax2_3.relim()
+        # self.ax2_3.autoscale_view()
         plt.pause(0.01)
 
         self.ax3_1.lines[0].set_data(time, self.input_traj[0, :])
@@ -304,9 +305,9 @@ class Deployer:
         self.ax3_2.lines[0].set_data(time, self.input_traj[1, :])
         self.ax3_2.relim()
         self.ax3_2.autoscale_view()
-        self.ax3_3.lines[0].set_data(time, self.input_traj[2, :])
-        self.ax3_3.relim()
-        self.ax3_3.autoscale_view()
+        # self.ax3_3.lines[0].set_data(time, self.input_traj[2, :])
+        # self.ax3_3.relim()
+        # self.ax3_3.autoscale_view()
         plt.pause(0.01)
 
         # plot total velocity
@@ -321,9 +322,9 @@ class Deployer:
         self.ax5_2.lines[0].set_data(time, self.dinput_traj[1, :])
         self.ax5_2.relim()
         self.ax5_2.autoscale_view()
-        self.ax5_3.lines[0].set_data(time, self.dinput_traj[2, :])
-        self.ax5_3.relim()
-        self.ax5_3.autoscale_view()
+        # self.ax5_3.lines[0].set_data(time, self.dinput_traj[2, :])
+        # self.ax5_3.relim()
+        # self.ax5_3.autoscale_view()
         plt.pause(0.01)
 
         self.ax6_1.lines[0].set_data(time, self.ddinput_traj[0, :])
@@ -332,9 +333,9 @@ class Deployer:
         self.ax6_2.lines[0].set_data(time, self.ddinput_traj[1, :])
         self.ax6_2.relim()
         self.ax6_2.autoscale_view()
-        self.ax6_3.lines[0].set_data(time, self.ddinput_traj[2, :])
-        self.ax6_3.relim()
-        self.ax6_3.autoscale_view()
+        # self.ax6_3.lines[0].set_data(time, self.ddinput_traj[2, :])
+        # self.ax6_3.relim()
+        # self.ax6_3.autoscale_view()
         plt.pause(0.01)
 
         self.ax7.lines[0].set_data(self.state_traj[0, :], self.state_traj[1, :])
