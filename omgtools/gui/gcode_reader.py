@@ -242,21 +242,31 @@ class GCodeReader(object):
         v = [[], []]
         a = [[], []]
         t = []
+        alpha = []
+        omega = []
+        theta = []
+
         for block in self.blocks:
             coords = block.get_coordinates()
             print(block.type)
             if block.type == 'G01':
                 pb, vb, ab, tb = block.get_velocity_profile(t0, 0.1, .5)
+                alphab = np.zeros_like(tb)
+                omegab = np.zeros_like(tb)
+                thetab = np.zeros_like(tb)
             elif block.type == 'G02':
-                pb, vb, ab, tb = block.get_velocity_profile(t0, 0.1, .5)
+                pb, vb, ab, tb, alphab, omegab, thetab = block.get_velocity_profile(t0, 0.1, .5)
             elif block.type == 'G03':
-                pb, vb, ab, tb = block.get_velocity_profile(t0, 0.1, .5)
+                pb, vb, ab, tb, alphab, omegab, thetab = block.get_velocity_profile(t0, 0.1, .5)
             p[0].append(pb[0])
             p[1].append(pb[1])
             v[0].append(vb[0])
             v[1].append(vb[1])
             a[0].append(ab[0])
             a[1].append(ab[1])
+            alpha.append(alphab)
+            omega.append(omegab)
+            theta.append(thetab)
             t.append(tb)
             t0 = tb[-1]
 
@@ -289,6 +299,12 @@ class GCodeReader(object):
             pyy.extend([1000*ppy for ppy in py])
             ttt.extend(tt)
 
+        _, (ax3_1, ax3_2, ax3_3) = plt.subplots(3, 1)
+        for tt, alphas, omegas, thetas in zip(t, alpha, omega, theta):
+            ax3_1.step(tt, alphas, where='post')
+            ax3_2.plot(tt, omegas)
+            ax3_3.plot(tt, thetas)
+
         _, (ax4_1, ax4_2, ax4_3) = plt.subplots(3, 1)
         vxx = []
         vyy = []
@@ -316,7 +332,7 @@ class GCodeReader(object):
         _, ax5_1 = plt.subplots(1, 1)
         ax5_1.plot(ttt, axx)
         a_v = [(vxx1-vxx2)/(tx1-tx2) for vxx1, vxx2, tx1, tx2 in zip(vxx[1:], vxx[:-1], ttt[1:], ttt[:-1])]
-        ax5_1.plot(ttt[1:], a_v)
+        ax5_1.plot(ttt[0:-1], a_v)
 
         _, (ax1_1) = plt.subplots(1, 1)
         ax1_1.plot(self.coords[:,0], self.coords[:,1], color='blue')

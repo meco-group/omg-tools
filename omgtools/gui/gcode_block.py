@@ -498,55 +498,49 @@ class G03(GCodeBlock):
         omega.append(0.)
         theta.append(self.start_angle)
         for i in range(N):
-            t_local = (i+1)*t_acc/N
-            t.append(t_local)
-            alpha.append(sign*alpha_max)
-            omega.append(sign*alpha_max*t_local)
-            theta.append(self.start_angle + sign*0.5*alpha_max*t_local**2)
-        alpha.append(0)
-
-        # t.append(0)
-        # omega.append(0.)
-        # theta.append(self.start_angle)
-        # for i in range(N):
-        #     dt_local = t_acc/N
-        #     t_new = t[-1] + dt_local
-        #     alpha_new = sign*alpha_max
-        #     omega_new = omega[-1] + alpha_new*dt_local
-        #     theta_new = theta[-1] + omega_new*dt_local + 0.5*alpha_new*dt_local**2
-        #     # continue on this approach by checking if the acceleration is too high
-        #     # if it is, scale the acceleration down
-        #     # if it is not, continue
-
-        # [[-radius*np.cos(theta)*omega**2 - radius*np.sin(theta)*alpha for theta, omega, alpha in zip(theta, omega, alpha)],
-        #  [-radius*np.sin(theta)*omega**2 + radius*np.cos(theta)*alpha for theta, omega, alpha in zip(theta, omega, alpha)]]
-        
-
+            dt_local = t_acc/N
+            t_new = t[-1] + dt_local
+            alpha_new = sign*alpha_max
+            omega_new = omega[-1] + alpha_new*dt_local
+            theta_new = theta[-1] + omega[-1]*dt_local + 0.5*alpha_new*dt_local**2
+            t.append(t_new)
+            alpha.append(alpha_new)
+            omega.append(omega_new)
+            theta.append(theta_new)
+            # continue on this approach by checking if the acceleration is too high
+            # if it is, scale the acceleration down
+            # if it is not, continue
+        alpha.append(0)        
+ 
         t.append(t_acc)
         omega.append(sign*omega_max)
         theta.append(self.start_angle + sign*theta_acc)
         for i in range(N):
-            t_local = (i+1)*t_coast/N
-            t.append(t_acc + t_local)
-            alpha.append(0.)
-            omega.append(sign*omega_max)
-            theta.append(self.start_angle + sign*theta_acc + sign*omega_max*t_local)
-        alpha.append(0)
-        
+            dt_local = t_coast/N
+            t_new = t[-1] + dt_local
+            alpha_new = 0.
+            omega_new = omega[-1] + alpha_new*dt_local
+            theta_new = theta[-1] + omega[-1]*dt_local + 0.5*alpha_new*dt_local**2
+            t.append(t_new)
+            alpha.append(alpha_new)
+            omega.append(omega_new)
+            theta.append(theta_new)
+        alpha.append(0)     
+
         t.append(t_acc + t_coast)
         omega.append(sign*omega_max)
         theta.append(self.start_angle + sign*theta_acc + sign*theta_coast)
         for i in range(N):
-            t_local = (i+1)*t_acc/N
-            t.append(t_acc + t_coast + t_local)
-            alpha.append(-sign*alpha_max)
-            omega.append(sign*omega_max - sign*alpha_max*t_local)
-            theta.append(self.start_angle + sign*theta_acc + sign*theta_coast + sign*omega_max*t_local - sign*0.5*alpha_max*t_local**2)
+            dt_local = t_acc/N
+            t_new = t[-1] + dt_local
+            alpha_new = -sign*alpha_max
+            omega_new = omega[-1] + alpha_new*dt_local
+            theta_new = theta[-1] + omega[-1]*dt_local + 0.5*alpha_new*dt_local**2
+            t.append(t_new)
+            alpha.append(alpha_new)
+            omega.append(omega_new)
+            theta.append(theta_new)
         alpha.append(0)
-        print('t: ', t)
-        print('alpha: ', alpha)
-        print('omega: ', omega)
-        print('theta: ', theta)
 
         positions = [[center[0] + radius*np.cos(thetas) for thetas in theta], 
                      [center[1] + radius*np.sin(thetas) for thetas in theta]]
@@ -579,8 +573,8 @@ class G03(GCodeBlock):
         v[1] = velocities[1]
         a[0] = accelerations[0]
         a[1] = accelerations[1]
-        
-        return p, v, a, t
+
+        return p, v, a, t, alpha, omega, theta
 
 
 def distance_between(point1, point2):
