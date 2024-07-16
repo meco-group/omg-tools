@@ -94,7 +94,6 @@ class G01(GCodeBlock):
         ay = a_s[1][0]
 
         if 2*dist_to_max > dist_to_cover[bd]:
-            print('Warning: unable to reach max velocity')
             # accelerate
             t1 = np.sqrt(dist_to_cover[bd]/a_max)
             t.append(0.)
@@ -136,9 +135,7 @@ class G01(GCodeBlock):
                 p[1].append(curr_pos[1] + curr_vel[1]*t_local + ay*t_local**2/2)
             a[0].append(0)
             a[1].append(0)
-
         else:
-            print('Warning: able to reach max velocity')
             # accelerate
             t1 = v_max/a_max
             t.append(0.)
@@ -462,12 +459,8 @@ class G03(GCodeBlock):
         omega_v = v_max/radius
         omega_a = np.sqrt(a_max/radius)
         omega_max = omega_v if omega_v < omega_a else omega_a
-        alpha_max = a_max/radius
+        alpha_max = .6*a_max/radius
         
-        print('start_angle: ', self.start_angle)
-        print('end_angle: ', self.end_angle)
-        print('arc_angle: ', self.arc_angle)
-
         N = 10
 
         p = [[], []]
@@ -479,20 +472,15 @@ class G03(GCodeBlock):
         alpha = []
         theta = []
 
-        # for i in range(N+1):
-        #     t_local = i*T/N
-        #     t.append(t0 + t_local)
-        #     p[0].append(center[0]+radius*np.cos(angles[i]))
-        #     p[1].append(center[1]+radius*np.sin(angles[i]))
-        #     v[0].append(-radius*np.sin(angles[i])*omega_max)
-        #     v[1].append(radius*np.cos(angles[i])*omega_max)
-        #     a[0].append(-radius*np.cos(angles[i])*omega_max**2)
-        #     a[1].append(-radius*np.sin(angles[i])*omega_max**2)
-
         t_acc = omega_max/alpha_max
-        theta_acc = 0.5*alpha_max*t_acc**2
+        theta_acc = alpha_max/2*t_acc**2
         theta_coast = self.arc_angle - 2*theta_acc
         t_coast = theta_coast/omega_max
+        if theta_acc > self.arc_angle/2:
+            theta_acc = self.arc_angle/2
+            t_acc = np.sqrt(2*theta_acc/alpha_max)
+            t_coast = 0
+            theta_coast = 0
 
         t.append(0)
         omega.append(0.)
@@ -507,28 +495,26 @@ class G03(GCodeBlock):
             alpha.append(alpha_new)
             omega.append(omega_new)
             theta.append(theta_new)
-            # continue on this approach by checking if the acceleration is too high
-            # if it is, scale the acceleration down
-            # if it is not, continue
-        alpha.append(0)        
- 
-        t.append(t_acc)
-        omega.append(sign*omega_max)
-        theta.append(self.start_angle + sign*theta_acc)
-        for i in range(N):
-            dt_local = t_coast/N
-            t_new = t[-1] + dt_local
-            alpha_new = 0.
-            omega_new = omega[-1] + alpha_new*dt_local
-            theta_new = theta[-1] + omega[-1]*dt_local + 0.5*alpha_new*dt_local**2
-            t.append(t_new)
-            alpha.append(alpha_new)
-            omega.append(omega_new)
-            theta.append(theta_new)
-        alpha.append(0)     
+        alpha.append(0)
 
-        t.append(t_acc + t_coast)
-        omega.append(sign*omega_max)
+        if t_coast != 0:
+            t.append(t[-1])
+            omega.append(sign*omega_max)
+            theta.append(self.start_angle + sign*theta_acc)
+            for i in range(N):
+                dt_local = t_coast/N
+                t_new = t[-1] + dt_local
+                alpha_new = 0.
+                omega_new = omega[-1] + alpha_new*dt_local
+                theta_new = theta[-1] + omega[-1]*dt_local + 0.5*alpha_new*dt_local**2
+                t.append(t_new)
+                alpha.append(alpha_new)
+                omega.append(omega_new)
+                theta.append(theta_new)
+            alpha.append(0)
+
+        t.append(t[-1])
+        omega.append(omega[-1])
         theta.append(self.start_angle + sign*theta_acc + sign*theta_coast)
         for i in range(N):
             dt_local = t_acc/N
@@ -548,22 +534,6 @@ class G03(GCodeBlock):
                       [radius*np.cos(theta)*omega for theta, omega in zip(theta, omega)]]
         accelerations = [[-radius*np.cos(theta)*omega**2 - radius*np.sin(theta)*alpha for theta, omega, alpha in zip(theta, omega, alpha)],
                          [-radius*np.sin(theta)*omega**2 + radius*np.cos(theta)*alpha for theta, omega, alpha in zip(theta, omega, alpha)]]
-        
-        # tt = np.zeros_like(t)
-        # dt = t[1] - t[0]
-        # for i in range(len(t)-1):
-        #     ax, ay = accelerations[0][i], accelerations[1][i]
-        #     if abs(ax) > a_max or abs(ay) > a_max:
-        #         axy = max(abs(ax), abs(ay))
-        #         a_scaling = a_max/axy
-        #     else:
-        #         a_scaling = 1
-        #     t_new = dt/a_scaling
-        #     accelerations[0][i] *= a_scaling
-        #     accelerations[1][i] *= a_scaling
-           
-        #     tt[i+1] = tt[i] + t_new
-        # print(tt)
 
         t = [t0 + t_local for t_local in t]
         

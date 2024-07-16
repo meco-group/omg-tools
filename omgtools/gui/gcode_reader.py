@@ -272,71 +272,42 @@ class GCodeReader(object):
 
             for c in coords:
                 coordinates.append(c)
+
         self.coords = np.array(coordinates)
         ax.plot(self.coords[:,0], self.coords[:,1], self.coords[:,2], color='blue', label='GCode')
-        # plt.show(block=True)
-
-        _, (ax2_1, ax2_2) = plt.subplots(2, 1)
-        ax2_1.plot(self.coords[:,0])
-        ax2_2.plot(self.coords[:,1])
-
-        _, (ax2_1, ax2_2) = plt.subplots(2, 1)
-        ax2_1.plot(self.coords[2:,0] - self.coords[:-2,0])
-        ax2_2.plot(self.coords[2:,1] - self.coords[:-2,1])
-
-        _, (ax2_1, ax2_2) = plt.subplots(2, 1)
-        ax2_1.plot(self.coords[2:,0] - 2*self.coords[1:-1,0] + self.coords[:-2,0])
-        ax2_2.plot(self.coords[2:,1] - 2*self.coords[1:-1,1] + self.coords[:-2,1])
 
         _, (ax3_1, ax3_2) = plt.subplots(2, 1)
-        pxx = []
-        pyy = []
-        ttt = []
-        for tt, px, py in zip(t, p[0], p[1]):
-            ax3_1.plot(tt, px)
-            ax3_2.plot(tt, py)
-            pxx.extend([1000*ppx for ppx in px])
-            pyy.extend([1000*ppy for ppy in py])
-            ttt.extend(tt)
-
-        _, (ax3_1, ax3_2, ax3_3) = plt.subplots(3, 1)
-        for tt, alphas, omegas, thetas in zip(t, alpha, omega, theta):
-            ax3_1.step(tt, alphas, where='post')
-            ax3_2.plot(tt, omegas)
-            ax3_3.plot(tt, thetas)
+        px, py, pt = [], [], []
+        for p_t, p_x, p_y in zip(t, p[0], p[1]):
+            ax3_1.plot(p_t, p_x)
+            ax3_2.plot(p_t, p_y)
+            px.extend(p_x)
+            py.extend(p_y)
+            pt.extend(p_t)
 
         _, (ax4_1, ax4_2, ax4_3) = plt.subplots(3, 1)
-        vxx = []
-        vyy = []
-        ttt = []
-        for tt, vx, vy in zip(t, v[0], v[1]):
-            ax4_1.plot(tt, vx)
-            ax4_2.plot(tt, vy)
-            ax4_3.plot(tt, [np.sqrt(vxx**2 + vyy**2) for vxx, vyy in zip(vx, vy)])
-            vxx.extend(vx)
-            vyy.extend(vy)
-            ttt.extend(tt)
+        vx, vy, vt = [], [], []
+        for v_t, v_x, v_y in zip(t, v[0], v[1]):
+            ax4_1.plot(v_t, v_x)
+            ax4_2.plot(v_t, v_y)
+            ax4_3.plot(v_t, [np.sqrt(vxx**2 + vyy**2) for vxx, vyy in zip(v_x, v_y)])
+            vx.extend(v_x)
+            vy.extend(v_y)
+            vt.extend(v_t)
             
         _, (ax5_1, ax5_2, ax5_3) = plt.subplots(3, 1)
-        axx = []
-        ayy = []
-        ttt = []
-        for tt, ax, ay in zip(t, a[0], a[1]):
-            ax5_1.step(tt, ax, where='post')
-            ax5_2.step(tt, ay, where='post')
-            ax5_3.step(tt, [np.sqrt(axx**2 + ayy**2) for axx, ayy in zip(ax, ay)], where='post')
-            axx.extend(ax)
-            ayy.extend(ay)
-            ttt.extend(tt)
-
-        _, ax5_1 = plt.subplots(1, 1)
-        ax5_1.plot(ttt, axx)
-        a_v = [(vxx1-vxx2)/(tx1-tx2) for vxx1, vxx2, tx1, tx2 in zip(vxx[1:], vxx[:-1], ttt[1:], ttt[:-1])]
-        ax5_1.plot(ttt[0:-1], a_v)
+        ax, ay, at = [], [], []
+        for a_t, a_x, a_y in zip(t, a[0], a[1]):
+            ax5_1.step(a_t, a_x, where='post')
+            ax5_2.step(a_t, a_y, where='post')
+            ax5_3.step(a_t, [np.sqrt(axx**2 + ayy**2) for axx, ayy in zip(a_x, a_y)], where='post')
+            ax.extend(a_x)
+            ay.extend(a_y)
+            at.extend(a_t)
 
         _, (ax1_1) = plt.subplots(1, 1)
         ax1_1.plot(self.coords[:,0], self.coords[:,1], color='blue')
-        ax1_1.plot(pxx, pyy, color='red')
+        ax1_1.plot(px, py, color='red')
         ax1_1.set_xlabel('X [mm]')
         ax1_1.set_ylabel('Y [mm]')
         ax1_1.set_aspect('equal')
