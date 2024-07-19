@@ -249,15 +249,16 @@ class Deployer:
         self.ax2_2.set_ylabel('y[mm]')
         # self.ax2_3.set_ylabel('z[mm]')
         _, (self.ax3_1, self.ax3_2) = plt.subplots(2, 1, sharex=True)  # input
-        self.ax3_1.plot([], [], zorder=0)
-        self.ax3_2.plot([], [], zorder=0)
+        self.ax3_1.plot([], [], zorder=0, linewidth=1.2)
+        self.ax3_2.plot([], [], zorder=0, linewidth=1.2)
         # self.ax3_3.plot([], [], zorder=0)
-        self.ax3_1.set_ylabel('vx[mm/s]')
-        self.ax3_2.set_ylabel('vy[mm/s]')
+        self.ax3_2.set_xlabel('time[s]')
+        self.ax3_1.set_ylabel('vx [mm/s]')
+        self.ax3_2.set_ylabel('vy [mm/s]')
         # self.ax3_3.set_ylabel('vz[mm/s]')
         _, self.ax4 = plt.subplots(1,1, sharex=True)  # total velocity
-        self.ax4.plot([], [], zorder=0)
-        self.ax4.set_ylabel('time[s]')
+        self.ax4.plot([], [], zorder=0, linewidth=1.2)
+        self.ax4.set_xlabel('time[s]')
         self.ax4.set_ylabel('v [mm/s]')
         _, (self.ax5_1, self.ax5_2) = plt.subplots(2, 1, sharex=True)  # dinput
         self.ax5_1.plot([], [], zorder=0)
@@ -339,6 +340,7 @@ class Deployer:
         plt.pause(0.01)
 
         self.ax7.lines[0].set_data(self.state_traj[0, :], self.state_traj[1, :])
+        self.ax7.set_aspect('equal')
         # plot environment
         for idx, room in enumerate(self.problem.environment.room):
             points = room['shape'].draw(room['pose'][:2]+[0])[0][0]  # no extra rotation to plot

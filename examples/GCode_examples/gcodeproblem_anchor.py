@@ -30,22 +30,22 @@ reader = GCodeReader()
 GCode = reader.run()
 
 # amount of GCode blocks to combine
-n_blocks = 2
+n_blocks = 3
 # variable_tolerance: allow less freedom in the middle of segments, allow more freedom in the area of connection
 # Warning: if you receive a message 'infeasible problem' try increasing the amount of knot_intervals,
 # this gives more freedom
 # it is also possible that segments with variable tolerance are too short, check with required stop distance of tool
 variable_tolerance = False
 # required tolerance of the machined part [mm]
-tol = 0.05
+tol = 0.5
 # reduced tolerance for middle of segments
-tol_small = 0.1*tol
+tol_small = 0.4*tol
 # how to split segments if using variable tolerance e.g. 0.1 --> 0.1, 0.8, 0.1 * total length
-split_small = 0.1
+split_small = 0.15
 # minimal length of segment that you want to split
-split_length = 6.
+split_length = 4.
 # split_circle: split large circle segments in smaller ones to avoid shortcuts in the trajectory
-split_circle = True
+split_circle = False
 bounds = {'vmin':-100, 'vmax':100,
           'amin':-500, 'amax':500,
           'jmin':-1500e3, 'jmax':1500e3}  # [mm]
@@ -85,6 +85,22 @@ schedulerproblem.plot('scene')
 
 # run using a receding horizon of one segment
 deployer.update_segment()
+
+x_sol, y_sol, z_sol = deployer.state_traj
+
+file = open('gcode_solution_anchor.nc', 'w')
+x_prev = round(x_sol[0], 3)
+y_prev = round(y_sol[0], 3)
+file.write(f'G00 X{x_prev} Y{y_prev}\n')
+for x, y in zip(x_sol, y_sol):
+    x_new = round(x, 3)
+    y_new = round(y, 3)
+    if x_new != x_prev or y_new != y_prev:
+        file.write(f'G01 X{x_new} Y{y_new}\n')
+    x_prev = x_new
+    y_prev = y_new
+file.close()
+
 
 # plotting afterwards, and saving is only available when using the simulator
 # schedulerproblem.plot_movie('scene', number_of_frames=100, repeat=False)

@@ -250,14 +250,14 @@ class GCodeReader(object):
             coords = block.get_coordinates()
             print(block.type)
             if block.type == 'G01':
-                pb, vb, ab, tb = block.get_velocity_profile(t0, 0.1, .5)
+                pb, vb, ab, tb = block.get_velocity_profile(t0, .1, .5)
                 alphab = np.zeros_like(tb)
                 omegab = np.zeros_like(tb)
                 thetab = np.zeros_like(tb)
             elif block.type == 'G02':
-                pb, vb, ab, tb, alphab, omegab, thetab = block.get_velocity_profile(t0, 0.1, .5)
+                pb, vb, ab, tb, alphab, omegab, thetab = block.get_velocity_profile(t0, .1, .5)
             elif block.type == 'G03':
-                pb, vb, ab, tb, alphab, omegab, thetab = block.get_velocity_profile(t0, 0.1, .5)
+                pb, vb, ab, tb, alphab, omegab, thetab = block.get_velocity_profile(t0, .1, .5)
             p[0].append(pb[0])
             p[1].append(pb[1])
             v[0].append(vb[0])
@@ -285,15 +285,24 @@ class GCodeReader(object):
             py.extend(p_y)
             pt.extend(p_t)
 
-        _, (ax4_1, ax4_2, ax4_3) = plt.subplots(3, 1)
+        _, (ax4_1, ax4_2) = plt.subplots(2, 1)
         vx, vy, vt = [], [], []
         for v_t, v_x, v_y in zip(t, v[0], v[1]):
-            ax4_1.plot(v_t, v_x)
-            ax4_2.plot(v_t, v_y)
-            ax4_3.plot(v_t, [np.sqrt(vxx**2 + vyy**2) for vxx, vyy in zip(v_x, v_y)])
+            ax4_1.plot(v_t, [1000*x for x in v_x], lw=1.2, color='tab:blue')
+            ax4_2.plot(v_t, [1000*x for x in v_y], lw=1.2, color='tab:blue')
+            ax4_2.set_xlabel('time[s]')
+            ax4_1.set_ylabel('vx [mm/s]')
+            ax4_2.set_ylabel('vy [mm/s]')
+            # ax4_3.plot(v_t, [np.sqrt(vxx**2 + vyy**2) for vxx, vyy in zip(v_x, v_y)])
             vx.extend(v_x)
             vy.extend(v_y)
             vt.extend(v_t)
+
+        _, (ax4_1b) = plt.subplots(1, 1)
+        ax4_1b.set_xlabel('time[s]')
+        ax4_1b.set_ylabel('v [mm/s]')
+        for v_t, v_x, v_y in zip(t, v[0], v[1]):
+            ax4_1b.plot(v_t, [np.sqrt((1000*vxx)**2 + (1000*vyy)**2) for vxx, vyy in zip(v_x, v_y)], lw=1.2, color='tab:blue')
             
         _, (ax5_1, ax5_2, ax5_3) = plt.subplots(3, 1)
         ax, ay, at = [], [], []
@@ -306,8 +315,8 @@ class GCodeReader(object):
             at.extend(a_t)
 
         _, (ax1_1) = plt.subplots(1, 1)
-        ax1_1.plot(self.coords[:,0], self.coords[:,1], color='blue')
-        ax1_1.plot(px, py, color='red')
+        ax1_1.plot(self.coords[:,0], self.coords[:,1])
+        # ax1_1.plot(px, py, color='red')
         ax1_1.set_xlabel('X [mm]')
         ax1_1.set_ylabel('Y [mm]')
         ax1_1.set_aspect('equal')
