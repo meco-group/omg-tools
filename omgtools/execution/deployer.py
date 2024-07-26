@@ -93,6 +93,7 @@ class Deployer:
         self.input_traj = np.c_[[0.,0.,0.]]
         self.dinput_traj = np.c_[[0.,0.,0.]]
         self.ddinput_traj = np.c_[[0.,0.,0.]]
+        self.pos_splines = []
 
         current_time = 0.
         target_reached = False
@@ -136,6 +137,7 @@ class Deployer:
                 # update values
                 # use original splines here, not the ones from concat_splines, since they are less accurate
                 pos_splines = self.problem.vehicles[0].result_spline_segments[0]
+                self.pos_splines.append(pos_splines)
                 input_splines = [s.derivative(1) for s in pos_splines]
                 dinput_splines = [s.derivative(2) for s in pos_splines]
                 ddinput_splines = [s.derivative(3) for s in pos_splines]

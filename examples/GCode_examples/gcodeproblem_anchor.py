@@ -22,13 +22,14 @@
 # to machine a part, described by GCode in a .nc file, with a certain tolerance.
 
 from omgtools import *
+from gcode_helpers import get_bezier_full, write_to_file_G01, write_to_file_G05
 
 # make GCode reader and run it to obtain an object-oriented description of the GCode
 reader = GCodeReader()
 # this opens a file dialog in which you can select your GCode as an .nc-file
 # the settings inside this example are made specifically for the anchor2D.nc file
 GCode = reader.run()
-
+Gout = 'G01' #G01 or G05
 # amount of GCode blocks to combine
 n_blocks = 3
 # variable_tolerance: allow less freedom in the middle of segments, allow more freedom in the area of connection
@@ -86,21 +87,15 @@ schedulerproblem.plot('scene')
 # run using a receding horizon of one segment
 deployer.update_segment()
 
-x_sol, y_sol, z_sol = deployer.state_traj
-
-file = open('gcode_solution_anchor.nc', 'w')
-x_prev = round(x_sol[0], 3)
-y_prev = round(y_sol[0], 3)
-file.write(f'G00 X{x_prev} Y{y_prev}\n')
-for x, y in zip(x_sol, y_sol):
-    x_new = round(x, 3)
-    y_new = round(y, 3)
-    if x_new != x_prev or y_new != y_prev:
-        file.write(f'G01 X{x_new} Y{y_new}\n')
-    x_prev = x_new
-    y_prev = y_new
-file.close()
-
+if Gout == 'G01':
+    filename = 'gcode_solution_anchor_G01.nc'
+    x_sol, y_sol, z_sol = deployer.state_traj
+    write_to_file_G01(x_sol, y_sol, filename)
+elif Gout == 'G05':
+    filename = 'gcode_solution_anchor_G05.nc'
+    pos_splines = deployer.pos_splines
+    x_bezier_full, y_bezier_full = get_bezier_full(pos_splines)
+    write_to_file_G05(x_bezier_full, y_bezier_full, filename)
 
 # plotting afterwards, and saving is only available when using the simulator
 # schedulerproblem.plot_movie('scene', number_of_frames=100, repeat=False)
