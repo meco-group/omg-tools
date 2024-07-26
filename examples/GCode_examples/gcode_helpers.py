@@ -1,3 +1,5 @@
+import numpy as np
+
 
 def bspline_to_bezier(knots, coeffs, degree):
     num_knots = len(knots)
@@ -53,6 +55,19 @@ def get_bezier_full(pos_splines):
             x_bezier_full.append(x_bezier)
             y_bezier_full.append(y_bezier)
     return x_bezier_full, y_bezier_full
+
+def plot_bezier_curves(bezier_control_points):
+    t = np.linspace(0, 1, 11)
+    curves = []
+    for B in bezier_control_points:
+        B = np.array(B)
+        curve = (
+            ((1-t)**3)[:,np.newaxis]*B[0]
+            + (3*(1-t)**2)[:,np.newaxis]*t[:,np.newaxis]*B[1]
+            + (3*(1-t))[:,np.newaxis]*(t**2)[:,np.newaxis]*B[2]
+            + (t**3)[:,np.newaxis]*B[3])
+        curves.append(curve[:, 0])
+    return curves
 
 def write_to_file_G01(x_sol, y_sol, filename):
     file = open(filename, 'w')
