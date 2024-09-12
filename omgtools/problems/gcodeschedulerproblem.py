@@ -353,7 +353,7 @@ class GCodeSchedulerProblem(Problem):
                     raise RuntimeError('Invalid block type: ', block.type)
                 new_room = self.split_ring_segment(block, arc_angle, start, end, radius_in, radius_out, direction, tolerance, number)
 
-                if self.variable_tolerance:
+                if self.variable_tolerance and (distance_between_points(block.start, block.end) > self.split_length):
                     divided_rooms = []
                     for r in new_room:
                         # following parameters are the same for all segments

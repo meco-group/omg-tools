@@ -143,7 +143,8 @@ class GCodeReader(object):
                     if '.nc' in i:
                         filename = i
                         self.subfiles.append(filename)
-            # else: skip line, this is not a G-code block
+            else: #skip line, this is not a G-code block
+                pass
 
         # loop over all subfiles
         for f in self.subfiles:
@@ -245,17 +246,20 @@ class GCodeReader(object):
         alpha = []
         omega = []
         theta = []
+        block_types = []
 
         for block in self.blocks:
-            coords = block.get_coordinates()
             if block.type == 'G01':
+                coords = block.get_coordinates()
                 pb, vb, ab, tb = block.get_velocity_profile(t0, .1, .5)
                 alphab = np.zeros_like(tb)
                 omegab = np.zeros_like(tb)
                 thetab = np.zeros_like(tb)
             elif block.type == 'G02':
+                coords = block.get_coordinates()
                 pb, vb, ab, tb, alphab, omegab, thetab = block.get_velocity_profile(t0, .1, .5)
             elif block.type == 'G03':
+                coords = block.get_coordinates()
                 pb, vb, ab, tb, alphab, omegab, thetab = block.get_velocity_profile(t0, .1, .5)
             else:
                 print('Block type not supported')
@@ -270,6 +274,7 @@ class GCodeReader(object):
             theta.append(thetab)
             t.append(tb)
             t0 = tb[-1]
+            block_types.append(block.type)
 
             for c in coords:
                 coordinates.append(c)
@@ -285,31 +290,34 @@ class GCodeReader(object):
         ax2_2.set_ylabel('y [mm]')
         ax2_2.set_xlabel('time[s]')
 
-        _, (ax3_1, ax3_2) = plt.subplots(2, 1)
-        for v_t, v_x, v_y in zip(t, v[0], v[1]):
-            ax3_1.plot(v_t, [1000*x for x in v_x], lw=1.2, color='tab:blue')
-            ax3_2.plot(v_t, [1000*x for x in v_y], lw=1.2, color='tab:blue')
-        ax3_1.set_ylabel('vx [mm/s]')
-        ax3_2.set_ylabel('vy [mm/s]')
-        ax3_2.set_xlabel('time[s]')
+        # _, (ax3_1, ax3_2) = plt.subplots(2, 1)
+        # for v_t, v_x, v_y in zip(t, v[0], v[1]):
+        #     ax3_1.plot(v_t, [1000*x for x in v_x], lw=1.2, color='tab:blue')
+        #     ax3_2.plot(v_t, [1000*x for x in v_y], lw=1.2, color='tab:blue')
+        # ax3_1.set_ylabel('vx [mm/s]')
+        # ax3_2.set_ylabel('vy [mm/s]')
+        # ax3_2.set_xlabel('time[s]')
 
-        _, (ax4_1) = plt.subplots(1, 1)
-        for v_t, v_x, v_y in zip(t, v[0], v[1]):
-            ax4_1.plot(v_t, [np.sqrt((1000*vx)**2 + (1000*vy)**2) for \
-                             vx, vy in zip(v_x, v_y)], lw=1.2, color='tab:blue')
-        ax4_1.set_ylabel('v [mm/s]')
-        ax4_1.set_xlabel('time[s]')
+        # _, (ax4_1) = plt.subplots(1, 1)
+        # for v_t, v_x, v_y in zip(t, v[0], v[1]):
+        #     ax4_1.plot(v_t, [np.sqrt((1000*vx)**2 + (1000*vy)**2) for \
+        #                      vx, vy in zip(v_x, v_y)], lw=1.2, color='tab:blue')
+        # ax4_1.set_ylabel('v [mm/s]')
+        # ax4_1.set_xlabel('time[s]')
             
-        _, (ax5_1, ax5_2) = plt.subplots(2, 1)
-        for a_t, a_x, a_y in zip(t, a[0], a[1]):
-            ax5_1.step(a_t, [1000*x for x in a_x], where='post', lw=1.2, color='tab:blue')
-            ax5_2.step(a_t, [1000*x for x in a_y], where='post', lw=1.2, color='tab:blue')
-        ax5_1.set_ylabel('ax [mm/s²]')
-        ax5_2.set_ylabel('ay [mm/s²]')
-        ax5_2.set_xlabel('time[s]')
+        # _, (ax5_1, ax5_2) = plt.subplots(2, 1)
+        # for a_t, a_x, a_y in zip(t, a[0], a[1]):
+        #     ax5_1.step(a_t, [1000*x for x in a_x], where='post', lw=1.2, color='tab:blue')
+        #     ax5_2.step(a_t, [1000*x for x in a_y], where='post', lw=1.2, color='tab:blue')
+        # ax5_1.set_ylabel('ax [mm/s²]')
+        # ax5_2.set_ylabel('ay [mm/s²]')
+        # ax5_2.set_xlabel('time[s]')
 
         _, (ax6_1) = plt.subplots(1, 1)
         ax6_1.plot(self.coords[:,0], self.coords[:,1])
+        for p_t, p_x, p_y, block_type in zip(t, p[0], p[1], block_types):
+            ax6_1.plot(1000*p_x[0], 1000*p_y[0], lw=1.2, color='firebrick', marker='x')
+            ax6_1.text(1000*(p_x[0]+p_x[-1])/2, 1000*(p_y[0]+p_y[-1])/2, block_type, fontsize=12)
         ax6_1.set_ylabel('y [mm]')
         ax6_1.set_xlabel('x [mm]')
         ax6_1.set_aspect('equal')

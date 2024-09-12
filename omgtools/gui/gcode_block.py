@@ -220,7 +220,6 @@ class G02(GCodeBlock):
         if 'K' in command:
             self.K = command['K']
             self.center[2] = self.Z0+self.K
-        self.radius = distance_between(self.center, [self.X0, self.Y0,self.Z0])
 
         # Todo: add check if IJ, IK, or JK present, if not throw error
 
@@ -246,6 +245,8 @@ class G02(GCodeBlock):
         if self.plane == 'YZ':
             # arc in YZ-plane
 
+            self.radius = distance_between(self.center[1:], [self.Y0,self.Z0])
+
             # compute angle of both vectors with horizontal axes
             angle1 = np.arctan2(self.Z0-self.center[2], self.Y0-self.center[1])
             angle2 = np.arctan2(self.Z1-self.center[2], self.Y1-self.center[1])
@@ -269,6 +270,8 @@ class G02(GCodeBlock):
                 coords.append([self.X0, self.center[1]+self.radius*np.cos(s),self.center[2]+self.radius*np.sin(s)])
         elif self.plane == 'XZ':
             # arc in XZ-plane
+
+            self.radius = distance_between([self.center[0],self.center[2]], [self.X0,self.Z0])
 
             # compute angle of both vectors with horizontal axes
             angle1 = angle1
@@ -294,6 +297,8 @@ class G02(GCodeBlock):
                 coords.append([self.center[0]+self.radius*np.cos(s), self.Y0, self.center[2]+self.radius*np.sin(s)])
         elif self.plane == 'XY':
             # arc in XY-plane
+
+            self.radius = distance_between(self.center[:2], [self.X0,self.Y0])
 
             # compute angle of both vectors with horizontal axes
             angle1 = np.arctan2(self.Y0-self.center[1], self.X0-self.center[0])
@@ -559,7 +564,7 @@ def generate_gcodeblock(command, number, prev_block):
     command = command.split()  # split at white spaces
     command_dict = {}
     for c in command:
-        if c in ['G00','G01','G02','G03']:
+        if c in ['G0', 'G1', 'G2', 'G3', 'G00', 'G01', 'G02', 'G03']:
             command_dict['type'] = c
         elif '(' in c:
             # neglect this command, since it is a comment
@@ -579,7 +584,7 @@ def generate_gcodeblock(command, number, prev_block):
 
     command = command_dict
     if 'type' in command:
-        if command['type'] == 'G00':
+        if command['type'] == 'G0' or command['type'] == 'G00':
             # sometimes also used as alternative for G01
             if prev_block is None:
                 # if no prev_block, this is the first block,
@@ -591,11 +596,11 @@ def generate_gcodeblock(command, number, prev_block):
                 block = G00(command, number, prev_block, start_pos=start)
             else:
                 block = G00(command, number, prev_block)
-        elif command['type'] == 'G01':
+        elif command['type'] == 'G1' or command['type'] == 'G01':
             block = G01(command, number, prev_block)
-        elif command['type'] == 'G02':
+        elif command['type'] == 'G2' or command['type'] == 'G02':
             block = G02(command, number, prev_block)
-        elif command['type'] == 'G03':
+        elif command['type'] == 'G3' or command['type'] == 'G03':
             block = G03(command, number, prev_block)
         else:
             warnings.warn('G-code given which was not yet implemented: ' + command['type'] + ', ignoring  this line.')
